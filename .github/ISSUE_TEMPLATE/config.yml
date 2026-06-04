@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 작업 전 확인
+    url: https://github.com/Code-Badgers/potato-mubwanna
+    about: 기능, 버그, 설정 변경은 템플릿을 사용해 이슈로 먼저 등록합니다.
+
