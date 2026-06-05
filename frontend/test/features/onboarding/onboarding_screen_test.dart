@@ -18,6 +18,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('위치 권한이 필요해요'), findsOneWidget);
-    expect(find.text('위치 권한 확인'), findsOneWidget);
+    expect(find.text('권한 허용하기'), findsOneWidget);
   });
 }

@@ -29,9 +29,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       eyebrow: 'STEP 02',
       title: '위치 권한이 필요해요',
       subtitle: 'GPS 기반 방문 인증',
-      description: '관광지에 도착하면 위치로 스탬프를 받을 수 있어요.',
-      helperText: '정확한 방문 인증을 위해 위치 정보 사용이 필요합니다.',
-      actionLabel: '위치 권한 확인',
+      description: '관광지 방문 인증을 위해\n위치 정보 사용이 필요합니다.',
+      helperText: '',
+      actionLabel: '권한 허용하기',
       accentColor: Color(0xFF38A36A),
       type: _OnboardingVisualType.location,
     ),
@@ -39,9 +39,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       eyebrow: 'STEP 03',
       title: '알림을 허용해주세요',
       subtitle: '점순이 미션과 보상 알림',
-      description: '미션, 쿠폰 지급, 이벤트 소식을 놓치지 않게 알려드려요.',
-      helperText: '알림은 마이페이지에서 언제든 다시 설정할 수 있어요.',
-      actionLabel: '시작하기',
+      description: '점순이 미션, 쿠폰 지급,\n이벤트 알림을 받을 수 있어요.',
+      helperText: '',
+      actionLabel: '권한 허용하기',
       accentColor: Color(0xFFF3B632),
       type: _OnboardingVisualType.notification,
     ),
@@ -74,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final step = _steps[_currentPage];
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -102,18 +102,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 if (_currentPage > 0)
                   Positioned(
-                    left: 20,
-                    right: 20,
-                    top: 12,
-                    child: _OnboardingHeader(
-                      onSkip: _skipToLogin,
-                    ),
-                  ),
-                if (_currentPage > 0)
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: 20,
+                    left: 28,
+                    right: 28,
+                    bottom: 22,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -142,6 +133,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: Text(step.actionLabel),
                           ),
                         ),
+                        const SizedBox(height: 14),
+                        TextButton(
+                          onPressed: _skipToLogin,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text('나중에 하기'),
+                        ),
                       ],
                     ),
                   ),
@@ -149,44 +152,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OnboardingHeader extends StatelessWidget {
-  const _OnboardingHeader({
-    required this.onSkip,
-  });
-
-  final VoidCallback onSkip;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text(
-                '🥔',
-                style: TextStyle(fontSize: 20),
-              ),
-            ),
-          ),
-          const Spacer(),
-          TextButton(
-            onPressed: onSkip,
-            child: const Text('나중에 하기'),
-          ),
-        ],
       ),
     );
   }
@@ -216,52 +181,68 @@ class _OnboardingHeroPage extends StatelessWidget {
           Positioned(
             left: 24,
             right: 24,
-            bottom: 28,
+            bottom: 36,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.88),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFE8E2D8)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.touch_app_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        step.actionLabel,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ],
-                  ),
+                _BlinkingStartText(
+                  label: step.actionLabel,
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BlinkingStartText extends StatefulWidget {
+  const _BlinkingStartText({required this.label});
+
+  final String label;
+
+  @override
+  State<_BlinkingStartText> createState() => _BlinkingStartTextState();
+}
+
+class _BlinkingStartTextState extends State<_BlinkingStartText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 820),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _opacity = Tween<double>(
+    begin: 0.34,
+    end: 1,
+  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Text(
+        widget.label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+          shadows: [
+            Shadow(
+              color: Colors.white,
+              blurRadius: 8,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -277,55 +258,41 @@ class _PermissionOnboardingPage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 72, 20, 116),
+          padding: const EdgeInsets.fromLTRB(28, 50, 28, 156),
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: ConstrainedBox(
               constraints:
-                  BoxConstraints(minHeight: constraints.maxHeight - 188),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(22, 30, 22, 26),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: const Color(0xFFE8E2D8)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 26,
-                      offset: const Offset(0, 14),
+                  BoxConstraints(minHeight: constraints.maxHeight - 206),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    step.title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      height: 1.15,
+                      letterSpacing: 0,
                     ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      step.title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 25,
-                        fontWeight: FontWeight.w900,
-                        height: 1.1,
-                        letterSpacing: 0,
-                      ),
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    step.description,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      height: 1.55,
+                      letterSpacing: 0,
                     ),
-                    const SizedBox(height: 18),
-                    Text(
-                      step.description,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        height: 1.6,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 34),
-                    _OnboardingVisual(step: step),
+                  ),
+                  const SizedBox(height: 46),
+                  _OnboardingVisual(step: step),
+                  if (step.helperText.isNotEmpty) ...[
                     const SizedBox(height: 34),
                     Text(
                       step.helperText,
@@ -339,7 +306,7 @@ class _PermissionOnboardingPage extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
           ),
@@ -357,7 +324,7 @@ class _OnboardingVisual extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 178,
+      height: 212,
       child: Center(child: _StepIcon(type: step.type)),
     );
   }
@@ -387,37 +354,37 @@ class _LocationPermissionIllustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 210,
-      height: 178,
+      width: 240,
+      height: 210,
       child: Stack(
         alignment: Alignment.center,
         children: [
           const Positioned(
-            bottom: 4,
+            bottom: 6,
             child: CustomPaint(
-              size: Size(188, 82),
+              size: Size(218, 94),
               painter: _MapBasePainter(),
             ),
           ),
           Positioned(
             top: 0,
             child: Container(
-              width: 116,
-              height: 116,
+              width: 138,
+              height: 138,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: const Color(0xFF4FBF79),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.26),
-                    blurRadius: 22,
-                    offset: const Offset(0, 12),
+                    color: const Color(0xFF4FBF79).withOpacity(0.28),
+                    blurRadius: 26,
+                    offset: const Offset(0, 14),
                   ),
                 ],
               ),
               child: const Icon(
                 Icons.location_on_rounded,
-                size: 82,
+                size: 98,
                 color: Colors.white,
               ),
             ),
@@ -434,8 +401,8 @@ class _NotificationPermissionIllustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 142,
-      height: 142,
+      width: 154,
+      height: 154,
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3D3),
         shape: BoxShape.circle,
@@ -450,7 +417,7 @@ class _NotificationPermissionIllustration extends StatelessWidget {
       ),
       child: const Icon(
         Icons.notifications_rounded,
-        size: 82,
+        size: 90,
         color: AppColors.secondary,
       ),
     );
