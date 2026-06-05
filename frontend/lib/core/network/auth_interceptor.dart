@@ -12,11 +12,21 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final accessToken = await _tokenStorage.readAccessToken();
-    if (accessToken != null && accessToken.isNotEmpty) {
-      options.headers['Authorization'] = 'Bearer $accessToken';
+    try {
+      final accessToken = await _tokenStorage.readAccessToken();
+      if (accessToken != null && accessToken.isNotEmpty) {
+        options.headers['Authorization'] = 'Bearer $accessToken';
+      }
+      handler.next(options);
+    } catch (error, stackTrace) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          error: error,
+          stackTrace: stackTrace,
+          type: DioExceptionType.unknown,
+        ),
+      );
     }
-    handler.next(options);
   }
 }
-

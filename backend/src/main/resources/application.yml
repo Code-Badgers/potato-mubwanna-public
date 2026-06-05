@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: potato-mubwanna-backend
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/potato_mubwanna}
+    username: ${DB_USERNAME:potato}
+    password: ${DB_PASSWORD:potato}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+server:
+  servlet:
+    context-path: /api
+
+springdoc:
+  swagger-ui:
+    path: /docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
