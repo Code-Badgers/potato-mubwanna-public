@@ -14,11 +14,11 @@ class MainShell extends StatelessWidget {
         selectedIndex: _selectedIndex(context),
         onDestinationSelected: (index) => context.go(_paths[index]),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.map), label: 'Map'),
-          NavigationDestination(icon: Icon(Icons.book), label: 'Stamps'),
-          NavigationDestination(icon: Icon(Icons.eco), label: 'Potatoes'),
-          NavigationDestination(icon: Icon(Icons.redeem), label: 'Coupons'),
-          NavigationDestination(icon: Icon(Icons.person), label: 'My'),
+          NavigationDestination(icon: Icon(Icons.map), label: '지도'),
+          NavigationDestination(icon: Icon(Icons.book), label: '랠리북'),
+          NavigationDestination(icon: Icon(Icons.eco), label: '감자도감'),
+          NavigationDestination(icon: Icon(Icons.redeem), label: '보상'),
+          NavigationDestination(icon: Icon(Icons.person), label: '마이'),
         ],
       ),
     );
