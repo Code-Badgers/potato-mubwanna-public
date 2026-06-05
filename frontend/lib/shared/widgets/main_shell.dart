@@ -25,7 +25,7 @@ class MainShell extends StatelessWidget {
   }
 
   int _selectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
+    final location = GoRouterState.of(context).location;
     final index = _paths.indexWhere(location.startsWith);
     return index < 0 ? 0 : index;
   }
@@ -38,4 +38,3 @@ class MainShell extends StatelessWidget {
     '/main/mypage',
   ];
 }
-
