@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 
+const _permissionButtonColor = Color(0xFF56C787);
+
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -120,7 +122,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: FilledButton(
                             onPressed: _handlePrimaryAction,
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: _permissionButtonColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -353,44 +355,12 @@ class _LocationPermissionIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 240,
-      height: 210,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Positioned(
-            bottom: 6,
-            child: CustomPaint(
-              size: Size(218, 94),
-              painter: _MapBasePainter(),
-            ),
-          ),
-          Positioned(
-            top: 0,
-            child: Container(
-              width: 138,
-              height: 138,
-              decoration: BoxDecoration(
-                color: const Color(0xFF4FBF79),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4FBF79).withOpacity(0.28),
-                    blurRadius: 26,
-                    offset: const Offset(0, 14),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.location_on_rounded,
-                size: 98,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return Image.asset(
+      'assets/onboading_02.png',
+      width: 246,
+      height: 220,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -553,62 +523,6 @@ class _PotatoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PotatoPainter oldDelegate) => false;
-}
-
-class _MapBasePainter extends CustomPainter {
-  const _MapBasePainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final basePath = Path()
-      ..moveTo(size.width * 0.08, size.height * 0.28)
-      ..quadraticBezierTo(size.width * 0.18, size.height * 0.04,
-          size.width * 0.34, size.height * 0.08)
-      ..lineTo(size.width * 0.92, size.height * 0.22)
-      ..quadraticBezierTo(size.width * 1.02, size.height * 0.25,
-          size.width * 0.95, size.height * 0.46)
-      ..lineTo(size.width * 0.83, size.height * 0.84)
-      ..quadraticBezierTo(size.width * 0.80, size.height * 0.96,
-          size.width * 0.66, size.height * 0.92)
-      ..lineTo(size.width * 0.10, size.height * 0.76)
-      ..quadraticBezierTo(size.width * -0.02, size.height * 0.72,
-          size.width * 0.04, size.height * 0.54)
-      ..close();
-
-    canvas.drawPath(basePath, Paint()..color = const Color(0xFFD8E97B));
-
-    final waterPaint = Paint()
-      ..color = const Color(0xFF8CCFD5)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 12;
-    final waterPath = Path()
-      ..moveTo(size.width * 0.18, size.height * 0.63)
-      ..cubicTo(size.width * 0.35, size.height * 0.36, size.width * 0.50,
-          size.height * 0.78, size.width * 0.70, size.height * 0.43)
-      ..quadraticBezierTo(size.width * 0.80, size.height * 0.28,
-          size.width * 0.92, size.height * 0.34);
-    canvas.drawPath(waterPath, waterPaint);
-
-    final roadPaint = Paint()
-      ..color = const Color(0xFFFFF3C8)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 10;
-    canvas.drawLine(
-      Offset(size.width * 0.08, size.height * 0.38),
-      Offset(size.width * 0.86, size.height * 0.78),
-      roadPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.78, size.height * 0.18),
-      Offset(size.width * 0.26, size.height * 0.86),
-      roadPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _MapBasePainter oldDelegate) => false;
 }
 
 class _OnboardingStep {
