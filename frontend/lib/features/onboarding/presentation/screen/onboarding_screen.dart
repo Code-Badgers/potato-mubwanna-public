@@ -21,7 +21,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       subtitle: '강원도 감자여행',
       description: '스탬프를 모아보세요!',
       helperText: '지도에서 감자 스팟을 찾고 방문 인증으로 지역 감자를 수집해요.',
-      actionLabel: '다음',
+      actionLabel: '터치하여 시작하기',
       accentColor: Color(0xFF7DB84E),
       type: _OnboardingVisualType.potato,
     ),
@@ -79,55 +79,73 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                children: [
-                  _OnboardingHeader(
-                    canSkip: _currentPage > 0,
-                    onSkip: _skipToLogin,
-                  ),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: _steps.length,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPage = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        return _OnboardingPage(step: _steps[index]);
-                      },
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: _steps.length,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return _OnboardingHeroPage(
+                        step: _steps[index],
+                        onTap: _handlePrimaryAction,
+                      );
+                    }
+
+                    return _PermissionOnboardingPage(step: _steps[index]);
+                  },
+                ),
+                if (_currentPage > 0)
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    top: 12,
+                    child: _OnboardingHeader(
+                      onSkip: _skipToLogin,
                     ),
                   ),
-                  _PageIndicator(
-                    count: _steps.length,
-                    currentIndex: _currentPage,
-                    activeColor: step.accentColor,
-                  ),
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: FilledButton(
-                      onPressed: _handlePrimaryAction,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
+                if (_currentPage > 0)
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 20,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _PageIndicator(
+                          count: _steps.length,
+                          currentIndex: _currentPage,
+                          activeColor: step.accentColor,
                         ),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: FilledButton(
+                            onPressed: _handlePrimaryAction,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            child: Text(step.actionLabel),
+                          ),
                         ),
-                      ),
-                      child: Text(step.actionLabel),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ),
@@ -138,11 +156,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardingHeader extends StatelessWidget {
   const _OnboardingHeader({
-    required this.canSkip,
     required this.onSkip,
   });
 
-  final bool canSkip;
   final VoidCallback onSkip;
 
   @override
@@ -166,19 +182,93 @@ class _OnboardingHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          if (canSkip)
-            TextButton(
-              onPressed: onSkip,
-              child: const Text('나중에 하기'),
-            ),
+          TextButton(
+            onPressed: onSkip,
+            child: const Text('나중에 하기'),
+          ),
         ],
       ),
     );
   }
 }
 
-class _OnboardingPage extends StatelessWidget {
-  const _OnboardingPage({required this.step});
+class _OnboardingHeroPage extends StatelessWidget {
+  const _OnboardingHeroPage({
+    required this.step,
+    required this.onTap,
+  });
+
+  final _OnboardingStep step;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/onboading.png',
+            fit: BoxFit.cover,
+          ),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 28,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.88),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: const Color(0xFFE8E2D8)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.touch_app_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        step.actionLabel,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PermissionOnboardingPage extends StatelessWidget {
+  const _PermissionOnboardingPage({required this.step});
 
   final _OnboardingStep step;
 
@@ -186,72 +276,71 @@ class _OnboardingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _OnboardingVisual(step: step),
-                const SizedBox(height: 28),
-                Text(
-                  step.eyebrow,
-                  style: TextStyle(
-                    color: step.accentColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 72, 20, 116),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(minHeight: constraints.maxHeight - 188),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(22, 30, 22, 26),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: const Color(0xFFE8E2D8)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 26,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  step.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    height: 1.1,
-                    letterSpacing: 0,
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      step.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      step.description,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        height: 1.6,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 34),
+                    _OnboardingVisual(step: step),
+                    const SizedBox(height: 34),
+                    Text(
+                      step.helperText,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.45,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  step.subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  step.description,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    height: 1.45,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  step.helperText,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 1.45,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -267,14 +356,9 @@ class _OnboardingVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1.1,
-      child: CustomPaint(
-        painter: _LandscapePainter(accentColor: step.accentColor),
-        child: Center(
-          child: _StepIcon(type: step.type),
-        ),
-      ),
+    return SizedBox(
+      height: 178,
+      child: Center(child: _StepIcon(type: step.type)),
     );
   }
 }
@@ -290,28 +374,86 @@ class _StepIcon extends StatelessWidget {
       case _OnboardingVisualType.potato:
         return const _PotatoCharacter();
       case _OnboardingVisualType.location:
-        return const Icon(
-          Icons.location_on_rounded,
-          size: 132,
-          color: AppColors.primary,
-        );
+        return const _LocationPermissionIllustration();
       case _OnboardingVisualType.notification:
-        return const Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(
-              Icons.notifications_rounded,
-              size: 126,
-              color: AppColors.secondary,
-            ),
-            Positioned(
-              right: 44,
-              top: 42,
-              child: _SmallPotatoBadge(),
-            ),
-          ],
-        );
+        return const _NotificationPermissionIllustration();
     }
+  }
+}
+
+class _LocationPermissionIllustration extends StatelessWidget {
+  const _LocationPermissionIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 210,
+      height: 178,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Positioned(
+            bottom: 4,
+            child: CustomPaint(
+              size: Size(188, 82),
+              painter: _MapBasePainter(),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            child: Container(
+              width: 116,
+              height: 116,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.26),
+                    blurRadius: 22,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.location_on_rounded,
+                size: 82,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationPermissionIllustration extends StatelessWidget {
+  const _NotificationPermissionIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 142,
+      height: 142,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3D3),
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFF0C35D), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF3B632).withOpacity(0.24),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.notifications_rounded,
+        size: 82,
+        color: AppColors.secondary,
+      ),
+    );
   }
 }
 
@@ -323,18 +465,6 @@ class _PotatoCharacter extends StatelessWidget {
     return const CustomPaint(
       size: Size(150, 170),
       painter: _PotatoPainter(),
-    );
-  }
-}
-
-class _SmallPotatoBadge extends StatelessWidget {
-  const _SmallPotatoBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return const CustomPaint(
-      size: Size(46, 50),
-      painter: _PotatoPainter(compact: true),
     );
   }
 }
@@ -372,128 +502,12 @@ class _PageIndicator extends StatelessWidget {
   }
 }
 
-class _LandscapePainter extends CustomPainter {
-  const _LandscapePainter({required this.accentColor});
-
-  final Color accentColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final skyPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFFE6F8FF),
-          Color(0xFFFFF9EC),
-        ],
-      ).createShader(Offset.zero & size);
-
-    final hillBack = Paint()..color = const Color(0xFFBFDDAE);
-    final hillFront = Paint()..color = const Color(0xFF8DC56C);
-    final field = Paint()..color = const Color(0xFFE6D986);
-    final cloud = Paint()..color = Colors.white.withOpacity(0.9);
-    final accent = Paint()..color = accentColor.withOpacity(0.22);
-
-    final rect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(32),
-    );
-    canvas.drawRRect(rect, skyPaint);
-
-    canvas.drawCircle(
-        Offset(size.width * 0.82, size.height * 0.18), 26, accent);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(size.width * 0.22, size.height * 0.22),
-        width: 54,
-        height: 22,
-      ),
-      cloud,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(size.width * 0.30, size.height * 0.19),
-        width: 38,
-        height: 26,
-      ),
-      cloud,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(size.width * 0.68, size.height * 0.29),
-        width: 70,
-        height: 24,
-      ),
-      cloud,
-    );
-
-    final backPath = Path()
-      ..moveTo(0, size.height * 0.63)
-      ..quadraticBezierTo(
-        size.width * 0.26,
-        size.height * 0.42,
-        size.width * 0.50,
-        size.height * 0.60,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.72,
-        size.height * 0.76,
-        size.width,
-        size.height * 0.50,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(backPath, hillBack);
-
-    final frontPath = Path()
-      ..moveTo(0, size.height * 0.78)
-      ..quadraticBezierTo(
-        size.width * 0.35,
-        size.height * 0.57,
-        size.width * 0.68,
-        size.height * 0.76,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.84,
-        size.height * 0.86,
-        size.width,
-        size.height * 0.70,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(frontPath, hillFront);
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          size.width * 0.22,
-          size.height * 0.78,
-          size.width * 0.56,
-          size.height * 0.12,
-        ),
-        const Radius.circular(999),
-      ),
-      field,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _LandscapePainter oldDelegate) {
-    return oldDelegate.accentColor != accentColor;
-  }
-}
-
 class _PotatoPainter extends CustomPainter {
-  const _PotatoPainter({this.compact = false});
-
-  final bool compact;
+  const _PotatoPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
-    final scale = compact ? 0.95 : 1.0;
+    const scale = 1.0;
     final bodyPaint = Paint()..color = const Color(0xFFE1B15E);
     final shadowPaint = Paint()..color = const Color(0xFFB77A32);
     final cheekPaint = Paint()..color = const Color(0xFFFF9E81);
@@ -571,9 +585,63 @@ class _PotatoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _PotatoPainter oldDelegate) {
-    return oldDelegate.compact != compact;
+  bool shouldRepaint(covariant _PotatoPainter oldDelegate) => false;
+}
+
+class _MapBasePainter extends CustomPainter {
+  const _MapBasePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final basePath = Path()
+      ..moveTo(size.width * 0.08, size.height * 0.28)
+      ..quadraticBezierTo(size.width * 0.18, size.height * 0.04,
+          size.width * 0.34, size.height * 0.08)
+      ..lineTo(size.width * 0.92, size.height * 0.22)
+      ..quadraticBezierTo(size.width * 1.02, size.height * 0.25,
+          size.width * 0.95, size.height * 0.46)
+      ..lineTo(size.width * 0.83, size.height * 0.84)
+      ..quadraticBezierTo(size.width * 0.80, size.height * 0.96,
+          size.width * 0.66, size.height * 0.92)
+      ..lineTo(size.width * 0.10, size.height * 0.76)
+      ..quadraticBezierTo(size.width * -0.02, size.height * 0.72,
+          size.width * 0.04, size.height * 0.54)
+      ..close();
+
+    canvas.drawPath(basePath, Paint()..color = const Color(0xFFD8E97B));
+
+    final waterPaint = Paint()
+      ..color = const Color(0xFF8CCFD5)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 12;
+    final waterPath = Path()
+      ..moveTo(size.width * 0.18, size.height * 0.63)
+      ..cubicTo(size.width * 0.35, size.height * 0.36, size.width * 0.50,
+          size.height * 0.78, size.width * 0.70, size.height * 0.43)
+      ..quadraticBezierTo(size.width * 0.80, size.height * 0.28,
+          size.width * 0.92, size.height * 0.34);
+    canvas.drawPath(waterPath, waterPaint);
+
+    final roadPaint = Paint()
+      ..color = const Color(0xFFFFF3C8)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 10;
+    canvas.drawLine(
+      Offset(size.width * 0.08, size.height * 0.38),
+      Offset(size.width * 0.86, size.height * 0.78),
+      roadPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.78, size.height * 0.18),
+      Offset(size.width * 0.26, size.height * 0.86),
+      roadPaint,
+    );
   }
+
+  @override
+  bool shouldRepaint(covariant _MapBasePainter oldDelegate) => false;
 }
 
 class _OnboardingStep {
