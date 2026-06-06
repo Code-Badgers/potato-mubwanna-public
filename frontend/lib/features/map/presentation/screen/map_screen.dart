@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 
-const _mapPrimary = Color(0xFF56C787);
+const _mapPrimary = Color(0xFF36D98F);
 const _mapDark = Color(0xFF509B64);
 const _mapGrass = Color(0xFFCDD98F);
 const _mapWater = Color(0xFFA1CDD2);

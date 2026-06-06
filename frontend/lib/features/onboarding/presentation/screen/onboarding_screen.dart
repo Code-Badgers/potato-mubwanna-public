@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 
-const _permissionButtonColor = Color(0xFF56C787);
+const _permissionButtonColor = Color(0xFF36D98F);
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -370,26 +370,12 @@ class _NotificationPermissionIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 154,
-      height: 154,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3D3),
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFF0C35D), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFF3B632).withOpacity(0.24),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: const Icon(
-        Icons.notifications_rounded,
-        size: 90,
-        color: AppColors.secondary,
-      ),
+    return Image.asset(
+      'assets/onboading_03.png',
+      width: 220,
+      height: 220,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     );
   }
 }
