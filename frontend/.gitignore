@@ -6,3 +6,11 @@
 *.iml
 build/
 coverage/
+
+# Local secrets and build-time environment
+.env
+.env.*
+!.env.example
+firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist

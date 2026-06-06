@@ -1,2 +1,18 @@
 .DS_Store
 agents_docs/
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.p12
+*.key
+*.keystore
+*.jks
+
+# Firebase / platform secret config files
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
