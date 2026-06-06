@@ -9,10 +9,9 @@ class PotatoMubwannaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Potato Mubwanna',
+      title: '감자무봤나',
       theme: AppTheme.light,
       routerConfig: appRouter,
     );
   }
 }
-
