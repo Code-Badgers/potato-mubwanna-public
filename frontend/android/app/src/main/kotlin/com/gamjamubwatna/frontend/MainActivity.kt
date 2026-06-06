@@ -1,0 +1,6 @@
+package com.gamjamubwatna.frontend
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+}

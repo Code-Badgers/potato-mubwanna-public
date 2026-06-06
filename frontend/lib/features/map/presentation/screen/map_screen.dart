@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../widget/kakao_map_view.dart';
 
 const _mapPrimary = Color(0xFF36D98F);
 const _mapDark = Color(0xFF509B64);
-const _mapGrass = Color(0xFFCDD98F);
-const _mapWater = Color(0xFFA1CDD2);
-const _mapRoad = Color(0xFFFFF0C8);
 const _rareGold = Color(0xFFF6C23E);
 
 class MapScreen extends StatefulWidget {
@@ -236,8 +234,11 @@ class _PotatoMapPreview extends StatelessWidget {
           builder: (context, constraints) {
             return Stack(
               children: [
-                const Positioned.fill(
-                    child: CustomPaint(painter: _MapPainter())),
+                SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  child: const KakaoMapView(),
+                ),
                 Positioned(
                   left: constraints.maxWidth * 0.47,
                   top: constraints.maxHeight * 0.51,
@@ -610,115 +611,6 @@ class _NormalPotatoLine extends StatelessWidget {
       ],
     );
   }
-}
-
-class _MapPainter extends CustomPainter {
-  const _MapPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final background = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFFE8F4DB),
-          Color(0xFFF7F2D7),
-        ],
-      ).createShader(Offset.zero & size);
-
-    canvas.drawRect(Offset.zero & size, background);
-
-    _drawArea(
-      canvas,
-      size,
-      const Color(0xFFD9E7A4),
-      const [
-        Offset(-0.08, 0.24),
-        Offset(0.22, 0.12),
-        Offset(0.54, 0.28),
-        Offset(0.38, 0.54),
-        Offset(0.02, 0.46),
-      ],
-    );
-    _drawArea(
-      canvas,
-      size,
-      _mapGrass,
-      const [
-        Offset(0.60, 0.06),
-        Offset(1.08, 0.18),
-        Offset(0.98, 0.50),
-        Offset(0.62, 0.42),
-      ],
-    );
-    _drawArea(
-      canvas,
-      size,
-      const Color(0xFFDCE8A8),
-      const [
-        Offset(-0.04, 0.68),
-        Offset(0.32, 0.52),
-        Offset(0.62, 0.72),
-        Offset(0.42, 1.04),
-        Offset(0.02, 0.96),
-      ],
-    );
-
-    final waterPaint = Paint()
-      ..color = _mapWater
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 28
-      ..strokeCap = StrokeCap.round;
-    final river = Path()
-      ..moveTo(size.width * 0.06, size.height * 0.58)
-      ..cubicTo(
-        size.width * 0.24,
-        size.height * 0.46,
-        size.width * 0.40,
-        size.height * 0.64,
-        size.width * 0.56,
-        size.height * 0.50,
-      )
-      ..cubicTo(
-        size.width * 0.74,
-        size.height * 0.34,
-        size.width * 0.84,
-        size.height * 0.60,
-        size.width * 0.98,
-        size.height * 0.46,
-      );
-    canvas.drawPath(river, waterPaint);
-
-    final roadPaint = Paint()
-      ..color = _mapRoad
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 16
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(size.width * 0.18, size.height * 0.20),
-      Offset(size.width * 0.90, size.height * 0.72),
-      roadPaint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.78, size.height * 0.12),
-      Offset(size.width * 0.22, size.height * 0.86),
-      roadPaint,
-    );
-  }
-
-  void _drawArea(Canvas canvas, Size size, Color color, List<Offset> points) {
-    final path = Path()
-      ..moveTo(size.width * points.first.dx, size.height * points.first.dy);
-    for (final point in points.skip(1)) {
-      path.lineTo(size.width * point.dx, size.height * point.dy);
-    }
-    path.close();
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MapPainter oldDelegate) => false;
 }
 
 class _MapSpot {
