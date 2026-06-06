@@ -5,6 +5,11 @@ import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
 
 void main() {
   testWidgets('renders the five footer navigation labels', (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final router = GoRouter(
       initialLocation: '/main/map',
       routes: [
@@ -43,5 +48,8 @@ void main() {
     expect(find.text('감자 도감'), findsOneWidget);
     expect(find.text('보상'), findsOneWidget);
     expect(find.text('마이'), findsOneWidget);
+
+    final footerBottom = tester.getBottomLeft(find.text('지도')).dy;
+    expect(footerBottom, greaterThan(880));
   });
 }

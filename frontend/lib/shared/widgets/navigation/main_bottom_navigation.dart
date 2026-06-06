@@ -13,32 +13,34 @@ class MainBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedIndex = _selectedIndex(context);
 
-    return ColoredBox(
-      color: AppColors.surface,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 430),
-          child: Container(
-            width: double.infinity,
-            height: 72,
-            padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border(top: BorderSide(color: _footerLine)),
-            ),
-            child: Row(
-              children: List.generate(_destinations.length, (index) {
-                final destination = _destinations[index];
+    return SizedBox(
+      height: 72,
+      child: ColoredBox(
+        color: AppColors.surface,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                border: Border(top: BorderSide(color: _footerLine)),
+              ),
+              child: Row(
+                children: List.generate(_destinations.length, (index) {
+                  final destination = _destinations[index];
 
-                return Expanded(
-                  child: _FooterItem(
-                    icon: destination.icon,
-                    label: destination.label,
-                    isSelected: selectedIndex == index,
-                    onTap: () => context.go(_paths[index]),
-                  ),
-                );
-              }),
+                  return Expanded(
+                    child: _FooterItem(
+                      icon: destination.icon,
+                      label: destination.label,
+                      isSelected: selectedIndex == index,
+                      onTap: () => context.go(_paths[index]),
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
         ),
