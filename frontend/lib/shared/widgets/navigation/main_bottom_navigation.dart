@@ -1,52 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/theme/app_colors.dart';
+import '../../../app/theme/app_colors.dart';
 
 const _footerPrimary = Color(0xFF36D98F);
 const _footerLine = Color(0xFFE8E2D8);
 
-class MainShell extends StatelessWidget {
-  const MainShell({required this.child, super.key});
-
-  final Widget child;
+class MainBottomNavigation extends StatelessWidget {
+  const MainBottomNavigation({super.key});
 
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _selectedIndex(context);
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: ColoredBox(
-          color: AppColors.surface,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: Container(
-                width: double.infinity,
-                height: 72,
-                padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  border: Border(top: BorderSide(color: _footerLine)),
-                ),
-                child: Row(
-                  children: List.generate(_destinations.length, (index) {
-                    final destination = _destinations[index];
+    return ColoredBox(
+      color: AppColors.surface,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 430),
+          child: Container(
+            width: double.infinity,
+            height: 72,
+            padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              border: Border(top: BorderSide(color: _footerLine)),
+            ),
+            child: Row(
+              children: List.generate(_destinations.length, (index) {
+                final destination = _destinations[index];
 
-                    return Expanded(
-                      child: _FooterItem(
-                        icon: destination.icon,
-                        label: destination.label,
-                        isSelected: selectedIndex == index,
-                        onTap: () => context.go(_paths[index]),
-                      ),
-                    );
-                  }),
-                ),
-              ),
+                return Expanded(
+                  child: _FooterItem(
+                    icon: destination.icon,
+                    label: destination.label,
+                    isSelected: selectedIndex == index,
+                    onTap: () => context.go(_paths[index]),
+                  ),
+                );
+              }),
             ),
           ),
         ),

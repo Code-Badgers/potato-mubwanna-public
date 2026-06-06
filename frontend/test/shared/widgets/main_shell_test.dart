@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:potato_mubwanna/shared/widgets/main_shell.dart';
+import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
 
 void main() {
   testWidgets('renders the five footer navigation labels', (tester) async {

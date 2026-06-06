@@ -9,7 +9,7 @@ import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
 import '../../features/spot/presentation/screen/spot_detail_screen.dart';
 import '../../features/stamp/presentation/screen/stamp_book_screen.dart';
-import '../../shared/widgets/main_shell.dart';
+import '../../shared/widgets/navigation/main_shell.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/onboarding',
@@ -69,4 +69,3 @@ final appRouter = GoRouter(
     ),
   ),
 );
-
