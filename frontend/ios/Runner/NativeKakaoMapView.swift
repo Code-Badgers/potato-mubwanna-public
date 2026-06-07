@@ -2,13 +2,23 @@ import Flutter
 import KakaoMapsSDK
 import UIKit
 
+private final class NativeKakaoMapContainer: KMViewContainer {
+  var onLayout: ((CGSize) -> Void)?
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    onLayout?(bounds.size)
+  }
+}
+
 final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDelegate {
-  private let container: KMViewContainer
+  private let container: NativeKakaoMapContainer
   private var mapController: KMController?
   private let latitude: Double
   private let longitude: Double
   private let zoomLevel: Int
   private var isAuthenticated = false
+  private var didPrepareEngine = false
 
   init(
     frame: CGRect,
@@ -20,7 +30,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     latitude = params["latitude"] as? Double ?? 37.3808
     longitude = params["longitude"] as? Double ?? 128.6609
     zoomLevel = params["zoomLevel"] as? Int ?? 9
-    container = KMViewContainer(frame: frame)
+    container = NativeKakaoMapContainer(frame: frame)
     super.init()
 
     let nativeAppKey = params["nativeAppKey"] as? String ?? ""
@@ -32,7 +42,14 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     SDKInitializer.InitSDK(appKey: nativeAppKey)
     mapController = KMController(viewContainer: container)
     mapController?.delegate = self
-    mapController?.prepareEngine()
+    container.onLayout = { [weak self] size in
+      self?.prepareEngineIfNeeded(for: size)
+      self?.resizeMap(to: size)
+    }
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      self.prepareEngineIfNeeded(for: self.container.bounds.size)
+    }
   }
 
   func view() -> UIView {
@@ -60,8 +77,11 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   func addViewSucceeded(_ viewName: String, viewInfoName: String) {
-    container.setNeedsLayout()
-    container.layoutIfNeeded()
+    resizeMap(to: container.bounds.size)
+  }
+
+  func containerDidResized(_ size: CGSize) {
+    resizeMap(to: size)
   }
 
   func addViewFailed(_ viewName: String, viewInfoName: String) {
@@ -71,6 +91,22 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   deinit {
     mapController?.pauseEngine()
     mapController?.resetEngine()
+  }
+
+  private func prepareEngineIfNeeded(for size: CGSize) {
+    guard !didPrepareEngine, size.width > 0, size.height > 0 else {
+      return
+    }
+    didPrepareEngine = true
+    mapController?.prepareEngine()
+  }
+
+  private func resizeMap(to size: CGSize) {
+    guard size.width > 0, size.height > 0 else {
+      return
+    }
+    let mapView = mapController?.getView("potatoMap") as? KakaoMap
+    mapView?.viewRect = CGRect(origin: .zero, size: size)
   }
 
   private func showFallback(_ message: String) {
