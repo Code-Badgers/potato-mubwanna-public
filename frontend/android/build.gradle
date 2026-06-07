@@ -3,6 +3,7 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://devrepo.kakao.com/nexus/repository/kakaomap-releases/' }
     }
 
     dependencies {
@@ -15,6 +16,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://devrepo.kakao.com/nexus/repository/kakaomap-releases/' }
     }
 }
 

@@ -8,6 +8,12 @@ import Flutter
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    let controller = window?.rootViewController as! FlutterViewController
+    registrar(forPlugin: "NativeKakaoMapView")?
+      .register(
+        NativeKakaoMapViewFactory(messenger: controller.binaryMessenger),
+        withId: "potato_mubwanna/kakao_map"
+      )
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }
