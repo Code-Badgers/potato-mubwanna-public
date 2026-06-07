@@ -2,3 +2,7 @@
 build/
 out/
 
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
