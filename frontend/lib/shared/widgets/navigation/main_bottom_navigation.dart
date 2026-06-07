@@ -103,7 +103,7 @@ class _FooterItem extends StatelessWidget {
               height: 28,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _footerPrimary.withOpacity(0.16)
+                    ? _footerPrimary.withValues(alpha: 0.16)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
               ),

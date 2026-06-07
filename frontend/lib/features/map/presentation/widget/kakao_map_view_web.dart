@@ -1,10 +1,9 @@
-// ignore_for_file: avoid_web_libraries_in_flutter
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:html' as html;
-import 'dart:js' as js;
-import 'dart:js_util' as js_util;
-import 'dart:ui' as ui;
+import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 
@@ -41,6 +40,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       ..style.backgroundColor = '#EAF5D5';
 
     _messageElement = html.DivElement()
+      ..dataset['kakaoMessage'] = 'true'
       ..style.position = 'absolute'
       ..style.left = '18px'
       ..style.right = '18px'
@@ -66,7 +66,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       ..append(_messageElement);
 
     // ignore: undefined_prefixed_name
-    ui.platformViewRegistry.registerViewFactory(
+    ui_web.platformViewRegistry.registerViewFactory(
       _viewType,
       (int viewId) => wrapper,
     );
@@ -98,45 +98,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         return;
       }
 
-      final kakao = js_util.getProperty(html.window, 'kakao');
-      final maps = js_util.getProperty(kakao, 'maps');
-      final latLngConstructor = js_util.getProperty(maps, 'LatLng');
-      final mapConstructor = js_util.getProperty(maps, 'Map');
-      final markerConstructor = js_util.getProperty(maps, 'Marker');
-
-      final center = js_util.callConstructor(latLngConstructor, [
-        37.3808,
-        128.6609,
-      ]);
-      final options = js_util.jsify({
-        'center': center,
-        'level': 9,
-      });
-      final map = js_util.callConstructor(mapConstructor, [
-        _mapElement,
-        options,
-      ]);
-
-      final markerPositions = [
-        [37.3808, 128.6609],
-        [37.7519, 128.8761],
-        [37.3704, 128.3904],
-        [38.2045, 128.5918],
-      ];
-
-      for (final position in markerPositions) {
-        final markerPosition = js_util.callConstructor(latLngConstructor, [
-          position[0],
-          position[1],
-        ]);
-        final marker = js_util.callConstructor(markerConstructor, [
-          js_util.jsify({'position': markerPosition}),
-        ]);
-        js_util.callMethod(marker, 'setMap', [map]);
-      }
-
-      js_util.callMethod(map, 'relayout', []);
-      js_util.callMethod(map, 'setCenter', [center]);
+      _injectKakaoMapScript();
       _messageElement.style.display = 'none';
     } catch (_) {
       _showMessage(
@@ -156,7 +118,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
     final existingScript = html.document.getElementById('kakao-map-sdk');
     if (existingScript != null) {
-      _loadMaps(completer);
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
       return completer.future;
     }
 
@@ -165,9 +129,13 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       ..type = 'text/javascript'
       ..async = true
       ..src =
-          'https://dapi.kakao.com/v2/maps/sdk.js?appkey=$_kakaoJavaScriptKey&autoload=false';
+          'https://dapi.kakao.com/v2/maps/sdk.js?appkey=${Uri.encodeComponent(_kakaoJavaScriptKey)}&autoload=false';
 
-    script.onLoad.first.then((_) => _loadMaps(completer));
+    script.onLoad.first.then((_) {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    });
     script.onError.first.then((_) {
       if (!completer.isCompleted) {
         completer.completeError(StateError('Failed to load Kakao Maps SDK'));
@@ -178,23 +146,118 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     return completer.future;
   }
 
-  static void _loadMaps(Completer<void> completer) {
-    final kakao = js_util.getProperty(html.window, 'kakao');
-    if (kakao == null) {
-      if (!completer.isCompleted) {
-        completer.completeError(StateError('Kakao SDK is unavailable'));
-      }
-      return;
-    }
-
-    final maps = js_util.getProperty(kakao, 'maps');
-    js_util.callMethod(maps, 'load', [
-      js.allowInterop(() {
-        if (!completer.isCompleted) {
-          completer.complete();
-        }
-      }),
+  void _injectKakaoMapScript() {
+    final mapElementId = jsonEncode(_viewType);
+    final spots = jsonEncode([
+      {
+        'name': '정선 5일장',
+        'lat': 37.3808,
+        'lng': 128.6609,
+        'rare': true,
+      },
+      {
+        'name': '강릉 커피거리',
+        'lat': 37.7519,
+        'lng': 128.8761,
+        'rare': false,
+      },
+      {
+        'name': '대관령 목장',
+        'lat': 37.3704,
+        'lng': 128.3904,
+        'rare': true,
+      },
+      {
+        'name': '속초 중앙시장',
+        'lat': 38.2045,
+        'lng': 128.5918,
+        'rare': false,
+      },
     ]);
+
+    final script = html.ScriptElement()
+      ..type = 'text/javascript'
+      ..text = '''
+(function () {
+  const mapElement = document.getElementById($mapElementId);
+  const messageElement = mapElement && mapElement.parentElement
+    ? mapElement.parentElement.querySelector('[data-kakao-message="true"]')
+    : null;
+
+  function showMessage(message) {
+    if (!messageElement) return;
+    messageElement.textContent = message;
+    messageElement.style.display = 'block';
+  }
+
+  if (!mapElement || !window.kakao || !window.kakao.maps) {
+    showMessage('카카오맵 SDK를 찾지 못했습니다.');
+    return;
+  }
+
+  window.kakao.maps.load(function () {
+    try {
+      const center = new window.kakao.maps.LatLng(37.3808, 128.6609);
+      const map = new window.kakao.maps.Map(mapElement, {
+        center: center,
+        level: 7,
+        draggable: true,
+        scrollwheel: true,
+        disableDoubleClickZoom: false
+      });
+
+      map.setDraggable(true);
+      map.setZoomable(true);
+      map.addControl(
+        new window.kakao.maps.ZoomControl(),
+        window.kakao.maps.ControlPosition.RIGHT
+      );
+
+      const spots = $spots;
+      spots.forEach(function (spot) {
+        const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
+        const markerElement = document.createElement('button');
+        markerElement.type = 'button';
+        markerElement.title = spot.name;
+        markerElement.setAttribute('aria-label', spot.name);
+        markerElement.textContent = spot.rare ? '🥔★' : '🥔';
+        markerElement.style.width = spot.rare ? '58px' : '48px';
+        markerElement.style.height = '48px';
+        markerElement.style.border = '3px solid ' + (spot.rare ? '#F6C23E' : '#36D98F');
+        markerElement.style.borderRadius = '999px';
+        markerElement.style.background = '#FFFFFF';
+        markerElement.style.boxShadow = '0 8px 18px rgba(0,0,0,0.18)';
+        markerElement.style.fontSize = spot.rare ? '21px' : '24px';
+        markerElement.style.lineHeight = '1';
+        markerElement.style.cursor = 'pointer';
+        markerElement.style.padding = '0';
+
+        new window.kakao.maps.CustomOverlay({
+          position: markerPosition,
+          content: markerElement,
+          xAnchor: 0.5,
+          yAnchor: 1
+        }).setMap(map);
+      });
+
+      map.relayout();
+      map.setCenter(center);
+      window.setTimeout(function () {
+        map.relayout();
+        map.setCenter(center);
+      }, 100);
+
+      mapElement.__potatoKakaoMap = map;
+      if (messageElement) messageElement.style.display = 'none';
+    } catch (error) {
+      showMessage('카카오맵을 초기화하지 못했습니다.');
+      console.error(error);
+    }
+  });
+})();
+''';
+
+    html.document.body?.append(script);
   }
 
   void _showMessage(String message) {

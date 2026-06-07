@@ -498,7 +498,8 @@ class _PotatoPainter extends CustomPainter {
       facePaint,
     );
 
-    final dotPaint = Paint()..color = const Color(0xFFC58C43).withOpacity(0.65);
+    final dotPaint = Paint()
+      ..color = const Color(0xFFC58C43).withValues(alpha: 0.65);
     canvas.drawCircle(
         Offset(size.width * 0.34, size.height * 0.42), 3 * scale, dotPaint);
     canvas.drawCircle(

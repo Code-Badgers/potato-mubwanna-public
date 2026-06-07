@@ -30,7 +30,6 @@ class _MapScreenState extends State<MapScreen> {
       congestion: '여유',
       potatoName: '곤드레감자',
       isRare: true,
-      position: Offset(0.58, 0.42),
     ),
     _MapSpot(
       id: 'gangneung-coffee',
@@ -40,7 +39,6 @@ class _MapScreenState extends State<MapScreen> {
       congestion: '보통',
       potatoName: '바다감자',
       isRare: false,
-      position: Offset(0.78, 0.28),
     ),
     _MapSpot(
       id: 'pyeongchang-ranch',
@@ -50,7 +48,6 @@ class _MapScreenState extends State<MapScreen> {
       congestion: '여유',
       potatoName: '눈꽃감자',
       isRare: true,
-      position: Offset(0.32, 0.36),
     ),
     _MapSpot(
       id: 'sokcho-market',
@@ -60,7 +57,6 @@ class _MapScreenState extends State<MapScreen> {
       congestion: '혼잡',
       potatoName: '오징어감자',
       isRare: false,
-      position: Offset(0.66, 0.68),
     ),
   ];
 
@@ -87,34 +83,19 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _selectSpot(_MapSpot spot) {
-    setState(() {
-      _selectedSpotIndex = _visibleSpots.indexOf(spot);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final visibleSpots = _visibleSpots;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            const _MapHeader(),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Stack(
                   children: [
-                    Positioned.fill(
-                      child: _PotatoMapPreview(
-                        spots: visibleSpots,
-                        selectedSpot: _selectedSpot,
-                        onSpotSelected: _selectSpot,
-                      ),
-                    ),
+                    const Positioned.fill(child: _PotatoMapPreview()),
                     Positioned(
                       left: 12,
                       right: 12,
@@ -147,121 +128,24 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
-class _MapHeader extends StatelessWidget {
-  const _MapHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE8E2D8)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.search_rounded, color: _mapDark),
-                  SizedBox(width: 10),
-                  Text(
-                    '감자 찾기',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF8EF),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFC9E9D3)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.place_rounded, color: _mapPrimary, size: 20),
-                SizedBox(width: 4),
-                Text(
-                  '강원',
-                  style: TextStyle(
-                    color: _mapDark,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PotatoMapPreview extends StatelessWidget {
-  const _PotatoMapPreview({
-    required this.spots,
-    required this.selectedSpot,
-    required this.onSpotSelected,
-  });
-
-  final List<_MapSpot> spots;
-  final _MapSpot selectedSpot;
-  final ValueChanged<_MapSpot> onSpotSelected;
+  const _PotatoMapPreview();
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(color: Color(0xFFEAF5D5)),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Stack(
-              children: [
-                SizedBox(
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight,
-                  child: const KakaoMapView(),
-                ),
-                Positioned(
-                  left: constraints.maxWidth * 0.47,
-                  top: constraints.maxHeight * 0.51,
-                  child: const _CurrentLocationMarker(),
-                ),
-                for (final spot in spots)
-                  Positioned(
-                    left: constraints.maxWidth * spot.position.dx - 24,
-                    top: constraints.maxHeight * spot.position.dy - 28,
-                    child: _PotatoMarker(
-                      spot: spot,
-                      isSelected: selectedSpot.id == spot.id,
-                      onTap: () => onSpotSelected(spot),
-                    ),
-                  ),
-                const Positioned(
-                  left: 18,
-                  top: 18,
-                  child: _MapStatusBadge(),
-                ),
-              ],
-            );
-          },
+      child: const DecoratedBox(
+        decoration: BoxDecoration(color: Color(0xFFEAF5D5)),
+        child: Stack(
+          children: [
+            Positioned.fill(child: KakaoMapView()),
+            Positioned(
+              left: 18,
+              top: 18,
+              child: _MapStatusBadge(),
+            ),
+          ],
         ),
       ),
     );
@@ -276,11 +160,11 @@ class _MapStatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.92),
+        color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -293,88 +177,6 @@ class _MapStatusBadge extends StatelessWidget {
           fontSize: 13,
           fontWeight: FontWeight.w800,
           letterSpacing: 0,
-        ),
-      ),
-    );
-  }
-}
-
-class _CurrentLocationMarker extends StatelessWidget {
-  const _CurrentLocationMarker();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(color: _mapPrimary, width: 4),
-        boxShadow: [
-          BoxShadow(
-            color: _mapPrimary.withOpacity(0.26),
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PotatoMarker extends StatelessWidget {
-  const _PotatoMarker({
-    required this.spot,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final _MapSpot spot;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final markerColor = spot.isRare ? _rareGold : _mapPrimary;
-
-    return Tooltip(
-      message: spot.name,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 180),
-          scale: isSelected ? 1.12 : 1,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: markerColor, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: markerColor.withOpacity(0.28),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text('🥔', style: TextStyle(fontSize: 24)),
-                ),
-              ),
-              if (spot.isRare)
-                const Positioned(
-                  right: -4,
-                  top: -6,
-                  child: Icon(Icons.star_rounded, color: _rareGold, size: 20),
-                ),
-            ],
-          ),
         ),
       ),
     );
@@ -404,7 +206,7 @@ class _CategoryFilterBar extends StatelessWidget {
               selected: selectedIndex == index,
               onSelected: (_) => onSelected(index),
               selectedColor: _mapPrimary,
-              backgroundColor: Colors.white.withOpacity(0.94),
+              backgroundColor: Colors.white.withValues(alpha: 0.94),
               labelStyle: TextStyle(
                 color: selectedIndex == index
                     ? Colors.white
@@ -445,7 +247,7 @@ class _SpotBottomSheet extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE8E2D8)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withValues(alpha: 0.10),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -622,7 +424,6 @@ class _MapSpot {
     required this.congestion,
     required this.potatoName,
     required this.isRare,
-    required this.position,
   });
 
   final String id;
@@ -632,5 +433,4 @@ class _MapSpot {
   final String congestion;
   final String potatoName;
   final bool isRare;
-  final Offset position;
 }
