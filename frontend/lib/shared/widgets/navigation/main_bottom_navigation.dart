@@ -58,15 +58,15 @@ class MainBottomNavigation extends StatelessWidget {
     '/main/map',
     '/main/stamps',
     '/main/potatoes',
-    '/main/coupons',
+    '/main/missions',
     '/main/mypage',
   ];
 
   static const _destinations = [
     _FooterDestination(icon: Icons.map_rounded, label: '지도'),
     _FooterDestination(icon: Icons.emoji_events_rounded, label: '랠리북'),
-    _FooterDestination(icon: Icons.eco_rounded, label: '감자 도감'),
-    _FooterDestination(icon: Icons.card_giftcard_rounded, label: '보상'),
+    _FooterDestination(icon: Icons.eco_rounded, label: '감자'),
+    _FooterDestination(icon: Icons.flag_rounded, label: '미션'),
     _FooterDestination(icon: Icons.person_rounded, label: '마이'),
   ];
 }
