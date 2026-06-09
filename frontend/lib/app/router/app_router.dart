@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screen/login_screen.dart';
-import '../../features/coupon/presentation/screen/coupon_screen.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
+import '../../features/mission/presentation/screen/mission_screen.dart';
 import '../../features/mypage/presentation/screen/my_page_screen.dart';
 import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
@@ -38,8 +38,8 @@ final appRouter = GoRouter(
           builder: (context, state) => const PotatoCollectionScreen(),
         ),
         GoRoute(
-          path: '/main/coupons',
-          builder: (context, state) => const CouponScreen(),
+          path: '/main/missions',
+          builder: (context, state) => const MissionScreen(),
         ),
         GoRoute(
           path: '/main/mypage',

@@ -29,7 +29,7 @@ void main() {
               builder: (context, state) => const SizedBox(),
             ),
             GoRoute(
-              path: '/main/coupons',
+              path: '/main/missions',
               builder: (context, state) => const SizedBox(),
             ),
             GoRoute(
@@ -45,8 +45,8 @@ void main() {
 
     expect(find.text('지도'), findsOneWidget);
     expect(find.text('랠리북'), findsOneWidget);
-    expect(find.text('감자 도감'), findsOneWidget);
-    expect(find.text('보상'), findsOneWidget);
+    expect(find.text('감자'), findsOneWidget);
+    expect(find.text('미션'), findsOneWidget);
     expect(find.text('마이'), findsOneWidget);
 
     final footerBottom = tester.getBottomLeft(find.text('지도')).dy;
