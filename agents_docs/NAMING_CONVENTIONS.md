@@ -55,10 +55,14 @@ refactor/25-potato-reward-policy
 
 ## GitHub Issue Title
 
+프론트엔드와 백엔드 이슈만 대괄호 접두사를 붙인다. 문서, 설정, GitHub 템플릿, 공통 정책 이슈는 접두사 없이 작성한다.
+
 형식:
 
 ```text
-[AREA] type: 작업 제목
+[FE] type: 작업 제목
+[BE] type: 작업 제목
+type: 작업 제목
 ```
 
 예시:
@@ -66,10 +70,12 @@ refactor/25-potato-reward-policy
 ```text
 [BE] feat: 스탬프 방문 인증 API 구현
 [FE] fix: 감자 도감 빈 상태 렌더링 수정
-[DOCS] docs: 배포 검증 절차 정리
+docs: 배포 검증 절차 정리
+chore: GitHub 템플릿 정리
 ```
 
-- `AREA`는 `BE`, `FE`, `DOCS`, `INFRA`처럼 변경 영역을 짧게 쓴다.
+- `[FE]`는 `frontend/` 중심 이슈에만 사용한다.
+- `[BE]`는 `backend/` 중심 이슈에만 사용한다.
 - `type`은 커밋 메시지 type과 맞춘다: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `style`.
 - 제목에는 에이전트 이름이나 임시 표현을 넣지 않는다.
 
