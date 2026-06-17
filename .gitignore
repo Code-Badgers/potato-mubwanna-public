@@ -1,12 +1,7 @@
 .DS_Store
-agents_docs/*
-!agents_docs/*.md
-!agents_docs/ux-heuristics/
-agents_docs/ux-heuristics/*
-!agents_docs/ux-heuristics/*.md
-!agents_docs/ux-heuristics/references/
-agents_docs/ux-heuristics/references/*
-!agents_docs/ux-heuristics/references/*.md
+agents_docs/**
+!agents_docs/**/
+!agents_docs/**/*.md
 
 # Local secrets and environment files
 .env

@@ -689,7 +689,7 @@ HIGH    = 혼잡 / Red
 /spots/:spotId
 /potatoes/:potatoId
 /missions/:missionId
-/rewards/:couponId
+/coupons/:couponId
 ```
 
 ### 9.2 화면 파일 예시

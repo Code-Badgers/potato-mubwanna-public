@@ -59,6 +59,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": {
     "accessToken": "jwt-access-token",
     "refreshToken": "jwt-refresh-token",
@@ -127,6 +128,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": {
     "id": 1,
     "email": "user@email.com",
@@ -168,6 +170,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": [
     {
       "id": 1,
@@ -210,6 +213,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": {
     "id": 1,
     "name": "정선 5일장",
@@ -254,6 +258,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": {
     "totalCount": 18,
     "acquiredCount": 5,
@@ -292,6 +297,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": {
     "verified": true,
     "stampAcquired": true,
@@ -343,6 +349,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": [
     {
       "potatoId": 1,
@@ -461,6 +468,7 @@ Response:
 ```json
 {
   "success": true,
+  "message": "요청이 성공했습니다.",
   "data": {
     "id": 1,
     "title": "정선 5일장 이야기",
