@@ -60,9 +60,10 @@ class LoginScreen extends ConsumerWidget {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFEE500),
-                    foregroundColor: const Color(0xFF191600),
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
                     elevation: 0,
+                    padding: EdgeInsets.zero,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -72,50 +73,58 @@ class LoginScreen extends ConsumerWidget {
                           dimension: 20,
                           child: CircularProgressIndicator(strokeWidth: 2.5),
                         )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.asset(
+                      : Ink(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            image: const DecorationImage(
+                              image: AssetImage(
                                 'assets/kakao_login_button.png',
-                                width: 24,
-                                height: 24,
-                                fit: BoxFit.cover,
                               ),
+                              fit: BoxFit.cover,
                             ),
-                            const SizedBox(width: 10),
-                            const Text(
-                              '카카오 로그인',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0,
-                              ),
+                          ),
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: const Color(0xFF191600)
+                                  .withValues(alpha: 0.38),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEE500),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'K',
+                                    style: TextStyle(
+                                      color: Color(0xFF191600),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  '카카오 로그인',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 54,
-                child: OutlinedButton(
-                  onPressed: null,
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Apple 로그인 준비 중',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
                 ),
               ),
               const SizedBox(height: 8),

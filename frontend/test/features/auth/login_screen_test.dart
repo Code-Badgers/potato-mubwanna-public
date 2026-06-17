@@ -22,7 +22,7 @@ void main() {
     );
 
     expect(find.text('카카오 로그인'), findsOneWidget);
-    expect(find.text('Apple 로그인 준비 중'), findsOneWidget);
+    expect(find.text('Apple 로그인 준비 중'), findsNothing);
     expect(find.text('나중에 로그인하기'), findsOneWidget);
   });
 
