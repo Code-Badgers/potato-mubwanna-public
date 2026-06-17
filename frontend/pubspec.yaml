@@ -20,6 +20,7 @@ dependencies:
   go_router: ^8.0.0
   json_annotation: ^4.8.1
   just_audio: ^0.9.34
+  kakao_flutter_sdk_user: ^2.0.0+1
   permission_handler: ^12.0.3
   qr_flutter: ^4.1.0
   shared_preferences: ^2.1.1
