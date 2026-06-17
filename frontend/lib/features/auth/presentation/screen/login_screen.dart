@@ -45,7 +45,7 @@ class LoginScreen extends ConsumerWidget {
                 const SizedBox(height: 18),
                 _LoginMessage(message: authState.message ?? '로그인에 실패했습니다.'),
               ],
-              const Spacer(),
+              const Spacer(flex: 4),
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
@@ -61,7 +61,7 @@ class LoginScreen extends ConsumerWidget {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF191600),
                     elevation: 0,
                     padding: EdgeInsets.zero,
                     shape: RoundedRectangleBorder(
@@ -73,55 +73,17 @@ class LoginScreen extends ConsumerWidget {
                           dimension: 20,
                           child: CircularProgressIndicator(strokeWidth: 2.5),
                         )
-                      : Ink(
-                          decoration: BoxDecoration(
+                      : Semantics(
+                          label: '카카오 로그인',
+                          button: true,
+                          child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            image: const DecorationImage(
-                              image: AssetImage(
-                                'assets/kakao_login_button.png',
-                              ),
+                            child: Image.asset(
+                              'assets/kakao_login_medium_wide.png',
+                              width: double.infinity,
+                              height: 54,
                               fit: BoxFit.cover,
-                            ),
-                          ),
-                          child: Container(
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              color: const Color(0xFF191600)
-                                  .withValues(alpha: 0.38),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFEE500),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'K',
-                                    style: TextStyle(
-                                      color: Color(0xFF191600),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                const Text(
-                                  '카카오 로그인',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0,
-                                  ),
-                                ),
-                              ],
+                              semanticLabel: '카카오 로그인',
                             ),
                           ),
                         ),
@@ -132,6 +94,7 @@ class LoginScreen extends ConsumerWidget {
                 onPressed: () => context.go('/main/map'),
                 child: const Text('나중에 로그인하기'),
               ),
+              const Spacer(),
             ],
           ),
         ),

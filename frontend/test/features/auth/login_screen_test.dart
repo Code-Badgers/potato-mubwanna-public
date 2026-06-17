@@ -21,7 +21,7 @@ void main() {
       ),
     );
 
-    expect(find.text('카카오 로그인'), findsOneWidget);
+    expect(find.bySemanticsLabel('카카오 로그인'), findsWidgets);
     expect(find.text('Apple 로그인 준비 중'), findsNothing);
     expect(find.text('나중에 로그인하기'), findsOneWidget);
   });
@@ -44,7 +44,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('카카오 로그인'));
+    await tester.tap(find.bySemanticsLabel('카카오 로그인').first);
     await tester.pump();
     await tester.pump();
 
