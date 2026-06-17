@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../application/auth_controller.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authControllerProvider);
+    final isLoading = authState.status == AuthStatus.loading;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('로그인')),
@@ -28,7 +33,7 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                '카카오 로그인과 Apple 로그인은 이후 단계에서 연결합니다.',
+                '방문 인증, 스탬프 수집, 감자 성장을 위해 계정 연결이 필요합니다.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 15,
@@ -36,21 +41,75 @@ class LoginScreen extends StatelessWidget {
                   letterSpacing: 0,
                 ),
               ),
+              if (authState.status == AuthStatus.failure) ...[
+                const SizedBox(height: 18),
+                _LoginMessage(message: authState.message ?? '로그인에 실패했습니다.'),
+              ],
               const Spacer(),
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/main/map'),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final loggedIn = await ref
+                              .read(authControllerProvider.notifier)
+                              .loginWithKakao();
+                          if (loggedIn && context.mounted) {
+                            context.go('/main/map');
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF56C787),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFFFEE500),
+                    foregroundColor: const Color(0xFF191600),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
+                  child: isLoading
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.asset(
+                                'assets/kakao_login_button.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              '카카오 로그인',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 54,
+                child: OutlinedButton(
+                  onPressed: null,
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                   child: const Text(
-                    '로그인 없이 시작하기',
+                    'Apple 로그인 준비 중',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -59,13 +118,40 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               TextButton(
                 onPressed: () => context.go('/main/map'),
                 child: const Text('나중에 로그인하기'),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoginMessage extends StatelessWidget {
+  const _LoginMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: AppColors.error,
+          fontSize: 14,
+          height: 1.4,
+          letterSpacing: 0,
         ),
       ),
     );
