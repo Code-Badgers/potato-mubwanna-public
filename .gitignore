@@ -1,5 +1,7 @@
 .DS_Store
-agents_docs/
+agents_docs/**
+!agents_docs/**/
+!agents_docs/**/*.md
 
 # Local secrets and environment files
 .env
