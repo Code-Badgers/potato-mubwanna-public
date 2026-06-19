@@ -261,6 +261,14 @@ POST /api/missions/{missionId}/complete
 
 두 팀이 충돌을 줄이기 위해 다음 계약을 먼저 맞춘다.
 
+### 5.0 작업 선점과 충돌 방지
+
+- 모든 작업은 GitHub Issue 하나에 연결한다.
+- Issue에는 주 담당, 협업 담당, 작업 브랜치, 작업 범위, 제외 범위를 적는다.
+- 같은 파일을 두 팀 또는 두 에이전트가 동시에 수정해야 하면 먼저 Issue나 PR에서 순서를 정한다.
+- 공유 위험 파일은 수정 전 조율이 필요하다. 공유 위험 파일은 `agents_docs/**/*.md`, `.github/**`, `frontend/pubspec.yaml`, `backend/build.gradle`, `backend/src/main/resources/application.yml`, 라우터, 테마, 공통 네트워크/인증 코드, Flyway migration, 공통 DTO/API 응답이다.
+- 공유 위험 파일을 수정한 PR은 리뷰 중점사항에 변경 이유와 영향 범위를 적는다.
+
 ### 5.1 공통 식별자
 
 - 사용자 식별자: `userId`
@@ -289,6 +297,9 @@ POST /api/missions/{missionId}/complete
 - API 계약 변경 전 `agents_docs/07_api_specification.md` 또는 작업 이슈에 request/response를 먼저 작성한다.
 - 프론트는 임시 mock 데이터가 필요할 경우 실제 API 응답 형태와 동일하게 만든다.
 - 백엔드는 API가 준비되면 Swagger 또는 HTTP 예시를 검증 산출물에 남긴다.
+- 식별자 이름은 `userId`, `spotId`, `stampId`, `potatoId`, `missionId`, `rewardId`, `couponId`를 우선 사용한다.
+- 방문 인증 성공 이벤트 순서가 바뀌면 Team A와 Team B가 함께 랠리북, 감자, 미션, 보상 영향 범위를 확인한다.
+- 에러 코드나 상태값을 추가하면 프론트의 로딩, 빈 상태, 에러 상태 표현까지 함께 확인한다.
 
 ## 6. Recommended Implementation Order
 

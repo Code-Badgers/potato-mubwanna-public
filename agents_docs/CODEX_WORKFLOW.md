@@ -9,6 +9,8 @@
 3. GitHub Issue 또는 Notion 작업 페이지에서 목표, 범위, 제외 범위를 확인한다.
 4. 관련 코드, 테스트, API 계약, 화면 문서를 먼저 읽는다.
 5. `main`에서 직접 작업하지 않고 `<type>/<issue-number>-<clear-task-name>` 브랜치에서 작업한다.
+6. Issue가 없으면 작업 전에 먼저 Issue를 만들고, 생성된 번호로 브랜치명을 맞춘다.
+7. 작업 시작 메시지나 Issue에 담당 영역, 건드릴 파일군, 건드리지 않을 파일군을 남긴다.
 
 ## 2. Scope Control
 
@@ -17,6 +19,9 @@
 - 프론트와 백엔드를 모두 크게 바꾸는 경우 가능한 한 커밋을 분리한다.
 - API 계약 변경은 구현 전에 `agents_docs/07_api_specification.md` 또는 작업 페이지에 먼저 명시한다.
 - 비밀값, 실제 API 키, 개인 토큰은 코드와 Notion에 평문으로 남기지 않는다.
+- 공유 위험 파일을 수정할 때는 Issue와 PR에 사유를 적는다. 공유 위험 파일은 `agents_docs/**/*.md`, `.github/**`, `frontend/pubspec.yaml`, `backend/build.gradle`, `backend/src/main/resources/application.yml`, 라우터, 테마, 공통 네트워크/인증 코드, Flyway migration, 공통 DTO/API 응답이다.
+- Issue 범위 밖 파일 변경이 필요해지면 즉시 멈추고 범위 변경 승인을 받는다.
+- Windows 금지 파일명 문자 `:`, `*`, `?`, `"`, `<`, `>`, `|`를 새 파일이나 폴더명에 사용하지 않는다.
 
 ## 3. Implementation
 
@@ -51,14 +56,17 @@ Backend:
 5. 현재 브랜치가 `main`이 아닌지 확인한다.
 6. 검증이 실패한 상태에서는 push하지 않는다.
 7. push 후 PR을 열고 `.github/pull_request_template.md`를 채운다.
+8. PR 본문에는 최신 `main` 반영 여부, 공유 위험 파일 조율 여부, API 계약 변경 여부, 검증 산출물 위치를 적는다.
 
 ## 6. Handoff
 
 작업이 끝나거나 중단될 때는 다음 항목을 남긴다.
 
+- GitHub Issue 번호와 작업 브랜치
 - 변경한 핵심 파일
 - 실행한 검증 명령과 결과
 - 생성한 산출물 위치
+- 공유 위험 파일을 수정했다면 조율 내용
 - 남은 리스크
 - 다음 작업자가 이어서 할 일
 
