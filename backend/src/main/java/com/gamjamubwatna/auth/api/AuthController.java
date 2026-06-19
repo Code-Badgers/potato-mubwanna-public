@@ -24,4 +24,21 @@ public class AuthController {
     ) {
         return AuthApiResponse.success(authService.loginWithKakao(request.accessToken()));
     }
+
+    // 만료된 access token을 refresh token 회전으로 새 서비스 JWT 세션으로 교환한다.
+    @PostMapping("/refresh")
+    public AuthApiResponse<AuthLoginResponse> refresh(
+        @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        return AuthApiResponse.success(authService.refresh(request.refreshToken()));
+    }
+
+    // 사용자가 명시적으로 로그아웃할 때 저장된 refresh token을 폐기한다.
+    @PostMapping("/logout")
+    public AuthApiResponse<Void> logout(
+        @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        authService.logout(request.refreshToken());
+        return AuthApiResponse.success(null);
+    }
 }

@@ -66,6 +66,24 @@ class AuthController extends StateNotifier<AuthState> {
       return false;
     }
   }
+
+  Future<bool> refreshSession() async {
+    state = const AuthState.loading();
+    try {
+      await _authRepository.refreshSession();
+      state = const AuthState.authenticated();
+      return true;
+    } catch (_) {
+      state = const AuthState.idle();
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    state = const AuthState.loading();
+    await _authRepository.logout();
+    state = const AuthState.idle();
+  }
 }
 
 class AuthState {
