@@ -15,6 +15,8 @@
 
 - 작업 시작 시 Issue 번호 없이 임시 브랜치를 먼저 만들었다.
 - 사용자의 지시에 따라 GitHub Issue #18을 생성한 뒤 브랜치를 `docs/18-agent-collaboration-guardrails`로 변경했다.
+- Gemini Code Assist 리뷰에서 bug/feature 템플릿의 비밀값 체크 누락, PR 템플릿의 검증 산출물 업로드 문구, handoff 템플릿의 외부 API 항목 누락을 지적했다.
+- 리뷰 피드백을 확인한 뒤 네 항목 모두 현재 문서 정책과 충돌하지 않는 작은 정합성 수정으로 판단해 반영했다.
 
 ## 변경 파일 요약
 
@@ -25,6 +27,7 @@
 - `agents_docs/HANDOFF_TEMPLATE.md`: 이어받기와 계약 변경 기록 항목 추가.
 - `.github/ISSUE_TEMPLATE/*.md`: Issue 작성 시 협업 가드레일 확인 항목 추가.
 - `.github/pull_request_template.md`: PR 제출 전 협업/계약/검증 체크리스트 보강.
+- Gemini Code Assist 리뷰 반영: bug/feature 템플릿 비밀값 체크 추가, PR 템플릿 업로드 문구 조정, handoff 외부 API 항목 추가.
 - `artifacts/validation/issue-18/VALIDATION.md`: 이 검증 기록.
 
 ## 실행한 명령
@@ -36,6 +39,8 @@ git branch -m docs/18-agent-collaboration-guardrails
 git diff -- AGENTS.md agents_docs/AGENTS.md agents_docs/CODEX_WORKFLOW.md agents_docs/11_team_work_split.md agents_docs/HANDOFF_TEMPLATE.md .github/ISSUE_TEMPLATE/task-template.md .github/ISSUE_TEMPLATE/feature-template.md .github/ISSUE_TEMPLATE/bug-template.md .github/pull_request_template.md
 git status --short
 rg -n "TBD|TODO|FIXME|<issue-number>|공유 위험 파일|Windows 금지|API 계약|Issue가 없으면|같은 파일" AGENTS.md agents_docs .github
+gh pr view 19 --json comments,reviews,files
+gh api repos/Code-Badgers/potato-mubwanna/pulls/19/comments --paginate
 ```
 
 ## 결과
