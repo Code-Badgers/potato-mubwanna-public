@@ -11,9 +11,12 @@
 ## Non-Negotiables
 
 - 작업 전 `git status --short --branch`를 확인한다.
+- 작업 전 GitHub Issue 번호와 작업 브랜치를 확인한다. 이슈가 없으면 먼저 이슈를 만들고, 브랜치명은 `<type>/<issue-number>-<clear-task-name>` 형식을 따른다.
 - 기존 사용자 변경사항을 되돌리지 않는다.
 - `main`에 직접 push하지 않는다.
 - GitHub Issue 범위 밖 파일은 수정하지 않는다.
+- 같은 파일을 다른 사람 또는 다른 에이전트가 작업 중이면 즉시 멈추고 조율한다.
+- API 계약 변경은 구현 전에 `agents_docs/07_api_specification.md` 또는 작업 이슈에 request/response를 먼저 명시한다.
 - 스테이징 전 `git diff`와 `git status --short`를 확인한다.
 - 커밋 메시지는 `agents_docs/AGENTS.md`와 `agents_docs/NAMING_CONVENTIONS.md`의 컨벤션을 따른다.
 - 작업 종료 시 `agents_docs/HANDOFF_TEMPLATE.md` 형식으로 변경, 검증, 리스크를 보고한다.

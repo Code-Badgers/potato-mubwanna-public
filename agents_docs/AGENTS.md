@@ -5,6 +5,7 @@
 ## 1. 기본 원칙
 
 - 작업 전 `git status --short --branch`로 현재 브랜치와 변경사항을 확인한다.
+- 작업 전 GitHub Issue 번호, 작업 브랜치, 담당 범위, 제외 범위를 확인한다. Issue가 없으면 먼저 Issue를 만들고 그 번호를 브랜치명과 커밋 메시지에 사용한다.
 - 기존 사용자 변경사항은 되돌리지 않는다.
 - 요청 범위를 작게 해석하고, 한 번에 하나의 기능/버그/리팩터만 다룬다.
 - 변경 전에는 관련 코드와 테스트를 먼저 읽고, 기존 패턴을 따른다.
@@ -14,6 +15,22 @@
 - 파일명, 변수명, 브랜치명, migration 명칭은 역할이 명확하게 드러나야 한다. `bootstrap`, `init`, `temp`, `misc`처럼 모호한 단어는 단독으로 쓰지 않는다.
 - 임시 검증 파일, 해시 생성 파일, 크롤러 산출물은 의도적으로 요청된 경우에만 커밋한다.
 - 운영 장애, 배포 문제, 인증/권한, 데이터 무결성, 테스트 실패처럼 포트폴리오에 활용 가능한 문제 해결 사례가 생기면 추후 생성 예정인 `docs/PORTFOLIO_PROBLEM_SOLVING_GUIDE.md`를 확인하고, 필요 시 `docs/portfolio/`에 기록한다.
+
+### 다중 에이전트 협업 절대 규칙
+
+- 두 명 이상이 같은 저장소를 작업할 때는 한 작업을 하나의 GitHub Issue로 제한한다.
+- 작업 브랜치는 반드시 최신 `main`에서 만들고, `<type>/<issue-number>-<clear-task-name>` 형식을 사용한다.
+- `main`에서는 직접 수정, 커밋, push하지 않는다. 긴급 복구 등 예외는 사용자가 명시적으로 승인한 경우에만 허용한다.
+- 같은 파일을 다른 사람 또는 다른 에이전트가 수정 중이면 작업을 시작하지 말고 Issue, PR, 채팅, Notion 중 하나에서 먼저 조율한다.
+- 공유 위험 파일을 수정할 때는 작업 이슈와 PR에 이유를 명시한다. 공유 위험 파일은 `agents_docs/**/*.md`, `.github/**`, `frontend/pubspec.yaml`, `backend/build.gradle`, `backend/src/main/resources/application.yml`, 라우터, 테마, 공통 네트워크/인증 코드, Flyway migration, 공통 DTO/API 응답이다.
+- API request/response, 식별자 이름, 이벤트 순서, 에러 코드를 바꾸는 작업은 구현 전에 `agents_docs/07_api_specification.md` 또는 작업 이슈에 먼저 기록한다.
+- 프론트 mock 데이터는 합의된 API 응답 형태와 동일해야 하며, 임시 필드명을 만들면 안 된다.
+- 이미 원격에 반영된 Flyway migration은 수정하지 않는다. 변경이 필요하면 새 migration을 추가한다.
+- Windows에서 체크아웃할 수 없는 파일명 문자를 사용하지 않는다. 금지 문자는 `:`, `*`, `?`, `"`, `<`, `>`, `|`이다.
+- 비밀값, 실제 API 키, 개인 토큰은 코드, 문서, Issue, PR, Notion에 평문으로 남기지 않는다. 필요한 경우 환경 변수 이름만 기록한다.
+- 검증 실패 상태에서는 push하지 않는다. 실패 원인과 남은 리스크를 handoff와 검증 산출물에 기록하고 멈춘다.
+- 스테이징 전에는 `git diff`와 `git status --short`를 확인하고, Issue 범위 밖 파일은 스테이징하지 않는다.
+- 작업 종료 또는 중단 시 `agents_docs/HANDOFF_TEMPLATE.md` 형식으로 현재 브랜치, Issue, 변경 파일, 검증 결과, 남은 리스크, 다음 명령을 남긴다.
 
 ### 로컬 문서 보호 규칙
 

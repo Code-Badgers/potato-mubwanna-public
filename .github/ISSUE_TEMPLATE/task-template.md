@@ -10,6 +10,12 @@ assignees: ""
 
 - 무엇을 해결하거나 만들기 위한 이슈인지 작성합니다.
 
+## 담당 / 브랜치
+
+- 주 담당:
+- 협업 담당:
+- 작업 브랜치: `<type>/<issue-number>-<clear-task-name>`
+
 ## 배경
 
 - 관련 사용자 흐름, 기능 ID, API, 화면, 도메인 규칙을 작성합니다.
@@ -19,6 +25,20 @@ assignees: ""
 
 - [ ] 변경할 범위를 작성합니다.
 - [ ] 제외할 범위를 작성합니다.
+
+## 협업 가드레일
+
+- [ ] 같은 파일을 다른 사람 또는 다른 에이전트가 작업 중인지 확인했습니다.
+- [ ] 공유 위험 파일을 수정한다면 사유와 영향 범위를 작성했습니다.
+- [ ] API 계약 변경이 있다면 구현 전에 request/response를 작성했습니다.
+- [ ] Windows 금지 파일명 문자(`:`, `*`, `?`, `"`, `<`, `>`, `|`)를 새 파일/폴더명에 사용하지 않습니다.
+- [ ] 비밀값은 평문으로 남기지 않고 환경 변수 이름만 기록합니다.
+
+공유 위험 파일:
+
+- `agents_docs/**/*.md`, `.github/**`
+- `frontend/pubspec.yaml`, `backend/build.gradle`, `backend/src/main/resources/application.yml`
+- 라우터, 테마, 공통 네트워크/인증 코드, Flyway migration, 공통 DTO/API 응답
 
 ## 구현 메모
 
