@@ -28,9 +28,16 @@ springdoc:
   swagger-ui:
     path: /docs
 
+auth:
+  kakao:
+    user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+  jwt:
+    secret: ${JWT_SECRET:local-development-jwt-secret-change-me-please}
+    access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:3600}
+    refresh-token-ttl-seconds: ${JWT_REFRESH_TOKEN_TTL_SECONDS:1209600}
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info
-
