@@ -8,9 +8,13 @@ class DioClient {
     required TokenStorage tokenStorage,
     String baseUrl = '/api',
   }) : dio = Dio(BaseOptions(baseUrl: baseUrl)) {
-    dio.interceptors.add(AuthInterceptor(tokenStorage));
+    dio.interceptors.add(
+      AuthInterceptor(
+        tokenStorage,
+        baseUrl: baseUrl,
+      ),
+    );
   }
 
   final Dio dio;
 }
-

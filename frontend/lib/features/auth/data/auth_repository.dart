@@ -48,6 +48,72 @@ class AuthRepository {
       refreshToken: apiResponse.data!.refreshToken,
     );
   }
+
+  Future<void> refreshSession() async {
+    final refreshToken = await _tokenStorage.readRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw const ApiException(message: '저장된 refresh token이 없습니다.');
+    }
+
+    final tokens = await _requestTokens(
+      ApiPaths.authRefresh,
+      {'refreshToken': refreshToken},
+      fallbackMessage: '로그인 세션 갱신에 실패했습니다.',
+    );
+    await _tokenStorage.saveTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
+  }
+
+  Future<void> logout() async {
+    final refreshToken = await _tokenStorage.readRefreshToken();
+    try {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await _dio.post<Map<String, dynamic>>(
+          ApiPaths.authLogout,
+          data: {'refreshToken': refreshToken},
+        );
+      }
+    } finally {
+      await _tokenStorage.clearTokens();
+    }
+  }
+
+  Future<AuthTokens> _requestTokens(
+    String path,
+    Map<String, String> data, {
+    required String fallbackMessage,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      path,
+      data: data,
+    );
+    final apiResponse = ApiResponse<AuthTokens>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      AuthTokens.fromJson,
+    );
+
+    if (!apiResponse.success || apiResponse.data == null) {
+      throw ApiException(
+        message: apiResponse.message.isEmpty
+            ? fallbackMessage
+            : apiResponse.message,
+        code: apiResponse.code,
+        statusCode: response.statusCode,
+      );
+    }
+
+    if (apiResponse.data!.accessToken.isEmpty ||
+        apiResponse.data!.refreshToken.isEmpty) {
+      throw ApiException(
+        message: '인증 토큰 응답이 올바르지 않습니다.',
+        statusCode: response.statusCode,
+      );
+    }
+
+    return apiResponse.data!;
+  }
 }
 
 class AuthTokens {
