@@ -22,6 +22,11 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def kakaoNativeAppKey = localProperties.getProperty('kakao.nativeAppKey')
+if (kakaoNativeAppKey == null) {
+    kakaoNativeAppKey = System.getenv('KAKAO_NATIVE_APP_KEY') ?: ''
+}
+
 android {
     namespace "com.gamjamubwatna.frontend"
     compileSdkVersion flutter.compileSdkVersion
@@ -50,6 +55,9 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+        manifestPlaceholders = [
+            kakaoRedirectScheme: "kakao${kakaoNativeAppKey}",
+        ]
     }
 
     buildTypes {
