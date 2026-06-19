@@ -12,6 +12,7 @@ import com.gamjamubwatna.auth.infrastructure.KakaoUserClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserInfo;
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final Clock clock;
 
+    @Autowired
     public AuthService(
         KakaoUserClient kakaoUserClient,
         JwtTokenProvider jwtTokenProvider,

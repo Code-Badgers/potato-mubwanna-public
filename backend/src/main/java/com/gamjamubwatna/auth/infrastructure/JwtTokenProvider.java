@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,7 @@ public class JwtTokenProvider {
     private final long accessTokenTtlSeconds;
     private final long refreshTokenTtlSeconds;
 
+    @Autowired
     public JwtTokenProvider(
         ObjectMapper objectMapper,
         @Value("${auth.jwt.secret}") String secret,
