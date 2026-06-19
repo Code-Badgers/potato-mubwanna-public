@@ -16,15 +16,15 @@ class KakaoLoginService {
   const KakaoLoginService();
 
   Future<String> loginAndReadAccessToken() async {
-    if (!AppEnvironment.hasKakaoLoginKey) {
+    if (kIsWeb) {
       throw const KakaoLoginUnsupportedException(
-        'KAKAO_NATIVE_APP_KEY가 설정되지 않았습니다.',
+        '현재 Flutter용 Kakao SDK는 Web 로그인을 지원하지 않습니다. iOS 또는 Android에서 실행해주세요.',
       );
     }
 
-    if (kIsWeb) {
+    if (!AppEnvironment.hasKakaoLoginKey) {
       throw const KakaoLoginUnsupportedException(
-        '현재 Flutter용 Kakao SDK는 Web 로그인을 지원하지 않습니다.',
+        'KAKAO_NATIVE_APP_KEY가 설정되지 않았습니다.',
       );
     }
 
