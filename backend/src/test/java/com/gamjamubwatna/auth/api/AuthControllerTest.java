@@ -8,17 +8,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.application.AuthService;
-import com.gamjamubwatna.global.config.SecurityConfig;
+import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @WebMvcTest(AuthController.class)
-@Import(SecurityConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
     @Autowired
@@ -29,6 +29,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     void loginWithKakaoReturnsJwtTokens() throws Exception {
@@ -69,5 +72,29 @@ class AuthControllerTest {
                 )))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.data.accessToken").doesNotExist());
+    }
+
+    @Test
+    void refreshReturnsRotatedJwtTokens() throws Exception {
+        when(authService.refresh(eq("old-refresh-token")))
+            .thenReturn(new AuthLoginResponse(
+                "new-access-token",
+                "new-refresh-token",
+                new AuthUserResponse(
+                    1L,
+                    "user@email.com",
+                    "감자러버",
+                    "https://example.com/profile.png"
+                )
+            ));
+
+        mockMvc.perform(post("/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                    new RefreshTokenRequest("old-refresh-token")
+                )))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
+            .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
     }
 }
