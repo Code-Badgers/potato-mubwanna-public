@@ -6,6 +6,7 @@ import '../../features/map/presentation/screen/map_screen.dart';
 import '../../features/mission/presentation/screen/mission_screen.dart';
 import '../../features/mypage/presentation/screen/my_page_screen.dart';
 import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
+import '../../features/onboarding/presentation/screen/permission_guide_screen.dart';
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
 import '../../features/spot/presentation/screen/spot_detail_screen.dart';
 import '../../features/stamp/presentation/screen/stamp_book_screen.dart';
@@ -21,6 +22,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/permissions',
+      builder: (context, state) => const PermissionGuideScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),

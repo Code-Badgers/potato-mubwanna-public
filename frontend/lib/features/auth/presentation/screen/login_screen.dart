@@ -56,7 +56,7 @@ class LoginScreen extends ConsumerWidget {
                               .read(authControllerProvider.notifier)
                               .loginWithKakao();
                           if (loggedIn && context.mounted) {
-                            context.go('/main/map');
+                            context.go('/permissions');
                           }
                         },
                   style: ElevatedButton.styleFrom(
@@ -91,7 +91,7 @@ class LoginScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: () => context.go('/main/map'),
+                onPressed: () => context.go('/permissions'),
                 child: const Text('나중에 로그인하기'),
               ),
               const Spacer(),

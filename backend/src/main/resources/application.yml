@@ -1,11 +1,15 @@
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:backend/.env[.properties]
   application:
     name: potato-mubwanna-backend
   threads:
     virtual:
       enabled: true
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/potato_mubwanna}
+    url: ${DB_URL:jdbc:postgresql://localhost:15432/potato_mubwanna}
     username: ${DB_USERNAME:potato}
     password: ${DB_PASSWORD:potato}
   jpa:
