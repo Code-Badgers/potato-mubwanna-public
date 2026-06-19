@@ -12,6 +12,7 @@ class DioClient {
       AuthInterceptor(
         tokenStorage,
         baseUrl: baseUrl,
+        dio: dio,
       ),
     );
   }

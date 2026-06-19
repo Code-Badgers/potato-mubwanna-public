@@ -7,9 +7,12 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(
     this._tokenStorage, {
     required String baseUrl,
-  }) : _refreshDio = Dio(BaseOptions(baseUrl: baseUrl));
+    required Dio dio,
+  })  : _dio = dio,
+        _refreshDio = Dio(BaseOptions(baseUrl: baseUrl));
 
   final TokenStorage _tokenStorage;
+  final Dio _dio;
   final Dio _refreshDio;
 
   @override
@@ -70,7 +73,7 @@ class AuthInterceptor extends Interceptor {
         refreshToken: rotatedRefreshToken,
       );
 
-      final retryResponse = await _refreshDio.request<dynamic>(
+      final retryResponse = await _dio.request<dynamic>(
         options.path,
         data: options.data,
         queryParameters: options.queryParameters,
