@@ -40,6 +40,10 @@ auth:
     access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:3600}
     refresh-token-ttl-seconds: ${JWT_REFRESH_TOKEN_TTL_SECONDS:1209600}
 
+external:
+  tour-api:
+    service-key: ${TOUR_API_SERVICE_KEY:}
+
 management:
   endpoints:
     web:
