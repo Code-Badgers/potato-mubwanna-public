@@ -42,6 +42,8 @@ class MapSpot {
       'POTATO_RESTAURANT' => '맛집',
       'POTATO_CAFE' => '카페',
       'POTATO_SNACK' => '간식',
+      'POTATO_MARKET' => '시장',
+      'POTATO_BREWERY' => '술',
       'POTATO_SHOP' => '쇼핑',
       _ => '감자',
     };
@@ -60,9 +62,24 @@ class MapSpot {
       'POTATO_RESTAURANT' => '맛감자',
       'POTATO_CAFE' => '디저트감자',
       'POTATO_SNACK' => '간식감자',
+      'POTATO_MARKET' => '직판감자',
+      'POTATO_BREWERY' => '맥주감자',
       'POTATO_SHOP' => '기념감자',
       'POTATO_EXPERIENCE' => '체험감자',
       _ => '여행감자',
+    };
+  }
+
+  String get markerColorHex {
+    return switch (category) {
+      'POTATO_RESTAURANT' => '#FFB84D',
+      'POTATO_CAFE' => '#D98CFF',
+      'POTATO_SNACK' => '#F6C23E',
+      'POTATO_MARKET' => '#36D98F',
+      'POTATO_BREWERY' => '#7A9BFF',
+      'POTATO_SHOP' => '#64C7D9',
+      'POTATO_EXPERIENCE' => '#8BC34A',
+      _ => '#36D98F',
     };
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,6 +30,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _MapCategoryFilter(label: '관광', icon: Icons.landscape_rounded),
     _MapCategoryFilter(label: '체험', icon: Icons.directions_walk_rounded),
     _MapCategoryFilter(label: '간식', icon: Icons.bakery_dining_rounded),
+    _MapCategoryFilter(label: '시장', icon: Icons.storefront_rounded),
+    _MapCategoryFilter(label: '술', icon: Icons.sports_bar_rounded),
     _MapCategoryFilter(label: '쇼핑', icon: Icons.shopping_bag_rounded),
   ];
 
@@ -75,17 +78,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     return Stack(
                       children: [
                         Positioned.fill(
-                          child: _PotatoMapPreview(spots: visibleSpots),
-                        ),
-                        Positioned(
-                          left: 12,
-                          top: 18,
-                          child: _MapStatusBadge(count: visibleSpots.length),
+                          child: _PotatoMapPreview(
+                            spots: visibleSpots,
+                            selectedSpotId: selectedSpot?.id,
+                            onSpotSelected: (spot) {
+                              setState(() {
+                                _selectedSpotIndex = visibleSpots.indexWhere(
+                                  (candidate) => candidate.id == spot.id,
+                                );
+                              });
+                            },
+                          ),
                         ),
                         Positioned(
                           left: 12,
                           right: 12,
-                          top: 62,
+                          top: 18,
                           child: _CategoryFilterBar(
                             categories: _categories,
                             selectedIndex: _selectedCategoryIndex,
@@ -112,7 +120,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     );
                   },
                   loading: () => const _MapLoading(),
-                  error: (_, __) => const _MapError(),
+                  error: (_, __) => Stack(
+                    children: [
+                      const Positioned.fill(
+                        child: _PotatoMapPreview(spots: []),
+                      ),
+                      Positioned(
+                        left: 12,
+                        right: 12,
+                        top: 18,
+                        child: _CategoryFilterBar(
+                          categories: _categories,
+                          selectedIndex: _selectedCategoryIndex,
+                          onSelected: _selectCategory,
+                        ),
+                      ),
+                      const Positioned.fill(child: _MapError()),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -124,9 +149,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 class _PotatoMapPreview extends StatelessWidget {
-  const _PotatoMapPreview({required this.spots});
+  const _PotatoMapPreview({
+    required this.spots,
+    this.selectedSpotId,
+    this.onSpotSelected,
+  });
 
   final List<MapSpot> spots;
+  final String? selectedSpotId;
+  final ValueChanged<MapSpot>? onSpotSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +168,14 @@ class _PotatoMapPreview extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(child: KakaoMapView(spots: spots)),
+            if (!kIsWeb && spots.isNotEmpty)
+              Positioned.fill(
+                child: _NativePotatoPinOverlay(
+                  spots: spots,
+                  selectedSpotId: selectedSpotId,
+                  onSpotSelected: onSpotSelected,
+                ),
+              ),
           ],
         ),
       ),
@@ -144,36 +183,101 @@ class _PotatoMapPreview extends StatelessWidget {
   }
 }
 
-class _MapStatusBadge extends StatelessWidget {
-  const _MapStatusBadge({required this.count});
+class _NativePotatoPinOverlay extends StatelessWidget {
+  const _NativePotatoPinOverlay({
+    required this.spots,
+    required this.selectedSpotId,
+    required this.onSpotSelected,
+  });
 
-  final int count;
+  final List<MapSpot> spots;
+  final String? selectedSpotId;
+  final ValueChanged<MapSpot>? onSpotSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final visibleSpots = spots.take(8).toList();
+        return Stack(
+          children: [
+            for (final spot in visibleSpots)
+              Positioned(
+                left: _leftFor(spot, constraints.maxWidth),
+                top: _topFor(spot, constraints.maxHeight),
+                child: _PotatoMapPin(
+                  spot: spot,
+                  selected: spot.id == selectedSpotId,
+                  onTap: () => onSpotSelected?.call(spot),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  double _leftFor(MapSpot spot, double width) {
+    final normalized = ((spot.longitude - 127.0) / 3.2).clamp(0.08, 0.86);
+    return width * normalized;
+  }
+
+  double _topFor(MapSpot spot, double height) {
+    final normalized = ((38.6 - spot.latitude) / 2.2).clamp(0.16, 0.72);
+    return height * normalized;
+  }
+}
+
+class _PotatoMapPin extends StatelessWidget {
+  const _PotatoMapPin({
+    required this.spot,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final MapSpot spot;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: spot.isRare ? 58 : 48,
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: selected || spot.isRare
+                ? _rareGold
+                : _colorFromHex(spot.markerColorHex),
+            width: 3,
           ),
-        ],
-      ),
-      child: Text(
-        '저장된 감자 스팟 ${count}곳',
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Text(
+          spot.isRare ? '🥔★' : '🥔',
+          style: TextStyle(
+            fontSize: spot.isRare ? 20 : 23,
+            height: 1,
+          ),
         ),
       ),
     );
+  }
+
+  Color _colorFromHex(String hex) {
+    final normalized = hex.replaceFirst('#', '');
+    return Color(int.parse('FF$normalized', radix: 16));
   }
 }
 
@@ -477,8 +581,7 @@ class _MapError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(color: Color(0xFFEAF5D5)),
+    return const IgnorePointer(
       child: Center(
         child: Padding(
           padding: EdgeInsets.all(24),

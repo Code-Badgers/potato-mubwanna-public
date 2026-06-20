@@ -161,6 +161,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'lat': spot.latitude,
               'lng': spot.longitude,
               'rare': spot.isRare,
+              'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
             })
         .toList());
 
@@ -206,6 +207,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         window.kakao.maps.ControlPosition.RIGHT
       );
 
+      let selectedMarkerElement = null;
       spots.forEach(function (spot) {
         const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
         const markerElement = document.createElement('button');
@@ -215,7 +217,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         markerElement.textContent = spot.rare ? '🥔★' : '🥔';
         markerElement.style.width = spot.rare ? '58px' : '48px';
         markerElement.style.height = '48px';
-        markerElement.style.border = '3px solid ' + (spot.rare ? '#F6C23E' : '#36D98F');
+        markerElement.style.border = '3px solid ' + (spot.markerColor || '#F6C23E');
         markerElement.style.borderRadius = '999px';
         markerElement.style.background = '#FFFFFF';
         markerElement.style.boxShadow = '0 8px 18px rgba(0,0,0,0.18)';
@@ -223,6 +225,15 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         markerElement.style.lineHeight = '1';
         markerElement.style.cursor = 'pointer';
         markerElement.style.padding = '0';
+        markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
+        markerElement.addEventListener('click', function () {
+          if (selectedMarkerElement) {
+            selectedMarkerElement.style.borderColor =
+              selectedMarkerElement.dataset.defaultBorderColor || '#36D98F';
+          }
+          markerElement.style.borderColor = '#F6C23E';
+          selectedMarkerElement = markerElement;
+        });
 
         new window.kakao.maps.CustomOverlay({
           position: markerPosition,
