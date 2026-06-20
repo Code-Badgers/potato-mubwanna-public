@@ -10,12 +10,16 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TourApiSpotImportService {
+
+    private static final Logger log = LoggerFactory.getLogger(TourApiSpotImportService.class);
 
     private final TourApiClient tourApiClient;
     private final KakaoLocalClient kakaoLocalClient;
@@ -49,15 +53,20 @@ public class TourApiSpotImportService {
 
     @Transactional
     public int importPotatoSpots(int pageNo, int numOfRows) {
-        List<TourApiSpotItem> items = tourApiClient.searchPotatoSpots(pageNo, numOfRows);
         int savedCount = 0;
-        for (TourApiSpotItem item : items) {
-            if (isMissingRequiredCoordinate(item)) {
-                continue;
-            }
-            savedCount += upsert(item);
+
+        try {
+            savedCount += importTourApiSpots(pageNo, numOfRows);
+        } catch (RuntimeException exception) {
+            log.warn("TourAPI potato spot import source skipped. reason={}", exception.getMessage());
         }
-        savedCount += importKakaoLocalSpots(pageNo, numOfRows);
+
+        try {
+            savedCount += importKakaoLocalSpots(pageNo, numOfRows);
+        } catch (RuntimeException exception) {
+            log.warn("Kakao Local potato spot import source skipped. reason={}", exception.getMessage());
+        }
+
         return savedCount;
     }
 
@@ -68,6 +77,19 @@ public class TourApiSpotImportService {
             totalSavedCount += importPotatoSpots(pageNo, numOfRows);
         }
         return totalSavedCount;
+    }
+
+    private int importTourApiSpots(int pageNo, int numOfRows) {
+        List<TourApiSpotItem> items = tourApiClient.searchPotatoSpots(pageNo, numOfRows);
+        int savedCount = 0;
+        for (TourApiSpotItem item : items) {
+            if (isMissingRequiredCoordinate(item)) {
+                continue;
+            }
+            savedCount += upsert(item);
+        }
+        log.info("TourAPI potato spot import source completed. pageNo={}, savedCount={}", pageNo, savedCount);
+        return savedCount;
     }
 
     private int upsert(TourApiSpotItem item) {
@@ -118,6 +140,7 @@ public class TourApiSpotImportService {
             }
             savedCount += upsert(item);
         }
+        log.info("Kakao Local potato spot import source completed. pageNo={}, savedCount={}", pageNo, savedCount);
         return savedCount;
     }
 

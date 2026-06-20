@@ -8,6 +8,8 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -17,6 +19,7 @@ import org.springframework.web.util.UriUtils;
 public class KakaoLocalClient {
 
     private static final int KAKAO_LOCAL_MAX_PAGE_SIZE = 15;
+    private static final Logger log = LoggerFactory.getLogger(KakaoLocalClient.class);
 
     private final RestClient restClient;
     private final String keywordSearchUrl;
@@ -37,12 +40,15 @@ public class KakaoLocalClient {
 
     public List<KakaoLocalSpotItem> searchPotatoSpots(int pageNo, int numOfRows) {
         if (restApiKey == null || restApiKey.isBlank()) {
+            log.warn("Kakao Local potato spot search skipped. reason=KAKAO_REST_API_KEY is blank");
             return List.of();
         }
 
         Map<String, KakaoLocalSpotItem> uniqueItems = new LinkedHashMap<>();
         for (String keyword : spotKeywords) {
-            for (KakaoLocalSpotItem item : searchPotatoSpots(keyword, pageNo, numOfRows)) {
+            List<KakaoLocalSpotItem> items = searchPotatoSpots(keyword, pageNo, numOfRows);
+            log.info("Kakao Local potato spot search completed. keyword={}, resultCount={}", keyword, items.size());
+            for (KakaoLocalSpotItem item : items) {
                 if (item.id() == null || item.id().isBlank()) {
                     continue;
                 }
