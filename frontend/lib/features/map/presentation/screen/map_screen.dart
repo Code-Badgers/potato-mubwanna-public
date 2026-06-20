@@ -22,14 +22,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
   int _selectedSpotIndex = 0;
 
-  static const _categories = ['전체', '관광', '카페', '체험', '맛집', '간식', '쇼핑'];
+  static const _categories = [
+    _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
+    _MapCategoryFilter(label: '맛집', icon: Icons.restaurant_rounded),
+    _MapCategoryFilter(label: '카페', icon: Icons.local_cafe_rounded),
+    _MapCategoryFilter(label: '관광', icon: Icons.landscape_rounded),
+    _MapCategoryFilter(label: '체험', icon: Icons.directions_walk_rounded),
+    _MapCategoryFilter(label: '간식', icon: Icons.bakery_dining_rounded),
+    _MapCategoryFilter(label: '쇼핑', icon: Icons.shopping_bag_rounded),
+  ];
 
   List<MapSpot> _visibleSpots(List<MapSpot> spots) {
-    final selectedCategory = _categories[_selectedCategoryIndex];
+    final selectedCategory = _categories[_selectedCategoryIndex].label;
     if (selectedCategory == '전체') {
       return spots;
     }
-    return spots.where((spot) => spot.matchesCategoryLabel(selectedCategory)).toList();
+    return spots
+        .where((spot) => spot.matchesCategoryLabel(selectedCategory))
+        .toList();
   }
 
   MapSpot? _selectedSpot(List<MapSpot> spots) {
@@ -75,7 +85,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         Positioned(
                           left: 12,
                           right: 12,
-                          bottom: selectedSpot == null ? 24 : 126,
+                          top: 62,
                           child: _CategoryFilterBar(
                             categories: _categories,
                             selectedIndex: _selectedCategoryIndex,
@@ -174,7 +184,7 @@ class _CategoryFilterBar extends StatelessWidget {
     required this.onSelected,
   });
 
-  final List<String> categories;
+  final List<_MapCategoryFilter> categories;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
@@ -185,24 +195,10 @@ class _CategoryFilterBar extends StatelessWidget {
       child: Row(
         children: [
           for (var index = 0; index < categories.length; index++) ...[
-            ChoiceChip(
-              label: Text(categories[index]),
+            _MapCategoryChip(
+              category: categories[index],
               selected: selectedIndex == index,
-              onSelected: (_) => onSelected(index),
-              selectedColor: _mapPrimary,
-              backgroundColor: Colors.white.withValues(alpha: 0.94),
-              labelStyle: TextStyle(
-                color: selectedIndex == index
-                    ? Colors.white
-                    : AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-              side: const BorderSide(color: Color(0xFFE8E2D8)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
+              onTap: () => onSelected(index),
             ),
             if (index < categories.length - 1) const SizedBox(width: 8),
           ],
@@ -210,6 +206,69 @@ class _CategoryFilterBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MapCategoryChip extends StatelessWidget {
+  const _MapCategoryChip({
+    required this.category,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _MapCategoryFilter category;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foregroundColor = selected ? Colors.white : AppColors.textPrimary;
+    return Material(
+      color: selected ? _mapPrimary : Colors.white.withValues(alpha: 0.94),
+      borderRadius: BorderRadius.circular(999),
+      elevation: selected ? 4 : 1,
+      shadowColor: Colors.black.withValues(alpha: 0.14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? _mapPrimary : const Color(0xFFE8E2D8),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(category.icon, size: 17, color: foregroundColor),
+              const SizedBox(width: 6),
+              Text(
+                category.label,
+                style: TextStyle(
+                  color: foregroundColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapCategoryFilter {
+  const _MapCategoryFilter({
+    required this.label,
+    required this.icon,
+  });
+
+  final String label;
+  final IconData icon;
 }
 
 class _SpotBottomSheet extends StatelessWidget {
