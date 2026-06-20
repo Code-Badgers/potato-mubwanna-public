@@ -13,11 +13,7 @@ void main() {
       authRepository: _FailingLogoutAuthRepository(),
     );
 
-    try {
-      await controller.logout();
-    } catch (_) {
-      // The current controller forwards repository errors; the state must still recover.
-    }
+    await controller.logout();
 
     expect(controller.state.status, AuthStatus.idle);
   });
