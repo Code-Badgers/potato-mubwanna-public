@@ -408,21 +408,24 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Material(
         color: _mypageCream,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _mypageLine),
-      ),
-      child: Column(
-        children: [
-          for (var index = 0; index < _items.length; index++) ...[
-            _MenuRow(item: _items[index]),
-            if (index < _items.length - 1)
-              const Divider(height: 1, color: _mypageLine, indent: 58),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: _mypageLine),
+        ),
+        child: Column(
+          children: [
+            for (var index = 0; index < _items.length; index++) ...[
+              _MenuRow(item: _items[index]),
+              if (index < _items.length - 1)
+                const Divider(height: 1, color: _mypageLine, indent: 58),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -437,7 +440,6 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {},
-      borderRadius: BorderRadius.circular(18),
       child: SizedBox(
         height: 64,
         child: Row(

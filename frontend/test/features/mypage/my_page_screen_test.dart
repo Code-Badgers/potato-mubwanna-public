@@ -40,4 +40,35 @@ void main() {
     expect(find.text('고객센터'), findsOneWidget);
     expect(find.text('로그아웃'), findsOneWidget);
   });
+
+  testWidgets('clips account menu ink responses to the menu shape',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MyPageScreen(),
+      ),
+    );
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Material &&
+            widget.color == const Color(0xFFFFF8EA) &&
+            widget.clipBehavior == Clip.antiAlias,
+      ),
+      findsOneWidget,
+    );
+
+    for (final label in ['설정', '공지사항', '고객센터', '로그아웃']) {
+      expect(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is InkWell && widget.borderRadius == null,
+          ),
+        ),
+        findsOneWidget,
+      );
+    }
+  });
 }

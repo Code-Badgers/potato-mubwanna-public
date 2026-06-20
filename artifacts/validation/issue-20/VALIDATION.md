@@ -51,6 +51,18 @@
   - No visible text clipping or overlapping in the captured first screen.
   - The page is scrollable, so the lower menu remains reachable below the fold.
 
+## Review Follow-up
+
+- Reviewed Gemini Code Assist feedback on PR #21.
+- Kept My Page color constants local because centralizing them would expand the shared `AppColors` theme contract beyond this screen-focused issue.
+- Replaced the account menu `Container` with a clipped `Material` so menu `InkWell` ripple effects render on the menu surface. Individual menu rows no longer apply their own rounded ripple radius.
+- Added a widget regression test that verifies the clipped menu material and each account menu row's ink response.
+- `flutter test --no-pub --reporter expanded test\features\mypage\my_page_screen_test.dart`: passed, 2 tests.
+- `flutter analyze`: passed, `No issues found!`.
+- `flutter test --no-pub`: passed, 14 tests.
+- `flutter build apk --debug`: passed, rebuilt `build\app\outputs\flutter-apk\app-debug.apk`.
+- Initial sandboxed Flutter invocations could not open the SDK cache lockfile because the sandbox account has read-only access. Re-ran Flutter verification with the local user account; no project or SDK source files were changed to address this environment permission boundary.
+
 ## Notes And Risks
 
 - `flutter doctor` still reports the Flutter SDK channel as `[user-branch]`; this is expected for the tag-based local install and does not block builds/tests.
