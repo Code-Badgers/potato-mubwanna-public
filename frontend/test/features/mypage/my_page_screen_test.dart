@@ -12,6 +12,7 @@ import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
+import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
 
 void main() {
   testWidgets('renders profile summary, quick actions, and account menu',
@@ -189,6 +190,40 @@ void main() {
     expect(find.text('보상함'), findsOneWidget);
   });
 
+  testWidgets('opens travel records from the My Page quick action',
+      (tester) async {
+    final router = GoRouter(
+      initialLocation: '/main/mypage',
+      routes: [
+        GoRoute(
+          path: '/main/mypage',
+          builder: (_, __) => const MyPageScreen(),
+        ),
+        GoRoute(
+          path: '/travel-records',
+          builder: (_, __) => const TravelRecordScreen(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.text('여행 기록'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('총 3곳 방문'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+
+    await tester.tap(find.byTooltip('뒤로 가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행 기록'), findsOneWidget);
+  });
+
   testWidgets('disables quick actions without a destination', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
@@ -199,7 +234,6 @@ void main() {
     );
 
     for (final icon in [
-      Icons.menu_book_rounded,
       Icons.assignment_turned_in_rounded,
       Icons.inventory_2_rounded,
     ]) {

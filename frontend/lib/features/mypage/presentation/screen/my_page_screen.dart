@@ -289,7 +289,11 @@ class _QuickActionGrid extends StatelessWidget {
         label: '보상함',
         onTap: () => context.push('/coupons'),
       ),
-      const _QuickAction(icon: Icons.menu_book_rounded, label: '여행 기록'),
+      _QuickAction(
+        icon: Icons.menu_book_rounded,
+        label: '여행 기록',
+        onTap: () => context.push('/travel-records'),
+      ),
       const _QuickAction(
           icon: Icons.assignment_turned_in_rounded, label: '내 미션'),
       const _QuickAction(icon: Icons.inventory_2_rounded, label: '감자 도감'),
