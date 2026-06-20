@@ -27,6 +27,7 @@ public class SecurityConfig {
                     "/auth/kakao",
                     "/auth/refresh",
                     "/auth/logout",
+                    "/spots/**",
                     "/health",
                     "/docs/**",
                     "/v3/api-docs/**",
