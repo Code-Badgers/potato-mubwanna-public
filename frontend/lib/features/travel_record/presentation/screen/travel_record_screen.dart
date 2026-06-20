@@ -38,7 +38,13 @@ class TravelRecordScreen extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(
               child: _TravelRecordHeader(
-                onBack: () => context.pop(),
+                onBack: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/main/mypage');
+                  }
+                },
               ),
             ),
             SliverToBoxAdapter(child: _TravelSummary(count: _records.length)),
