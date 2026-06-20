@@ -6,5 +6,7 @@ public enum SpotCategory {
     POTATO_RESTAURANT,
     POTATO_CAFE,
     POTATO_SNACK,
+    POTATO_MARKET,
+    POTATO_BREWERY,
     POTATO_SHOP
 }

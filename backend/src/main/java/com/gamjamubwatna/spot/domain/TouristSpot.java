@@ -89,6 +89,36 @@ public class TouristSpot {
         String potatoTags,
         Instant now
     ) {
+        this(
+            contentId,
+            contentTypeId,
+            name,
+            category,
+            latitude,
+            longitude,
+            address,
+            cityName,
+            imageUrl,
+            "TOUR_API",
+            potatoTags,
+            now
+        );
+    }
+
+    public TouristSpot(
+        String contentId,
+        Integer contentTypeId,
+        String name,
+        SpotCategory category,
+        BigDecimal latitude,
+        BigDecimal longitude,
+        String address,
+        String cityName,
+        String imageUrl,
+        String source,
+        String potatoTags,
+        Instant now
+    ) {
         this.contentId = contentId;
         this.contentTypeId = contentTypeId;
         this.name = name;
@@ -98,7 +128,7 @@ public class TouristSpot {
         this.address = address;
         this.cityName = cityName;
         this.imageUrl = imageUrl;
-        this.source = "TOUR_API";
+        this.source = source;
         this.potatoTags = potatoTags;
         this.congestionLevel = CongestionLevel.NORMAL;
         this.verificationRadiusMeter = 100;
@@ -119,6 +149,21 @@ public class TouristSpot {
         String potatoTags,
         Instant now
     ) {
+        updateFromSource(name, category, latitude, longitude, address, cityName, imageUrl, "TOUR_API", potatoTags, now);
+    }
+
+    public void updateFromSource(
+        String name,
+        SpotCategory category,
+        BigDecimal latitude,
+        BigDecimal longitude,
+        String address,
+        String cityName,
+        String imageUrl,
+        String source,
+        String potatoTags,
+        Instant now
+    ) {
         this.name = name;
         this.category = category;
         this.latitude = latitude;
@@ -126,6 +171,7 @@ public class TouristSpot {
         this.address = address;
         this.cityName = cityName;
         this.imageUrl = imageUrl;
+        this.source = source;
         this.potatoTags = potatoTags;
         this.active = true;
         this.updatedAt = now;

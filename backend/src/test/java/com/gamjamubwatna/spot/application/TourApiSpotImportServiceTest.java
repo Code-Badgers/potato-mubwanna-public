@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.spot.infrastructure.KakaoLocalClient;
+import com.gamjamubwatna.spot.infrastructure.KakaoLocalClient.KakaoLocalSpotItem;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient.TourApiSpotItem;
 import java.math.BigDecimal;
@@ -23,6 +25,7 @@ class TourApiSpotImportServiceTest {
     @Test
     void importsPotatoSpotFromTourApiSearchResult() {
         TourApiClient tourApiClient = mock(TourApiClient.class);
+        KakaoLocalClient kakaoLocalClient = mock(KakaoLocalClient.class);
         TouristSpotRepository repository = mock(TouristSpotRepository.class);
         when(tourApiClient.searchPotatoSpots(1, 20))
             .thenReturn(List.of(new TourApiSpotItem(
@@ -34,11 +37,13 @@ class TourApiSpotImportServiceTest {
                 new BigDecimal("128.6609000"),
                 ""
             )));
+        when(kakaoLocalClient.searchPotatoSpots(1, 20)).thenReturn(List.of());
         when(repository.findByContentId("100")).thenReturn(Optional.empty());
         when(repository.save(any(TouristSpot.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         TourApiSpotImportService importService = new TourApiSpotImportService(
             tourApiClient,
+            kakaoLocalClient,
             new PotatoSpotClassifier(),
             repository,
             Clock.fixed(Instant.parse("2026-06-20T00:00:00Z"), ZoneOffset.UTC)
@@ -53,12 +58,16 @@ class TourApiSpotImportServiceTest {
     @Test
     void importsConfiguredPageRange() {
         TourApiClient tourApiClient = mock(TourApiClient.class);
+        KakaoLocalClient kakaoLocalClient = mock(KakaoLocalClient.class);
         TouristSpotRepository repository = mock(TouristSpotRepository.class);
         when(tourApiClient.searchPotatoSpots(1, 10)).thenReturn(List.of());
         when(tourApiClient.searchPotatoSpots(2, 10)).thenReturn(List.of());
+        when(kakaoLocalClient.searchPotatoSpots(1, 10)).thenReturn(List.of());
+        when(kakaoLocalClient.searchPotatoSpots(2, 10)).thenReturn(List.of());
 
         TourApiSpotImportService importService = new TourApiSpotImportService(
             tourApiClient,
+            kakaoLocalClient,
             new PotatoSpotClassifier(),
             repository,
             Clock.fixed(Instant.parse("2026-06-20T00:00:00Z"), ZoneOffset.UTC)
@@ -69,5 +78,43 @@ class TourApiSpotImportServiceTest {
         assertThat(savedCount).isZero();
         verify(tourApiClient).searchPotatoSpots(1, 10);
         verify(tourApiClient).searchPotatoSpots(2, 10);
+        verify(kakaoLocalClient).searchPotatoSpots(1, 10);
+        verify(kakaoLocalClient).searchPotatoSpots(2, 10);
+    }
+
+    @Test
+    void importsPotatoSpotFromKakaoLocalSearchResult() {
+        TourApiClient tourApiClient = mock(TourApiClient.class);
+        KakaoLocalClient kakaoLocalClient = mock(KakaoLocalClient.class);
+        TouristSpotRepository repository = mock(TouristSpotRepository.class);
+        when(tourApiClient.searchPotatoSpots(1, 15)).thenReturn(List.of());
+        when(kakaoLocalClient.searchPotatoSpots(1, 15))
+            .thenReturn(List.of(new KakaoLocalSpotItem(
+                "kakao-100",
+                "강릉 감자빵 카페",
+                "음식점 > 카페",
+                "강원특별자치도 강릉시 감자길 1",
+                "",
+                "https://place.map.kakao.com/kakao-100",
+                "128.8961000",
+                "37.7519000"
+            )));
+        when(repository.findByContentId("KAKAO_LOCAL:kakao-100")).thenReturn(Optional.empty());
+        when(repository.findByNameAndAddress("강릉 감자빵 카페", "강원특별자치도 강릉시 감자길 1"))
+            .thenReturn(Optional.empty());
+        when(repository.save(any(TouristSpot.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TourApiSpotImportService importService = new TourApiSpotImportService(
+            tourApiClient,
+            kakaoLocalClient,
+            new PotatoSpotClassifier(),
+            repository,
+            Clock.fixed(Instant.parse("2026-06-20T00:00:00Z"), ZoneOffset.UTC)
+        );
+
+        int savedCount = importService.importPotatoSpots(1, 15);
+
+        assertThat(savedCount).isEqualTo(1);
+        verify(repository).save(any(TouristSpot.class));
     }
 }

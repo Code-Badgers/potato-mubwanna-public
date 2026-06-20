@@ -34,31 +34,58 @@ public class PotatoSpotClassifier {
             return Optional.empty();
         }
 
-        SpotCategory category = switch (contentTypeId) {
-            case 38 -> SpotCategory.POTATO_SHOP;
-            case 39 -> classifyRestaurantLike(text);
-            case 12 -> SpotCategory.POTATO_TOUR;
-            default -> SpotCategory.POTATO_EXPERIENCE;
-        };
+        SpotCategory category = classifyCategory(contentTypeId, text);
 
         return Optional.of(new PotatoSpotClassification(category, extractTags(text)));
     }
 
-    private SpotCategory classifyRestaurantLike(String text) {
-        if (containsAny(text, "카페", "커피", "디저트")) {
+    private SpotCategory classifyCategory(Integer contentTypeId, String text) {
+        if (containsAny(text, "맥주", "브루어리", "양조", "펍", "술")) {
+            return SpotCategory.POTATO_BREWERY;
+        }
+        if (containsAny(text, "시장", "전통시장", "직판장", "로컬푸드", "농협", "마트", "상회")) {
+            return SpotCategory.POTATO_MARKET;
+        }
+        if (containsAny(text, "카페", "커피", "디저트", "젤라또", "베이커리", "제과", "빵집")) {
             return SpotCategory.POTATO_CAFE;
         }
-        if (containsAny(text, "빵", "간식", "떡", "과자")) {
+        if (containsAny(text, "빵", "간식", "떡", "과자", "알감자", "회오리감자", "휴게소")) {
             return SpotCategory.POTATO_SNACK;
         }
-        return SpotCategory.POTATO_RESTAURANT;
+
+        return switch (contentTypeId) {
+            case 38 -> SpotCategory.POTATO_SHOP;
+            case 39 -> SpotCategory.POTATO_RESTAURANT;
+            case 12, 14, 15, 25 -> SpotCategory.POTATO_TOUR;
+            default -> SpotCategory.POTATO_EXPERIENCE;
+        };
     }
 
     private boolean containsPotatoKeyword(String text) {
-        return containsAny(text, "감자", "옹심이", "감자전", "감자떡", "감자빵", "고랭지");
+        return containsAny(
+            text,
+            "감자",
+            "옹심이",
+            "감자전",
+            "감자떡",
+            "감자빵",
+            "알감자",
+            "회오리감자",
+            "고랭지",
+            "로컬푸드"
+        );
     }
 
     private String extractTags(String text) {
+        if (containsAny(text, "맥주", "브루어리", "양조", "펍")) {
+            return "감자,감자맥주";
+        }
+        if (containsAny(text, "시장", "직판장", "로컬푸드", "농협", "마트")) {
+            return "감자,직판장";
+        }
+        if (containsAny(text, "카페", "디저트", "젤라또")) {
+            return "감자,디저트";
+        }
         if (containsAny(text, "옹심이")) {
             return "감자,옹심이";
         }
@@ -70,6 +97,9 @@ public class PotatoSpotClassifier {
         }
         if (containsAny(text, "감자떡", "떡")) {
             return "감자,감자떡";
+        }
+        if (containsAny(text, "알감자", "회오리감자", "휴게소")) {
+            return "감자,간식";
         }
         return "감자";
     }

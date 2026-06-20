@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriUtils;
@@ -20,6 +23,7 @@ public class TourApiClient {
     private final String mobileOs;
     private final String mobileApp;
     private final String legalRegionCode;
+    private final List<String> spotKeywords;
 
     public TourApiClient(
         RestClient.Builder restClientBuilder,
@@ -28,7 +32,8 @@ public class TourApiClient {
         @Value("${external.tour-api.service-key}") String serviceKey,
         @Value("${external.tour-api.mobile-os}") String mobileOs,
         @Value("${external.tour-api.mobile-app}") String mobileApp,
-        @Value("${external.tour-api.legal-region-code}") String legalRegionCode
+        @Value("${external.tour-api.legal-region-code}") String legalRegionCode,
+        @Value("${external.tour-api.spot-keywords}") String spotKeywords
     ) {
         this.restClient = restClientBuilder.build();
         this.baseUrl = baseUrl;
@@ -37,6 +42,7 @@ public class TourApiClient {
         this.mobileOs = mobileOs;
         this.mobileApp = mobileApp;
         this.legalRegionCode = legalRegionCode;
+        this.spotKeywords = parseKeywords(spotKeywords);
     }
 
     public List<TourApiSpotItem> searchPotatoSpots(int pageNo, int numOfRows) {
@@ -44,8 +50,21 @@ public class TourApiClient {
             throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
         }
 
+        Map<String, TourApiSpotItem> uniqueItems = new LinkedHashMap<>();
+        for (String keyword : spotKeywords) {
+            for (TourApiSpotItem item : searchPotatoSpots(keyword, pageNo, numOfRows)) {
+                if (item.contentId() == null || item.contentId().isBlank()) {
+                    continue;
+                }
+                uniqueItems.putIfAbsent(item.contentId(), item);
+            }
+        }
+        return List.copyOf(uniqueItems.values());
+    }
+
+    private List<TourApiSpotItem> searchPotatoSpots(String keyword, int pageNo, int numOfRows) {
         TourApiSearchResponse response = restClient.get()
-            .uri(searchKeywordUri(pageNo, numOfRows))
+            .uri(searchKeywordUri(keyword, pageNo, numOfRows))
             .retrieve()
             .body(TourApiSearchResponse.class);
 
@@ -59,7 +78,7 @@ public class TourApiClient {
         return response.response().body().items().item();
     }
 
-    private URI searchKeywordUri(int pageNo, int numOfRows) {
+    private URI searchKeywordUri(String keyword, int pageNo, int numOfRows) {
         String query = String.join("&",
             "serviceKey=%s".formatted(encodeServiceKey(serviceKey)),
             "MobileOS=%s".formatted(encode(mobileOs)),
@@ -67,11 +86,22 @@ public class TourApiClient {
             "_type=json",
             "arrange=C",
             "lDongRegnCd=%s".formatted(encode(legalRegionCode)),
-            "keyword=%s".formatted(encode("감자")),
+            "keyword=%s".formatted(encode(keyword)),
             "pageNo=%d".formatted(pageNo),
             "numOfRows=%d".formatted(numOfRows)
         );
         return URI.create("%s%s?%s".formatted(normalizedBaseUrl(), normalizedPath(), query));
+    }
+
+    private List<String> parseKeywords(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of("감자");
+        }
+        return Arrays.stream(value.split(","))
+            .map(String::trim)
+            .filter(keyword -> !keyword.isBlank())
+            .distinct()
+            .toList();
     }
 
     private String normalizedBaseUrl() {

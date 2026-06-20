@@ -161,7 +161,7 @@ Query Params:
 
 | 이름            | 타입   | 필수 | 설명                                       |
 | --------------- | ------ | ---- | ------------------------------------------ |
-| category        | String | N    | POTATO_TOUR, POTATO_EXPERIENCE, POTATO_RESTAURANT, POTATO_CAFE, POTATO_SNACK, POTATO_SHOP |
+| category        | String | N    | POTATO_TOUR, POTATO_EXPERIENCE, POTATO_RESTAURANT, POTATO_CAFE, POTATO_SNACK, POTATO_MARKET, POTATO_BREWERY, POTATO_SHOP |
 | cityName        | String | N    | 강릉시, 평창군 등                          |
 | congestionLevel | String | N    | LOW, NORMAL, HIGH                          |
 

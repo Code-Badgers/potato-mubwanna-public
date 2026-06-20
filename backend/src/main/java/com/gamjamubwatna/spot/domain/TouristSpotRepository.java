@@ -10,6 +10,8 @@ public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> 
 
     Optional<TouristSpot> findByContentId(String contentId);
 
+    Optional<TouristSpot> findByNameAndAddress(String name, String address);
+
     Optional<TouristSpot> findByIdAndActiveTrue(Long id);
 
     @Query("""
