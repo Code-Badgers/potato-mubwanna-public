@@ -4,11 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '../../domain/map_spot.dart';
+
 const _kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
 const _nativeKakaoMapViewType = 'potato_mubwanna/kakao_map';
 
 class KakaoMapView extends StatelessWidget {
-  const KakaoMapView({super.key});
+  const KakaoMapView({
+    super.key,
+    required this.spots,
+  });
+
+  final List<MapSpot> spots;
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +26,18 @@ class KakaoMapView extends StatelessWidget {
 
     final creationParams = <String, Object>{
       'nativeAppKey': _kakaoNativeAppKey,
-      'latitude': 37.3808,
-      'longitude': 128.6609,
+      'latitude': spots.isEmpty ? 37.8228 : spots.first.latitude,
+      'longitude': spots.isEmpty ? 128.1555 : spots.first.longitude,
       'zoomLevel': 9,
+      'spots': spots
+          .map((spot) => {
+                'id': spot.id,
+                'name': spot.name,
+                'latitude': spot.latitude,
+                'longitude': spot.longitude,
+                'rare': spot.isRare,
+              })
+          .toList(),
     };
 
     if (Platform.isAndroid) {

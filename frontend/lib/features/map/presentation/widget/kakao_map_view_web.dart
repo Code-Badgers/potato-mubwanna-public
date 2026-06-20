@@ -7,10 +7,17 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/map_spot.dart';
+
 const _kakaoJavaScriptKey = String.fromEnvironment('KAKAO_JAVASCRIPT_KEY');
 
 class KakaoMapView extends StatefulWidget {
-  const KakaoMapView({super.key});
+  const KakaoMapView({
+    super.key,
+    required this.spots,
+  });
+
+  final List<MapSpot> spots;
 
   @override
   State<KakaoMapView> createState() => _KakaoMapViewState();
@@ -148,32 +155,14 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
   void _injectKakaoMapScript() {
     final mapElementId = jsonEncode(_viewType);
-    final spots = jsonEncode([
-      {
-        'name': '정선 5일장',
-        'lat': 37.3808,
-        'lng': 128.6609,
-        'rare': true,
-      },
-      {
-        'name': '강릉 커피거리',
-        'lat': 37.7519,
-        'lng': 128.8761,
-        'rare': false,
-      },
-      {
-        'name': '대관령 목장',
-        'lat': 37.3704,
-        'lng': 128.3904,
-        'rare': true,
-      },
-      {
-        'name': '속초 중앙시장',
-        'lat': 38.2045,
-        'lng': 128.5918,
-        'rare': false,
-      },
-    ]);
+    final spots = jsonEncode(widget.spots
+        .map((spot) => {
+              'name': spot.name,
+              'lat': spot.latitude,
+              'lng': spot.longitude,
+              'rare': spot.isRare,
+            })
+        .toList());
 
     final script = html.ScriptElement()
       ..type = 'text/javascript'
@@ -197,7 +186,11 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
   window.kakao.maps.load(function () {
     try {
-      const center = new window.kakao.maps.LatLng(37.3808, 128.6609);
+      const spots = $spots;
+      const firstSpot = spots.length > 0 ? spots[0] : null;
+      const center = firstSpot
+        ? new window.kakao.maps.LatLng(firstSpot.lat, firstSpot.lng)
+        : new window.kakao.maps.LatLng(37.8228, 128.1555);
       const map = new window.kakao.maps.Map(mapElement, {
         center: center,
         level: 7,
@@ -213,7 +206,6 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         window.kakao.maps.ControlPosition.RIGHT
       );
 
-      const spots = $spots;
       spots.forEach(function (spot) {
         const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
         const markerElement = document.createElement('button');

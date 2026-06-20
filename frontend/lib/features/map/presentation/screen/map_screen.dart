@@ -1,77 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../application/map_spot_controller.dart';
+import '../../domain/map_spot.dart';
 import '../widget/kakao_map_view.dart';
 
 const _mapPrimary = Color(0xFF36D98F);
 const _mapDark = Color(0xFF509B64);
 const _rareGold = Color(0xFFF6C23E);
 
-class MapScreen extends StatefulWidget {
+class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
   int _selectedSpotIndex = 0;
 
-  static const _categories = ['전체', '관광', '카페', '체험', '맛집'];
+  static const _categories = ['전체', '관광', '카페', '체험', '맛집', '간식', '쇼핑'];
 
-  static const _spots = [
-    _MapSpot(
-      id: 'jeongseon-market',
-      name: '정선 5일장',
-      area: '정선군',
-      category: '관광',
-      congestion: '여유',
-      potatoName: '곤드레감자',
-      isRare: true,
-    ),
-    _MapSpot(
-      id: 'gangneung-coffee',
-      name: '강릉 커피거리',
-      area: '강릉시',
-      category: '카페',
-      congestion: '보통',
-      potatoName: '바다감자',
-      isRare: false,
-    ),
-    _MapSpot(
-      id: 'pyeongchang-ranch',
-      name: '대관령 목장',
-      area: '평창군',
-      category: '체험',
-      congestion: '여유',
-      potatoName: '눈꽃감자',
-      isRare: true,
-    ),
-    _MapSpot(
-      id: 'sokcho-market',
-      name: '속초 중앙시장',
-      area: '속초시',
-      category: '맛집',
-      congestion: '혼잡',
-      potatoName: '오징어감자',
-      isRare: false,
-    ),
-  ];
-
-  List<_MapSpot> get _visibleSpots {
+  List<MapSpot> _visibleSpots(List<MapSpot> spots) {
     final selectedCategory = _categories[_selectedCategoryIndex];
     if (selectedCategory == '전체') {
-      return _spots;
+      return spots;
     }
-    return _spots.where((spot) => spot.category == selectedCategory).toList();
+    return spots.where((spot) => spot.matchesCategoryLabel(selectedCategory)).toList();
   }
 
-  _MapSpot get _selectedSpot {
-    final spots = _visibleSpots;
+  MapSpot? _selectedSpot(List<MapSpot> spots) {
     if (_selectedSpotIndex >= spots.length) {
-      return spots.first;
+      return spots.isEmpty ? null : spots.first;
     }
     return spots[_selectedSpotIndex];
   }
@@ -85,6 +48,8 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final spotsState = ref.watch(mapSpotsProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -93,31 +58,51 @@ class _MapScreenState extends State<MapScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Stack(
-                  children: [
-                    const Positioned.fill(child: _PotatoMapPreview()),
-                    Positioned(
-                      left: 12,
-                      right: 12,
-                      bottom: 126,
-                      child: _CategoryFilterBar(
-                        categories: _categories,
-                        selectedIndex: _selectedCategoryIndex,
-                        onSelected: _selectCategory,
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: _SpotBottomSheet(
-                        spot: _selectedSpot,
-                        onDetailPressed: () {
-                          context.go('/spots/${_selectedSpot.id}');
-                        },
-                      ),
-                    ),
-                  ],
+                child: spotsState.when(
+                  data: (spots) {
+                    final visibleSpots = _visibleSpots(spots);
+                    final selectedSpot = _selectedSpot(visibleSpots);
+                    return Stack(
+                      children: [
+                        Positioned.fill(
+                          child: _PotatoMapPreview(spots: visibleSpots),
+                        ),
+                        Positioned(
+                          left: 12,
+                          top: 18,
+                          child: _MapStatusBadge(count: visibleSpots.length),
+                        ),
+                        Positioned(
+                          left: 12,
+                          right: 12,
+                          bottom: selectedSpot == null ? 24 : 126,
+                          child: _CategoryFilterBar(
+                            categories: _categories,
+                            selectedIndex: _selectedCategoryIndex,
+                            onSelected: _selectCategory,
+                          ),
+                        ),
+                        if (selectedSpot == null)
+                          const Positioned.fill(
+                            child: _EmptySpotMessage(),
+                          )
+                        else
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: _SpotBottomSheet(
+                              spot: selectedSpot,
+                              onDetailPressed: () {
+                                context.go('/spots/${selectedSpot.id}');
+                              },
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                  loading: () => const _MapLoading(),
+                  error: (_, __) => const _MapError(),
                 ),
               ),
             ),
@@ -129,22 +114,19 @@ class _MapScreenState extends State<MapScreen> {
 }
 
 class _PotatoMapPreview extends StatelessWidget {
-  const _PotatoMapPreview();
+  const _PotatoMapPreview({required this.spots});
+
+  final List<MapSpot> spots;
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
-      child: const DecoratedBox(
-        decoration: BoxDecoration(color: Color(0xFFEAF5D5)),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(color: Color(0xFFEAF5D5)),
         child: Stack(
           children: [
-            Positioned.fill(child: KakaoMapView()),
-            Positioned(
-              left: 18,
-              top: 18,
-              child: _MapStatusBadge(),
-            ),
+            Positioned.fill(child: KakaoMapView(spots: spots)),
           ],
         ),
       ),
@@ -153,7 +135,9 @@ class _PotatoMapPreview extends StatelessWidget {
 }
 
 class _MapStatusBadge extends StatelessWidget {
-  const _MapStatusBadge();
+  const _MapStatusBadge({required this.count});
+
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -170,9 +154,9 @@ class _MapStatusBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: const Text(
-        '주변 감자 스팟 4곳',
-        style: TextStyle(
+      child: Text(
+        '저장된 감자 스팟 ${count}곳',
+        style: const TextStyle(
           color: AppColors.textPrimary,
           fontSize: 13,
           fontWeight: FontWeight.w800,
@@ -234,7 +218,7 @@ class _SpotBottomSheet extends StatelessWidget {
     required this.onDetailPressed,
   });
 
-  final _MapSpot spot;
+  final MapSpot spot;
   final VoidCallback onDetailPressed;
 
   @override
@@ -275,7 +259,7 @@ class _SpotBottomSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '${spot.area} · ${spot.category} · ${spot.potatoName}',
+                      '${spot.cityName} · ${spot.categoryLabel} · ${spot.potatoName}',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -286,7 +270,7 @@ class _SpotBottomSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              _CongestionBadge(label: spot.congestion),
+              _CongestionBadge(label: spot.congestionLabel),
             ],
           ),
           const SizedBox(height: 12),
@@ -415,22 +399,67 @@ class _NormalPotatoLine extends StatelessWidget {
   }
 }
 
-class _MapSpot {
-  const _MapSpot({
-    required this.id,
-    required this.name,
-    required this.area,
-    required this.category,
-    required this.congestion,
-    required this.potatoName,
-    required this.isRare,
-  });
+class _MapLoading extends StatelessWidget {
+  const _MapLoading();
 
-  final String id;
-  final String name;
-  final String area;
-  final String category;
-  final String congestion;
-  final String potatoName;
-  final bool isRare;
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(color: Color(0xFFEAF5D5)),
+      child: Center(
+        child: CircularProgressIndicator(color: _mapPrimary),
+      ),
+    );
+  }
+}
+
+class _MapError extends StatelessWidget {
+  const _MapError();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(color: Color(0xFFEAF5D5)),
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            '감자 스팟을 불러오지 못했습니다.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptySpotMessage extends StatelessWidget {
+  const _EmptySpotMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const IgnorePointer(
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(24, 0, 24, 120),
+          child: Text(
+            '아직 저장된 감자 스팟이 없습니다.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
