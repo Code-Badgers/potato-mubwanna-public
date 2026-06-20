@@ -67,6 +67,8 @@ class _CouponScreenState extends State<CouponScreen> {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: _CouponTabBar(
                 selectedTab: _selectedTab,
+                availableCount: _availableCoupons.length,
+                usedCount: _usedCoupons.length,
                 onChanged: (tab) => setState(() => _selectedTab = tab),
               ),
             ),
@@ -128,10 +130,14 @@ class _CouponHeader extends StatelessWidget {
 class _CouponTabBar extends StatelessWidget {
   const _CouponTabBar({
     required this.selectedTab,
+    required this.availableCount,
+    required this.usedCount,
     required this.onChanged,
   });
 
   final _CouponTab selectedTab;
+  final int availableCount;
+  final int usedCount;
   final ValueChanged<_CouponTab> onChanged;
 
   @override
@@ -147,7 +153,7 @@ class _CouponTabBar extends StatelessWidget {
         children: [
           Expanded(
             child: _CouponTabButton(
-              label: '사용 가능 2',
+              label: '사용 가능 $availableCount',
               selected: selectedTab == _CouponTab.available,
               onTap: () => onChanged(_CouponTab.available),
             ),
@@ -155,7 +161,7 @@ class _CouponTabBar extends StatelessWidget {
           const SizedBox(width: 4),
           Expanded(
             child: _CouponTabButton(
-              label: '사용 완료 1',
+              label: '사용 완료 $usedCount',
               selected: selectedTab == _CouponTab.used,
               onTap: () => onChanged(_CouponTab.used),
             ),
