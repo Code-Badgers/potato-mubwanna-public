@@ -12,8 +12,25 @@ public class PotatoSpotClassifier {
         String title,
         String address
     ) {
+        return classify(contentTypeId, title, address, false);
+    }
+
+    public Optional<PotatoSpotClassification> classifyKeywordSearchResult(
+        Integer contentTypeId,
+        String title,
+        String address
+    ) {
+        return classify(contentTypeId, title, address, true);
+    }
+
+    private Optional<PotatoSpotClassification> classify(
+        Integer contentTypeId,
+        String title,
+        String address,
+        boolean trustKeywordSearch
+    ) {
         String text = "%s %s".formatted(nullToBlank(title), nullToBlank(address));
-        if (!containsPotatoKeyword(text)) {
+        if (!trustKeywordSearch && !containsPotatoKeyword(text)) {
             return Optional.empty();
         }
 

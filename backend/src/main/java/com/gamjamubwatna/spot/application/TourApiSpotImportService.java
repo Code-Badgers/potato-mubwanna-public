@@ -53,8 +53,21 @@ public class TourApiSpotImportService {
         return savedCount;
     }
 
+    @Transactional
+    public int importPotatoSpotPages(int maxPages, int numOfRows) {
+        int totalSavedCount = 0;
+        for (int pageNo = 1; pageNo <= maxPages; pageNo++) {
+            totalSavedCount += importPotatoSpots(pageNo, numOfRows);
+        }
+        return totalSavedCount;
+    }
+
     private int upsert(TourApiSpotItem item) {
-        return potatoSpotClassifier.classify(item.contentTypeId(), item.title(), item.address())
+        return potatoSpotClassifier.classifyKeywordSearchResult(
+                item.contentTypeId(),
+                item.title(),
+                item.address()
+            )
             .map(classification -> {
                 Instant now = Instant.now(clock);
                 touristSpotRepository.findByContentId(item.contentId())

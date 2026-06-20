@@ -43,9 +43,14 @@ auth:
 external:
   tour-api:
     base-url: ${TOUR_API_BASE_URL:https://apis.data.go.kr/B551011/KorService2}
+    search-keyword-path: ${TOUR_API_SEARCH_KEYWORD_PATH:/searchKeyword2}
     service-key: ${TOUR_API_SERVICE_KEY:}
     mobile-os: ${TOUR_API_MOBILE_OS:ETC}
     mobile-app: ${TOUR_API_MOBILE_APP:potato-mubwanna}
+    legal-region-code: ${TOUR_API_LEGAL_REGION_CODE:51}
+    import-on-startup: ${TOUR_API_IMPORT_ON_STARTUP:false}
+    import-page-size: ${TOUR_API_IMPORT_PAGE_SIZE:50}
+    import-max-pages: ${TOUR_API_IMPORT_MAX_PAGES:1}
 
 management:
   endpoints:

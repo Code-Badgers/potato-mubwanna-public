@@ -34,4 +34,14 @@ class PotatoSpotClassifierTest {
         assertThat(classifier.classify(12, "바다 전망대", "강원특별자치도 고성군"))
             .isEmpty();
     }
+
+    @Test
+    void trustsTourApiKeywordSearchResultForInitialImport() {
+        PotatoSpotClassification classification = classifier
+            .classifyKeywordSearchResult(12, "대관령 여행지", "강원특별자치도 평창군")
+            .orElseThrow();
+
+        assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_TOUR);
+        assertThat(classification.tags()).isEqualTo("감자");
+    }
 }

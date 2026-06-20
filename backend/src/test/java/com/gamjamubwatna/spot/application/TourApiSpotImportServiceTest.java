@@ -49,4 +49,25 @@ class TourApiSpotImportServiceTest {
         assertThat(savedCount).isEqualTo(1);
         verify(repository).save(any(TouristSpot.class));
     }
+
+    @Test
+    void importsConfiguredPageRange() {
+        TourApiClient tourApiClient = mock(TourApiClient.class);
+        TouristSpotRepository repository = mock(TouristSpotRepository.class);
+        when(tourApiClient.searchPotatoSpots(1, 10)).thenReturn(List.of());
+        when(tourApiClient.searchPotatoSpots(2, 10)).thenReturn(List.of());
+
+        TourApiSpotImportService importService = new TourApiSpotImportService(
+            tourApiClient,
+            new PotatoSpotClassifier(),
+            repository,
+            Clock.fixed(Instant.parse("2026-06-20T00:00:00Z"), ZoneOffset.UTC)
+        );
+
+        int savedCount = importService.importPotatoSpotPages(2, 10);
+
+        assertThat(savedCount).isZero();
+        verify(tourApiClient).searchPotatoSpots(1, 10);
+        verify(tourApiClient).searchPotatoSpots(2, 10);
+    }
 }
