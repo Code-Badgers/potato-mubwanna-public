@@ -10,6 +10,7 @@ import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
+import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 
 void main() {
@@ -152,6 +153,66 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('login destination'), findsOneWidget);
+  });
+
+  testWidgets('opens the coupon inbox from the My Page reward action',
+      (tester) async {
+    final router = GoRouter(
+      initialLocation: '/main/mypage',
+      routes: [
+        GoRoute(
+          path: '/main/mypage',
+          builder: (_, __) => const MyPageScreen(),
+        ),
+        GoRoute(
+          path: '/coupons',
+          builder: (_, __) => const CouponScreen(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.text('보상함'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('사용 가능 2'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+
+    router.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('보상함'), findsOneWidget);
+  });
+
+  testWidgets('disables quick actions without a destination', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: MyPageScreen(),
+        ),
+      ),
+    );
+
+    for (final icon in [
+      Icons.menu_book_rounded,
+      Icons.assignment_turned_in_rounded,
+      Icons.inventory_2_rounded,
+    ]) {
+      expect(
+        find.ancestor(
+          of: find.byIcon(icon),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is InkWell && widget.onTap == null,
+          ),
+        ),
+        findsOneWidget,
+      );
+    }
   });
 }
 

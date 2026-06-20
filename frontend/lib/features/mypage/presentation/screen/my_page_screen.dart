@@ -281,22 +281,27 @@ class _VerticalDivider extends StatelessWidget {
 class _QuickActionGrid extends StatelessWidget {
   const _QuickActionGrid();
 
-  static const _actions = [
-    _QuickAction(icon: Icons.card_giftcard_rounded, label: '보상함'),
-    _QuickAction(icon: Icons.menu_book_rounded, label: '여행 기록'),
-    _QuickAction(icon: Icons.assignment_turned_in_rounded, label: '내 미션'),
-    _QuickAction(icon: Icons.inventory_2_rounded, label: '감자 도감'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final actions = [
+      _QuickAction(
+        icon: Icons.card_giftcard_rounded,
+        label: '보상함',
+        onTap: () => context.push('/coupons'),
+      ),
+      const _QuickAction(icon: Icons.menu_book_rounded, label: '여행 기록'),
+      const _QuickAction(
+          icon: Icons.assignment_turned_in_rounded, label: '내 미션'),
+      const _QuickAction(icon: Icons.inventory_2_rounded, label: '감자 도감'),
+    ];
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
       child: Row(
         children: [
-          for (var index = 0; index < _actions.length; index++) ...[
-            Expanded(child: _QuickActionCard(action: _actions[index])),
-            if (index < _actions.length - 1) const SizedBox(width: 12),
+          for (var index = 0; index < actions.length; index++) ...[
+            Expanded(child: _QuickActionCard(action: actions[index])),
+            if (index < actions.length - 1) const SizedBox(width: 12),
           ],
         ],
       ),
@@ -315,7 +320,7 @@ class _QuickActionCard extends StatelessWidget {
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        onTap: () {},
+        onTap: action.onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
           height: 96,
@@ -521,10 +526,12 @@ class _QuickAction {
   const _QuickAction({
     required this.icon,
     required this.label,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
 }
 
 class _MenuItem {
