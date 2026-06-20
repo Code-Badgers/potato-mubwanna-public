@@ -287,7 +287,7 @@ class _QuickActionGrid extends StatelessWidget {
       _QuickAction(
         icon: Icons.card_giftcard_rounded,
         label: '보상함',
-        onTap: () => context.go('/coupons'),
+        onTap: () => context.push('/coupons'),
       ),
       const _QuickAction(icon: Icons.menu_book_rounded, label: '여행 기록'),
       const _QuickAction(
@@ -320,7 +320,7 @@ class _QuickActionCard extends StatelessWidget {
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        onTap: action.onTap ?? () {},
+        onTap: action.onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
           height: 96,

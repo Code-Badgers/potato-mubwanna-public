@@ -181,6 +181,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('사용 가능 2'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+
+    router.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('보상함'), findsOneWidget);
+  });
+
+  testWidgets('disables quick actions without a destination', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: MyPageScreen(),
+        ),
+      ),
+    );
+
+    for (final icon in [
+      Icons.menu_book_rounded,
+      Icons.assignment_turned_in_rounded,
+      Icons.inventory_2_rounded,
+    ]) {
+      expect(
+        find.ancestor(
+          of: find.byIcon(icon),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is InkWell && widget.onTap == null,
+          ),
+        ),
+        findsOneWidget,
+      );
+    }
   });
 }
 
