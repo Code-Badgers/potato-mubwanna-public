@@ -73,12 +73,27 @@ void main() {
       findsOneWidget,
     );
 
-    for (final label in ['설정', '공지사항', '고객센터', '로그아웃']) {
+    for (final label in ['설정', '공지사항', '고객센터']) {
       expect(
         find.ancestor(
           of: find.text(label),
           matching: find.byWidgetPredicate(
             (widget) => widget is InkWell && widget.borderRadius == null,
+          ),
+        ),
+        findsOneWidget,
+      );
+    }
+
+    for (final label in ['설정', '공지사항', '고객센터']) {
+      expect(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is InkWell &&
+                widget.borderRadius == null &&
+                widget.onTap != null,
           ),
         ),
         findsOneWidget,
@@ -128,9 +143,10 @@ void main() {
     await tester.scrollUntilVisible(logout, 200);
     await tester.tap(logout);
     await tester.pump();
-    await tester.tap(logout);
 
     expect(authRepository.logoutCalls, 1);
+    expect(find.byType(ModalBarrier), findsAtLeastNWidgets(1));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     authRepository.completeLogout();
     await tester.pumpAndSettle();

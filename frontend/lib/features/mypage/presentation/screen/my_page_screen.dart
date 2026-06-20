@@ -23,25 +23,36 @@ class MyPageScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            const SliverToBoxAdapter(child: _MyPageHeader()),
-            const SliverToBoxAdapter(child: _ProfileSummary()),
-            const SliverToBoxAdapter(child: _TravelStats()),
-            const SliverToBoxAdapter(child: _QuickActionGrid()),
-            const SliverToBoxAdapter(child: _TravelBanner()),
-            SliverToBoxAdapter(
-              child: _AccountMenu(
-                isLoggingOut: isLoggingOut,
-                onLogout: () async {
-                  await ref.read(authControllerProvider.notifier).logout();
-                  if (context.mounted) {
-                    context.go('/login');
-                  }
-                },
-              ),
+        child: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                const SliverToBoxAdapter(child: _MyPageHeader()),
+                const SliverToBoxAdapter(child: _ProfileSummary()),
+                const SliverToBoxAdapter(child: _TravelStats()),
+                const SliverToBoxAdapter(child: _QuickActionGrid()),
+                const SliverToBoxAdapter(child: _TravelBanner()),
+                SliverToBoxAdapter(
+                  child: _AccountMenu(
+                    isLoggingOut: isLoggingOut,
+                    onLogout: () async {
+                      await ref.read(authControllerProvider.notifier).logout();
+                      if (context.mounted) {
+                        context.go('/login');
+                      }
+                    },
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              ],
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            if (isLoggingOut) ...[
+              const ModalBarrier(
+                dismissible: false,
+                color: Colors.black12,
+              ),
+              const Center(child: CircularProgressIndicator()),
+            ],
           ],
         ),
       ),
@@ -448,8 +459,9 @@ class _AccountMenu extends StatelessWidget {
             for (var index = 0; index < _items.length; index++) ...[
               _MenuRow(
                 item: _items[index],
-                onTap:
-                    _items[index].isLogout && !isLoggingOut ? onLogout : null,
+                onTap: _items[index].isLogout
+                    ? (isLoggingOut ? null : onLogout)
+                    : () {},
               ),
               if (index < _items.length - 1)
                 const Divider(height: 1, color: _mypageLine, indent: 58),

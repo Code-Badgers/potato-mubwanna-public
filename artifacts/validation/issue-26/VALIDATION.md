@@ -10,6 +10,14 @@
 - The My Page logout row invokes `AuthController.logout()` once while a logout is in progress.
 - After local session cleanup, the current route is replaced with `/login`.
 - `AuthController` resets to `idle` after an `AuthRepository.logout()` exception.
+- A logout-in-progress overlay blocks all My Page input and shows a loading indicator.
+- Placeholder account menu rows retain their InkWell feedback while logout is idle.
+
+## Review Follow-Up
+
+- Gemini review feedback was evaluated against the current My Page interaction model.
+- Added a `ModalBarrier` and `CircularProgressIndicator` while logout is pending so no other My Page action can run during session cleanup.
+- Restored non-logout placeholder menu callbacks to preserve the existing InkWell ripple behavior.
 
 ## Test-First Record
 
