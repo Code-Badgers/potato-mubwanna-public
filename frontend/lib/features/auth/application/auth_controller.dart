@@ -29,8 +29,7 @@ final authRepositoryProvider = Provider<AuthRepository>(
   ),
 );
 
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>(
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
     kakaoLoginService: ref.watch(kakaoLoginServiceProvider),
     authRepository: ref.watch(authRepositoryProvider),
@@ -81,8 +80,13 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     state = const AuthState.loading();
-    await _authRepository.logout();
-    state = const AuthState.idle();
+    try {
+      await _authRepository.logout();
+    } catch (_) {
+      // AuthRepository clears local tokens even when remote revocation fails.
+    } finally {
+      state = const AuthState.idle();
+    }
   }
 }
 

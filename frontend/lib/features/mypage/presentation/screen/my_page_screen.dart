@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../auth/application/auth_controller.dart';
 
 const _mypagePrimary = Color(0xFF56C787);
 const _mypageDark = Color(0xFF509B64);
@@ -9,23 +12,36 @@ const _mypageCream = Color(0xFFFFF8EA);
 const _mypageBrown = Color(0xFF7A4A24);
 const _mypageGold = Color(0xFFF6C23E);
 
-class MyPageScreen extends StatelessWidget {
+class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoggingOut =
+        ref.watch(authControllerProvider).status == AuthStatus.loading;
+
+    return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _MyPageHeader()),
-            SliverToBoxAdapter(child: _ProfileSummary()),
-            SliverToBoxAdapter(child: _TravelStats()),
-            SliverToBoxAdapter(child: _QuickActionGrid()),
-            SliverToBoxAdapter(child: _TravelBanner()),
-            SliverToBoxAdapter(child: _AccountMenu()),
-            SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(child: _MyPageHeader()),
+            const SliverToBoxAdapter(child: _ProfileSummary()),
+            const SliverToBoxAdapter(child: _TravelStats()),
+            const SliverToBoxAdapter(child: _QuickActionGrid()),
+            const SliverToBoxAdapter(child: _TravelBanner()),
+            SliverToBoxAdapter(
+              child: _AccountMenu(
+                isLoggingOut: isLoggingOut,
+                onLogout: () async {
+                  await ref.read(authControllerProvider.notifier).logout();
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
+                },
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),
@@ -397,13 +413,23 @@ class _TravelBanner extends StatelessWidget {
 }
 
 class _AccountMenu extends StatelessWidget {
-  const _AccountMenu();
+  const _AccountMenu({
+    required this.isLoggingOut,
+    required this.onLogout,
+  });
+
+  final bool isLoggingOut;
+  final VoidCallback onLogout;
 
   static const _items = [
     _MenuItem(icon: Icons.settings_outlined, label: '설정'),
     _MenuItem(icon: Icons.campaign_outlined, label: '공지사항'),
     _MenuItem(icon: Icons.help_outline_rounded, label: '고객센터'),
-    _MenuItem(icon: Icons.logout_rounded, label: '로그아웃'),
+    _MenuItem(
+      icon: Icons.logout_rounded,
+      label: '로그아웃',
+      isLogout: true,
+    ),
   ];
 
   @override
@@ -420,7 +446,11 @@ class _AccountMenu extends StatelessWidget {
         child: Column(
           children: [
             for (var index = 0; index < _items.length; index++) ...[
-              _MenuRow(item: _items[index]),
+              _MenuRow(
+                item: _items[index],
+                onTap:
+                    _items[index].isLogout && !isLoggingOut ? onLogout : null,
+              ),
               if (index < _items.length - 1)
                 const Divider(height: 1, color: _mypageLine, indent: 58),
             ],
@@ -432,14 +462,18 @@ class _AccountMenu extends StatelessWidget {
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.item});
+  const _MenuRow({
+    required this.item,
+    required this.onTap,
+  });
 
   final _MenuItem item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       child: SizedBox(
         height: 64,
         child: Row(
@@ -485,8 +519,10 @@ class _MenuItem {
   const _MenuItem({
     required this.icon,
     required this.label,
+    this.isLogout = false,
   });
 
   final IconData icon;
   final String label;
+  final bool isLogout;
 }
