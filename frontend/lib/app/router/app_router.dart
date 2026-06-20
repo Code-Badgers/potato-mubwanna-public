@@ -11,6 +11,7 @@ import '../../features/onboarding/presentation/screen/permission_guide_screen.da
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
 import '../../features/spot/presentation/screen/spot_detail_screen.dart';
 import '../../features/stamp/presentation/screen/stamp_book_screen.dart';
+import '../../features/travel_record/presentation/screen/travel_record_screen.dart';
 import '../../shared/widgets/navigation/main_shell.dart';
 
 final appRouter = GoRouter(
@@ -31,6 +32,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/coupons',
       builder: (context, state) => const CouponScreen(),
+    ),
+    GoRoute(
+      path: '/travel-records',
+      builder: (context, state) => const TravelRecordScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),
