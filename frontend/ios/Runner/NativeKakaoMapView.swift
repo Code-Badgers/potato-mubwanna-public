@@ -17,8 +17,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private let latitude: Double
   private let longitude: Double
   private let zoomLevel: Int
+  private let spots: [[String: Any]]
   private var isAuthenticated = false
   private var didPrepareEngine = false
+  private let spotLayerID = "potatoSpotLayer"
 
   init(
     frame: CGRect,
@@ -30,6 +32,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     latitude = params["latitude"] as? Double ?? 37.3808
     longitude = params["longitude"] as? Double ?? 128.6609
     zoomLevel = params["zoomLevel"] as? Int ?? 9
+    spots = params["spots"] as? [[String: Any]] ?? []
     container = NativeKakaoMapContainer(frame: frame)
     super.init()
 
@@ -78,6 +81,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   func addViewSucceeded(_ viewName: String, viewInfoName: String) {
     resizeMap(to: container.bounds.size)
+    addSpotPois()
   }
 
   func containerDidResized(_ size: CGSize) {
@@ -107,6 +111,110 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
     let mapView = mapController?.getView("potatoMap") as? KakaoMap
     mapView?.viewRect = CGRect(origin: .zero, size: size)
+  }
+
+  private func addSpotPois() {
+    guard let mapView = mapController?.getView("potatoMap") as? KakaoMap else {
+      return
+    }
+
+    let labelManager = mapView.getLabelManager()
+    let layer = labelManager.getLabelLayer(layerID: spotLayerID) ?? labelManager.addLabelLayer(
+      option: LabelLayerOptions(
+        layerID: spotLayerID,
+        competitionType: .none,
+        competitionUnit: .symbolFirst,
+        orderType: .rank,
+        zOrder: 10
+      )
+    )
+    layer?.clearAllItems()
+
+    for spot in spots {
+      guard
+        let latitude = spot["latitude"] as? Double,
+        let longitude = spot["longitude"] as? Double
+      else {
+        continue
+      }
+
+      let spotID = "\(spot["id"] ?? UUID().uuidString)"
+      let isRare = spot["rare"] as? Bool ?? false
+      let markerColor = spot["markerColor"] as? String ?? (isRare ? "#F6C23E" : "#36D98F")
+      let styleID = styleIDFor(markerColor: markerColor, isRare: isRare)
+      labelManager.addPoiStyle(
+        makePoiStyle(
+          styleID: styleID,
+          text: isRare ? "🥔★" : "🥔",
+          color: colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
+        )
+      )
+      let option = PoiOptions(
+        styleID: styleID,
+        poiID: "potato-\(spotID)"
+      )
+      layer?.addPoi(
+        option: option,
+        at: MapPoint(longitude: longitude, latitude: latitude)
+      )
+    }
+  }
+
+  private func styleIDFor(markerColor: String, isRare: Bool) -> String {
+    let colorKey = markerColor
+      .replacingOccurrences(of: "#", with: "")
+      .replacingOccurrences(of: " ", with: "")
+    return "potato\(colorKey)\(isRare ? "Rare" : "Normal")"
+  }
+
+  private func colorFromHex(_ hex: String) -> UIColor? {
+    let normalized = hex
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .replacingOccurrences(of: "#", with: "")
+    guard normalized.count == 6, let value = Int(normalized, radix: 16) else {
+      return nil
+    }
+    return UIColor(
+      red: CGFloat((value >> 16) & 0xFF) / 255.0,
+      green: CGFloat((value >> 8) & 0xFF) / 255.0,
+      blue: CGFloat(value & 0xFF) / 255.0,
+      alpha: 1
+    )
+  }
+
+  private func makePoiStyle(styleID: String, text: String, color: UIColor) -> PoiStyle {
+    let iconStyle = PoiIconStyle(
+      symbol: makeMarkerImage(text: text, color: color),
+      anchorPoint: CGPoint(x: 0.5, y: 1.0)
+    )
+    let perLevelStyle = PerLevelPoiStyle(iconStyle: iconStyle, padding: 0, level: 0)
+    return PoiStyle(styleID: styleID, styles: [perLevelStyle])
+  }
+
+  private func makeMarkerImage(text: String, color: UIColor) -> UIImage? {
+    let size = CGSize(width: text.contains("★") ? 58 : 48, height: 48)
+    let renderer = UIGraphicsImageRenderer(size: size)
+    return renderer.image { _ in
+      let markerRect = CGRect(x: 3, y: 3, width: size.width - 6, height: size.height - 6)
+      let markerPath = UIBezierPath(
+        roundedRect: markerRect,
+        cornerRadius: markerRect.height / 2
+      )
+      UIColor.white.setFill()
+      markerPath.fill()
+      color.setStroke()
+      markerPath.lineWidth = 3
+      markerPath.stroke()
+
+      let paragraph = NSMutableParagraphStyle()
+      paragraph.alignment = .center
+      let attributes: [NSAttributedString.Key: Any] = [
+        .font: UIFont.systemFont(ofSize: text.contains("★") ? 20 : 23),
+        .paragraphStyle: paragraph,
+      ]
+      let textRect = CGRect(x: 0, y: 12, width: size.width, height: 28)
+      NSAttributedString(string: text, attributes: attributes).draw(in: textRect)
+    }
   }
 
   private func showFallback(_ message: String) {

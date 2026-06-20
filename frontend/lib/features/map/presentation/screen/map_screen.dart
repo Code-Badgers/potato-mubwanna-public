@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -80,14 +79,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         Positioned.fill(
                           child: _PotatoMapPreview(
                             spots: visibleSpots,
-                            selectedSpotId: selectedSpot?.id,
-                            onSpotSelected: (spot) {
-                              setState(() {
-                                _selectedSpotIndex = visibleSpots.indexWhere(
-                                  (candidate) => candidate.id == spot.id,
-                                );
-                              });
-                            },
                           ),
                         ),
                         Positioned(
@@ -151,13 +142,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
     required this.spots,
-    this.selectedSpotId,
-    this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
-  final String? selectedSpotId;
-  final ValueChanged<MapSpot>? onSpotSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -168,116 +155,10 @@ class _PotatoMapPreview extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(child: KakaoMapView(spots: spots)),
-            if (!kIsWeb && spots.isNotEmpty)
-              Positioned.fill(
-                child: _NativePotatoPinOverlay(
-                  spots: spots,
-                  selectedSpotId: selectedSpotId,
-                  onSpotSelected: onSpotSelected,
-                ),
-              ),
           ],
         ),
       ),
     );
-  }
-}
-
-class _NativePotatoPinOverlay extends StatelessWidget {
-  const _NativePotatoPinOverlay({
-    required this.spots,
-    required this.selectedSpotId,
-    required this.onSpotSelected,
-  });
-
-  final List<MapSpot> spots;
-  final String? selectedSpotId;
-  final ValueChanged<MapSpot>? onSpotSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final visibleSpots = spots.take(8).toList();
-        return Stack(
-          children: [
-            for (final spot in visibleSpots)
-              Positioned(
-                left: _leftFor(spot, constraints.maxWidth),
-                top: _topFor(spot, constraints.maxHeight),
-                child: _PotatoMapPin(
-                  spot: spot,
-                  selected: spot.id == selectedSpotId,
-                  onTap: () => onSpotSelected?.call(spot),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  double _leftFor(MapSpot spot, double width) {
-    final normalized = ((spot.longitude - 127.0) / 3.2).clamp(0.08, 0.86);
-    return width * normalized;
-  }
-
-  double _topFor(MapSpot spot, double height) {
-    final normalized = ((38.6 - spot.latitude) / 2.2).clamp(0.16, 0.72);
-    return height * normalized;
-  }
-}
-
-class _PotatoMapPin extends StatelessWidget {
-  const _PotatoMapPin({
-    required this.spot,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final MapSpot spot;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: spot.isRare ? 58 : 48,
-        height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(
-            color: selected || spot.isRare
-                ? _rareGold
-                : _colorFromHex(spot.markerColorHex),
-            width: 3,
-          ),
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Text(
-          spot.isRare ? '🥔★' : '🥔',
-          style: TextStyle(
-            fontSize: spot.isRare ? 20 : 23,
-            height: 1,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _colorFromHex(String hex) {
-    final normalized = hex.replaceFirst('#', '');
-    return Color(int.parse('FF$normalized', radix: 16));
   }
 }
 

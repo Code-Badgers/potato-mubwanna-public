@@ -36,6 +36,7 @@ class KakaoMapView extends StatelessWidget {
                 'latitude': spot.latitude,
                 'longitude': spot.longitude,
                 'rare': spot.isRare,
+                'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
               })
           .toList(),
     };
