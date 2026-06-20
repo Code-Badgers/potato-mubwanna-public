@@ -27,7 +27,11 @@ class MyPageScreen extends ConsumerWidget {
           children: [
             CustomScrollView(
               slivers: [
-                const SliverToBoxAdapter(child: _MyPageHeader()),
+                SliverToBoxAdapter(
+                  child: _MyPageHeader(
+                    onSettings: () => context.push('/settings'),
+                  ),
+                ),
                 const SliverToBoxAdapter(child: _ProfileSummary()),
                 const SliverToBoxAdapter(child: _TravelStats()),
                 const SliverToBoxAdapter(child: _QuickActionGrid()),
@@ -35,6 +39,7 @@ class MyPageScreen extends ConsumerWidget {
                 SliverToBoxAdapter(
                   child: _AccountMenu(
                     isLoggingOut: isLoggingOut,
+                    onSettings: () => context.push('/settings'),
                     onLogout: () async {
                       await ref.read(authControllerProvider.notifier).logout();
                       if (context.mounted) {
@@ -61,7 +66,9 @@ class MyPageScreen extends ConsumerWidget {
 }
 
 class _MyPageHeader extends StatelessWidget {
-  const _MyPageHeader();
+  const _MyPageHeader({required this.onSettings});
+
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +89,7 @@ class _MyPageHeader extends StatelessWidget {
           ),
           IconButton(
             tooltip: '설정',
-            onPressed: () {},
+            onPressed: onSettings,
             icon: const Icon(
               Icons.settings_outlined,
               color: AppColors.textPrimary,
@@ -435,14 +442,20 @@ class _TravelBanner extends StatelessWidget {
 class _AccountMenu extends StatelessWidget {
   const _AccountMenu({
     required this.isLoggingOut,
+    required this.onSettings,
     required this.onLogout,
   });
 
   final bool isLoggingOut;
+  final VoidCallback onSettings;
   final VoidCallback onLogout;
 
   static const _items = [
-    _MenuItem(icon: Icons.settings_outlined, label: '설정'),
+    _MenuItem(
+      icon: Icons.settings_outlined,
+      label: '설정',
+      isSettings: true,
+    ),
     _MenuItem(icon: Icons.campaign_outlined, label: '공지사항'),
     _MenuItem(icon: Icons.help_outline_rounded, label: '고객센터'),
     _MenuItem(
@@ -470,7 +483,9 @@ class _AccountMenu extends StatelessWidget {
                 item: _items[index],
                 onTap: _items[index].isLogout
                     ? (isLoggingOut ? null : onLogout)
-                    : () {},
+                    : _items[index].isSettings
+                        ? onSettings
+                        : () {},
               ),
               if (index < _items.length - 1)
                 const Divider(height: 1, color: _mypageLine, indent: 58),
@@ -543,9 +558,11 @@ class _MenuItem {
     required this.icon,
     required this.label,
     this.isLogout = false,
+    this.isSettings = false,
   });
 
   final IconData icon;
   final String label;
   final bool isLogout;
+  final bool isSettings;
 }

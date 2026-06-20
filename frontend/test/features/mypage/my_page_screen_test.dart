@@ -6,12 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:potato_mubwanna/core/permissions/permission_service.dart';
 import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
+import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
 
 void main() {
@@ -224,6 +227,50 @@ void main() {
     expect(find.text('여행 기록'), findsOneWidget);
   });
 
+  testWidgets('opens settings from My Page header and account menu',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = GoRouter(
+      initialLocation: '/main/mypage',
+      routes: [
+        GoRoute(
+          path: '/main/mypage',
+          builder: (_, __) => const MyPageScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (_, __) => SettingsScreen(
+            permissionService: _GrantedPermissionService(),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('설정'));
+    await tester.pumpAndSettle();
+    expect(find.text('권한 관리'), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+
+    final settingsMenu = find.text('설정');
+    await tester.scrollUntilVisible(settingsMenu, 200);
+    await tester.tap(settingsMenu);
+    await tester.pumpAndSettle();
+
+    expect(find.text('권한 관리'), findsOneWidget);
+  });
+
   testWidgets('disables quick actions without a destination', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
@@ -269,4 +316,13 @@ class _ControlledLogoutAuthRepository extends AuthRepository {
   void completeLogout() {
     _logoutCompleter.complete();
   }
+}
+
+class _GrantedPermissionService extends PermissionService {
+  @override
+  Future<PermissionStatus> locationStatus() async => PermissionStatus.granted;
+
+  @override
+  Future<PermissionStatus> notificationStatus() async =>
+      PermissionStatus.granted;
 }
