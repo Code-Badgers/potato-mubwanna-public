@@ -48,13 +48,15 @@
 
 ## Android Runtime Permission Capture
 
-- Verified on the Pixel 7 API 36 Google APIs emulator after a fresh app install.
+- Verified on the Pixel 7 API 36 Google APIs emulator after a fresh app install
+  with the device system language set to Korean.
 - `issue-32-location-permission.png` captures the Android system location
-  permission dialog with precise/approximate and foreground/one-time choices.
+  permission dialog with Korean precise/approximate and foreground/one-time
+  choices.
 - `issue-32-notification-permission.png` captures the Android system
-  notification permission dialog.
-- The emulator's system language is English; the app's settings screen remains
-  Korean underneath each system dialog.
+  notification permission dialog with Korean allow/deny actions.
+- The app screen, Android system permission dialog, navigation labels, and
+  status-bar environment shown in both captures are Korean.
 
 ## Residual Risk
 
