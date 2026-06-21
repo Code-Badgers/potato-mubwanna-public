@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
+import 'dart:js' as js;
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
@@ -112,6 +113,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
     try {
       await _loadKakaoSdk();
+      await _waitForKakaoMaps();
       if (!mounted) {
         return;
       }
@@ -120,7 +122,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       _messageElement.style.display = 'none';
     } catch (_) {
       _showMessage(
-        '카카오맵을 불러오지 못했습니다. JavaScript 키, Kakao Map 사용 설정, Web 도메인 등록을 확인해주세요.',
+        '카카오맵을 불러오지 못했습니다. Kakao Developers에 ${html.window.location.origin} 도메인이 등록되어 있는지 확인해주세요.',
       );
     }
   }
@@ -134,20 +136,25 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     final completer = Completer<void>();
     _sdkLoadFuture = completer.future;
 
+    final sdkSrc =
+        'https://dapi.kakao.com/v2/maps/sdk.js?appkey=${Uri.encodeComponent(_kakaoJavaScriptKey)}&autoload=false';
     final existingScript = html.document.getElementById('kakao-map-sdk');
     if (existingScript != null) {
-      if (!completer.isCompleted) {
-        completer.complete();
+      final existingSrc = existingScript.getAttribute('src') ?? '';
+      if (existingSrc == sdkSrc) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+        return completer.future;
       }
-      return completer.future;
+      existingScript.remove();
     }
 
     final script = html.ScriptElement()
       ..id = 'kakao-map-sdk'
       ..type = 'text/javascript'
       ..async = true
-      ..src =
-          'https://dapi.kakao.com/v2/maps/sdk.js?appkey=${Uri.encodeComponent(_kakaoJavaScriptKey)}&autoload=false';
+      ..src = sdkSrc;
 
     script.onLoad.first.then((_) {
       if (!completer.isCompleted) {
@@ -162,6 +169,27 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
     html.document.head?.append(script);
     return completer.future;
+  }
+
+  static Future<void> _waitForKakaoMaps() async {
+    for (var attempt = 0; attempt < 30; attempt += 1) {
+      final hasKakaoMaps = _hasKakaoMaps();
+      if (hasKakaoMaps) {
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+
+    throw StateError('Kakao Maps SDK was loaded but kakao.maps is unavailable');
+  }
+
+  static bool _hasKakaoMaps() {
+    final kakao = js.context['kakao'];
+    if (kakao is! js.JsObject) {
+      return false;
+    }
+    final maps = kakao['maps'];
+    return maps != null;
   }
 
   void _injectKakaoMapScript() {
