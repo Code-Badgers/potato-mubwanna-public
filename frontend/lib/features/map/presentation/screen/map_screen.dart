@@ -21,6 +21,7 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
   int _selectedSpotIndex = 0;
+  bool _showFavoriteRouteOnly = false;
 
   static const _categories = [
     _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
@@ -34,14 +35,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _MapCategoryFilter(label: '쇼핑', icon: Icons.shopping_bag_rounded),
   ];
 
-  List<MapSpot> _visibleSpots(List<MapSpot> spots) {
+  List<MapSpot> _visibleSpots(
+      List<MapSpot> spots, Set<String> favoriteSpotIds) {
     final selectedCategory = _categories[_selectedCategoryIndex].label;
-    if (selectedCategory == '전체') {
-      return spots;
-    }
-    return spots
-        .where((spot) => spot.matchesCategoryLabel(selectedCategory))
-        .toList();
+    return spots.where((spot) {
+      final matchesCategory = selectedCategory == '전체' ||
+          spot.matchesCategoryLabel(selectedCategory);
+      final matchesFavoriteRoute =
+          !_showFavoriteRouteOnly || favoriteSpotIds.contains(spot.id);
+      return matchesCategory && matchesFavoriteRoute;
+    }).toList();
   }
 
   MapSpot? _selectedSpot(List<MapSpot> spots) {
@@ -54,6 +57,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void _selectCategory(int index) {
     setState(() {
       _selectedCategoryIndex = index;
+      _selectedSpotIndex = 0;
+    });
+  }
+
+  void _toggleFavoriteRouteOnly() {
+    setState(() {
+      _showFavoriteRouteOnly = !_showFavoriteRouteOnly;
       _selectedSpotIndex = 0;
     });
   }
@@ -84,7 +94,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: spotsState.when(
                   data: (spots) {
-                    final visibleSpots = _visibleSpots(spots);
+                    final visibleSpots = _visibleSpots(spots, favoriteSpotIds);
                     final selectedSpot = _selectedSpot(visibleSpots);
                     return Stack(
                       children: [
@@ -100,10 +110,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           left: 12,
                           right: 12,
                           top: 18,
-                          child: _CategoryFilterBar(
-                            categories: _categories,
-                            selectedIndex: _selectedCategoryIndex,
-                            onSelected: _selectCategory,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _RouteModeChip(
+                                enabled: _showFavoriteRouteOnly,
+                                favoriteCount: favoriteSpotIds.length,
+                                onTap: _toggleFavoriteRouteOnly,
+                              ),
+                              const SizedBox(height: 10),
+                              _CategoryFilterBar(
+                                categories: _categories,
+                                selectedIndex: _selectedCategoryIndex,
+                                onSelected: _selectCategory,
+                              ),
+                            ],
                           ),
                         ),
                         if (selectedSpot == null)
@@ -157,10 +178,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         left: 12,
                         right: 12,
                         top: 18,
-                        child: _CategoryFilterBar(
-                          categories: _categories,
-                          selectedIndex: _selectedCategoryIndex,
-                          onSelected: _selectCategory,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _RouteModeChip(
+                              enabled: _showFavoriteRouteOnly,
+                              favoriteCount: favoriteSpotIds.length,
+                              onTap: _toggleFavoriteRouteOnly,
+                            ),
+                            const SizedBox(height: 10),
+                            _CategoryFilterBar(
+                              categories: _categories,
+                              selectedIndex: _selectedCategoryIndex,
+                              onSelected: _selectCategory,
+                            ),
+                          ],
                         ),
                       ),
                       const Positioned.fill(child: _MapError()),
@@ -170,6 +202,57 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RouteModeChip extends StatelessWidget {
+  const _RouteModeChip({
+    required this.enabled,
+    required this.favoriteCount,
+    required this.onTap,
+  });
+
+  final bool enabled;
+  final int favoriteCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = enabled ? const Color(0xFFFFF2B8) : Colors.white;
+    final foregroundColor = enabled ? AppColors.textPrimary : _mapDark;
+    return Material(
+      color: backgroundColor.withValues(alpha: 0.96),
+      borderRadius: BorderRadius.circular(999),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                enabled ? Icons.route_rounded : Icons.bookmark_border_rounded,
+                size: 18,
+                color: enabled ? _rareGold : _mapDark,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                enabled ? '내 동선만 보기' : '내 동선 $favoriteCount곳',
+                style: TextStyle(
+                  color: foregroundColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
