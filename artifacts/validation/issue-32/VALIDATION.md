@@ -46,6 +46,16 @@
 | `flutter analyze` | Passed: no issues |
 | `flutter build apk --debug` | Passed: `build/app/outputs/flutter-apk/app-debug.apk` created (204,618,959 bytes) |
 
+## Android Runtime Permission Capture
+
+- Verified on the Pixel 7 API 36 Google APIs emulator after a fresh app install.
+- `issue-32-location-permission.png` captures the Android system location
+  permission dialog with precise/approximate and foreground/one-time choices.
+- `issue-32-notification-permission.png` captures the Android system
+  notification permission dialog.
+- The emulator's system language is English; the app's settings screen remains
+  Korean underneath each system dialog.
+
 ## Residual Risk
 
 - The runtime Android permission dialog and the system settings return flow still need confirmation on an Android emulator or physical device.
