@@ -186,7 +186,6 @@ class _PotatoMapPreview extends StatelessWidget {
           children: [
             Positioned.fill(
               child: KakaoMapView(
-                key: ValueKey(Object.hashAll(spots.map((spot) => spot.id))),
                 spots: spots,
                 onSpotSelected: onSpotSelected,
               ),

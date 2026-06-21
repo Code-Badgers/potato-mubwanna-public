@@ -18,7 +18,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private let latitude: Double
   private let longitude: Double
   private let zoomLevel: Int
-  private let spots: [[AnyHashable: Any]]
+  private var spots: [[AnyHashable: Any]]
   private var isAuthenticated = false
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
@@ -42,6 +42,15 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       binaryMessenger: messenger
     )
     super.init()
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "updateSpots" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      self?.spots = Self.spotMaps(from: call.arguments)
+      self?.addSpotPois()
+      result(nil)
+    }
 
     let nativeAppKey = params["nativeAppKey"] as? String ?? ""
     if nativeAppKey.isEmpty {
@@ -113,6 +122,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   deinit {
+    channel.setMethodCallHandler(nil)
     eventHandlers.forEach { $0.dispose() }
     eventHandlers.removeAll()
     mapController?.pauseEngine()
@@ -183,6 +193,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     layer?.visible = true
     layer?.setClickable(true)
     spotStyleByPoiID.removeAll()
+    if spots.isEmpty {
+      mapView.refresh()
+      return
+    }
 
     for spot in spots {
       guard

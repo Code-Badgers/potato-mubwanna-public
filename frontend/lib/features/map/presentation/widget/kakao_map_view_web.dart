@@ -95,6 +95,15 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     });
   }
 
+  @override
+  void didUpdateWidget(covariant KakaoMapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.spots == widget.spots) {
+      return;
+    }
+    _injectKakaoMapScript();
+  }
+
   Future<void> _initializeMapAfterLayout() async {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     if (!mounted) {
@@ -228,6 +237,11 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   window.kakao.maps.load(function () {
     try {
       const spots = $spots;
+      if (mapElement.__potatoRenderSpots) {
+        mapElement.__potatoRenderSpots(spots);
+        return;
+      }
+
       const firstSpot = spots.length > 0 ? spots[0] : null;
       const center = firstSpot
         ? new window.kakao.maps.LatLng(firstSpot.lat, firstSpot.lng)
@@ -249,6 +263,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
       let selectedMarkerElement = null;
       const markerElements = [];
+      let markerOverlays = [];
 
       function markerScale(level) {
         return Math.max(0.52, Math.min(0.88, 1.05 - ((level - 4) * 0.10)));
@@ -261,48 +276,62 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         });
       }
 
-      spots.forEach(function (spot) {
-        const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
-        const markerElement = document.createElement('button');
-        markerElement.type = 'button';
-        markerElement.title = spot.name;
-        markerElement.setAttribute('aria-label', spot.name);
-        markerElement.textContent = spot.rare ? '🥔★' : '🥔';
-        markerElement.style.width = spot.rare ? '42px' : '36px';
-        markerElement.style.height = '36px';
-        markerElement.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
-        markerElement.style.borderRadius = '999px';
-        markerElement.style.background = '#FFFFFF';
-        markerElement.style.boxShadow = '0 6px 14px rgba(0,0,0,0.16)';
-        markerElement.style.fontSize = spot.rare ? '15px' : '18px';
-        markerElement.style.lineHeight = '1';
-        markerElement.style.cursor = 'pointer';
-        markerElement.style.padding = '0';
-        markerElement.style.transformOrigin = '50% 100%';
-        markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
-        markerElement.addEventListener('click', function () {
-          if (selectedMarkerElement) {
-            selectedMarkerElement.style.borderColor =
-              selectedMarkerElement.dataset.defaultBorderColor || '#36D98F';
-          }
-          markerElement.style.borderColor = '#F6C23E';
-          selectedMarkerElement = markerElement;
-          window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
-            detail: String(spot.id)
-          }));
+      function renderSpots(nextSpots) {
+        markerOverlays.forEach(function (overlay) {
+          overlay.setMap(null);
         });
-        markerElements.push(markerElement);
+        markerOverlays = [];
+        markerElements.length = 0;
+        selectedMarkerElement = null;
 
-        new window.kakao.maps.CustomOverlay({
-          position: markerPosition,
-          content: markerElement,
-          xAnchor: 0.5,
-          yAnchor: 1
-        }).setMap(map);
-      });
+        nextSpots.forEach(function (spot) {
+          const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
+          const markerElement = document.createElement('button');
+          markerElement.type = 'button';
+          markerElement.title = spot.name;
+          markerElement.setAttribute('aria-label', spot.name);
+          markerElement.textContent = spot.rare ? '🥔★' : '🥔';
+          markerElement.style.width = spot.rare ? '42px' : '36px';
+          markerElement.style.height = '36px';
+          markerElement.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
+          markerElement.style.borderRadius = '999px';
+          markerElement.style.background = '#FFFFFF';
+          markerElement.style.boxShadow = '0 6px 14px rgba(0,0,0,0.16)';
+          markerElement.style.fontSize = spot.rare ? '15px' : '18px';
+          markerElement.style.lineHeight = '1';
+          markerElement.style.cursor = 'pointer';
+          markerElement.style.padding = '0';
+          markerElement.style.transformOrigin = '50% 100%';
+          markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
+          markerElement.addEventListener('click', function () {
+            if (selectedMarkerElement) {
+              selectedMarkerElement.style.borderColor =
+                selectedMarkerElement.dataset.defaultBorderColor || '#36D98F';
+            }
+            markerElement.style.borderColor = '#F6C23E';
+            selectedMarkerElement = markerElement;
+            window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
+              detail: String(spot.id)
+            }));
+          });
+          markerElements.push(markerElement);
+
+          const overlay = new window.kakao.maps.CustomOverlay({
+            position: markerPosition,
+            content: markerElement,
+            xAnchor: 0.5,
+            yAnchor: 1
+          });
+          overlay.setMap(map);
+          markerOverlays.push(overlay);
+        });
+        applyMarkerScale();
+      }
+
+      mapElement.__potatoRenderSpots = renderSpots;
+      renderSpots(spots);
 
       window.kakao.maps.event.addListener(map, 'zoom_changed', applyMarkerScale);
-      applyMarkerScale();
 
       map.relayout();
       map.setCenter(center);

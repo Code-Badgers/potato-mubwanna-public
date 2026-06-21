@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -26,6 +27,29 @@ class KakaoMapView extends StatefulWidget {
 class _KakaoMapViewState extends State<KakaoMapView> {
   MethodChannel? _channel;
 
+  List<Map<String, Object>> get _spotPayload => widget.spots
+      .map((spot) => {
+            'id': spot.id,
+            'name': spot.name,
+            'latitude': spot.latitude,
+            'longitude': spot.longitude,
+            'rare': spot.isRare,
+            'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
+          })
+      .toList();
+
+  @override
+  void didUpdateWidget(covariant KakaoMapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.spots == widget.spots) {
+      return;
+    }
+    final channel = _channel;
+    if (channel != null) {
+      unawaited(channel.invokeMethod<void>('updateSpots', _spotPayload));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_kakaoNativeAppKey.isEmpty ||
@@ -39,16 +63,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       'longitude':
           widget.spots.isEmpty ? 128.1555 : widget.spots.first.longitude,
       'zoomLevel': 9,
-      'spots': widget.spots
-          .map((spot) => {
-                'id': spot.id,
-                'name': spot.name,
-                'latitude': spot.latitude,
-                'longitude': spot.longitude,
-                'rare': spot.isRare,
-                'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
-              })
-          .toList(),
+      'spots': _spotPayload,
     };
 
     if (Platform.isAndroid) {

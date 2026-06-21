@@ -34,17 +34,28 @@ class NativeKakaoMapView(
     private val mapView = MapView(context)
     private val channel = MethodChannel(messenger, "potato_mubwanna/kakao_map_$viewId")
     private val spotLabels = mutableListOf<Label>()
+    private var kakaoMap: KakaoMap? = null
 
     init {
         val appKey = params["nativeAppKey"] as? String
         val latitude = (params["latitude"] as? Number)?.toDouble() ?: 37.3808
         val longitude = (params["longitude"] as? Number)?.toDouble() ?: 128.6609
         val zoomLevel = (params["zoomLevel"] as? Number)?.toInt() ?: 9
-        val spots = params["spots"] as? List<Map<*, *>> ?: emptyList()
+        val spots = spotMaps(params["spots"])
 
         if (appKey.isNullOrBlank()) {
             showFallback(context, "KAKAO_NATIVE_APP_KEY 설정 후 모바일 카카오맵이 표시됩니다.")
         } else {
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "updateSpots" -> {
+                        val nextSpots = spotMaps(call.arguments)
+                        kakaoMap?.let { addSpotLabels(it, nextSpots) }
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
             initializeSdk(context, appKey)
             container.addView(
                 mapView,
@@ -63,6 +74,7 @@ class NativeKakaoMapView(
                 },
                 object : KakaoMapReadyCallback() {
                     override fun onMapReady(kakaoMap: KakaoMap) {
+                        this@NativeKakaoMapView.kakaoMap = kakaoMap
                         addSpotLabels(kakaoMap, spots)
                         kakaoMap.setOnLabelClickListener { _, _, label ->
                             val spotId = label.labelId.removePrefix("potato-")
@@ -91,6 +103,7 @@ class NativeKakaoMapView(
     }
 
     override fun dispose() {
+        channel.setMethodCallHandler(null)
         mapView.pause()
     }
 
@@ -114,12 +127,11 @@ class NativeKakaoMapView(
     }
 
     private fun addSpotLabels(kakaoMap: KakaoMap, spots: List<Map<*, *>>) {
-        if (spots.isEmpty()) return
-
         val labelManager = kakaoMap.labelManager ?: return
         val layer = labelManager.layer ?: return
         layer.removeAll()
         spotLabels.clear()
+        if (spots.isEmpty()) return
 
         val styleCache = mutableMapOf<String, LabelStyles>()
         spots.forEach { spot ->
@@ -196,6 +208,10 @@ class NativeKakaoMapView(
 
     private fun parseColor(hex: String): Int {
         return runCatching { Color.parseColor(hex) }.getOrDefault(0xFF36D98F.toInt())
+    }
+
+    private fun spotMaps(value: Any?): List<Map<*, *>> {
+        return (value as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
     }
 
     companion object {
