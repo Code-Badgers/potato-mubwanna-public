@@ -21,6 +21,7 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
   int _selectedSpotIndex = 0;
+  final Set<String> _favoriteSpotIds = {};
 
   static const _categories = [
     _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
@@ -58,6 +59,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
+  void _selectSpotById(List<MapSpot> visibleSpots, String spotId) {
+    final nextIndex = visibleSpots.indexWhere((spot) => spot.id == spotId);
+    if (nextIndex < 0) {
+      return;
+    }
+    setState(() {
+      _selectedSpotIndex = nextIndex;
+    });
+  }
+
+  void _toggleFavorite(String spotId) {
+    setState(() {
+      if (!_favoriteSpotIds.add(spotId)) {
+        _favoriteSpotIds.remove(spotId);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final spotsState = ref.watch(mapSpotsProvider);
@@ -79,6 +98,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         Positioned.fill(
                           child: _PotatoMapPreview(
                             spots: visibleSpots,
+                            onSpotSelected: (spotId) {
+                              _selectSpotById(visibleSpots, spotId);
+                            },
                           ),
                         ),
                         Positioned(
@@ -102,6 +124,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             bottom: 0,
                             child: _SpotBottomSheet(
                               spot: selectedSpot,
+                              favoriteCount: _favoriteSpotIds.length,
+                              isFavorite:
+                                  _favoriteSpotIds.contains(selectedSpot.id),
+                              onFavoritePressed: () {
+                                _toggleFavorite(selectedSpot.id);
+                              },
                               onDetailPressed: () {
                                 context.go('/spots/${selectedSpot.id}');
                               },
@@ -142,9 +170,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
     required this.spots,
+    this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
+  final ValueChanged<String>? onSpotSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +188,7 @@ class _PotatoMapPreview extends StatelessWidget {
               child: KakaoMapView(
                 key: ValueKey(Object.hashAll(spots.map((spot) => spot.id))),
                 spots: spots,
+                onSpotSelected: onSpotSelected,
               ),
             ),
           ],
@@ -264,10 +295,16 @@ class _MapCategoryFilter {
 class _SpotBottomSheet extends StatelessWidget {
   const _SpotBottomSheet({
     required this.spot,
+    required this.favoriteCount,
+    required this.isFavorite,
+    required this.onFavoritePressed,
     required this.onDetailPressed,
   });
 
   final MapSpot spot;
+  final int favoriteCount;
+  final bool isFavorite;
+  final VoidCallback onFavoritePressed;
   final VoidCallback onDetailPressed;
 
   @override
@@ -319,6 +356,20 @@ class _SpotBottomSheet extends StatelessWidget {
                   ],
                 ),
               ),
+              IconButton.filledTonal(
+                onPressed: onFavoritePressed,
+                style: IconButton.styleFrom(
+                  backgroundColor: isFavorite
+                      ? const Color(0xFFFFF2B8)
+                      : const Color(0xFFEAF8EF),
+                  foregroundColor: isFavorite ? _rareGold : _mapDark,
+                ),
+                icon: Icon(
+                  isFavorite ? Icons.bookmark_rounded : Icons.bookmark_border,
+                ),
+                tooltip: isFavorite ? '동선에서 제거' : '내 동선에 추가',
+              ),
+              const SizedBox(width: 8),
               _CongestionBadge(label: spot.congestionLabel),
             ],
           ),
@@ -327,6 +378,10 @@ class _SpotBottomSheet extends StatelessWidget {
             const _RarePotatoLine()
           else
             const _NormalPotatoLine(),
+          if (favoriteCount > 0) ...[
+            const SizedBox(height: 10),
+            _FavoriteRouteLine(count: favoriteCount),
+          ],
           const SizedBox(height: 14),
           Row(
             children: [
@@ -444,6 +499,39 @@ class _NormalPotatoLine extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FavoriteRouteLine extends StatelessWidget {
+  const _FavoriteRouteLine({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFAE5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF4E0A2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.route_rounded, color: _rareGold, size: 18),
+          const SizedBox(width: 7),
+          Text(
+            '내 동선 $count곳 저장됨',
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

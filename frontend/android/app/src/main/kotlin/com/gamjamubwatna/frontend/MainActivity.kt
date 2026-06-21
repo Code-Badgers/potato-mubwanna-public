@@ -11,7 +11,7 @@ class MainActivity: FlutterActivity() {
             .registry
             .registerViewFactory(
                 NativeKakaoMapViewFactory.viewType,
-                NativeKakaoMapViewFactory(),
+                NativeKakaoMapViewFactory(flutterEngine.dartExecutor.binaryMessenger),
             )
     }
 }

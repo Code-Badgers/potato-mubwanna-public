@@ -15,17 +15,25 @@ import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.MapView
+import com.kakao.vectormap.camera.CameraPosition
+import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 
 class NativeKakaoMapView(
     context: Context,
+    viewId: Int,
     params: Map<*, *>,
+    messenger: BinaryMessenger,
 ) : PlatformView {
     private val container = FrameLayout(context)
     private val mapView = MapView(context)
+    private val channel = MethodChannel(messenger, "potato_mubwanna/kakao_map_$viewId")
+    private val spotLabels = mutableListOf<Label>()
 
     init {
         val appKey = params["nativeAppKey"] as? String
@@ -56,6 +64,14 @@ class NativeKakaoMapView(
                 object : KakaoMapReadyCallback() {
                     override fun onMapReady(kakaoMap: KakaoMap) {
                         addSpotLabels(kakaoMap, spots)
+                        kakaoMap.setOnLabelClickListener { _, _, label ->
+                            val spotId = label.labelId.removePrefix("potato-")
+                            channel.invokeMethod("spotSelected", spotId)
+                            true
+                        }
+                        kakaoMap.setOnCameraMoveEndListener { map, cameraPosition, _ ->
+                            scaleSpotLabels(map, cameraPosition)
+                        }
                     }
 
                     override fun getPosition(): LatLng {
@@ -100,9 +116,10 @@ class NativeKakaoMapView(
     private fun addSpotLabels(kakaoMap: KakaoMap, spots: List<Map<*, *>>) {
         if (spots.isEmpty()) return
 
-        val labelManager = kakaoMap.labelManager
-        val layer = labelManager.layer
+        val labelManager = kakaoMap.labelManager ?: return
+        val layer = labelManager.layer ?: return
         layer.removeAll()
+        spotLabels.clear()
 
         val styleCache = mutableMapOf<String, LabelStyles>()
         spots.forEach { spot ->
@@ -114,27 +131,44 @@ class NativeKakaoMapView(
             val labelText = if (isRare) "🥔★" else "🥔"
             val styleKey = "${markerColor.replace("#", "")}_${if (isRare) "rare" else "normal"}"
             val styles = styleCache.getOrPut(styleKey) {
-                labelManager.addLabelStyles(
-                    LabelStyles.from(
-                        "potato_$styleKey",
-                        LabelStyle.from(markerBitmap(labelText, parseColor(markerColor)))
-                            .setAnchorPoint(0.5f, 1.0f),
-                    ),
+                val labelStyles = LabelStyles.from(
+                    "potato_$styleKey",
+                    LabelStyle.from(markerBitmap(labelText, parseColor(markerColor)))
+                        .setAnchorPoint(0.5f, 1.0f),
                 )
+                labelManager.addLabelStyles(labelStyles) ?: labelStyles
             }
 
-            layer.addLabel(
+            val label = layer.addLabel(
                 LabelOptions.from(
                     "potato-$spotId",
                     LatLng.from(latitude, longitude),
-                ).setStyles(styles),
+                )
+                    .setStyles(styles)
+                    .setClickable(true),
             )
+            label.show()
+            spotLabels.add(label)
+        }
+        scaleSpotLabels(kakaoMap, kakaoMap.cameraPosition)
+    }
+
+    private fun scaleSpotLabels(kakaoMap: KakaoMap, cameraPosition: CameraPosition?) {
+        val level = cameraPosition?.zoomLevel ?: kakaoMap.zoomLevel
+        val scale = when {
+            level <= 5 -> 1.0f
+            level <= 8 -> 0.82f
+            level <= 11 -> 0.66f
+            else -> 0.52f
+        }
+        spotLabels.forEach { label ->
+            label.scaleTo(scale, scale)
         }
     }
 
     private fun markerBitmap(text: String, strokeColor: Int): Bitmap {
-        val width = if (text.contains("★")) 58 else 48
-        val height = 48
+        val width = if (text.contains("★")) 42 else 36
+        val height = 36
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -144,12 +178,12 @@ class NativeKakaoMapView(
         val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = strokeColor
             style = Paint.Style.STROKE
-            strokeWidth = 3f
+            strokeWidth = 2f
         }
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
             textAlign = Paint.Align.CENTER
-            textSize = if (text.contains("★")) 20f else 23f
+            textSize = if (text.contains("★")) 15f else 18f
         }
         val markerRect = RectF(3f, 3f, width - 3f, height - 3f)
         canvas.drawRoundRect(markerRect, markerRect.height() / 2, markerRect.height() / 2, fillPaint)

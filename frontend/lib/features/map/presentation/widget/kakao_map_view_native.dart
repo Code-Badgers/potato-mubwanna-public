@@ -9,13 +9,22 @@ import '../../domain/map_spot.dart';
 const _kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
 const _nativeKakaoMapViewType = 'potato_mubwanna/kakao_map';
 
-class KakaoMapView extends StatelessWidget {
+class KakaoMapView extends StatefulWidget {
   const KakaoMapView({
     super.key,
     required this.spots,
+    this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
+  final ValueChanged<String>? onSpotSelected;
+
+  @override
+  State<KakaoMapView> createState() => _KakaoMapViewState();
+}
+
+class _KakaoMapViewState extends State<KakaoMapView> {
+  MethodChannel? _channel;
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +35,11 @@ class KakaoMapView extends StatelessWidget {
 
     final creationParams = <String, Object>{
       'nativeAppKey': _kakaoNativeAppKey,
-      'latitude': spots.isEmpty ? 37.8228 : spots.first.latitude,
-      'longitude': spots.isEmpty ? 128.1555 : spots.first.longitude,
+      'latitude': widget.spots.isEmpty ? 37.8228 : widget.spots.first.latitude,
+      'longitude':
+          widget.spots.isEmpty ? 128.1555 : widget.spots.first.longitude,
       'zoomLevel': 9,
-      'spots': spots
+      'spots': widget.spots
           .map((spot) => {
                 'id': spot.id,
                 'name': spot.name,
@@ -47,6 +57,7 @@ class KakaoMapView extends StatelessWidget {
         creationParams: creationParams,
         creationParamsCodec: const StandardMessageCodec(),
         hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+        onPlatformViewCreated: _onPlatformViewCreated,
       );
     }
 
@@ -56,10 +67,30 @@ class KakaoMapView extends StatelessWidget {
         creationParams: creationParams,
         creationParamsCodec: const StandardMessageCodec(),
         hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+        onPlatformViewCreated: _onPlatformViewCreated,
       );
     }
 
     return const _KakaoMapFallback();
+  }
+
+  void _onPlatformViewCreated(int id) {
+    _channel = MethodChannel('potato_mubwanna/kakao_map_$id')
+      ..setMethodCallHandler((call) async {
+        if (call.method != 'spotSelected') {
+          return;
+        }
+        final spotId = call.arguments?.toString();
+        if (spotId != null && spotId.isNotEmpty) {
+          widget.onSpotSelected?.call(spotId);
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _channel?.setMethodCallHandler(null);
+    super.dispose();
   }
 }
 

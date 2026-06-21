@@ -11,9 +11,10 @@ private final class NativeKakaoMapContainer: KMViewContainer {
   }
 }
 
-final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDelegate {
+final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDelegate, KakaoMapEventDelegate {
   private let container: NativeKakaoMapContainer
   private var mapController: KMController?
+  private let channel: FlutterMethodChannel
   private let latitude: Double
   private let longitude: Double
   private let zoomLevel: Int
@@ -21,6 +22,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private var isAuthenticated = false
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
+  private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
 
   init(
     frame: CGRect,
@@ -34,6 +36,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     zoomLevel = Self.intValue(params["zoomLevel"]) ?? 9
     spots = Self.spotMaps(from: params["spots"])
     container = NativeKakaoMapContainer(frame: frame)
+    channel = FlutterMethodChannel(
+      name: "potato_mubwanna/kakao_map_\(viewId)",
+      binaryMessenger: messenger
+    )
     super.init()
 
     let nativeAppKey = params["nativeAppKey"] as? String ?? ""
@@ -81,7 +87,21 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   func addViewSucceeded(_ viewName: String, viewInfoName: String) {
     resizeMap(to: container.bounds.size)
+    let mapView = mapController?.getView("potatoMap") as? KakaoMap
+    mapView?.eventDelegate = self
     addSpotPois()
+  }
+
+  func poiDidTapped(kakaoMap: KakaoMap, layerID: String, poiID: String, position: MapPoint) {
+    guard layerID == spotLayerID else {
+      return
+    }
+    let spotID = poiID.replacingOccurrences(of: "potato-", with: "")
+    channel.invokeMethod("spotSelected", arguments: spotID)
+  }
+
+  func cameraDidStopped(kakaoMap: KakaoMap, by: MoveBy) {
+    applySpotPoiScale(for: kakaoMap)
   }
 
   func containerDidResized(_ size: CGSize) {
@@ -130,6 +150,8 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     )
     layer?.clearAllItems()
     layer?.visible = true
+    layer?.setClickable(true)
+    spotStyleByPoiID.removeAll()
 
     for spot in spots {
       guard
@@ -140,34 +162,81 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       }
 
       let spotID = "\(spot["id"] ?? UUID().uuidString)"
+      let poiID = "potato-\(spotID)"
       let isRare = Self.boolValue(spot["rare"]) ?? false
       let markerColor = spot["markerColor"] as? String ?? (isRare ? "#F6C23E" : "#36D98F")
-      let styleID = styleIDFor(markerColor: markerColor, isRare: isRare)
-      labelManager.addPoiStyle(
-        makePoiStyle(
-          styleID: styleID,
-          text: isRare ? "🥔★" : "🥔",
-          color: colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
-        )
+      addPoiStyles(
+        labelManager: labelManager,
+        markerColor: markerColor,
+        isRare: isRare
       )
+      let styleID = styleIDFor(markerColor: markerColor, isRare: isRare, sizeKey: "medium")
       let option = PoiOptions(
         styleID: styleID,
-        poiID: "potato-\(spotID)"
+        poiID: poiID
       )
+      option.clickable = true
+      spotStyleByPoiID[poiID] = (markerColor: markerColor, isRare: isRare)
       layer?.addPoi(
         option: option,
         at: MapPoint(longitude: longitude, latitude: latitude)
       )?.show()
     }
     layer?.showAllPois()
+    applySpotPoiScale(for: mapView)
     mapView.refresh()
   }
 
-  private func styleIDFor(markerColor: String, isRare: Bool) -> String {
+  private func applySpotPoiScale(for mapView: KakaoMap) {
+    let sizeKey = sizeKeyForZoomLevel(mapView.zoomLevel)
+    guard let layer = mapView.getLabelManager().getLabelLayer(layerID: spotLayerID) else {
+      return
+    }
+    spotStyleByPoiID.forEach { poiID, style in
+      let styleID = styleIDFor(
+        markerColor: style.markerColor,
+        isRare: style.isRare,
+        sizeKey: sizeKey
+      )
+      layer.getPoi(poiID: poiID)?.changeStyle(styleID: styleID, enableTransition: false)
+    }
+  }
+
+  private func sizeKeyForZoomLevel(_ zoomLevel: Int) -> String {
+    if zoomLevel <= 5 {
+      return "large"
+    }
+    if zoomLevel <= 9 {
+      return "medium"
+    }
+    return "small"
+  }
+
+  private func addPoiStyles(labelManager: LabelManager, markerColor: String, isRare: Bool) {
+    let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
+    let text = isRare ? "🥔★" : "🥔"
+    [
+      ("small", CGSize(width: isRare ? 30 : 26, height: 26), CGFloat(isRare ? 10 : 13)),
+      ("medium", CGSize(width: isRare ? 38 : 32, height: 32), CGFloat(isRare ? 13 : 16)),
+      ("large", CGSize(width: isRare ? 44 : 38, height: 38), CGFloat(isRare ? 15 : 18)),
+    ].forEach { sizeKey, size, fontSize in
+      labelManager.addPoiStyle(
+        makePoiStyle(
+          styleID: styleIDFor(markerColor: markerColor, isRare: isRare, sizeKey: sizeKey),
+          text: text,
+          color: color,
+          size: size,
+          fontSize: fontSize
+        )
+      )
+    }
+  }
+
+  private func styleIDFor(markerColor: String, isRare: Bool, sizeKey: String) -> String {
     let colorKey = markerColor
       .replacingOccurrences(of: "#", with: "")
       .replacingOccurrences(of: " ", with: "")
-    return "potato\(colorKey)\(isRare ? "Rare" : "Normal")"
+    return "potato\(colorKey)\(isRare ? "Rare" : "Normal")\(sizeKey)"
   }
 
   private func colorFromHex(_ hex: String) -> UIColor? {
@@ -185,17 +254,27 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     )
   }
 
-  private func makePoiStyle(styleID: String, text: String, color: UIColor) -> PoiStyle {
+  private func makePoiStyle(
+    styleID: String,
+    text: String,
+    color: UIColor,
+    size: CGSize,
+    fontSize: CGFloat
+  ) -> PoiStyle {
     let iconStyle = PoiIconStyle(
-      symbol: makeMarkerImage(text: text, color: color),
+      symbol: makeMarkerImage(text: text, color: color, size: size, fontSize: fontSize),
       anchorPoint: CGPoint(x: 0.5, y: 1.0)
     )
     let perLevelStyle = PerLevelPoiStyle(iconStyle: iconStyle, padding: 0, level: 0)
     return PoiStyle(styleID: styleID, styles: [perLevelStyle])
   }
 
-  private func makeMarkerImage(text: String, color: UIColor) -> UIImage? {
-    let size = CGSize(width: text.contains("★") ? 58 : 48, height: 48)
+  private func makeMarkerImage(
+    text: String,
+    color: UIColor,
+    size: CGSize,
+    fontSize: CGFloat
+  ) -> UIImage? {
     let renderer = UIGraphicsImageRenderer(size: size)
     return renderer.image { _ in
       let markerRect = CGRect(x: 3, y: 3, width: size.width - 6, height: size.height - 6)
@@ -206,16 +285,16 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       UIColor.white.setFill()
       markerPath.fill()
       color.setStroke()
-      markerPath.lineWidth = 3
+      markerPath.lineWidth = 2
       markerPath.stroke()
 
       let paragraph = NSMutableParagraphStyle()
       paragraph.alignment = .center
       let attributes: [NSAttributedString.Key: Any] = [
-        .font: UIFont.systemFont(ofSize: text.contains("★") ? 20 : 23),
+        .font: UIFont.systemFont(ofSize: fontSize),
         .paragraphStyle: paragraph,
       ]
-      let textRect = CGRect(x: 0, y: 12, width: size.width, height: 28)
+      let textRect = CGRect(x: 0, y: (size.height - fontSize) / 2 - 1, width: size.width, height: fontSize + 4)
       NSAttributedString(string: text, attributes: attributes).draw(in: textRect)
     }
   }

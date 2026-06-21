@@ -15,9 +15,11 @@ class KakaoMapView extends StatefulWidget {
   const KakaoMapView({
     super.key,
     required this.spots,
+    this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
+  final ValueChanged<String>? onSpotSelected;
 
   @override
   State<KakaoMapView> createState() => _KakaoMapViewState();
@@ -29,6 +31,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   late final String _viewType;
   late final html.DivElement _mapElement;
   late final html.DivElement _messageElement;
+  late final StreamSubscription<html.Event> _spotSelectedSubscription;
 
   @override
   void initState() {
@@ -77,6 +80,14 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       _viewType,
       (int viewId) => wrapper,
     );
+
+    _spotSelectedSubscription =
+        html.window.on['potato-map-spot-selected-$_viewType'].listen((event) {
+      final detail = (event as html.CustomEvent).detail;
+      if (detail is String) {
+        widget.onSpotSelected?.call(detail);
+      }
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_initializeMapAfterLayout());
@@ -158,6 +169,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     final spots = jsonEncode(widget.spots
         .map((spot) => {
               'name': spot.name,
+              'id': spot.id,
               'lat': spot.latitude,
               'lng': spot.longitude,
               'rare': spot.isRare,
@@ -208,6 +220,19 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       );
 
       let selectedMarkerElement = null;
+      const markerElements = [];
+
+      function markerScale(level) {
+        return Math.max(0.52, Math.min(0.88, 1.05 - ((level - 4) * 0.10)));
+      }
+
+      function applyMarkerScale() {
+        const scale = markerScale(map.getLevel());
+        markerElements.forEach(function (markerElement) {
+          markerElement.style.transform = 'scale(' + scale + ')';
+        });
+      }
+
       spots.forEach(function (spot) {
         const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
         const markerElement = document.createElement('button');
@@ -215,16 +240,17 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         markerElement.title = spot.name;
         markerElement.setAttribute('aria-label', spot.name);
         markerElement.textContent = spot.rare ? '🥔★' : '🥔';
-        markerElement.style.width = spot.rare ? '58px' : '48px';
-        markerElement.style.height = '48px';
-        markerElement.style.border = '3px solid ' + (spot.markerColor || '#F6C23E');
+        markerElement.style.width = spot.rare ? '42px' : '36px';
+        markerElement.style.height = '36px';
+        markerElement.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
         markerElement.style.borderRadius = '999px';
         markerElement.style.background = '#FFFFFF';
-        markerElement.style.boxShadow = '0 8px 18px rgba(0,0,0,0.18)';
-        markerElement.style.fontSize = spot.rare ? '21px' : '24px';
+        markerElement.style.boxShadow = '0 6px 14px rgba(0,0,0,0.16)';
+        markerElement.style.fontSize = spot.rare ? '15px' : '18px';
         markerElement.style.lineHeight = '1';
         markerElement.style.cursor = 'pointer';
         markerElement.style.padding = '0';
+        markerElement.style.transformOrigin = '50% 100%';
         markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
         markerElement.addEventListener('click', function () {
           if (selectedMarkerElement) {
@@ -233,7 +259,11 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           }
           markerElement.style.borderColor = '#F6C23E';
           selectedMarkerElement = markerElement;
+          window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
+            detail: String(spot.id)
+          }));
         });
+        markerElements.push(markerElement);
 
         new window.kakao.maps.CustomOverlay({
           position: markerPosition,
@@ -242,6 +272,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           yAnchor: 1
         }).setMap(map);
       });
+
+      window.kakao.maps.event.addListener(map, 'zoom_changed', applyMarkerScale);
+      applyMarkerScale();
 
       map.relayout();
       map.setCenter(center);
@@ -267,6 +300,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     _messageElement
       ..text = message
       ..style.display = 'block';
+  }
+
+  @override
+  void dispose() {
+    _spotSelectedSubscription.cancel();
+    super.dispose();
   }
 
   @override
