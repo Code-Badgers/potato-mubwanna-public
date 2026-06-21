@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/map_spot.dart';
+
 class KakaoMapView extends StatelessWidget {
-  const KakaoMapView({super.key});
+  const KakaoMapView({
+    super.key,
+    required this.spots,
+    this.onSpotSelected,
+  });
+
+  final List<MapSpot> spots;
+  final ValueChanged<String>? onSpotSelected;
 
   @override
   Widget build(BuildContext context) {

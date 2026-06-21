@@ -161,7 +161,7 @@ Query Params:
 
 | 이름            | 타입   | 필수 | 설명                                       |
 | --------------- | ------ | ---- | ------------------------------------------ |
-| category        | String | N    | TOURIST_SPOT, RESTAURANT, CAFE, EXPERIENCE |
+| category        | String | N    | POTATO_TOUR, POTATO_EXPERIENCE, POTATO_RESTAURANT, POTATO_CAFE, POTATO_SNACK, POTATO_MARKET, POTATO_BREWERY, POTATO_SHOP |
 | cityName        | String | N    | 강릉시, 평창군 등                          |
 | congestionLevel | String | N    | LOW, NORMAL, HIGH                          |
 
@@ -175,7 +175,7 @@ Response:
     {
       "id": 1,
       "name": "정선 5일장",
-      "category": "TOURIST_SPOT",
+      "category": "POTATO_TOUR",
       "latitude": 37.3801,
       "longitude": 128.6609,
       "address": "강원특별자치도 정선군...",
@@ -216,14 +216,15 @@ Response:
   "message": "요청이 성공했습니다.",
   "data": {
     "id": 1,
+    "contentId": "1234567",
     "name": "정선 5일장",
-    "category": "TOURIST_SPOT",
+    "category": "POTATO_TOUR",
     "latitude": 37.3801,
     "longitude": 128.6609,
     "address": "강원특별자치도 정선군...",
-    "description": "정선의 대표 전통시장",
     "imageUrl": "https://...",
     "cityName": "정선군",
+    "potatoTags": "감자,감자전",
     "congestionLevel": "LOW",
     "verificationRadiusMeter": 100,
     "stampEnabled": true

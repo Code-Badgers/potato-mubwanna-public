@@ -3,14 +3,24 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
+import 'dart:js' as js;
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/map_spot.dart';
+
 const _kakaoJavaScriptKey = String.fromEnvironment('KAKAO_JAVASCRIPT_KEY');
 
 class KakaoMapView extends StatefulWidget {
-  const KakaoMapView({super.key});
+  const KakaoMapView({
+    super.key,
+    required this.spots,
+    this.onSpotSelected,
+  });
+
+  final List<MapSpot> spots;
+  final ValueChanged<String>? onSpotSelected;
 
   @override
   State<KakaoMapView> createState() => _KakaoMapViewState();
@@ -22,6 +32,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   late final String _viewType;
   late final html.DivElement _mapElement;
   late final html.DivElement _messageElement;
+  late final StreamSubscription<html.Event> _spotSelectedSubscription;
 
   @override
   void initState() {
@@ -71,9 +82,26 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       (int viewId) => wrapper,
     );
 
+    _spotSelectedSubscription =
+        html.window.on['potato-map-spot-selected-$_viewType'].listen((event) {
+      final detail = (event as html.CustomEvent).detail;
+      if (detail is String) {
+        widget.onSpotSelected?.call(detail);
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_initializeMapAfterLayout());
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant KakaoMapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.spots == widget.spots) {
+      return;
+    }
+    _injectKakaoMapScript();
   }
 
   Future<void> _initializeMapAfterLayout() async {
@@ -94,6 +122,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
     try {
       await _loadKakaoSdk();
+      await _waitForKakaoMaps();
       if (!mounted) {
         return;
       }
@@ -102,7 +131,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       _messageElement.style.display = 'none';
     } catch (_) {
       _showMessage(
-        '카카오맵을 불러오지 못했습니다. JavaScript 키, Kakao Map 사용 설정, Web 도메인 등록을 확인해주세요.',
+        '카카오맵을 불러오지 못했습니다. Kakao Developers에 ${html.window.location.origin} 도메인이 등록되어 있는지 확인해주세요.',
       );
     }
   }
@@ -116,20 +145,25 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     final completer = Completer<void>();
     _sdkLoadFuture = completer.future;
 
+    final sdkSrc =
+        'https://dapi.kakao.com/v2/maps/sdk.js?appkey=${Uri.encodeComponent(_kakaoJavaScriptKey)}&autoload=false';
     final existingScript = html.document.getElementById('kakao-map-sdk');
     if (existingScript != null) {
-      if (!completer.isCompleted) {
-        completer.complete();
+      final existingSrc = existingScript.getAttribute('src') ?? '';
+      if (existingSrc == sdkSrc) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+        return completer.future;
       }
-      return completer.future;
+      existingScript.remove();
     }
 
     final script = html.ScriptElement()
       ..id = 'kakao-map-sdk'
       ..type = 'text/javascript'
       ..async = true
-      ..src =
-          'https://dapi.kakao.com/v2/maps/sdk.js?appkey=${Uri.encodeComponent(_kakaoJavaScriptKey)}&autoload=false';
+      ..src = sdkSrc;
 
     script.onLoad.first.then((_) {
       if (!completer.isCompleted) {
@@ -146,34 +180,39 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     return completer.future;
   }
 
+  static Future<void> _waitForKakaoMaps() async {
+    for (var attempt = 0; attempt < 30; attempt += 1) {
+      final hasKakaoMaps = _hasKakaoMaps();
+      if (hasKakaoMaps) {
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+
+    throw StateError('Kakao Maps SDK was loaded but kakao.maps is unavailable');
+  }
+
+  static bool _hasKakaoMaps() {
+    final kakao = js.context['kakao'];
+    if (kakao is! js.JsObject) {
+      return false;
+    }
+    final maps = kakao['maps'];
+    return maps != null;
+  }
+
   void _injectKakaoMapScript() {
     final mapElementId = jsonEncode(_viewType);
-    final spots = jsonEncode([
-      {
-        'name': '정선 5일장',
-        'lat': 37.3808,
-        'lng': 128.6609,
-        'rare': true,
-      },
-      {
-        'name': '강릉 커피거리',
-        'lat': 37.7519,
-        'lng': 128.8761,
-        'rare': false,
-      },
-      {
-        'name': '대관령 목장',
-        'lat': 37.3704,
-        'lng': 128.3904,
-        'rare': true,
-      },
-      {
-        'name': '속초 중앙시장',
-        'lat': 38.2045,
-        'lng': 128.5918,
-        'rare': false,
-      },
-    ]);
+    final spots = jsonEncode(widget.spots
+        .map((spot) => {
+              'name': spot.name,
+              'id': spot.id,
+              'lat': spot.latitude,
+              'lng': spot.longitude,
+              'rare': spot.isRare,
+              'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
+            })
+        .toList());
 
     final script = html.ScriptElement()
       ..type = 'text/javascript'
@@ -197,7 +236,16 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
   window.kakao.maps.load(function () {
     try {
-      const center = new window.kakao.maps.LatLng(37.3808, 128.6609);
+      const spots = $spots;
+      if (mapElement.__potatoRenderSpots) {
+        mapElement.__potatoRenderSpots(spots);
+        return;
+      }
+
+      const firstSpot = spots.length > 0 ? spots[0] : null;
+      const center = firstSpot
+        ? new window.kakao.maps.LatLng(firstSpot.lat, firstSpot.lng)
+        : new window.kakao.maps.LatLng(37.8228, 128.1555);
       const map = new window.kakao.maps.Map(mapElement, {
         center: center,
         level: 7,
@@ -213,32 +261,77 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         window.kakao.maps.ControlPosition.RIGHT
       );
 
-      const spots = $spots;
-      spots.forEach(function (spot) {
-        const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
-        const markerElement = document.createElement('button');
-        markerElement.type = 'button';
-        markerElement.title = spot.name;
-        markerElement.setAttribute('aria-label', spot.name);
-        markerElement.textContent = spot.rare ? '🥔★' : '🥔';
-        markerElement.style.width = spot.rare ? '58px' : '48px';
-        markerElement.style.height = '48px';
-        markerElement.style.border = '3px solid ' + (spot.rare ? '#F6C23E' : '#36D98F');
-        markerElement.style.borderRadius = '999px';
-        markerElement.style.background = '#FFFFFF';
-        markerElement.style.boxShadow = '0 8px 18px rgba(0,0,0,0.18)';
-        markerElement.style.fontSize = spot.rare ? '21px' : '24px';
-        markerElement.style.lineHeight = '1';
-        markerElement.style.cursor = 'pointer';
-        markerElement.style.padding = '0';
+      let selectedMarkerElement = null;
+      const markerElements = [];
+      let markerOverlays = [];
 
-        new window.kakao.maps.CustomOverlay({
-          position: markerPosition,
-          content: markerElement,
-          xAnchor: 0.5,
-          yAnchor: 1
-        }).setMap(map);
-      });
+      function markerScale(level) {
+        return Math.max(0.52, Math.min(0.88, 1.05 - ((level - 4) * 0.10)));
+      }
+
+      function applyMarkerScale() {
+        const scale = markerScale(map.getLevel());
+        markerElements.forEach(function (markerElement) {
+          markerElement.style.transform = 'scale(' + scale + ')';
+        });
+      }
+
+      function renderSpots(nextSpots) {
+        markerOverlays.forEach(function (overlay) {
+          overlay.setMap(null);
+        });
+        markerOverlays = [];
+        markerElements.length = 0;
+        selectedMarkerElement = null;
+
+        nextSpots.forEach(function (spot) {
+          const markerPosition = new window.kakao.maps.LatLng(spot.lat, spot.lng);
+          const markerElement = document.createElement('button');
+          markerElement.type = 'button';
+          markerElement.title = spot.name;
+          markerElement.setAttribute('aria-label', spot.name);
+          markerElement.textContent = spot.rare ? '🥔★' : '🥔';
+          markerElement.style.width = spot.rare ? '42px' : '36px';
+          markerElement.style.height = '36px';
+          markerElement.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
+          markerElement.style.borderRadius = '999px';
+          markerElement.style.background = '#FFFFFF';
+          markerElement.style.boxShadow = '0 6px 14px rgba(0,0,0,0.16)';
+          markerElement.style.fontSize = spot.rare ? '15px' : '18px';
+          markerElement.style.lineHeight = '1';
+          markerElement.style.cursor = 'pointer';
+          markerElement.style.padding = '0';
+          markerElement.style.transformOrigin = '50% 100%';
+          markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
+          markerElement.addEventListener('click', function () {
+            if (selectedMarkerElement) {
+              selectedMarkerElement.style.borderColor =
+                selectedMarkerElement.dataset.defaultBorderColor || '#36D98F';
+            }
+            markerElement.style.borderColor = '#F6C23E';
+            selectedMarkerElement = markerElement;
+            window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
+              detail: String(spot.id)
+            }));
+          });
+          markerElements.push(markerElement);
+
+          const overlay = new window.kakao.maps.CustomOverlay({
+            position: markerPosition,
+            content: markerElement,
+            xAnchor: 0.5,
+            yAnchor: 1
+          });
+          overlay.setMap(map);
+          markerOverlays.push(overlay);
+        });
+        applyMarkerScale();
+      }
+
+      mapElement.__potatoRenderSpots = renderSpots;
+      renderSpots(spots);
+
+      window.kakao.maps.event.addListener(map, 'zoom_changed', applyMarkerScale);
 
       map.relayout();
       map.setCenter(center);
@@ -264,6 +357,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     _messageElement
       ..text = message
       ..style.display = 'block';
+  }
+
+  @override
+  void dispose() {
+    _spotSelectedSubscription.cancel();
+    super.dispose();
   }
 
   @override

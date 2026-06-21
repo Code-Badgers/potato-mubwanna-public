@@ -1,14 +1,54 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '../../domain/map_spot.dart';
+
 const _kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
 const _nativeKakaoMapViewType = 'potato_mubwanna/kakao_map';
 
-class KakaoMapView extends StatelessWidget {
-  const KakaoMapView({super.key});
+class KakaoMapView extends StatefulWidget {
+  const KakaoMapView({
+    super.key,
+    required this.spots,
+    this.onSpotSelected,
+  });
+
+  final List<MapSpot> spots;
+  final ValueChanged<String>? onSpotSelected;
+
+  @override
+  State<KakaoMapView> createState() => _KakaoMapViewState();
+}
+
+class _KakaoMapViewState extends State<KakaoMapView> {
+  MethodChannel? _channel;
+
+  List<Map<String, Object>> get _spotPayload => widget.spots
+      .map((spot) => {
+            'id': spot.id,
+            'name': spot.name,
+            'latitude': spot.latitude,
+            'longitude': spot.longitude,
+            'rare': spot.isRare,
+            'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
+          })
+      .toList();
+
+  @override
+  void didUpdateWidget(covariant KakaoMapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.spots == widget.spots) {
+      return;
+    }
+    final channel = _channel;
+    if (channel != null) {
+      unawaited(channel.invokeMethod<void>('updateSpots', _spotPayload));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +59,11 @@ class KakaoMapView extends StatelessWidget {
 
     final creationParams = <String, Object>{
       'nativeAppKey': _kakaoNativeAppKey,
-      'latitude': 37.3808,
-      'longitude': 128.6609,
+      'latitude': widget.spots.isEmpty ? 37.8228 : widget.spots.first.latitude,
+      'longitude':
+          widget.spots.isEmpty ? 128.1555 : widget.spots.first.longitude,
       'zoomLevel': 9,
+      'spots': _spotPayload,
     };
 
     if (Platform.isAndroid) {
@@ -30,6 +72,7 @@ class KakaoMapView extends StatelessWidget {
         creationParams: creationParams,
         creationParamsCodec: const StandardMessageCodec(),
         hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+        onPlatformViewCreated: _onPlatformViewCreated,
       );
     }
 
@@ -39,10 +82,30 @@ class KakaoMapView extends StatelessWidget {
         creationParams: creationParams,
         creationParamsCodec: const StandardMessageCodec(),
         hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+        onPlatformViewCreated: _onPlatformViewCreated,
       );
     }
 
     return const _KakaoMapFallback();
+  }
+
+  void _onPlatformViewCreated(int id) {
+    _channel = MethodChannel('potato_mubwanna/kakao_map_$id')
+      ..setMethodCallHandler((call) async {
+        if (call.method != 'spotSelected') {
+          return;
+        }
+        final spotId = call.arguments?.toString();
+        if (spotId != null && spotId.isNotEmpty) {
+          widget.onSpotSelected?.call(spotId);
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _channel?.setMethodCallHandler(null);
+    super.dispose();
   }
 }
 

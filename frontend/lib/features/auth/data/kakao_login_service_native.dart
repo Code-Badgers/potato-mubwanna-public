@@ -11,6 +11,8 @@ class KakaoLoginService {
     'account_email',
   ];
 
+  Future<void> preload() async {}
+
   Future<String> loginAndReadAccessToken() async {
     if (!AppEnvironment.hasKakaoLoginKey) {
       throw const KakaoLoginUnsupportedException(

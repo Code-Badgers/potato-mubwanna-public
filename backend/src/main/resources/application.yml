@@ -40,6 +40,23 @@ auth:
     access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:3600}
     refresh-token-ttl-seconds: ${JWT_REFRESH_TOKEN_TTL_SECONDS:1209600}
 
+external:
+  tour-api:
+    base-url: ${TOUR_API_BASE_URL:https://apis.data.go.kr/B551011/KorService2}
+    search-keyword-path: ${TOUR_API_SEARCH_KEYWORD_PATH:/searchKeyword2}
+    service-key: ${TOUR_API_SERVICE_KEY:}
+    mobile-os: ${TOUR_API_MOBILE_OS:ETC}
+    mobile-app: ${TOUR_API_MOBILE_APP:potato-mubwanna}
+    legal-region-code: ${TOUR_API_LEGAL_REGION_CODE:51}
+    spot-keywords: ${TOUR_API_SPOT_KEYWORDS:감자,감자빵,감자전,옹심이,감자옹심이,감자떡,알감자,회오리감자,감자체험,감자축제,감자꽃,감자밭,전통시장 감자,로컬푸드 감자,감자 맥주}
+    import-on-startup: ${TOUR_API_IMPORT_ON_STARTUP:false}
+    import-page-size: ${TOUR_API_IMPORT_PAGE_SIZE:50}
+    import-max-pages: ${TOUR_API_IMPORT_MAX_PAGES:1}
+  kakao-local:
+    keyword-search-url: ${KAKAO_LOCAL_KEYWORD_SEARCH_URL:https://dapi.kakao.com/v2/local/search/keyword.json}
+    rest-api-key: ${KAKAO_REST_API_KEY:}
+    spot-keywords: ${KAKAO_LOCAL_SPOT_KEYWORDS:강원 감자빵,강릉 감자빵,춘천 감자 카페,평창 감자 체험,강원 감자전,강원 옹심이,강원 알감자,강원 로컬푸드 감자,강원 감자 맥주,강원 감자 직판장}
+
 management:
   endpoints:
     web:
