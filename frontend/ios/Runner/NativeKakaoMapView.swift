@@ -23,6 +23,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
   private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
+  private var eventHandlers: [DisposableEventHandler] = []
 
   init(
     frame: CGRect,
@@ -89,15 +90,14 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     resizeMap(to: container.bounds.size)
     let mapView = mapController?.getView("potatoMap") as? KakaoMap
     mapView?.eventDelegate = self
+    if let mapView {
+      bindMapEventHandlers(mapView)
+    }
     addSpotPois()
   }
 
   func poiDidTapped(kakaoMap: KakaoMap, layerID: String, poiID: String, position: MapPoint) {
-    guard layerID == spotLayerID else {
-      return
-    }
-    let spotID = poiID.replacingOccurrences(of: "potato-", with: "")
-    channel.invokeMethod("spotSelected", arguments: spotID)
+    handleSpotPoiTap(layerID: layerID, poiID: poiID)
   }
 
   func cameraDidStopped(kakaoMap: KakaoMap, by: MoveBy) {
@@ -113,6 +113,8 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   deinit {
+    eventHandlers.forEach { $0.dispose() }
+    eventHandlers.removeAll()
     mapController?.pauseEngine()
     mapController?.resetEngine()
   }
@@ -131,6 +133,35 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
     let mapView = mapController?.getView("potatoMap") as? KakaoMap
     mapView?.viewRect = CGRect(origin: .zero, size: size)
+  }
+
+  private func bindMapEventHandlers(_ mapView: KakaoMap) {
+    eventHandlers.forEach { $0.dispose() }
+    eventHandlers.removeAll()
+
+    let poiTapHandler = mapView.addPoisTappedEventHandler(target: self) { owner in
+      return { param in
+        owner.handleSpotPoiTap(layerID: param.layerID, poiID: param.poiID)
+      }
+    }
+    let cameraHandler = mapView.addCameraStoppedEventHandler(target: self) { owner in
+      return { param in
+        guard let kakaoMap = param.view as? KakaoMap else {
+          return
+        }
+        owner.applySpotPoiScale(for: kakaoMap)
+      }
+    }
+    eventHandlers.append(poiTapHandler)
+    eventHandlers.append(cameraHandler)
+  }
+
+  private func handleSpotPoiTap(layerID: String, poiID: String) {
+    guard layerID == spotLayerID else {
+      return
+    }
+    let spotID = poiID.replacingOccurrences(of: "potato-", with: "")
+    channel.invokeMethod("spotSelected", arguments: spotID)
   }
 
   private func addSpotPois() {

@@ -15,6 +15,15 @@ class KakaoLoginService {
       'https://t1.kakaocdn.net/kakao_js_sdk/2.7.5/kakao.min.js';
   static const _profileConsentScope = 'profile_nickname,account_email';
 
+  Future<void> preload() async {
+    if (AppEnvironment.kakaoJavaScriptKey.isEmpty) {
+      return;
+    }
+
+    await _loadSdk();
+    _initializeSdk();
+  }
+
   Future<String> loginAndReadAccessToken() async {
     if (AppEnvironment.kakaoJavaScriptKey.isEmpty) {
       throw const KakaoLoginUnsupportedException(
