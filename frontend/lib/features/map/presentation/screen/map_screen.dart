@@ -21,7 +21,6 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
   int _selectedSpotIndex = 0;
-  final Set<String> _favoriteSpotIds = {};
 
   static const _categories = [
     _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
@@ -69,17 +68,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
-  void _toggleFavorite(String spotId) {
-    setState(() {
-      if (!_favoriteSpotIds.add(spotId)) {
-        _favoriteSpotIds.remove(spotId);
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final spotsState = ref.watch(mapSpotsProvider);
+    final favoriteSpotsState = ref.watch(favoriteSpotControllerProvider);
+    final favoriteSpotIds = favoriteSpotsState.valueOrNull ?? <String>{};
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -124,11 +117,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             bottom: 0,
                             child: _SpotBottomSheet(
                               spot: selectedSpot,
-                              favoriteCount: _favoriteSpotIds.length,
-                              isFavorite:
-                                  _favoriteSpotIds.contains(selectedSpot.id),
-                              onFavoritePressed: () {
-                                _toggleFavorite(selectedSpot.id);
+                              favoriteCount: favoriteSpotIds.length,
+                              isFavorite: favoriteSpotIds.contains(
+                                selectedSpot.id,
+                              ),
+                              onFavoritePressed: () async {
+                                try {
+                                  await ref
+                                      .read(
+                                        favoriteSpotControllerProvider.notifier,
+                                      )
+                                      .toggle(selectedSpot.id);
+                                } catch (_) {
+                                  if (!context.mounted) {
+                                    return;
+                                  }
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('내 동선 저장에 실패했습니다.'),
+                                    ),
+                                  );
+                                }
                               },
                               onDetailPressed: () {
                                 context.go('/spots/${selectedSpot.id}');
