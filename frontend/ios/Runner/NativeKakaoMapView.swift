@@ -129,6 +129,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       )
     )
     layer?.clearAllItems()
+    layer?.visible = true
 
     for spot in spots {
       guard
@@ -156,8 +157,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       layer?.addPoi(
         option: option,
         at: MapPoint(longitude: longitude, latitude: latitude)
-      )
+      )?.show()
     }
+    layer?.showAllPois()
+    mapView.refresh()
   }
 
   private func styleIDFor(markerColor: String, isRare: Bool) -> String {
