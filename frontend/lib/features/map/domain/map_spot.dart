@@ -43,7 +43,7 @@ class MapSpot {
       'POTATO_CAFE' => '카페',
       'POTATO_SNACK' => '간식',
       'POTATO_MARKET' => '시장',
-      'POTATO_BREWERY' => '술',
+      'POTATO_BREWERY' => '바 & 페어링',
       'POTATO_SHOP' => '쇼핑',
       _ => '감자',
     };
@@ -63,7 +63,7 @@ class MapSpot {
       'POTATO_CAFE' => '디저트감자',
       'POTATO_SNACK' => '간식감자',
       'POTATO_MARKET' => '직판감자',
-      'POTATO_BREWERY' => '맥주감자',
+      'POTATO_BREWERY' => '페어링감자',
       'POTATO_SHOP' => '기념감자',
       'POTATO_EXPERIENCE' => '체험감자',
       _ => '여행감자',

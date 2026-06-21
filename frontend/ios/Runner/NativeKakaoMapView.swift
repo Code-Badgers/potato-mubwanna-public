@@ -17,7 +17,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private let latitude: Double
   private let longitude: Double
   private let zoomLevel: Int
-  private let spots: [[String: Any]]
+  private let spots: [[AnyHashable: Any]]
   private var isAuthenticated = false
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
@@ -29,10 +29,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     messenger: FlutterBinaryMessenger
   ) {
     let params = args as? [String: Any] ?? [:]
-    latitude = params["latitude"] as? Double ?? 37.3808
-    longitude = params["longitude"] as? Double ?? 128.6609
-    zoomLevel = params["zoomLevel"] as? Int ?? 9
-    spots = params["spots"] as? [[String: Any]] ?? []
+    latitude = Self.doubleValue(params["latitude"]) ?? 37.3808
+    longitude = Self.doubleValue(params["longitude"]) ?? 128.6609
+    zoomLevel = Self.intValue(params["zoomLevel"]) ?? 9
+    spots = Self.spotMaps(from: params["spots"])
     container = NativeKakaoMapContainer(frame: frame)
     super.init()
 
@@ -132,14 +132,14 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
     for spot in spots {
       guard
-        let latitude = spot["latitude"] as? Double,
-        let longitude = spot["longitude"] as? Double
+        let latitude = Self.doubleValue(spot["latitude"]),
+        let longitude = Self.doubleValue(spot["longitude"])
       else {
         continue
       }
 
       let spotID = "\(spot["id"] ?? UUID().uuidString)"
-      let isRare = spot["rare"] as? Bool ?? false
+      let isRare = Self.boolValue(spot["rare"]) ?? false
       let markerColor = spot["markerColor"] as? String ?? (isRare ? "#F6C23E" : "#36D98F")
       let styleID = styleIDFor(markerColor: markerColor, isRare: isRare)
       labelManager.addPoiStyle(
@@ -215,6 +215,68 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       let textRect = CGRect(x: 0, y: 12, width: size.width, height: 28)
       NSAttributedString(string: text, attributes: attributes).draw(in: textRect)
     }
+  }
+
+  private static func spotMaps(from value: Any?) -> [[AnyHashable: Any]] {
+    if let maps = value as? [[AnyHashable: Any]] {
+      return maps
+    }
+    if let maps = value as? [[String: Any]] {
+      return maps.map { Dictionary(uniqueKeysWithValues: $0.map { (AnyHashable($0.key), $0.value) }) }
+    }
+    if let array = value as? [NSDictionary] {
+      return array.compactMap { dictionary in
+        var result: [AnyHashable: Any] = [:]
+        dictionary.forEach { key, value in
+          if let hashableKey = key as? AnyHashable {
+            result[hashableKey] = value
+          } else if let stringKey = key as? String {
+            result[AnyHashable(stringKey)] = value
+          }
+        }
+        return result
+      }
+    }
+    return []
+  }
+
+  private static func doubleValue(_ value: Any?) -> Double? {
+    if let double = value as? Double {
+      return double
+    }
+    if let number = value as? NSNumber {
+      return number.doubleValue
+    }
+    if let string = value as? String {
+      return Double(string)
+    }
+    return nil
+  }
+
+  private static func intValue(_ value: Any?) -> Int? {
+    if let int = value as? Int {
+      return int
+    }
+    if let number = value as? NSNumber {
+      return number.intValue
+    }
+    if let string = value as? String {
+      return Int(string)
+    }
+    return nil
+  }
+
+  private static func boolValue(_ value: Any?) -> Bool? {
+    if let bool = value as? Bool {
+      return bool
+    }
+    if let number = value as? NSNumber {
+      return number.boolValue
+    }
+    if let string = value as? String {
+      return Bool(string)
+    }
+    return nil
   }
 
   private func showFallback(_ message: String) {

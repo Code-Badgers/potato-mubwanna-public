@@ -30,7 +30,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _MapCategoryFilter(label: '체험', icon: Icons.directions_walk_rounded),
     _MapCategoryFilter(label: '간식', icon: Icons.bakery_dining_rounded),
     _MapCategoryFilter(label: '시장', icon: Icons.storefront_rounded),
-    _MapCategoryFilter(label: '술', icon: Icons.sports_bar_rounded),
+    _MapCategoryFilter(label: '바 & 페어링', icon: Icons.sports_bar_rounded),
     _MapCategoryFilter(label: '쇼핑', icon: Icons.shopping_bag_rounded),
   ];
 
@@ -154,7 +154,12 @@ class _PotatoMapPreview extends StatelessWidget {
         decoration: const BoxDecoration(color: Color(0xFFEAF5D5)),
         child: Stack(
           children: [
-            Positioned.fill(child: KakaoMapView(spots: spots)),
+            Positioned.fill(
+              child: KakaoMapView(
+                key: ValueKey(Object.hashAll(spots.map((spot) => spot.id))),
+                spots: spots,
+              ),
+            ),
           ],
         ),
       ),
