@@ -21,7 +21,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   PermissionStatus? _locationStatus;
   PermissionStatus? _notificationStatus;
   String? _errorMessage;
@@ -29,11 +30,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadStatuses();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadStatuses();
+    }
+  }
+
   Future<void> _loadStatuses() async {
-    setState(() => _errorMessage = null);
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
 
     try {
       final locationStatus = await widget.permissionService.locationStatus();

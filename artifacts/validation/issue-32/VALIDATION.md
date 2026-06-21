@@ -11,6 +11,8 @@
 - Added the `/settings` route and connected the My Page header icon and account-menu row.
 - Declared coarse location, fine location, and notification permissions in the Android manifest.
 - Added widget coverage for permission states/actions and both My Page entry points.
+- Refreshed permission statuses when the app resumes after returning from
+  system settings, and avoided the initial synchronous error-state reset.
 
 ## Issue Encountered And Resolution
 
@@ -28,7 +30,22 @@
 | `flutter build apk --debug` | Passed: `build/app/outputs/flutter-apk/app-debug.apk` created (204,619,891 bytes) |
 | `flutter devices` | No Android device or emulator connected; Windows, Chrome, and Edge only |
 
+## Gemini Review Follow-up
+
+- Added `WidgetsBindingObserver` to reload permission statuses when the app
+  resumes after the user changes an app setting.
+- Added a widget regression test that changes the fake notification status,
+  sends an `AppLifecycleState.resumed` event, and verifies the UI refreshes.
+- Installed Flutter 3.44.2 and Dart 3.12.2 locally for this follow-up.
+
+| Command | Result |
+| --- | --- |
+| `flutter test --no-pub test\features\settings\settings_screen_test.dart` | Passed: 4 tests |
+| `flutter test --no-pub` | Passed: 28 tests |
+| `flutter analyze` | Passed: no issues |
+
 ## Residual Risk
 
 - The runtime Android permission dialog and the system settings return flow still need confirmation on an Android emulator or physical device.
 - iOS permission configuration is excluded from this Android-focused issue.
+- Android Studio and its SDK installation is in progress, so the follow-up APK build has not yet been rerun.

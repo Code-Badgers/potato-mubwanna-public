@@ -60,6 +60,28 @@ void main() {
 
     expect(service.openSettingsCalls, 1);
   });
+
+  testWidgets('refreshes permission statuses when the app resumes',
+      (tester) async {
+    final service = _FakePermissionService(
+      location: PermissionStatus.granted,
+      notification: PermissionStatus.denied,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: SettingsScreen(permissionService: service)),
+    );
+    await tester.pumpAndSettle();
+
+    service.notification = PermissionStatus.granted;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(service.locationStatusCalls, 2);
+    expect(service.notificationStatusCalls, 2);
+    expect(find.text('허용됨'), findsNWidgets(2));
+    expect(find.text('허용하기'), findsNothing);
+  });
 }
 
 class _FakePermissionService extends PermissionService {
@@ -70,14 +92,22 @@ class _FakePermissionService extends PermissionService {
 
   PermissionStatus location;
   PermissionStatus notification;
+  int locationStatusCalls = 0;
+  int notificationStatusCalls = 0;
   int notificationRequestCalls = 0;
   int openSettingsCalls = 0;
 
   @override
-  Future<PermissionStatus> locationStatus() async => location;
+  Future<PermissionStatus> locationStatus() async {
+    locationStatusCalls++;
+    return location;
+  }
 
   @override
-  Future<PermissionStatus> notificationStatus() async => notification;
+  Future<PermissionStatus> notificationStatus() async {
+    notificationStatusCalls++;
+    return notification;
+  }
 
   @override
   Future<PermissionStatus> requestNotification() async {
