@@ -21,6 +21,8 @@
 - 실제 로그인 JWT subject는 `user:1` 형식인데 즐겨찾기 컨트롤러가 숫자 문자열만 가정해 `NumberFormatException`이 발생했다. `user:` prefix를 제거한 뒤 user id를 파싱하도록 수정하고 컨트롤러 테스트를 추가했다.
 - iOS 네이티브 카카오맵에서 감자 POI 탭 시 하단 카드가 바뀌지 않는 문제가 있었다. POI id 문자열 가공에 의존하던 방식을 보완해 `poiID -> spotID` 매핑 테이블로 정확한 spot id를 Flutter `MethodChannel`에 전달하도록 수정했다.
 - 저장한 감자 스팟이 2곳 이상이면 지도 하단 카드를 위로 끌어올릴 수 있는 추천 동선 패널로 확장했다. 현재 추천 순서는 좌표 간 직선 거리 기준의 MVP 휴리스틱이며, 실제 도로 이동시간 최적화는 후속 API 연동이 필요하다.
+- iOS에서 감자 핀 탭 후 하단 카드가 갱신되지 않는 현상이 계속 보고되어, 지도 전체 POI 이벤트 대신 각 `Poi` 생성 시점에 개별 `addPoiTappedEventHandler`를 붙이는 방식으로 변경했다.
+- 로그인하지 않은 상태에서는 서버 즐겨찾기 API가 401/403으로 실패한다. 테스트 중에도 내 동선 버튼이 고장난 것처럼 보이지 않도록 로컬 저장 fallback을 추가했고, 로그인 상태에서는 기존 서버 저장을 계속 시도한다.
 
 ## 변경 파일 요약
 
@@ -32,6 +34,7 @@
 - `frontend/lib/features/map/**`: 지도 즐겨찾기 API 연동
 - `frontend/ios/Runner/NativeKakaoMapView.swift`: iOS 감자 POI 탭 이벤트의 spot id 전달 보강
 - `frontend/lib/features/map/presentation/screen/map_screen.dart`: 드래그 가능한 추천 동선 패널과 직선 거리 기반 정렬 추가
+- `frontend/lib/features/map/application/map_spot_controller.dart`: 비로그인 로컬 내 동선 저장 fallback 추가
 
 ## 검증
 
@@ -42,6 +45,10 @@
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter build ios --simulator --debug --dart-define=...`: 성공. iOS 네이티브 Swift 지도 코드 컴파일을 확인했다.
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공. 추천 동선 패널 추가 후 재검증했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공. iOS POI 개별 탭 핸들러와 로컬 저장 fallback 추가 후 재검증했다.
+- `cd backend && ./gradlew test`: 성공.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build ios --simulator --debug --dart-define=...`: 성공.
+- `xcrun simctl install ... Runner.app && xcrun simctl launch ... com.gamjamubwatna.frontend`: 성공. 최신 iOS simulator 빌드 설치와 실행을 확인했다.
 
 ## 후속 작업
 
@@ -56,3 +63,4 @@
 - 현재 API는 JWT 인증 사용자를 기준으로 동작한다. 로그인하지 않은 상태에서는 즐겨찾기 목록 조회와 토글이 실패한다.
 - 나만의 동선을 지도 Polyline으로 보여주는 화면은 후속 작업으로 분리한다.
 - iOS/Xcode 메타데이터 파일 2개가 작업 시작 전부터 수정 상태였다. 이번 이슈 범위가 아니므로 커밋 대상에서 제외한다.
+- 현재 로컬 환경의 `simctl`에는 `tap` 서브커맨드가 없어 iOS 시뮬레이터 좌표 탭 자동화는 수행하지 못했다. 대신 iOS 빌드, 설치, 실행까지 확인했고 수동 탭 검증이 필요하다.

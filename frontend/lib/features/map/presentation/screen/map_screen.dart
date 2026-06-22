@@ -187,13 +187,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                       favoriteSpotControllerProvider.notifier,
                                     )
                                     .toggle(selectedSpot.id);
+                              } on FavoriteSpotToggleException catch (error) {
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(error.message),
+                                  ),
+                                );
                               } catch (_) {
                                 if (!context.mounted) {
                                   return;
                                 }
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('내 동선 저장에 실패했습니다.'),
+                                    content: Text('내 동선을 저장하지 못했습니다.'),
                                   ),
                                 );
                               }

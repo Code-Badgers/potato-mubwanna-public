@@ -199,6 +199,9 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     layer?.setClickable(true)
     spotStyleByPoiID.removeAll()
     spotIDByPoiID.removeAll()
+    eventHandlers.forEach { $0.dispose() }
+    eventHandlers.removeAll()
+    bindMapEventHandlers(mapView)
     if spots.isEmpty {
       mapView.refresh()
       return
@@ -229,10 +232,20 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       option.clickable = true
       spotStyleByPoiID[poiID] = (markerColor: markerColor, isRare: isRare)
       spotIDByPoiID[poiID] = spotID
-      layer?.addPoi(
+      let poi = layer?.addPoi(
         option: option,
         at: MapPoint(longitude: longitude, latitude: latitude)
-      )?.show()
+      )
+      if let poi {
+        let tapHandler = poi.addPoiTappedEventHandler(target: self) { owner in
+          return { _ in
+            owner.channel.invokeMethod("spotSelected", arguments: spotID)
+          }
+        }
+        eventHandlers.append(tapHandler)
+        poi.clickable = true
+        poi.show()
+      }
     }
     layer?.showAllPois()
     applySpotPoiScale(for: mapView)
