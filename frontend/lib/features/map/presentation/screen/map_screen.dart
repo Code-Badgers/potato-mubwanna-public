@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -54,6 +56,41 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return spots[_selectedSpotIndex];
   }
 
+  List<MapSpot> _recommendedRouteSpots(
+    List<MapSpot> spots,
+    Set<String> favoriteSpotIds,
+    MapSpot? selectedSpot,
+  ) {
+    final favoriteSpots = spots
+        .where((spot) => favoriteSpotIds.contains(spot.id))
+        .where((spot) => spot.latitude != 0 && spot.longitude != 0)
+        .toList();
+    if (favoriteSpots.length <= 2) {
+      return favoriteSpots;
+    }
+
+    final route = <MapSpot>[];
+    final remaining = [...favoriteSpots];
+    MapSpot current =
+        selectedSpot != null && favoriteSpotIds.contains(selectedSpot.id)
+            ? selectedSpot
+            : remaining.first;
+    route.add(current);
+    remaining.removeWhere((spot) => spot.id == current.id);
+
+    while (remaining.isNotEmpty) {
+      remaining.sort((a, b) {
+        final distanceA = current.distanceKmTo(a);
+        final distanceB = current.distanceKmTo(b);
+        return distanceA.compareTo(distanceB);
+      });
+      current = remaining.removeAt(0);
+      route.add(current);
+    }
+
+    return route;
+  }
+
   void _selectCategory(int index) {
     setState(() {
       _selectedCategoryIndex = index;
@@ -96,6 +133,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   data: (spots) {
                     final visibleSpots = _visibleSpots(spots, favoriteSpotIds);
                     final selectedSpot = _selectedSpot(visibleSpots);
+                    final routeSpots = _recommendedRouteSpots(
+                      spots,
+                      favoriteSpotIds,
+                      selectedSpot,
+                    );
                     return Stack(
                       children: [
                         Positioned.fill(
@@ -132,38 +174,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             child: _EmptySpotMessage(),
                           )
                         else
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: _SpotBottomSheet(
-                              spot: selectedSpot,
-                              favoriteCount: favoriteSpotIds.length,
-                              isFavorite: favoriteSpotIds.contains(
-                                selectedSpot.id,
-                              ),
-                              onFavoritePressed: () async {
-                                try {
-                                  await ref
-                                      .read(
-                                        favoriteSpotControllerProvider.notifier,
-                                      )
-                                      .toggle(selectedSpot.id);
-                                } catch (_) {
-                                  if (!context.mounted) {
-                                    return;
-                                  }
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('내 동선 저장에 실패했습니다.'),
-                                    ),
-                                  );
+                          _RouteRecommendationSheet(
+                            selectedSpot: selectedSpot,
+                            routeSpots: routeSpots,
+                            favoriteCount: favoriteSpotIds.length,
+                            isFavorite:
+                                favoriteSpotIds.contains(selectedSpot.id),
+                            onFavoritePressed: () async {
+                              try {
+                                await ref
+                                    .read(
+                                      favoriteSpotControllerProvider.notifier,
+                                    )
+                                    .toggle(selectedSpot.id);
+                              } catch (_) {
+                                if (!context.mounted) {
+                                  return;
                                 }
-                              },
-                              onDetailPressed: () {
-                                context.go('/spots/${selectedSpot.id}');
-                              },
-                            ),
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('내 동선 저장에 실패했습니다.'),
+                                  ),
+                                );
+                              }
+                            },
+                            onDetailPressed: () {
+                              context.go('/spots/${selectedSpot.id}');
+                            },
                           ),
                       ],
                     );
@@ -202,6 +239,421 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RouteRecommendationSheet extends StatelessWidget {
+  const _RouteRecommendationSheet({
+    required this.selectedSpot,
+    required this.routeSpots,
+    required this.favoriteCount,
+    required this.isFavorite,
+    required this.onFavoritePressed,
+    required this.onDetailPressed,
+  });
+
+  final MapSpot selectedSpot;
+  final List<MapSpot> routeSpots;
+  final int favoriteCount;
+  final bool isFavorite;
+  final Future<void> Function() onFavoritePressed;
+  final VoidCallback onDetailPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRoute = routeSpots.length >= 2;
+    final totalDistance = routeSpots.totalRouteDistanceKm;
+    return DraggableScrollableSheet(
+      minChildSize: 0.24,
+      initialChildSize: hasRoute ? 0.34 : 0.28,
+      maxChildSize: 0.78,
+      snap: true,
+      snapSizes: hasRoute ? const [0.34, 0.78] : const [0.28, 0.56],
+      builder: (context, scrollController) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: const Color(0xFFE8E2D8)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 24,
+                offset: const Offset(0, -8),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(child: _SheetDragHandle()),
+                const SizedBox(height: 8),
+                _SelectedSpotSummary(
+                  spot: selectedSpot,
+                  favoriteCount: favoriteCount,
+                  isFavorite: isFavorite,
+                  onFavoritePressed: onFavoritePressed,
+                  onDetailPressed: onDetailPressed,
+                ),
+                if (hasRoute) ...[
+                  const SizedBox(height: 18),
+                  _RouteSummaryHeader(
+                    count: routeSpots.length,
+                    distanceKm: totalDistance,
+                  ),
+                  const SizedBox(height: 12),
+                  for (var index = 0; index < routeSpots.length; index++) ...[
+                    _RouteStopTile(
+                      index: index,
+                      spot: routeSpots[index],
+                      distanceFromPrevious: index == 0
+                          ? null
+                          : routeSpots[index - 1]
+                              .distanceKmTo(routeSpots[index]),
+                    ),
+                    if (index < routeSpots.length - 1) const _RouteConnector(),
+                  ],
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.near_me_rounded, size: 19),
+                    label: const Text('이 동선 따라가기'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _rareGold,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SheetDragHandle extends StatelessWidget {
+  const _SheetDragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 5,
+      decoration: BoxDecoration(
+        color: const Color(0xFFD8D2C8),
+        borderRadius: BorderRadius.circular(999),
+      ),
+    );
+  }
+}
+
+class _SelectedSpotSummary extends StatelessWidget {
+  const _SelectedSpotSummary({
+    required this.spot,
+    required this.favoriteCount,
+    required this.isFavorite,
+    required this.onFavoritePressed,
+    required this.onDetailPressed,
+  });
+
+  final MapSpot spot;
+  final int favoriteCount;
+  final bool isFavorite;
+  final Future<void> Function() onFavoritePressed;
+  final VoidCallback onDetailPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    spot.name,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${spot.cityName} · ${spot.categoryLabel} · ${spot.potatoName}',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton.filledTonal(
+              onPressed: onFavoritePressed,
+              style: IconButton.styleFrom(
+                backgroundColor: isFavorite
+                    ? const Color(0xFFFFF2B8)
+                    : const Color(0xFFEAF8EF),
+                foregroundColor: isFavorite ? _rareGold : _mapDark,
+              ),
+              icon: Icon(
+                isFavorite ? Icons.bookmark_rounded : Icons.bookmark_border,
+              ),
+              tooltip: isFavorite ? '동선에서 제거' : '내 동선에 추가',
+            ),
+            const SizedBox(width: 8),
+            _CongestionBadge(label: spot.congestionLabel),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (spot.isRare) const _RarePotatoLine() else const _NormalPotatoLine(),
+        if (favoriteCount > 0) ...[
+          const SizedBox(height: 10),
+          _FavoriteRouteLine(count: favoriteCount),
+        ],
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            SizedBox(
+              width: 118,
+              child: OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _mapDark,
+                  side: const BorderSide(color: Color(0xFFC9E9D3)),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                child: const Text('길찾기'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton(
+                onPressed: onDetailPressed,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _mapPrimary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                child: const Text('상세보기'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _RouteSummaryHeader extends StatelessWidget {
+  const _RouteSummaryHeader({
+    required this.count,
+    required this.distanceKm,
+  });
+
+  final int count;
+  final double distanceKm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(
+          child: Text(
+            '추천 동선',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+        Text(
+          '$count곳 · 직선 ${distanceKm.toStringAsFixed(1)}km',
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RouteStopTile extends StatelessWidget {
+  const _RouteStopTile({
+    required this.index,
+    required this.spot,
+    required this.distanceFromPrevious,
+  });
+
+  final int index;
+  final MapSpot spot;
+  final double? distanceFromPrevious;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFirst = index == 0;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _RouteStepBadge(index: index, first: isFirst),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFECE6DC)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Color(
+                      int.parse(spot.markerColorHex.replaceFirst('#', '0xFF')),
+                    ).withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    spot.isRare ? '🥔★' : '🥔',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        spot.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isFirst
+                            ? '출발 위치'
+                            : '이전 장소에서 직선 ${distanceFromPrevious!.toStringAsFixed(1)}km',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RouteStepBadge extends StatelessWidget {
+  const _RouteStepBadge({
+    required this.index,
+    required this.first,
+  });
+
+  final int index;
+  final bool first;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30,
+      height: 30,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: first ? const Color(0xFF65B7E8) : _mapDark,
+        shape: BoxShape.circle,
+      ),
+      child: first
+          ? const Icon(Icons.flag_rounded, size: 16, color: Colors.white)
+          : Text(
+              '${index + 1}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+    );
+  }
+}
+
+class _RouteConnector extends StatelessWidget {
+  const _RouteConnector();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(left: 15),
+      child: SizedBox(
+        height: 14,
+        child: VerticalDivider(
+          width: 1,
+          thickness: 1,
+          color: Color(0xFFD5E7DB),
         ),
       ),
     );
@@ -383,145 +835,6 @@ class _MapCategoryFilter {
   final IconData icon;
 }
 
-class _SpotBottomSheet extends StatelessWidget {
-  const _SpotBottomSheet({
-    required this.spot,
-    required this.favoriteCount,
-    required this.isFavorite,
-    required this.onFavoritePressed,
-    required this.onDetailPressed,
-  });
-
-  final MapSpot spot;
-  final int favoriteCount;
-  final bool isFavorite;
-  final VoidCallback onFavoritePressed;
-  final VoidCallback onDetailPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE8E2D8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      spot.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${spot.cityName} · ${spot.categoryLabel} · ${spot.potatoName}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton.filledTonal(
-                onPressed: onFavoritePressed,
-                style: IconButton.styleFrom(
-                  backgroundColor: isFavorite
-                      ? const Color(0xFFFFF2B8)
-                      : const Color(0xFFEAF8EF),
-                  foregroundColor: isFavorite ? _rareGold : _mapDark,
-                ),
-                icon: Icon(
-                  isFavorite ? Icons.bookmark_rounded : Icons.bookmark_border,
-                ),
-                tooltip: isFavorite ? '동선에서 제거' : '내 동선에 추가',
-              ),
-              const SizedBox(width: 8),
-              _CongestionBadge(label: spot.congestionLabel),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (spot.isRare)
-            const _RarePotatoLine()
-          else
-            const _NormalPotatoLine(),
-          if (favoriteCount > 0) ...[
-            const SizedBox(height: 10),
-            _FavoriteRouteLine(count: favoriteCount),
-          ],
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              SizedBox(
-                width: 118,
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _mapDark,
-                    side: const BorderSide(color: Color(0xFFC9E9D3)),
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  child: const Text('길찾기'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: onDetailPressed,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _mapPrimary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  child: const Text('상세보기'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CongestionBadge extends StatelessWidget {
   const _CongestionBadge({required this.label});
 
@@ -688,5 +1001,41 @@ class _EmptySpotMessage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+extension _MapSpotRouteDistance on MapSpot {
+  double distanceKmTo(MapSpot other) {
+    const earthRadiusKm = 6371.0;
+    final lat1 = _toRadians(latitude);
+    final lat2 = _toRadians(other.latitude);
+    final deltaLat = _toRadians(other.latitude - latitude);
+    final deltaLng = _toRadians(other.longitude - longitude);
+
+    final haversine = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(deltaLng / 2) *
+            math.sin(deltaLng / 2);
+    final centralAngle =
+        2 * math.atan2(math.sqrt(haversine), math.sqrt(1 - haversine));
+    return earthRadiusKm * centralAngle;
+  }
+
+  static double _toRadians(double degrees) {
+    return degrees * math.pi / 180;
+  }
+}
+
+extension _MapSpotRouteListDistance on List<MapSpot> {
+  double get totalRouteDistanceKm {
+    if (length < 2) {
+      return 0;
+    }
+    var distance = 0.0;
+    for (var index = 1; index < length; index++) {
+      distance += this[index - 1].distanceKmTo(this[index]);
+    }
+    return distance;
   }
 }
