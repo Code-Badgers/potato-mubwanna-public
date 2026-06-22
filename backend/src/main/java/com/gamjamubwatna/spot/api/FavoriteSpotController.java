@@ -50,6 +50,10 @@ public class FavoriteSpotController {
     }
 
     private Long currentUserId(Authentication authentication) {
-        return Long.parseLong(authentication.getName());
+        String principal = authentication.getName();
+        if (principal.startsWith("user:")) {
+            return Long.parseLong(principal.substring("user:".length()));
+        }
+        return Long.parseLong(principal);
     }
 }
