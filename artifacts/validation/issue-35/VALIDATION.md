@@ -19,6 +19,7 @@
 - 작업 시작 시 iOS/Xcode 관련 파일 2개가 이미 수정 상태였다. 이번 이슈 범위가 아니므로 스테이징하지 않는다.
 - 기존 지도 화면은 `Set<String>`으로 즐겨찾기를 로컬 상태에만 저장했다. 앱 재실행/다른 기기에서 사라지는 구조라서 API 기반 상태로 교체했다.
 - 실제 로그인 JWT subject는 `user:1` 형식인데 즐겨찾기 컨트롤러가 숫자 문자열만 가정해 `NumberFormatException`이 발생했다. `user:` prefix를 제거한 뒤 user id를 파싱하도록 수정하고 컨트롤러 테스트를 추가했다.
+- iOS 네이티브 카카오맵에서 감자 POI 탭 시 하단 카드가 바뀌지 않는 문제가 있었다. POI id 문자열 가공에 의존하던 방식을 보완해 `poiID -> spotID` 매핑 테이블로 정확한 spot id를 Flutter `MethodChannel`에 전달하도록 수정했다.
 
 ## 변경 파일 요약
 
@@ -28,6 +29,7 @@
 - `backend/src/test/java/com/gamjamubwatna/spot/application/FavoriteSpotServiceTest.java`: 즐겨찾기 서비스 테스트 추가
 - `backend/src/test/java/com/gamjamubwatna/spot/api/FavoriteSpotControllerTest.java`: JWT subject `user:{id}` 파싱 테스트 추가
 - `frontend/lib/features/map/**`: 지도 즐겨찾기 API 연동
+- `frontend/ios/Runner/NativeKakaoMapView.swift`: iOS 감자 POI 탭 이벤트의 spot id 전달 보강
 
 ## 검증
 
@@ -35,6 +37,8 @@
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
 - `cd frontend && flutter analyze`: 실패. 현재 셸 PATH에 `flutter`가 없어 절대경로로 재실행했다.
 - `cd backend && ./gradlew test`: 성공. JWT subject `user:1` 파싱 수정 후 재검증했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build ios --simulator --debug --dart-define=...`: 성공. iOS 네이티브 Swift 지도 코드 컴파일을 확인했다.
 
 ## 후속 작업
 

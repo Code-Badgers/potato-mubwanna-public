@@ -23,6 +23,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
   private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
+  private var spotIDByPoiID: [String: String] = [:]
   private var eventHandlers: [DisposableEventHandler] = []
 
   init(
@@ -167,6 +168,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   private func handleSpotPoiTap(layerID: String, poiID: String) {
+    if let spotID = spotIDByPoiID[poiID] {
+      channel.invokeMethod("spotSelected", arguments: spotID)
+      return
+    }
     guard layerID == spotLayerID else {
       return
     }
@@ -193,6 +198,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     layer?.visible = true
     layer?.setClickable(true)
     spotStyleByPoiID.removeAll()
+    spotIDByPoiID.removeAll()
     if spots.isEmpty {
       mapView.refresh()
       return
@@ -222,6 +228,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       )
       option.clickable = true
       spotStyleByPoiID[poiID] = (markerColor: markerColor, isRare: isRare)
+      spotIDByPoiID[poiID] = spotID
       layer?.addPoi(
         option: option,
         at: MapPoint(longitude: longitude, latitude: latitude)
