@@ -22,7 +22,7 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
-  int _selectedSpotIndex = 0;
+  String? _selectedSpotId;
   bool _showFavoriteRouteOnly = false;
 
   static const _categories = [
@@ -50,10 +50,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   MapSpot? _selectedSpot(List<MapSpot> spots) {
-    if (_selectedSpotIndex >= spots.length) {
-      return spots.isEmpty ? null : spots.first;
+    if (spots.isEmpty) {
+      return null;
     }
-    return spots[_selectedSpotIndex];
+    final selectedSpotId = _selectedSpotId;
+    if (selectedSpotId == null) {
+      return spots.first;
+    }
+    for (final spot in spots) {
+      if (spot.id == selectedSpotId) {
+        return spot;
+      }
+    }
+    return spots.first;
   }
 
   List<MapSpot> _recommendedRouteSpots(
@@ -94,24 +103,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void _selectCategory(int index) {
     setState(() {
       _selectedCategoryIndex = index;
-      _selectedSpotIndex = 0;
+      _selectedSpotId = null;
     });
   }
 
   void _toggleFavoriteRouteOnly() {
     setState(() {
       _showFavoriteRouteOnly = !_showFavoriteRouteOnly;
-      _selectedSpotIndex = 0;
+      _selectedSpotId = null;
     });
   }
 
-  void _selectSpotById(List<MapSpot> visibleSpots, String spotId) {
-    final nextIndex = visibleSpots.indexWhere((spot) => spot.id == spotId);
-    if (nextIndex < 0) {
-      return;
-    }
+  void _selectSpotById(String spotId) {
     setState(() {
-      _selectedSpotIndex = nextIndex;
+      _selectedSpotId = spotId;
     });
   }
 
@@ -143,9 +148,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         Positioned.fill(
                           child: _PotatoMapPreview(
                             spots: visibleSpots,
-                            onSpotSelected: (spotId) {
-                              _selectSpotById(visibleSpots, spotId);
-                            },
+                            onSpotSelected: _selectSpotById,
                           ),
                         ),
                         Positioned(

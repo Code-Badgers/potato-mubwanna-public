@@ -169,14 +169,23 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   private func handleSpotPoiTap(layerID: String, poiID: String) {
     if let spotID = spotIDByPoiID[poiID] {
-      channel.invokeMethod("spotSelected", arguments: spotID)
+      notifySpotSelected(spotID)
       return
     }
     guard layerID == spotLayerID else {
       return
     }
     let spotID = poiID.replacingOccurrences(of: "potato-", with: "")
-    channel.invokeMethod("spotSelected", arguments: spotID)
+    notifySpotSelected(spotID)
+  }
+
+  private func notifySpotSelected(_ spotID: String) {
+    DispatchQueue.main.async { [weak self] in
+#if DEBUG
+      print("[NativeKakaoMapView] spotSelected \(spotID)")
+#endif
+      self?.channel.invokeMethod("spotSelected", arguments: spotID)
+    }
   }
 
   private func addSpotPois() {
@@ -239,7 +248,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       if let poi {
         let tapHandler = poi.addPoiTappedEventHandler(target: self) { owner in
           return { _ in
-            owner.channel.invokeMethod("spotSelected", arguments: spotID)
+            owner.notifySpotSelected(spotID)
           }
         }
         eventHandlers.append(tapHandler)

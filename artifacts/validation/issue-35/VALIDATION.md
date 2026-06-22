@@ -23,6 +23,8 @@
 - 저장한 감자 스팟이 2곳 이상이면 지도 하단 카드를 위로 끌어올릴 수 있는 추천 동선 패널로 확장했다. 현재 추천 순서는 좌표 간 직선 거리 기준의 MVP 휴리스틱이며, 실제 도로 이동시간 최적화는 후속 API 연동이 필요하다.
 - iOS에서 감자 핀 탭 후 하단 카드가 갱신되지 않는 현상이 계속 보고되어, 지도 전체 POI 이벤트 대신 각 `Poi` 생성 시점에 개별 `addPoiTappedEventHandler`를 붙이는 방식으로 변경했다.
 - 로그인하지 않은 상태에서는 서버 즐겨찾기 API가 401/403으로 실패한다. 테스트 중에도 내 동선 버튼이 고장난 것처럼 보이지 않도록 로컬 저장 fallback을 추가했고, 로그인 상태에서는 기존 서버 저장을 계속 시도한다.
+- iOS에서 핀 탭 이벤트가 들어와도 카드가 계속 첫 장소로 보일 수 있는 상태를 줄이기 위해, Flutter 화면 선택 상태를 목록 index가 아니라 `spot.id` 기준으로 변경했다. 필터/즐겨찾기/비동기 목록 갱신 후에도 클릭한 장소 ID로 하단 카드 내용을 다시 계산한다.
+- iOS 네이티브 지도에서 `MethodChannel`로 선택 이벤트를 보낼 때 메인 스레드에서 호출하도록 보강했다. Debug 빌드에서는 Xcode/Flutter 로그에 `[NativeKakaoMapView] spotSelected <id>`가 찍히도록 해 수동 탭 검증 시 이벤트 도달 여부를 확인할 수 있다.
 
 ## 변경 파일 요약
 
@@ -35,6 +37,8 @@
 - `frontend/ios/Runner/NativeKakaoMapView.swift`: iOS 감자 POI 탭 이벤트의 spot id 전달 보강
 - `frontend/lib/features/map/presentation/screen/map_screen.dart`: 드래그 가능한 추천 동선 패널과 직선 거리 기반 정렬 추가
 - `frontend/lib/features/map/application/map_spot_controller.dart`: 비로그인 로컬 내 동선 저장 fallback 추가
+- `frontend/lib/features/map/presentation/screen/map_screen.dart`: 핀 선택 상태를 index에서 spot id 기반으로 변경
+- `frontend/ios/Runner/NativeKakaoMapView.swift`: iOS 핀 선택 이벤트를 메인 스레드 MethodChannel 호출로 보강
 
 ## 검증
 
@@ -49,6 +53,14 @@
 - `cd backend && ./gradlew test`: 성공.
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter build ios --simulator --debug --dart-define=...`: 성공.
 - `xcrun simctl install ... Runner.app && xcrun simctl launch ... com.gamjamubwatna.frontend`: 성공. 최신 iOS simulator 빌드 설치와 실행을 확인했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공. spot id 기반 선택 상태 변경 후 재검증했다.
+- `cd backend && ./gradlew test`: 성공.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build ios --simulator --debug --dart-define=...`: 성공. iOS 네이티브 Swift 지도 코드 컴파일을 확인했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build apk --debug --dart-define=...`: 성공. Android 네이티브 지도 코드 컴파일을 확인했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build web --dart-define=...`: 성공. Flutter Web 빌드를 확인했다. 첫 병렬 실행 때 Flutter startup lock으로 실패했으나, 순차 재실행으로 성공했다.
+- `xcrun simctl install booted build/ios/iphonesimulator/Runner.app && xcrun simctl launch booted com.gamjamubwatna.frontend`: 성공. 최신 iOS simulator 빌드 설치와 실행을 확인했다.
+- `python3 -m http.server 54631 --bind 127.0.0.1`: 성공. `http://127.0.0.1:54631/`에서 Web build 정적 서버 200 응답을 확인했다.
+- `artifacts/validation/issue-35/ios-pin-selection-fix-launch.png`: 최신 iOS 실행 스크린샷을 저장했다.
 
 ## 후속 작업
 
@@ -64,3 +76,5 @@
 - 나만의 동선을 지도 Polyline으로 보여주는 화면은 후속 작업으로 분리한다.
 - iOS/Xcode 메타데이터 파일 2개가 작업 시작 전부터 수정 상태였다. 이번 이슈 범위가 아니므로 커밋 대상에서 제외한다.
 - 현재 로컬 환경의 `simctl`에는 `tap` 서브커맨드가 없어 iOS 시뮬레이터 좌표 탭 자동화는 수행하지 못했다. 대신 iOS 빌드, 설치, 실행까지 확인했고 수동 탭 검증이 필요하다.
+- 최신 iOS 실행은 새 설치 상태라 온보딩 첫 화면에서 시작했다. 지도 화면까지 자동 진입해 실제 핀 좌표를 탭하는 E2E 검증은 수행하지 못했다. 수동 확인 시 핀을 탭하면 Xcode/Flutter 로그에 `[NativeKakaoMapView] spotSelected <id>`가 찍히고, 하단 카드의 장소명이 해당 id의 장소로 바뀌어야 한다.
+- Web 빌드는 성공했지만, Codex 셸에는 Playwright 패키지가 없어 브라우저 클릭 자동화는 수행하지 못했다. Web 구현은 CustomOverlay 버튼 클릭 시 `potato-map-spot-selected-*` 이벤트를 Flutter로 전달하는 기존 경로를 유지한다.
