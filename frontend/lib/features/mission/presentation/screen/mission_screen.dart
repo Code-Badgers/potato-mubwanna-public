@@ -403,8 +403,10 @@ class _MissionDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canComplete =
-        mission.active && mission.status != MissionStatus.locked;
+    final isCompleted = mission.status == MissionStatus.completed;
+    final canComplete = mission.active &&
+        mission.status != MissionStatus.locked &&
+        !isCompleted;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -430,7 +432,7 @@ class _MissionDetailView extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: canComplete ? onComplete : null,
                     icon: Icon(_actionIcon(mission.type)),
-                    label: Text(_actionLabel(mission.type)),
+                    label: Text(_actionLabel(mission)),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(58),
                       backgroundColor: _missionDark,
@@ -465,8 +467,11 @@ class _MissionDetailView extends StatelessWidget {
     };
   }
 
-  static String _actionLabel(MissionType type) {
-    return switch (type) {
+  static String _actionLabel(MissionChallenge mission) {
+    if (mission.status == MissionStatus.completed) {
+      return '완료된 미션';
+    }
+    return switch (mission.type) {
       MissionType.photo => '사진 인증하기',
       MissionType.qrScan => 'QR 스캔하기',
       MissionType.quiz => '퀴즈 풀기',

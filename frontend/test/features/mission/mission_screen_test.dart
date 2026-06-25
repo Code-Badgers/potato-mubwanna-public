@@ -53,4 +53,30 @@ void main() {
     expect(find.text('미션 완료!'), findsOneWidget);
     expect(find.text('황금감자 성장 아이템을 획득했어요.'), findsOneWidget);
   });
+
+  testWidgets('disables completion action for completed missions',
+      (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: MissionScreen()),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('스탬프 1개 획득하기'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('스탬프 1개 획득하기'));
+    await tester.pumpAndSettle();
+
+    final completedButton = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, '완료된 미션'));
+    expect(completedButton.onPressed, isNull);
+
+    await tester.tap(find.widgetWithText(FilledButton, '완료된 미션'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 완료!'), findsNothing);
+  });
 }
