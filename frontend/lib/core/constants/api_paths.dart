@@ -5,6 +5,7 @@ class ApiPaths {
   static const authRefresh = '/auth/refresh';
   static const authLogout = '/auth/logout';
   static const spots = '/spots';
+  static const favoriteSpots = '/me/favorite-spots';
   static const nearbySpots = '/spots/nearby';
   static const stampVerify = '/stamps/verify';
   static const myStamps = '/stamps/me';

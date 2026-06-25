@@ -238,7 +238,72 @@ Response:
 GET /api/spots/{spotId}/congestion
 ```
 
-### 3.5 연관 관광지 추천
+### 3.5 내 동선 즐겨찾기 목록 조회
+
+로그인한 사용자가 지도에서 저장한 감자 스팟 목록을 조회한다. 지도 탭의 즐겨찾기 표시와 추후 나만의 동선 생성에 사용한다.
+
+```http
+GET /api/me/favorite-spots
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": [
+    {
+      "spotId": 1,
+      "name": "정선 5일장",
+      "category": "POTATO_TOUR",
+      "latitude": 37.3801,
+      "longitude": 128.6609,
+      "createdAt": "2026-06-21T10:00:00Z"
+    }
+  ]
+}
+```
+
+### 3.6 내 동선 즐겨찾기 추가
+
+```http
+POST /api/me/favorite-spots/{spotId}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "spotId": 1,
+    "favorite": true
+  }
+}
+```
+
+### 3.7 내 동선 즐겨찾기 삭제
+
+```http
+DELETE /api/me/favorite-spots/{spotId}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "spotId": 1,
+    "favorite": false
+  }
+}
+```
+
+### 3.8 연관 관광지 추천
 
 ```http
 GET /api/spots/{spotId}/recommendations

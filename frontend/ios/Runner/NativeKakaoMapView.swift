@@ -23,6 +23,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
   private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
+  private var spotIDByPoiID: [String: String] = [:]
   private var eventHandlers: [DisposableEventHandler] = []
 
   init(
@@ -167,11 +168,24 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   private func handleSpotPoiTap(layerID: String, poiID: String) {
+    if let spotID = spotIDByPoiID[poiID] {
+      notifySpotSelected(spotID)
+      return
+    }
     guard layerID == spotLayerID else {
       return
     }
     let spotID = poiID.replacingOccurrences(of: "potato-", with: "")
-    channel.invokeMethod("spotSelected", arguments: spotID)
+    notifySpotSelected(spotID)
+  }
+
+  private func notifySpotSelected(_ spotID: String) {
+    DispatchQueue.main.async { [weak self] in
+#if DEBUG
+      print("[NativeKakaoMapView] spotSelected \(spotID)")
+#endif
+      self?.channel.invokeMethod("spotSelected", arguments: spotID)
+    }
   }
 
   private func addSpotPois() {
@@ -193,6 +207,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     layer?.visible = true
     layer?.setClickable(true)
     spotStyleByPoiID.removeAll()
+    spotIDByPoiID.removeAll()
+    eventHandlers.forEach { $0.dispose() }
+    eventHandlers.removeAll()
+    bindMapEventHandlers(mapView)
     if spots.isEmpty {
       mapView.refresh()
       return
@@ -222,10 +240,21 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       )
       option.clickable = true
       spotStyleByPoiID[poiID] = (markerColor: markerColor, isRare: isRare)
-      layer?.addPoi(
+      spotIDByPoiID[poiID] = spotID
+      let poi = layer?.addPoi(
         option: option,
         at: MapPoint(longitude: longitude, latitude: latitude)
-      )?.show()
+      )
+      if let poi {
+        let tapHandler = poi.addPoiTappedEventHandler(target: self) { owner in
+          return { _ in
+            owner.notifySpotSelected(spotID)
+          }
+        }
+        eventHandlers.append(tapHandler)
+        poi.clickable = true
+        poi.show()
+      }
     }
     layer?.showAllPois()
     applySpotPoiScale(for: mapView)
