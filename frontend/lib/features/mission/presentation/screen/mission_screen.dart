@@ -20,7 +20,7 @@ class MissionScreen extends ConsumerStatefulWidget {
 
 class _MissionScreenState extends ConsumerState<MissionScreen> {
   MissionGroup? _selectedGroup;
-  MissionChallenge? _selectedMission;
+  String? _selectedMissionId;
 
   List<MissionChallenge> _filteredMissions(List<MissionChallenge> missions) {
     final selectedGroup = _selectedGroup;
@@ -30,12 +30,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     return missions.where((mission) => mission.group == selectedGroup).toList();
   }
 
-  void _showMissionDetail(MissionChallenge mission) {
-    setState(() => _selectedMission = mission);
+  void _showMissionDetail(String missionId) {
+    setState(() => _selectedMissionId = missionId);
   }
 
   void _closeMissionDetail() {
-    setState(() => _selectedMission = null);
+    setState(() => _selectedMissionId = null);
   }
 
   void _showRewardDialog(MissionChallenge mission) {
@@ -48,9 +48,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   @override
   Widget build(BuildContext context) {
     final missions = ref.watch(missionsProvider);
-    final selectedMission = _selectedMission;
+    final selectedMissionId = _selectedMissionId;
+    final selectedMission = selectedMissionId == null
+        ? null
+        : ref.watch(missionByIdProvider(selectedMissionId));
 
-    if (selectedMission != null) {
+    if (selectedMissionId != null && selectedMission != null) {
       return _MissionDetailView(
         mission: selectedMission,
         onBack: _closeMissionDetail,
@@ -88,7 +91,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                   final mission = filteredMissions[index];
                   return _MissionCard(
                     mission: mission,
-                    onTap: () => _showMissionDetail(mission),
+                    onTap: () => _showMissionDetail(mission.id),
                   );
                 },
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
