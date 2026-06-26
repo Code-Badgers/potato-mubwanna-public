@@ -77,6 +77,10 @@ public class User {
         return profileImage;
     }
 
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
     public void updateProfile(String email, String nickname, String profileImage, Instant now) {
         this.email = email;
         this.nickname = nickname;
