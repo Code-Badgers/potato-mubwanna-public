@@ -134,7 +134,7 @@ class _ProfileSummary extends StatelessWidget {
                   nickname,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
