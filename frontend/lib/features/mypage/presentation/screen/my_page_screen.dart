@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../application/user_profile_controller.dart';
+import '../../domain/user_profile.dart';
 
 const _mypagePrimary = Color(0xFF56C787);
 const _mypageDark = Color(0xFF509B64);
@@ -19,6 +21,7 @@ class MyPageScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoggingOut =
         ref.watch(authControllerProvider).status == AuthStatus.loading;
+    final profile = ref.watch(userProfileProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -32,7 +35,7 @@ class MyPageScreen extends ConsumerWidget {
                     onSettings: () => context.push('/settings'),
                   ),
                 ),
-                const SliverToBoxAdapter(child: _ProfileSummary()),
+                SliverToBoxAdapter(child: _ProfileSummary(profile: profile)),
                 const SliverToBoxAdapter(child: _TravelStats()),
                 const SliverToBoxAdapter(child: _QuickActionGrid()),
                 const SliverToBoxAdapter(child: _TravelBanner()),
@@ -103,42 +106,32 @@ class _MyPageHeader extends StatelessWidget {
 }
 
 class _ProfileSummary extends StatelessWidget {
-  const _ProfileSummary();
+  const _ProfileSummary({required this.profile});
+
+  static const _fallbackNickname = '감자여행자';
+
+  final UserProfile? profile;
 
   @override
   Widget build(BuildContext context) {
+    final nickname = profile?.nickname.trim().isNotEmpty == true
+        ? profile!.nickname
+        : _fallbackNickname;
+    final profileImage =
+        profile?.hasProfileImage == true ? profile!.profileImage.trim() : null;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 22),
       child: Row(
         children: [
-          Container(
-            width: 102,
-            height: 102,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE17A),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFF8D14E), width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: _mypageGold.withValues(alpha: 0.22),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.face_3_rounded,
-              size: 58,
-              color: _mypageBrown,
-            ),
-          ),
+          _ProfileAvatar(profileImage: profileImage),
           const SizedBox(width: 22),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '감자여행자',
+                Text(
+                  nickname,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -186,6 +179,48 @@ class _ProfileSummary extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.profileImage});
+
+  final String? profileImage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 102,
+      height: 102,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFE17A),
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFF8D14E), width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: _mypageGold.withValues(alpha: 0.22),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: profileImage == null
+          ? const Icon(
+              Icons.face_3_rounded,
+              size: 58,
+              color: _mypageBrown,
+            )
+          : Image.network(
+              profileImage!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.face_3_rounded,
+                size: 58,
+                color: _mypageBrown,
+              ),
+            ),
     );
   }
 }

@@ -13,6 +13,8 @@ import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
+import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
+import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
@@ -26,8 +28,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(),
+        child: const MaterialApp(
           home: MyPageScreen(),
         ),
       ),
@@ -58,11 +61,83 @@ void main() {
     expect(find.text('로그아웃'), findsOneWidget);
   });
 
+  testWidgets('renders the fetched nickname in the profile summary',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides([
+          userProfileProvider.overrideWith(
+            (ref) async => const UserProfile(
+              userId: 1,
+              nickname: '실제 사용자',
+              email: 'user@example.com',
+              profileImage: 'https://example.com/profile.png',
+              createdAt: null,
+            ),
+          ),
+        ]),
+        child: const MaterialApp(
+          home: MyPageScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('실제 사용자'), findsOneWidget);
+    expect(find.text('감자여행자'), findsNothing);
+  });
+
+  testWidgets('uses the default avatar when profile image is absent',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides([
+          userProfileProvider.overrideWith(
+            (ref) async => const UserProfile(
+              userId: 1,
+              nickname: '이미지 없는 사용자',
+              email: 'user@example.com',
+              profileImage: '',
+              createdAt: null,
+            ),
+          ),
+        ]),
+        child: const MaterialApp(
+          home: MyPageScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('이미지 없는 사용자'), findsOneWidget);
+    expect(find.byIcon(Icons.face_3_rounded), findsOneWidget);
+  });
+
+  testWidgets('keeps the fallback profile when loading fails', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides([
+          userProfileProvider.overrideWith(
+            (ref) async => throw Exception('network unavailable'),
+          ),
+        ]),
+        child: const MaterialApp(
+          home: MyPageScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('감자여행자'), findsOneWidget);
+    expect(find.byIcon(Icons.face_3_rounded), findsOneWidget);
+  });
+
   testWidgets('clips account menu ink responses to the menu shape',
       (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(),
+        child: const MaterialApp(
           home: MyPageScreen(),
         ),
       ),
@@ -132,14 +207,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
+        overrides: _myPageProviderOverrides([
           authControllerProvider.overrideWith(
             (ref) => AuthController(
               kakaoLoginService: const KakaoLoginService(),
               authRepository: authRepository,
             ),
           ),
-        ],
+        ]),
         child: MaterialApp.router(routerConfig: router),
       ),
     );
@@ -177,6 +252,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: _myPageProviderOverrides(),
         child: MaterialApp.router(routerConfig: router),
       ),
     );
@@ -211,6 +287,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: _myPageProviderOverrides(),
         child: MaterialApp.router(routerConfig: router),
       ),
     );
@@ -252,6 +329,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: _myPageProviderOverrides(),
         child: MaterialApp.router(routerConfig: router),
       ),
     );
@@ -273,8 +351,9 @@ void main() {
 
   testWidgets('disables quick actions without a destination', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(),
+        child: const MaterialApp(
           home: MyPageScreen(),
         ),
       ),
@@ -295,6 +374,21 @@ void main() {
       );
     }
   });
+}
+
+List<Override> _myPageProviderOverrides([List<Override> overrides = const []]) {
+  return [
+    userProfileProvider.overrideWith(
+      (ref) async => const UserProfile(
+        userId: 1,
+        nickname: '감자여행자',
+        email: 'user@example.com',
+        profileImage: '',
+        createdAt: null,
+      ),
+    ),
+    ...overrides,
+  ];
 }
 
 class _ControlledLogoutAuthRepository extends AuthRepository {
