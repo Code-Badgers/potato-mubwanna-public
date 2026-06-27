@@ -14,6 +14,7 @@
   - `User.getCreatedAt()` 추가.
 - Frontend
   - `UserProfile`, `UserProfileRepository`, `userProfileProvider` 추가.
+  - `userProfileProvider`를 `autoDispose`로 전환해 로그아웃 후 다른 계정으로 로그인할 때 이전 프로필 캐시가 재사용되지 않도록 수정.
   - `ApiPaths.myProfile = '/users/me'` 추가.
   - `MyPageScreen`이 provider 값을 사용해 닉네임과 optional 프로필 이미지를 렌더링.
   - provider loading/error 및 빈 `profileImage`에서는 기존 기본 아바타와 `감자여행자` fallback 유지.
@@ -29,8 +30,11 @@
 | `backend/.gradlew.bat test --tests com.gamjamubwatna.user.application.UserProfileServiceTest --tests com.gamjamubwatna.user.api.UserControllerTest` | PASS |
 | `frontend/flutter test --no-pub test/features/mypage/user_profile_repository_test.dart test/features/mypage/my_page_screen_test.dart` | RED: repository/model/provider 없음으로 컴파일 실패 확인 |
 | `frontend/flutter test --no-pub test/features/mypage/user_profile_repository_test.dart test/features/mypage/my_page_screen_test.dart` | PASS, 12 tests |
+| `frontend/flutter test --no-pub test/features/mypage/user_profile_controller_test.dart` | RED: 마지막 listener 제거 후에도 프로필 캐시가 유지되어 재조회 횟수가 예상 `2`가 아닌 `1`로 확인됨 |
+| `frontend/flutter test --no-pub test/features/mypage/user_profile_controller_test.dart` | PASS, `autoDispose` 적용 후 재진입 시 프로필 재조회 확인 |
+| `frontend/flutter test --no-pub test/features/mypage` | PASS, 13 tests |
 | `backend/.gradlew.bat test` | PASS |
-| `frontend/flutter analyze` | 첫 실행: `prefer_const_constructors` 1건 실패, 수정 후 PASS |
+| `frontend/flutter analyze` | 첫 실행: `prefer_const_constructors` 1건 실패, 수정 후 PASS. 리뷰 반영 후 재실행도 PASS |
 | `frontend/flutter test --no-pub` | FAIL: 기존 `test/features/map/map_screen_test.dart`가 `ProviderScope` 없이 `MapScreen`을 렌더링해 실패 |
 | `frontend/flutter build apk --debug` | PASS, `frontend/build/app/outputs/flutter-apk/app-debug.apk` 생성 확인 |
 | `frontend/flutter run -d emulator-5554 -t ..\artifacts\validation\issue-37\mypage_profile_preview.dart` | PASS, Pixel 7 API 36 emulator에서 preview 실행 |
@@ -47,6 +51,11 @@
   - 해결: My Page 테스트 helper가 기본 profile provider override를 제공하도록 수정.
 - `flutter analyze`에서 동적 nickname `Text`의 `TextStyle`에 `const`가 가능하다는 lint가 발생했다.
   - 해결: 해당 `TextStyle`을 `const TextStyle`로 수정.
+- PR 리뷰에서 일반 `FutureProvider`가 로그아웃 이후에도 이전 사용자의 프로필을 캐시할 수 있다는 지적이 있었다.
+  - 원인: 앱 루트 `ProviderScope`는 로그인 세션보다 오래 유지되고, 로그아웃 과정에서 `userProfileProvider`를 별도로 무효화하지 않음.
+  - 해결: `FutureProvider.autoDispose`로 전환하고 마지막 listener 해제 후 재진입 시 API가 다시 호출되는 회귀 테스트를 추가.
+- PR 리뷰에서 잘못된 `createdAt`을 `DateTime.tryParse`로 허용하자는 제안은 반영하지 않았다.
+  - 판단: 백엔드 응답 타입이 `Instant`로 고정된 첫 번째 파티 API 계약이며, 파싱 실패는 `FutureProvider`의 `AsyncError`와 기존 fallback UI로 처리된다. `null`로 조용히 변환하기보다 계약 위반을 드러내는 엄격한 파싱을 유지한다.
 
 ## 남은 리스크
 

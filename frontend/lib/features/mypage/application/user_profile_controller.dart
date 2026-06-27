@@ -8,6 +8,6 @@ final userProfileRepositoryProvider = Provider<UserProfileRepository>(
   (ref) => UserProfileRepository(dio: ref.watch(dioClientProvider).dio),
 );
 
-final userProfileProvider = FutureProvider<UserProfile>(
+final userProfileProvider = FutureProvider.autoDispose<UserProfile>(
   (ref) => ref.watch(userProfileRepositoryProvider).fetchProfile(),
 );
