@@ -18,7 +18,7 @@ public class UserProfileService {
     @Transactional(readOnly = true)
     public UserProfileResponse getProfile(Long userId) {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            .orElseThrow(() -> new UserProfileAuthenticationException("사용자를 찾을 수 없습니다."));
 
         return new UserProfileResponse(
             user.getId(),
