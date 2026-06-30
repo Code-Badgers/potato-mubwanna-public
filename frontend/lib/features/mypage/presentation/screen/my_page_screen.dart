@@ -9,7 +9,6 @@ import '../../application/user_profile_controller.dart';
 import '../../domain/user_profile.dart';
 
 const _mypagePrimary = Color(0xFF56C787);
-const _mypageDark = Color(0xFF509B64);
 const _mypageLine = Color(0xFFE8E2D8);
 const _mypageCream = Color(0xFFFFF8EA);
 const _mypageBrown = Color(0xFF7A4A24);
