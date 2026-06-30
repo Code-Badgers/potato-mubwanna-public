@@ -3,6 +3,7 @@ package com.gamjamubwatna.global.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.api.AuthApiResponse;
 import com.gamjamubwatna.auth.infrastructure.JwtAuthenticationFilter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,6 +51,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint((request, response, exception) -> {
                     response.setStatus(HttpStatus.UNAUTHORIZED.value());
                     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                     objectMapper.writeValue(
                         response.getOutputStream(),
                         AuthApiResponse.failure("인증이 필요합니다.")

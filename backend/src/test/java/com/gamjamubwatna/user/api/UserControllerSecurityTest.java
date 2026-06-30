@@ -1,10 +1,12 @@
 package com.gamjamubwatna.user.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
 import com.gamjamubwatna.user.application.UserProfileService;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -83,7 +86,13 @@ class UserControllerSecurityTest {
         mockMvc.perform(get("/users/me"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+            .andExpect(jsonPath("$.message").value("인증이 필요합니다."))
+            .andExpect(header().string(
+                HttpHeaders.CONTENT_TYPE,
+                "application/json;charset=UTF-8"
+            ))
+            .andExpect(result -> assertThat(result.getResponse().getCharacterEncoding())
+                .isEqualTo(StandardCharsets.UTF_8.name()));
 
         verifyNoInteractions(userProfileService);
     }
