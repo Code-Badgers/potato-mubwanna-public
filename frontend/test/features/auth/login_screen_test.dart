@@ -16,9 +16,7 @@ void main() {
 
   testWidgets('renders kakao login entry points', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: LoginScreen()),
-      ),
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
     );
 
     expect(find.bySemanticsLabel('카카오 로그인'), findsWidgets);
@@ -26,8 +24,30 @@ void main() {
     expect(find.text('나중에 로그인하기'), findsOneWidget);
   });
 
-  testWidgets('shows unsupported message when kakao login cannot start',
+  for (final width in [430.0, 1200.0]) {
+    testWidgets(
+      'keeps the kakao button at its source ratio on ${width.toInt()}px',
       (tester) async {
+        tester.view.physicalSize = Size(width, 932);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          const ProviderScope(child: MaterialApp(home: LoginScreen())),
+        );
+
+        final imageSize = tester.getSize(find.byType(Image));
+        expect(imageSize.width, 300);
+        expect(imageSize.height, 45);
+        expect(imageSize.aspectRatio, closeTo(300 / 45, 0.01));
+      },
+    );
+  }
+
+  testWidgets('shows unsupported message when kakao login cannot start', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ProviderScope(
