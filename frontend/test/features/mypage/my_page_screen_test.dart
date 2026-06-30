@@ -20,7 +20,48 @@ import 'package:potato_mubwanna/features/settings/presentation/screen/settings_s
 import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
 
 void main() {
-  testWidgets('renders profile summary, quick actions, and account menu',
+  testWidgets('shows a login prompt instead of user data for guests',
+      (tester) async {
+    final router = GoRouter(
+      initialLocation: '/main/mypage',
+      routes: [
+        GoRoute(
+          path: '/main/mypage',
+          builder: (_, __) => const MyPageScreen(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (_, __) => const Scaffold(
+            body: Center(child: Text('login destination')),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            (ref) => _IdleAuthController(),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    expect(find.text('로그인이 필요한 서비스예요'), findsOneWidget);
+    expect(find.text('감자여행자'), findsNothing);
+    expect(find.text('256,842'), findsNothing);
+    expect(find.text('보상함'), findsNothing);
+    expect(find.text('로그아웃'), findsNothing);
+
+    await tester.tap(find.text('로그인하러 가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('login destination'), findsOneWidget);
+  });
+
+  testWidgets('renders real profile data without placeholder statistics',
       (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
@@ -35,18 +76,19 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('마이'), findsOneWidget);
     expect(find.text('감자여행자'), findsOneWidget);
-    expect(find.text('Lv.2'), findsOneWidget);
-    expect(find.text('6,420 / 10,000'), findsOneWidget);
+    expect(find.text('Lv.2'), findsNothing);
+    expect(find.text('6,420 / 10,000'), findsNothing);
 
     expect(find.text('누적 걸음 수'), findsOneWidget);
-    expect(find.text('256,842'), findsOneWidget);
+    expect(find.text('256,842'), findsNothing);
     expect(find.text('누적 스탬프 수'), findsOneWidget);
-    expect(find.text('8'), findsOneWidget);
     expect(find.text('보유 감자 수'), findsOneWidget);
-    expect(find.text('12'), findsOneWidget);
+    expect(find.text('12'), findsNothing);
+    expect(find.text('-'), findsNWidgets(3));
 
     expect(find.text('보상함'), findsOneWidget);
     expect(find.text('여행 기록'), findsOneWidget);
@@ -65,7 +107,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _myPageProviderOverrides([
+        overrides: _myPageProviderOverrides(overrides: [
           userProfileProvider.overrideWith(
             (ref) async => const UserProfile(
               userId: 1,
@@ -91,7 +133,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _myPageProviderOverrides([
+        overrides: _myPageProviderOverrides(overrides: [
           userProfileProvider.overrideWith(
             (ref) async => const UserProfile(
               userId: 1,
@@ -113,10 +155,11 @@ void main() {
     expect(find.byIcon(Icons.face_3_rounded), findsOneWidget);
   });
 
-  testWidgets('keeps the fallback profile when loading fails', (tester) async {
+  testWidgets('shows a profile error instead of fallback user data',
+      (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _myPageProviderOverrides([
+        overrides: _myPageProviderOverrides(overrides: [
           userProfileProvider.overrideWith(
             (ref) async => throw Exception('network unavailable'),
           ),
@@ -128,8 +171,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('감자여행자'), findsOneWidget);
-    expect(find.byIcon(Icons.face_3_rounded), findsOneWidget);
+    expect(find.text('내 정보를 불러오지 못했습니다.'), findsOneWidget);
+    expect(find.text('감자여행자'), findsNothing);
   });
 
   testWidgets('clips account menu ink responses to the menu shape',
@@ -142,6 +185,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(
       find.byWidgetPredicate(
@@ -189,6 +233,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final authRepository = _ControlledLogoutAuthRepository();
+    final authController = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: authRepository,
+    );
+    await authController.refreshSession();
     final router = GoRouter(
       initialLocation: '/main/mypage',
       routes: [
@@ -207,17 +256,11 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _myPageProviderOverrides([
-          authControllerProvider.overrideWith(
-            (ref) => AuthController(
-              kakaoLoginService: const KakaoLoginService(),
-              authRepository: authRepository,
-            ),
-          ),
-        ]),
+        overrides: _myPageProviderOverrides(authController: authController),
         child: MaterialApp.router(routerConfig: router),
       ),
     );
+    await tester.pumpAndSettle();
 
     final logout = find.text('로그아웃');
     await tester.scrollUntilVisible(logout, 200);
@@ -256,6 +299,7 @@ void main() {
         child: MaterialApp.router(routerConfig: router),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('보상함'));
     await tester.pumpAndSettle();
@@ -291,6 +335,7 @@ void main() {
         child: MaterialApp.router(routerConfig: router),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('여행 기록'));
     await tester.pumpAndSettle();
@@ -333,6 +378,7 @@ void main() {
         child: MaterialApp.router(routerConfig: router),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('설정'));
     await tester.pumpAndSettle();
@@ -358,6 +404,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     for (final icon in [
       Icons.assignment_turned_in_rounded,
@@ -376,8 +423,14 @@ void main() {
   });
 }
 
-List<Override> _myPageProviderOverrides([List<Override> overrides = const []]) {
+List<Override> _myPageProviderOverrides({
+  AuthController? authController,
+  List<Override> overrides = const [],
+}) {
   return [
+    authControllerProvider.overrideWith(
+      (ref) => authController ?? _AuthenticatedAuthController(),
+    ),
     userProfileProvider.overrideWith(
       (ref) async => const UserProfile(
         userId: 1,
@@ -391,6 +444,38 @@ List<Override> _myPageProviderOverrides([List<Override> overrides = const []]) {
   ];
 }
 
+class _IdleAuthController extends AuthController {
+  _IdleAuthController()
+      : super(
+          kakaoLoginService: const KakaoLoginService(),
+          authRepository: _SessionAuthRepository(),
+        );
+}
+
+class _AuthenticatedAuthController extends AuthController {
+  _AuthenticatedAuthController()
+      : super(
+          kakaoLoginService: const KakaoLoginService(),
+          authRepository: _SessionAuthRepository(),
+        ) {
+    state = const AuthState.authenticated();
+  }
+}
+
+class _SessionAuthRepository extends AuthRepository {
+  _SessionAuthRepository()
+      : super(
+          dio: Dio(),
+          tokenStorage: const TokenStorage(FlutterSecureStorage()),
+        );
+
+  @override
+  Future<void> refreshSession() async {}
+
+  @override
+  Future<void> logout() async {}
+}
+
 class _ControlledLogoutAuthRepository extends AuthRepository {
   _ControlledLogoutAuthRepository()
       : super(
@@ -400,6 +485,9 @@ class _ControlledLogoutAuthRepository extends AuthRepository {
 
   final _logoutCompleter = Completer<void>();
   int logoutCalls = 0;
+
+  @override
+  Future<void> refreshSession() async {}
 
   @override
   Future<void> logout() {

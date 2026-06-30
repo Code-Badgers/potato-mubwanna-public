@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/user_profile_controller.dart';
 import '../../domain/user_profile.dart';
@@ -19,16 +20,34 @@ class MyPageScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggingOut =
-        ref.watch(authControllerProvider).status == AuthStatus.loading;
-    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final authStatus = ref.watch(authControllerProvider).status;
+
+    if (authStatus == AuthStatus.loading) {
+      return const _MyPageLoading();
+    }
+
+    if (authStatus != AuthStatus.authenticated) {
+      return _GuestMyPage(
+        onLogin: () => context.go('/login'),
+        onSettings: () => context.push('/settings'),
+      );
+    }
+
+    final profileState = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Stack(
-          children: [
-            CustomScrollView(
+        child: profileState.when(
+          data: (profile) {
+            if (profile == null) {
+              return AuthRequiredView(
+                description: '마이페이지를 확인하려면 로그인해주세요.',
+                onLogin: () => context.go('/login'),
+              );
+            }
+
+            return CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: _MyPageHeader(
@@ -41,7 +60,7 @@ class MyPageScreen extends ConsumerWidget {
                 const SliverToBoxAdapter(child: _TravelBanner()),
                 SliverToBoxAdapter(
                   child: _AccountMenu(
-                    isLoggingOut: isLoggingOut,
+                    isLoggingOut: false,
                     onSettings: () => context.push('/settings'),
                     onLogout: () async {
                       await ref.read(authControllerProvider.notifier).logout();
@@ -53,14 +72,94 @@ class MyPageScreen extends ConsumerWidget {
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
               ],
-            ),
-            if (isLoggingOut) ...[
-              const ModalBarrier(
-                dismissible: false,
-                color: Colors.black12,
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => _ProfileErrorState(
+            onRetry: () => ref.invalidate(userProfileProvider),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestMyPage extends StatelessWidget {
+  const _GuestMyPage({
+    required this.onLogin,
+    required this.onSettings,
+  });
+
+  final VoidCallback onLogin;
+  final VoidCallback onSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _MyPageHeader(onSettings: onSettings),
+            Expanded(
+              child: AuthRequiredView(
+                description: '마이페이지를 확인하려면 로그인해주세요.',
+                onLogin: onLogin,
               ),
-              const Center(child: CircularProgressIndicator()),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MyPageLoading extends StatelessWidget {
+  const _MyPageLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            ModalBarrier(dismissible: false, color: Colors.black12),
+            Center(child: CircularProgressIndicator()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileErrorState extends StatelessWidget {
+  const _ProfileErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '내 정보를 불러오지 못했습니다.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: onRetry,
+              child: const Text('다시 시도'),
+            ),
           ],
         ),
       ),
@@ -108,17 +207,13 @@ class _MyPageHeader extends StatelessWidget {
 class _ProfileSummary extends StatelessWidget {
   const _ProfileSummary({required this.profile});
 
-  static const _fallbackNickname = '감자여행자';
-
-  final UserProfile? profile;
+  final UserProfile profile;
 
   @override
   Widget build(BuildContext context) {
-    final nickname = profile?.nickname.trim().isNotEmpty == true
-        ? profile!.nickname
-        : _fallbackNickname;
+    final nickname = profile.nickname.trim();
     final profileImage =
-        profile?.hasProfileImage == true ? profile!.profileImage.trim() : null;
+        profile.hasProfileImage ? profile.profileImage.trim() : null;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 22),
@@ -141,37 +236,13 @@ class _ProfileSummary extends StatelessWidget {
                     letterSpacing: 0,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Lv.2',
-                  style: TextStyle(
-                    color: _mypageBrown,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: const LinearProgressIndicator(
-                    minHeight: 11,
-                    value: 0.642,
-                    backgroundColor: Color(0xFFE5E0D5),
-                    valueColor: AlwaysStoppedAnimation<Color>(_mypageDark),
-                  ),
-                ),
                 const SizedBox(height: 6),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '6,420 / 10,000',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
+                const Text(
+                  '프로필 정보',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -248,15 +319,15 @@ class _TravelStats extends StatelessWidget {
       child: const Row(
         children: [
           Expanded(
-            child: _StatItem(label: '누적 걸음 수', value: '256,842'),
+            child: _StatItem(label: '누적 걸음 수', value: '-'),
           ),
           _VerticalDivider(),
           Expanded(
-            child: _StatItem(label: '누적 스탬프 수', value: '8'),
+            child: _StatItem(label: '누적 스탬프 수', value: '-'),
           ),
           _VerticalDivider(),
           Expanded(
-            child: _StatItem(label: '보유 감자 수', value: '12'),
+            child: _StatItem(label: '보유 감자 수', value: '-'),
           ),
         ],
       ),
