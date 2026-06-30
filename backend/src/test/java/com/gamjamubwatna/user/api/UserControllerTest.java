@@ -1,5 +1,7 @@
 package com.gamjamubwatna.user.api;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -54,5 +56,21 @@ class UserControllerTest {
     void getMyProfileRejectsUnauthenticatedRequest() throws Exception {
         mockMvc.perform(get("/users/me"))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getMyProfileRejectsMalformedUserPrincipal() throws Exception {
+        mockMvc.perform(get("/users/me").with(user("admin:1")))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void getMyProfileDoesNotHideUnexpectedServiceFailure() {
+        doThrow(new IllegalStateException("database unavailable"))
+            .when(userProfileService).getProfile(1L);
+
+        assertThatThrownBy(() -> mockMvc.perform(get("/users/me").with(user("user:1"))))
+            .hasCauseInstanceOf(IllegalStateException.class);
     }
 }

@@ -46,6 +46,6 @@ class UserProfileServiceTest {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> new UserProfileService(userRepository).getProfile(99L))
-            .isInstanceOf(IllegalArgumentException.class);
+            .isInstanceOf(UserProfileAuthenticationException.class);
     }
 }

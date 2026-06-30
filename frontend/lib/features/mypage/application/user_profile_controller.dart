@@ -8,6 +8,15 @@ final userProfileRepositoryProvider = Provider<UserProfileRepository>(
   (ref) => UserProfileRepository(dio: ref.watch(dioClientProvider).dio),
 );
 
-final userProfileProvider = FutureProvider.autoDispose<UserProfile>(
-  (ref) => ref.watch(userProfileRepositoryProvider).fetchProfile(),
+final userProfileProvider = FutureProvider.autoDispose<UserProfile?>(
+  (ref) async {
+    final authStatus = ref.watch(
+      authControllerProvider.select((state) => state.status),
+    );
+    if (authStatus != AuthStatus.authenticated) {
+      return null;
+    }
+
+    return ref.watch(userProfileRepositoryProvider).fetchProfile();
+  },
 );

@@ -1,9 +1,14 @@
 package com.gamjamubwatna.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gamjamubwatna.auth.api.AuthApiResponse;
 import com.gamjamubwatna.auth.infrastructure.JwtAuthenticationFilter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,7 +27,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
-        JwtAuthenticationFilter jwtAuthenticationFilter
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        ObjectMapper objectMapper
     ) throws Exception {
         return http
             .csrf(AbstractHttpConfigurer::disable)
@@ -40,6 +46,17 @@ public class SecurityConfig {
                     "/actuator/health"
                 ).permitAll()
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(exceptionHandling -> exceptionHandling
+                .authenticationEntryPoint((request, response, exception) -> {
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                    objectMapper.writeValue(
+                        response.getOutputStream(),
+                        AuthApiResponse.failure("인증이 필요합니다.")
+                    );
+                })
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .build();

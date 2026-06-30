@@ -9,4 +9,8 @@ public record AuthApiResponse<T>(
     public static <T> AuthApiResponse<T> success(T data) {
         return new AuthApiResponse<>(true, "요청이 성공했습니다.", data);
     }
+
+    public static <T> AuthApiResponse<T> failure(String message) {
+        return new AuthApiResponse<>(false, message, null);
+    }
 }
