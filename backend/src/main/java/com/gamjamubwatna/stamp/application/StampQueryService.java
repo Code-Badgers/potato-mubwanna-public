@@ -1,5 +1,6 @@
 package com.gamjamubwatna.stamp.application;
 
+import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
 import com.gamjamubwatna.stamp.api.StampItemResponse;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
@@ -22,16 +23,20 @@ public class StampQueryService {
 
     private final StampRepository stampRepository;
     private final UserStampRepository userStampRepository;
+    private final UserRepository userRepository;
 
     public StampQueryService(
         StampRepository stampRepository,
-        UserStampRepository userStampRepository
+        UserStampRepository userStampRepository,
+        UserRepository userRepository
     ) {
         this.stampRepository = stampRepository;
         this.userStampRepository = userStampRepository;
+        this.userRepository = userRepository;
     }
 
     public StampBookResponse getStampBook(Long userId) {
+        validateUser(userId);
         List<Stamp> stamps = stampRepository.findAllByOrderByDisplayOrderAsc();
         Map<Long, UserStamp> acquiredByStampId = userStampRepository
             .findByUserIdWithStamp(userId)
@@ -52,6 +57,7 @@ public class StampQueryService {
     }
 
     public StampRewardStatusResponse getRewardStatus(Long userId) {
+        validateUser(userId);
         int acquiredCount = userStampRepository.countByUserId(userId);
         Integer nextTargetCount = REWARD_TARGETS.stream()
             .filter(target -> target > acquiredCount)
@@ -64,5 +70,11 @@ public class StampQueryService {
             nextTargetCount == null ? 0 : nextTargetCount - acquiredCount,
             nextTargetCount == null
         );
+    }
+
+    private void validateUser(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new StampAuthenticationException("사용자를 찾을 수 없습니다.");
+        }
     }
 }

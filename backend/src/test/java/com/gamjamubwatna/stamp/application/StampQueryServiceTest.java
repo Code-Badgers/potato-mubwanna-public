@@ -1,8 +1,10 @@
 package com.gamjamubwatna.stamp.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
 import com.gamjamubwatna.stamp.domain.Stamp;
@@ -31,11 +33,18 @@ class StampQueryServiceTest {
     @Mock
     private UserStampRepository userStampRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     private StampQueryService stampQueryService;
 
     @BeforeEach
     void setUp() {
-        stampQueryService = new StampQueryService(stampRepository, userStampRepository);
+        stampQueryService = new StampQueryService(
+            stampRepository,
+            userStampRepository,
+            userRepository
+        );
     }
 
     @Test
@@ -45,6 +54,7 @@ class StampQueryServiceTest {
             .toList();
         Instant acquiredAt = Instant.parse("2026-06-30T00:00:00Z");
         UserStamp acquired = new UserStamp(null, stamps.getFirst(), null, acquiredAt);
+        when(userRepository.existsById(1L)).thenReturn(true);
         when(stampRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(stamps);
         when(userStampRepository.findByUserIdWithStamp(1L)).thenReturn(List.of(acquired));
 
@@ -62,6 +72,7 @@ class StampQueryServiceTest {
     @Test
     void returnsEmptyAcquisitionStateWithoutUserStamps() {
         List<Stamp> stamps = List.of(stamp(1L, "강릉시", "하지감자", 1));
+        when(userRepository.existsById(2L)).thenReturn(true);
         when(stampRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(stamps);
         when(userStampRepository.findByUserIdWithStamp(2L)).thenReturn(List.of());
 
@@ -80,6 +91,7 @@ class StampQueryServiceTest {
         int remainingCount,
         boolean completed
     ) {
+        when(userRepository.existsById(1L)).thenReturn(true);
         when(userStampRepository.countByUserId(1L)).thenReturn(acquiredCount);
 
         StampRewardStatusResponse result = stampQueryService.getRewardStatus(1L);
@@ -88,6 +100,14 @@ class StampQueryServiceTest {
         assertThat(result.nextTargetCount()).isEqualTo(nextTargetCount);
         assertThat(result.remainingCount()).isEqualTo(remainingCount);
         assertThat(result.completed()).isEqualTo(completed);
+    }
+
+    @Test
+    void rejectsJwtSubjectForDeletedUser() {
+        when(userRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> stampQueryService.getStampBook(99L))
+            .isInstanceOf(StampAuthenticationException.class);
     }
 
     private static java.util.stream.Stream<Arguments> rewardBoundaries() {
