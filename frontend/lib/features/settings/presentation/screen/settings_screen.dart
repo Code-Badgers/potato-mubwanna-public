@@ -30,24 +30,33 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadStatuses();
+    if (widget.permissionService.supportsRuntimePermissions) {
+      WidgetsBinding.instance.addObserver(this);
+      _loadStatuses();
+    }
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    if (widget.permissionService.supportsRuntimePermissions) {
+      WidgetsBinding.instance.removeObserver(this);
+    }
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (widget.permissionService.supportsRuntimePermissions &&
+        state == AppLifecycleState.resumed) {
       _loadStatuses();
     }
   }
 
   Future<void> _loadStatuses() async {
+    if (!widget.permissionService.supportsRuntimePermissions) {
+      return;
+    }
+
     if (_errorMessage != null) {
       setState(() => _errorMessage = null);
     }
@@ -101,36 +110,69 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: _errorMessage != null
-            ? _SettingsErrorState(
-                message: _errorMessage!,
-                onRetry: _loadStatuses,
-              )
-            : _locationStatus == null || _notificationStatus == null
-                ? const Center(child: CircularProgressIndicator())
-                : CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: _SettingsHeader(
-                          onBack: () {
-                            if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              context.go('/main/mypage');
-                            }
-                          },
-                        ),
-                      ),
-                      SliverToBoxAdapter(
-                        child: _SettingsIntro(
-                          locationStatus: _locationStatus!,
-                          notificationStatus: _notificationStatus!,
-                          onLocationAction: _manageLocationPermission,
-                          onNotificationAction: _manageNotificationPermission,
-                        ),
-                      ),
-                    ],
+        child: !widget.permissionService.supportsRuntimePermissions
+            ? CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _SettingsHeader(onBack: _handleBack),
                   ),
+                  const SliverToBoxAdapter(child: _WebPermissionGuide()),
+                ],
+              )
+            : _errorMessage != null
+                ? _SettingsErrorState(
+                    message: _errorMessage!,
+                    onRetry: _loadStatuses,
+                  )
+                : _locationStatus == null || _notificationStatus == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _SettingsHeader(
+                              onBack: _handleBack,
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: _SettingsIntro(
+                              locationStatus: _locationStatus!,
+                              notificationStatus: _notificationStatus!,
+                              onLocationAction: _manageLocationPermission,
+                              onNotificationAction:
+                                  _manageNotificationPermission,
+                            ),
+                          ),
+                        ],
+                      ),
+      ),
+    );
+  }
+
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/main/mypage');
+    }
+  }
+}
+
+class _WebPermissionGuide extends StatelessWidget {
+  const _WebPermissionGuide();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(24),
+      child: Text(
+        '웹에서는 브라우저 설정에서 위치와 알림 권한을 관리해주세요.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          height: 1.5,
+        ),
       ),
     );
   }

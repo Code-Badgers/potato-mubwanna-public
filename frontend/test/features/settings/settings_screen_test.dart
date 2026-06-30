@@ -5,6 +5,29 @@ import 'package:potato_mubwanna/core/permissions/permission_service.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 
 void main() {
+  testWidgets('shows browser guidance without querying runtime permissions',
+      (tester) async {
+    final service = _FakePermissionService(
+      supportsRuntimePermissions: false,
+      location: PermissionStatus.denied,
+      notification: PermissionStatus.denied,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: SettingsScreen(permissionService: service)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('웹에서는 브라우저 설정에서 위치와 알림 권한을 관리해주세요.'),
+      findsOneWidget,
+    );
+    expect(find.text('권한 상태를 불러오지 못했습니다.'), findsNothing);
+    expect(find.text('다시 시도'), findsNothing);
+    expect(service.locationStatusCalls, 0);
+    expect(service.notificationStatusCalls, 0);
+  });
+
   testWidgets('shows permission states from the injected service',
       (tester) async {
     final service = _FakePermissionService(
@@ -86,9 +109,13 @@ void main() {
 
 class _FakePermissionService extends PermissionService {
   _FakePermissionService({
+    this.supportsRuntimePermissions = true,
     required this.location,
     required this.notification,
   });
+
+  @override
+  final bool supportsRuntimePermissions;
 
   PermissionStatus location;
   PermissionStatus notification;
