@@ -1,6 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
+  const PermissionService();
+
+  bool get supportsRuntimePermissions => !kIsWeb;
+
   Future<PermissionStatus> locationStatus() {
     return Permission.locationWhenInUse.status;
   }

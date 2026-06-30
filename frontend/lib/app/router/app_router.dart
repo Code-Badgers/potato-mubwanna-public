@@ -40,7 +40,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/settings',
-      builder: (context, state) => SettingsScreen(),
+      builder: (context, state) => const SettingsScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),

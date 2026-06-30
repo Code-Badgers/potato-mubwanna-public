@@ -1,48 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/permissions/permission_service.dart';
 
 const _permissionButtonColor = Color(0xFF56C787);
 
-class PermissionGuideScreen extends StatelessWidget {
-  const PermissionGuideScreen({super.key});
+class PermissionGuideScreen extends StatefulWidget {
+  const PermissionGuideScreen({
+    this.permissionService = const PermissionService(),
+    super.key,
+  });
 
+  final PermissionService permissionService;
+
+  @override
+  State<PermissionGuideScreen> createState() => _PermissionGuideScreenState();
+}
+
+class _PermissionGuideScreenState extends State<PermissionGuideScreen> {
   static const _items = [
+    _PermissionGuideItem(
+      icon: Icons.location_on_outlined,
+      title: '위치 [선택]',
+      description: '주변 감자 스팟 탐색과 관광지 방문 인증에 사용합니다.',
+    ),
     _PermissionGuideItem(
       icon: Icons.notifications_none_rounded,
       title: '알림 [선택]',
       description: '점순이 미션, 쿠폰 지급, 이벤트 알림에 사용합니다.',
     ),
-    _PermissionGuideItem(
-      icon: Icons.photo_camera_outlined,
-      title: '카메라 [선택]',
-      description: 'QR 인증, 방문 인증, 미션 인증 촬영에 사용합니다.',
-    ),
-    _PermissionGuideItem(
-      icon: Icons.photo_library_outlined,
-      title: '사진 및 동영상 [선택]',
-      description: '미션 인증 이미지 첨부와 여행 기록 등록에 사용합니다.',
-    ),
-    _PermissionGuideItem(
-      icon: Icons.location_on_outlined,
-      title: '위치 [필수]',
-      description: '주변 감자 스팟 탐색과 관광지 방문 인증에 사용합니다.',
-    ),
-    _PermissionGuideItem(
-      icon: Icons.person_outline_rounded,
-      title: '닉네임 [필수]',
-      description: '앱 내 프로필 표시와 스탬프/보상/미션 내역 식별에 사용합니다.',
-    ),
-    _PermissionGuideItem(
-      icon: Icons.alternate_email_rounded,
-      title: '이메일 [선택]',
-      description: '계정 식별, 보상 지급 내역 확인, 이용 문의 응대에 사용합니다.',
-    ),
   ];
+
+  bool _isRequesting = false;
+  String? _permissionMessage;
+  bool _canContinueWithoutPermission = false;
+
+  Future<void> _confirmPermissions() async {
+    if (!widget.permissionService.supportsRuntimePermissions) {
+      context.go('/main/map');
+      return;
+    }
+
+    setState(() {
+      _isRequesting = true;
+      _permissionMessage = null;
+      _canContinueWithoutPermission = false;
+    });
+
+    try {
+      final status = await widget.permissionService.requestLocation();
+      if (!mounted) {
+        return;
+      }
+
+      if (status.isGranted || status.isLimited) {
+        context.go('/main/map');
+        return;
+      }
+
+      setState(() {
+        _isRequesting = false;
+        _permissionMessage = status.isPermanentlyDenied
+            ? '위치 권한이 차단되어 있습니다. 설정의 권한 관리에서 허용해주세요.'
+            : '위치 권한 없이 둘러볼 수 있지만 주변 탐색과 방문 인증은 제한됩니다.';
+        _canContinueWithoutPermission = true;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRequesting = false;
+        _permissionMessage = '위치 권한을 확인하지 못했습니다. 다시 시도해주세요.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final supportsRuntimePermissions =
+        widget.permissionService.supportsRuntimePermissions;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -62,7 +103,6 @@ class PermissionGuideScreen extends StatelessWidget {
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
                       height: 1.26,
-                      letterSpacing: 0,
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -73,18 +113,34 @@ class PermissionGuideScreen extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 22),
                       itemBuilder: (context, index) {
                         if (index == _items.length) {
-                          return const _PermissionNotice();
+                          return _PermissionNotice(
+                            supportsRuntimePermissions:
+                                supportsRuntimePermissions,
+                          );
                         }
 
                         return _PermissionItemTile(item: _items[index]);
                       },
                     ),
                   ),
+                  if (_permissionMessage != null) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      _permissionMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   SizedBox(
                     height: 58,
                     child: FilledButton(
-                      onPressed: () => context.go('/main/map'),
+                      onPressed: _isRequesting ? null : _confirmPermissions,
                       style: FilledButton.styleFrom(
                         backgroundColor: _permissionButtonColor,
                         foregroundColor: Colors.white,
@@ -94,12 +150,24 @@ class PermissionGuideScreen extends StatelessWidget {
                         textStyle: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
                         ),
                       ),
-                      child: const Text('확인'),
+                      child: _isRequesting
+                          ? const SizedBox.square(
+                              dimension: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text('확인'),
                     ),
                   ),
+                  if (_canContinueWithoutPermission)
+                    TextButton(
+                      onPressed: () => context.go('/main/map'),
+                      child: const Text('권한 없이 둘러보기'),
+                    ),
                 ],
               ),
             ),
@@ -127,11 +195,7 @@ class _PermissionItemTile extends StatelessWidget {
             color: _permissionButtonColor.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            item.icon,
-            color: _permissionButtonColor,
-            size: 28,
-          ),
+          child: Icon(item.icon, color: _permissionButtonColor, size: 28),
         ),
         const SizedBox(width: 18),
         Expanded(
@@ -145,7 +209,6 @@ class _PermissionItemTile extends StatelessWidget {
                   fontSize: 19,
                   fontWeight: FontWeight.w900,
                   height: 1.2,
-                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 8),
@@ -156,7 +219,6 @@ class _PermissionItemTile extends StatelessWidget {
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   height: 1.42,
-                  letterSpacing: 0,
                 ),
               ),
             ],
@@ -168,22 +230,24 @@ class _PermissionItemTile extends StatelessWidget {
 }
 
 class _PermissionNotice extends StatelessWidget {
-  const _PermissionNotice();
+  const _PermissionNotice({required this.supportsRuntimePermissions});
+
+  final bool supportsRuntimePermissions;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(top: 6),
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
       child: Text(
-        '선택 접근권한에 동의하지 않아도 서비스 이용이 가능합니다. '
-        '다만 해당 권한이 필요한 기능은 일부 제한될 수 있습니다. '
-        '닉네임과 이메일은 카카오 로그인 단계에서 동의를 요청합니다.',
-        style: TextStyle(
+        supportsRuntimePermissions
+            ? '선택 접근권한에 동의하지 않아도 서비스를 둘러볼 수 있습니다. '
+                '다만 해당 권한이 필요한 기능은 제한될 수 있습니다.'
+            : '웹에서는 브라우저 설정에서 위치와 알림 권한을 관리해주세요.',
+        style: const TextStyle(
           color: AppColors.textSecondary,
           fontSize: 13,
           fontWeight: FontWeight.w600,
           height: 1.45,
-          letterSpacing: 0,
         ),
       ),
     );
