@@ -1,83 +1,78 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../application/stamp_book_controller.dart';
+import '../../domain/stamp_book.dart';
 
 const _stampPrimary = Color(0xFF36D98F);
 const _stampDark = Color(0xFF509B64);
 const _stampGold = Color(0xFFF6C23E);
 const _stampLine = Color(0xFFE8E2D8);
 
-class StampBookScreen extends StatelessWidget {
+class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
 
-  static const _stamps = [
-    _StampCity(name: '강릉', potato: '하지감자', acquired: true),
-    _StampCity(name: '정선', potato: '곤드레감자', acquired: true),
-    _StampCity(name: '평창', potato: '눈꽃감자', acquired: true),
-    _StampCity(name: '춘천', potato: '호반감자', acquired: true),
-    _StampCity(name: '속초', potato: '바다감자', acquired: true),
-    _StampCity(name: '홍천', potato: '찰감자', acquired: true),
-    _StampCity(name: '횡성', potato: '한우감자', acquired: true),
-    _StampCity(name: '영월', potato: '별빛감자', acquired: true),
-    _StampCity(name: '원주', potato: '미획득', acquired: false),
-    _StampCity(name: '동해', potato: '미획득', acquired: false),
-    _StampCity(name: '태백', potato: '미획득', acquired: false),
-    _StampCity(name: '삼척', potato: '미획득', acquired: false),
-    _StampCity(name: '양양', potato: '미획득', acquired: false),
-    _StampCity(name: '고성', potato: '미획득', acquired: false),
-    _StampCity(name: '인제', potato: '미획득', acquired: false),
-    _StampCity(name: '양구', potato: '미획득', acquired: false),
-    _StampCity(name: '화천', potato: '미획득', acquired: false),
-    _StampCity(name: '철원', potato: '미획득', acquired: false),
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    const acquiredCount = 8;
-    final totalCount = _stamps.length;
-    const nextRewardTarget = 10;
-    const remainingForReward = nextRewardTarget - acquiredCount;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stampBook = ref.watch(stampBookProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            const SliverToBoxAdapter(child: _StampHeader()),
-            SliverToBoxAdapter(
-              child: _ProgressSummary(
-                acquiredCount: acquiredCount,
-                totalCount: totalCount,
-                nextRewardTarget: nextRewardTarget,
-                remainingForReward: remainingForReward,
-              ),
-            ),
-            const SliverToBoxAdapter(child: _SectionTitle(title: '시군별 스탬프')),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-              sliver: SliverGrid.builder(
-                itemCount: _stamps.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 0.92,
-                ),
-                itemBuilder: (context, index) {
-                  return _StampTile(stamp: _stamps[index]);
-                },
-              ),
-            ),
-            const SliverToBoxAdapter(
-              child: _RewardCard(
-                targetCount: nextRewardTarget,
-                remainingCount: remainingForReward,
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
+        child: stampBook.when(
+          data: (value) => value == null
+              ? const _SignedOutState()
+              : _StampBookBody(stampBook: value),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => _StampBookError(
+            onRetry: () => ref.invalidate(stampBookProvider),
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _StampBookBody extends StatelessWidget {
+  const _StampBookBody({required this.stampBook});
+
+  final StampBook stampBook;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = stampBook.progress;
+    final reward = stampBook.nextReward;
+
+    return CustomScrollView(
+      slivers: [
+        const SliverToBoxAdapter(child: _StampHeader()),
+        SliverToBoxAdapter(
+          child: _ProgressSummary(
+            acquiredCount: progress.acquiredCount,
+            totalCount: progress.totalCount,
+            reward: reward,
+          ),
+        ),
+        const SliverToBoxAdapter(child: _SectionTitle(title: '시군별 스탬프')),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+          sliver: SliverGrid.builder(
+            itemCount: progress.stamps.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.92,
+            ),
+            itemBuilder: (context, index) {
+              return _StampTile(stamp: progress.stamps[index]);
+            },
+          ),
+        ),
+        SliverToBoxAdapter(child: _RewardCard(reward: reward)),
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+      ],
     );
   }
 }
@@ -112,18 +107,20 @@ class _ProgressSummary extends StatelessWidget {
   const _ProgressSummary({
     required this.acquiredCount,
     required this.totalCount,
-    required this.nextRewardTarget,
-    required this.remainingForReward,
+    required this.reward,
   });
 
   final int acquiredCount;
   final int totalCount;
-  final int nextRewardTarget;
-  final int remainingForReward;
+  final NextStampReward reward;
 
   @override
   Widget build(BuildContext context) {
-    final progress = acquiredCount / totalCount;
+    final progress = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
+    final targetCount = reward.nextTargetCount;
+    final rewardMessage = reward.completed || targetCount == null
+        ? '모든 보상 기준을 달성했어요'
+        : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -173,7 +170,7 @@ class _ProgressSummary extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               minHeight: 12,
-              value: progress,
+              value: progress.clamp(0, 1),
               backgroundColor: const Color(0xFFE7EFE9),
               valueColor: const AlwaysStoppedAnimation<Color>(_stampPrimary),
             ),
@@ -181,11 +178,15 @@ class _ProgressSummary extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              const Icon(Icons.card_giftcard_rounded, color: _stampGold, size: 20),
+              const Icon(
+                Icons.card_giftcard_rounded,
+                color: _stampGold,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '$nextRewardTarget개 달성까지 $remainingForReward개 남았어요',
+                  rewardMessage,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 14,
@@ -227,18 +228,22 @@ class _SectionTitle extends StatelessWidget {
 class _StampTile extends StatelessWidget {
   const _StampTile({required this.stamp});
 
-  final _StampCity stamp;
+  final RallybookStamp stamp;
 
   @override
   Widget build(BuildContext context) {
-    final foreground = stamp.acquired ? AppColors.textPrimary : AppColors.textSecondary;
+    final foreground =
+        stamp.acquired ? AppColors.textPrimary : AppColors.textSecondary;
     final borderColor = stamp.acquired ? _stampPrimary : _stampLine;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor, width: stamp.acquired ? 1.6 : 1),
+        border: Border.all(
+          color: borderColor,
+          width: stamp.acquired ? 1.6 : 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(10),
@@ -261,7 +266,9 @@ class _StampTile extends StatelessWidget {
                     child: Text(
                       stamp.acquired ? '감자' : '?',
                       style: TextStyle(
-                        color: stamp.acquired ? _stampDark : AppColors.textSecondary,
+                        color: stamp.acquired
+                            ? _stampDark
+                            : AppColors.textSecondary,
                         fontSize: stamp.acquired ? 14 : 20,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
@@ -283,7 +290,7 @@ class _StampTile extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              stamp.name,
+              stamp.cityName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -295,7 +302,7 @@ class _StampTile extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Text(
-              stamp.potato,
+              stamp.acquired ? stamp.stampName : '미획득',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -313,16 +320,14 @@ class _StampTile extends StatelessWidget {
 }
 
 class _RewardCard extends StatelessWidget {
-  const _RewardCard({
-    required this.targetCount,
-    required this.remainingCount,
-  });
+  const _RewardCard({required this.reward});
 
-  final int targetCount;
-  final int remainingCount;
+  final NextStampReward reward;
 
   @override
   Widget build(BuildContext context) {
+    final targetCount = reward.nextTargetCount;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       padding: const EdgeInsets.all(18),
@@ -357,24 +362,36 @@ class _RewardCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '$targetCount개 달성 시 지역쿠폰 지급',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                if (reward.completed || targetCount == null)
+                  const Text(
+                    '18개 시군 랠리를 모두 완주했어요.',
+                    style: TextStyle(
+                      color: _stampDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  )
+                else ...[
+                  Text(
+                    '$targetCount개 달성 시 지역쿠폰 지급',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
                   ),
-                ),
-                Text(
-                  '앞으로 $remainingCount개만 더 모으면 받을 수 있어요.',
-                  style: const TextStyle(
-                    color: _stampDark,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  Text(
+                    '앞으로 ${reward.remainingCount}개만 더 모으면 받을 수 있어요.',
+                    style: const TextStyle(
+                      color: _stampDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -384,14 +401,63 @@ class _RewardCard extends StatelessWidget {
   }
 }
 
-class _StampCity {
-  const _StampCity({
-    required this.name,
-    required this.potato,
-    required this.acquired,
-  });
+class _StampBookError extends StatelessWidget {
+  const _StampBookError({required this.onRetry});
 
-  final String name;
-  final String potato;
-  final bool acquired;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.textSecondary,
+              size: 36,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '랠리북을 불러오지 못했습니다.',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onRetry, child: const Text('다시 시도')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SignedOutState extends StatelessWidget {
+  const _SignedOutState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        _StampHeader(),
+        Expanded(
+          child: Center(
+            child: Text(
+              '로그인 후 랠리북을 확인할 수 있어요.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
