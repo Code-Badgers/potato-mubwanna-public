@@ -19,6 +19,7 @@ CREATE TABLE user_stamps (
 
 CREATE INDEX idx_user_stamps_user_id ON user_stamps(user_id);
 CREATE INDEX idx_user_stamps_stamp_id ON user_stamps(stamp_id);
+CREATE INDEX idx_user_stamps_tourist_spot_id ON user_stamps(tourist_spot_id);
 
 INSERT INTO stamps (city_name, stamp_name, stamp_image, display_order, created_at, updated_at) VALUES
     ('강릉시', '하지감자', NULL, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),

@@ -41,6 +41,7 @@ void main() {
       override: stampBookProvider.overrideWith((ref) => completer.future),
     );
 
+    expect(find.text('랠리북'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
@@ -54,6 +55,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('랠리북'), findsOneWidget);
     expect(find.text('랠리북을 불러오지 못했습니다.'), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
   });

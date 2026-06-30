@@ -24,12 +24,35 @@ class StampBookScreen extends ConsumerWidget {
           data: (value) => value == null
               ? const _SignedOutState()
               : _StampBookBody(stampBook: value),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => _StampBookError(
-            onRetry: () => ref.invalidate(stampBookProvider),
+          loading: () => const _StampBookStatusBody(
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, __) => _StampBookStatusBody(
+            child: _StampBookError(
+              onRetry: () => ref.invalidate(stampBookProvider),
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _StampBookStatusBody extends StatelessWidget {
+  const _StampBookStatusBody({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        const SliverToBoxAdapter(child: _StampHeader()),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: child,
+        ),
+      ],
     );
   }
 }

@@ -43,6 +43,13 @@ Fresh worktree from `origin/main` at `dc816c4`:
 - Provider does not fetch while signed out and refetches across user A -> logout -> user B.
 - Screen renders API progress plus loading, error/retry, completion, and signed-out states.
 
+## Gemini Review Follow-up
+
+- RED: `StampMigrationTest` failed because the explicit `idx_user_stamps_tourist_spot_id` index was missing.
+- GREEN: the migration now creates the tourist-spot foreign-key index and the metadata assertion passes.
+- RED: loading and error widget tests failed because the rallybook header was not rendered.
+- GREEN: loading and error states now use a header-preserving `CustomScrollView`, and all screen tests pass.
+
 ## Final Verification
 
 ### Backend
