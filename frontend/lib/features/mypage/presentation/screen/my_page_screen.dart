@@ -40,9 +40,9 @@ class MyPageScreen extends ConsumerWidget {
         child: profileState.when(
           data: (profile) {
             if (profile == null) {
-              return AuthRequiredView(
-                description: '마이페이지를 확인하려면 로그인해주세요.',
-                onLogin: () => context.go('/login'),
+              return _ProfileErrorState(
+                message: '프로필 정보를 찾을 수 없습니다.',
+                onRetry: () => ref.invalidate(userProfileProvider),
               );
             }
 
@@ -59,7 +59,7 @@ class MyPageScreen extends ConsumerWidget {
                 const SliverToBoxAdapter(child: _TravelBanner()),
                 SliverToBoxAdapter(
                   child: _AccountMenu(
-                    isLoggingOut: false,
+                    isLoggingOut: authStatus == AuthStatus.loading,
                     onSettings: () => context.push('/settings'),
                     onLogout: () async {
                       await ref.read(authControllerProvider.notifier).logout();
@@ -133,8 +133,12 @@ class _MyPageLoading extends StatelessWidget {
 }
 
 class _ProfileErrorState extends StatelessWidget {
-  const _ProfileErrorState({required this.onRetry});
+  const _ProfileErrorState({
+    this.message = '내 정보를 불러오지 못했습니다.',
+    required this.onRetry,
+  });
 
+  final String message;
   final VoidCallback onRetry;
 
   @override
@@ -145,10 +149,10 @@ class _ProfileErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              '내 정보를 불러오지 못했습니다.',
+            Text(
+              message,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,

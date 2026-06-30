@@ -175,6 +175,25 @@ void main() {
     expect(find.text('감자여행자'), findsNothing);
   });
 
+  testWidgets(
+      'shows a profile-specific state for an authenticated null profile',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(overrides: [
+          userProfileProvider.overrideWith((ref) async => null),
+        ]),
+        child: const MaterialApp(home: MyPageScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('프로필 정보를 찾을 수 없습니다.'), findsOneWidget);
+    expect(find.text('마이페이지를 확인하려면 로그인해주세요.'), findsNothing);
+    expect(find.text('로그인하기'), findsNothing);
+    expect(find.text('다시 시도'), findsOneWidget);
+  });
+
   testWidgets('clips account menu ink responses to the menu shape',
       (tester) async {
     await tester.pumpWidget(
