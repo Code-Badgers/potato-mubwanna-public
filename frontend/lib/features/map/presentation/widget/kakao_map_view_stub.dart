@@ -18,7 +18,7 @@ class KakaoMapView extends StatelessWidget {
       color: Color(0xFFEAF5D5),
       child: Center(
         child: Text(
-          '카카오맵은 Android/iOS 네이티브 지도 설정 후 표시됩니다.',
+          '지도 설정이 완료되지 않아 지도를 표시할 수 없습니다.\n앱 관리자에게 문의해주세요.',
           textAlign: TextAlign.center,
         ),
       ),

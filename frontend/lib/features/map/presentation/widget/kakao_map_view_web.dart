@@ -111,12 +111,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     }
 
     if (_kakaoJavaScriptKey.isEmpty) {
-      _showMessage('KAKAO_JAVASCRIPT_KEY가 설정되지 않았습니다.');
+      _showMessage('지도 설정이 완료되지 않았습니다. 앱 관리자에게 문의해주세요.');
       return;
     }
 
     if (_mapElement.clientWidth == 0 || _mapElement.clientHeight == 0) {
-      _showMessage('지도 영역 크기를 계산하지 못했습니다.');
+      _showMessage('지도 화면을 준비하지 못했습니다. 페이지를 새로고침해주세요.');
       return;
     }
 
@@ -131,7 +131,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       _messageElement.style.display = 'none';
     } catch (_) {
       _showMessage(
-        '카카오맵을 불러오지 못했습니다. Kakao Developers에 ${html.window.location.origin} 도메인이 등록되어 있는지 확인해주세요.',
+        '카카오맵을 불러오지 못했습니다. 잠시 후 페이지를 새로고침해주세요.',
       );
     }
   }

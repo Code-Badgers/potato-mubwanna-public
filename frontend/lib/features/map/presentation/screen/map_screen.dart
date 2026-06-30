@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../application/map_spot_controller.dart';
 import '../../domain/map_spot.dart';
@@ -14,7 +16,12 @@ const _mapDark = Color(0xFF509B64);
 const _rareGold = Color(0xFFF6C23E);
 
 class MapScreen extends ConsumerStatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({
+    this.hasMapConfiguration,
+    super.key,
+  });
+
+  final bool? hasMapConfiguration;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -136,6 +143,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: spotsState.when(
                   data: (spots) {
+                    final hasMapConfiguration = widget.hasMapConfiguration ??
+                        (kIsWeb
+                            ? AppEnvironment.kakaoJavaScriptKey.isNotEmpty
+                            : AppEnvironment.kakaoNativeAppKey.isNotEmpty);
+                    if (!hasMapConfiguration) {
+                      return const _MapConfigurationError();
+                    }
+
                     final visibleSpots = _visibleSpots(spots, favoriteSpotIds);
                     final selectedSpot = _selectedSpot(visibleSpots);
                     final routeSpots = _recommendedRouteSpots(
@@ -218,34 +233,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     );
                   },
                   loading: () => const _MapLoading(),
-                  error: (_, __) => Stack(
-                    children: [
-                      const Positioned.fill(
-                        child: _PotatoMapPreview(spots: []),
-                      ),
-                      Positioned(
-                        left: 12,
-                        right: 12,
-                        top: 18,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _RouteModeChip(
-                              enabled: _showFavoriteRouteOnly,
-                              favoriteCount: favoriteSpotIds.length,
-                              onTap: _toggleFavoriteRouteOnly,
-                            ),
-                            const SizedBox(height: 10),
-                            _CategoryFilterBar(
-                              categories: _categories,
-                              selectedIndex: _selectedCategoryIndex,
-                              onSelected: _selectCategory,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Positioned.fill(child: _MapError()),
-                    ],
+                  error: (_, __) => _MapDataError(
+                    onRetry: () => ref.invalidate(mapSpotsProvider),
                   ),
                 ),
               ),
@@ -966,24 +955,101 @@ class _MapLoading extends StatelessWidget {
   }
 }
 
-class _MapError extends StatelessWidget {
-  const _MapError();
+class _MapConfigurationError extends StatelessWidget {
+  const _MapConfigurationError();
 
   @override
   Widget build(BuildContext context) {
-    return const IgnorePointer(
+    return const _MapStatusCard(
+      icon: Icons.map_outlined,
+      title: '지도를 표시할 수 없습니다.',
+      description: '지도 설정이 완료되지 않았습니다. 앱 관리자에게 문의해주세요.',
+    );
+  }
+}
+
+class _MapDataError extends StatelessWidget {
+  const _MapDataError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _MapStatusCard(
+      icon: Icons.cloud_off_outlined,
+      title: '감자 스팟 정보를 불러오지 못했습니다.',
+      description: '네트워크 연결을 확인한 뒤 다시 시도해주세요.',
+      actionLabel: '다시 시도',
+      onAction: onRetry,
+    );
+  }
+}
+
+class _MapStatusCard extends StatelessWidget {
+  const _MapStatusCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF5D5),
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            '감자 스팟을 불러오지 못했습니다.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: _mapDark, size: 42),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.45,
+                  letterSpacing: 0,
+                ),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: onAction,
+                  icon: const Icon(Icons.refresh_rounded, size: 19),
+                  label: Text(actionLabel!),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _mapDark,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

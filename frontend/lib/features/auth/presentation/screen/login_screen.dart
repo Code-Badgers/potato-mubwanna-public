@@ -59,47 +59,64 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 _LoginMessage(message: authState.message ?? '로그인에 실패했습니다.'),
               ],
               const Spacer(flex: 4),
-              SizedBox(
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          final loggedIn = await ref
-                              .read(authControllerProvider.notifier)
-                              .loginWithKakao();
-                          if (loggedIn && context.mounted) {
-                            context.go('/permissions');
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: const Color(0xFF191600),
-                    elevation: 0,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: AspectRatio(
+                    aspectRatio: 300 / 45,
+                    child: ElevatedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              final loggedIn = await ref
+                                  .read(authControllerProvider.notifier)
+                                  .loginWithKakao();
+                              if (loggedIn && context.mounted) {
+                                context.go('/permissions');
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFEE500),
+                        foregroundColor: const Color(0xFF191600),
+                        elevation: 0,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: isLoading
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2.5),
+                            )
+                          : const SizedBox.expand(
+                              key: Key('kakao-login-button-content'),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Positioned(
+                                    left: 14,
+                                    child: Icon(
+                                      Icons.chat_bubble_rounded,
+                                      color: Color(0xFF191600),
+                                      size: 19,
+                                    ),
+                                  ),
+                                  Text(
+                                    '카카오 로그인',
+                                    style: TextStyle(
+                                      color: Color(0xFF191600),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                     ),
                   ),
-                  child: isLoading
-                      ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
-                        )
-                      : Semantics(
-                          label: '카카오 로그인',
-                          button: true,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.asset(
-                              'assets/kakao_login_medium_wide.png',
-                              width: double.infinity,
-                              height: 54,
-                              fit: BoxFit.cover,
-                              semanticLabel: '카카오 로그인',
-                            ),
-                          ),
-                        ),
                 ),
               ),
               const SizedBox(height: 8),

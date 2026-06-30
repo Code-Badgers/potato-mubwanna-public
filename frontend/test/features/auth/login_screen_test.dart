@@ -16,9 +16,7 @@ void main() {
 
   testWidgets('renders kakao login entry points', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: LoginScreen()),
-      ),
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
     );
 
     expect(find.bySemanticsLabel('카카오 로그인'), findsWidgets);
@@ -26,8 +24,46 @@ void main() {
     expect(find.text('나중에 로그인하기'), findsOneWidget);
   });
 
-  testWidgets('shows unsupported message when kakao login cannot start',
+  testWidgets('uses the button material for the kakao ink response',
       (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+
+    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(
+      button.style?.backgroundColor?.resolve(<WidgetState>{}),
+      const Color(0xFFFEE500),
+    );
+  });
+
+  for (final width in [430.0, 1200.0]) {
+    testWidgets(
+      'keeps the kakao button at its source ratio on ${width.toInt()}px',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 932);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          const ProviderScope(child: MaterialApp(home: LoginScreen())),
+        );
+
+        final buttonContent =
+            find.byKey(const Key('kakao-login-button-content'));
+        final buttonSize = tester.getSize(buttonContent);
+        expect(buttonSize.width, 300);
+        expect(buttonSize.height, 45);
+        expect(buttonSize.aspectRatio, closeTo(300 / 45, 0.01));
+        expect(find.byType(Image), findsNothing);
+      },
+    );
+  }
+
+  testWidgets('shows unsupported message when kakao login cannot start', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ProviderScope(
