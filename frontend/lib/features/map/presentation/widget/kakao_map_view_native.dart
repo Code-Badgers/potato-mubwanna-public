@@ -120,7 +120,7 @@ class _KakaoMapFallback extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'KAKAO_NATIVE_APP_KEY 설정 후 모바일 카카오맵이 표시됩니다.',
+            '지도 설정이 완료되지 않아 지도를 표시할 수 없습니다.\n앱 관리자에게 문의해주세요.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF4F6756),
