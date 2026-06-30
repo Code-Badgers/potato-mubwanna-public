@@ -37,10 +37,13 @@ void main() {
           const ProviderScope(child: MaterialApp(home: LoginScreen())),
         );
 
-        final imageSize = tester.getSize(find.byType(Image));
-        expect(imageSize.width, 300);
-        expect(imageSize.height, 45);
-        expect(imageSize.aspectRatio, closeTo(300 / 45, 0.01));
+        final buttonContent =
+            find.byKey(const Key('kakao-login-button-content'));
+        final buttonSize = tester.getSize(buttonContent);
+        expect(buttonSize.width, 300);
+        expect(buttonSize.height, 45);
+        expect(buttonSize.aspectRatio, closeTo(300 / 45, 0.01));
+        expect(find.byType(Image), findsNothing);
       },
     );
   }
