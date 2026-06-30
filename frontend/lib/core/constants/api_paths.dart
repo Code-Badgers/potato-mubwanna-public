@@ -10,6 +10,7 @@ class ApiPaths {
   static const nearbySpots = '/spots/nearby';
   static const stampVerify = '/stamps/verify';
   static const myStamps = '/stamps/me';
+  static const stampRewardCheck = '/stamps/rewards/check';
   static const potatoes = '/potatoes';
   static const myPotatoes = '/potatoes/me';
   static const myCoupons = '/coupons/me';
