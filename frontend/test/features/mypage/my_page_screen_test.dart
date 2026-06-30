@@ -304,7 +304,7 @@ void main() {
     await tester.tap(find.text('보상함'));
     await tester.pumpAndSettle();
 
-    expect(find.text('사용 가능 2'), findsOneWidget);
+    expect(find.text('보상 데이터 연동을 준비하고 있어요.'), findsOneWidget);
     expect(router.canPop(), isTrue);
 
     router.pop();
@@ -340,7 +340,7 @@ void main() {
     await tester.tap(find.text('여행 기록'));
     await tester.pumpAndSettle();
 
-    expect(find.text('총 3곳 방문'), findsOneWidget);
+    expect(find.text('여행 기록 연동을 준비하고 있어요.'), findsOneWidget);
     expect(router.canPop(), isTrue);
 
     await tester.tap(find.byTooltip('뒤로 가기'));
