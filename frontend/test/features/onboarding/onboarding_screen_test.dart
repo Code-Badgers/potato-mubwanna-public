@@ -108,7 +108,7 @@ void main() {
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
     expect(
-      find.text('웹에서는 브라우저 설정에서 위치 권한을 관리해주세요.'),
+      find.text('웹에서는 브라우저 설정에서 위치와 알림 권한을 관리해주세요.'),
       findsOneWidget,
     );
 

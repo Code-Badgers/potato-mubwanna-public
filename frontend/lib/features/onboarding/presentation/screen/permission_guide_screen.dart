@@ -242,7 +242,7 @@ class _PermissionNotice extends StatelessWidget {
         supportsRuntimePermissions
             ? '선택 접근권한에 동의하지 않아도 서비스를 둘러볼 수 있습니다. '
                 '다만 해당 권한이 필요한 기능은 제한될 수 있습니다.'
-            : '웹에서는 브라우저 설정에서 위치 권한을 관리해주세요.',
+            : '웹에서는 브라우저 설정에서 위치와 알림 권한을 관리해주세요.',
         style: const TextStyle(
           color: AppColors.textSecondary,
           fontSize: 13,
