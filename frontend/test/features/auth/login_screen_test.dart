@@ -24,6 +24,19 @@ void main() {
     expect(find.text('나중에 로그인하기'), findsOneWidget);
   });
 
+  testWidgets('uses the button material for the kakao ink response',
+      (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+
+    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(
+      button.style?.backgroundColor?.resolve(<WidgetState>{}),
+      const Color(0xFFFEE500),
+    );
+  });
+
   for (final width in [430.0, 1200.0]) {
     testWidgets(
       'keeps the kakao button at its source ratio on ${width.toInt()}px',
