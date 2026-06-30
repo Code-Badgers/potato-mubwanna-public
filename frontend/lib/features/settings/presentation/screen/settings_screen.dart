@@ -10,10 +10,10 @@ const _settingsLine = Color(0xFFE8E2D8);
 const _settingsCream = Color(0xFFFFF8EA);
 
 class SettingsScreen extends StatefulWidget {
-  SettingsScreen({
+  const SettingsScreen({
     PermissionService? permissionService,
     super.key,
-  }) : permissionService = permissionService ?? PermissionService();
+  }) : permissionService = permissionService ?? const PermissionService();
 
   final PermissionService permissionService;
 
