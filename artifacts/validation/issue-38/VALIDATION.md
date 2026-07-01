@@ -14,6 +14,7 @@
 4. 기존 placeholder 미션 화면을 미션 목록, 필터, 상세, 완료 보상 모달로 교체했다.
 5. 미션 화면 widget test를 추가했다.
 6. 추가 이미지 요청 사항은 `artifacts/local-runtime/mission_asset_requests.md`에 로컬 기록으로 남겼다.
+7. 미션 카드 제목과 보상 배지가 한 줄에서 서로 밀어내며 긴 제목이 좁게 보이는 문제가 있어, 제목 영역을 넓히고 신규/상태/보상 배지를 제목 아래 `Wrap`으로 분리했다.
 
 ## 발생한 문제와 해결
 
@@ -24,6 +25,7 @@
 - Flutter Web은 텍스트를 DOM으로 직접 노출하지 않아 Playwright `getByText` 클릭이 실패했다. 모바일 뷰포트 좌표 클릭으로 상세/보상 화면을 캡처했다.
 - PR 리뷰에서 완료된 미션도 다시 완료 버튼을 누를 수 있다는 지적이 있었다. `MissionStatus.completed` 상태는 완료 액션을 비활성화하고 버튼 문구를 `완료된 미션`으로 보여주도록 수정했다.
 - PR 리뷰에서 선택된 미션 객체를 UI state에 직접 보관하면 provider 데이터가 갱신될 때 stale data가 생길 수 있다는 지적이 있었다. 선택 상태는 `missionId`만 저장하고 상세 화면은 `missionByIdProvider`를 다시 watch하도록 수정했다.
+- 추가 디자인 점검 중 로컬 서버 포트 바인딩 권한 문제와 로컬 브라우저 접근 보안 정책으로 새 캡처는 만들지 못했다. 대신 `flutter test`, `flutter analyze`, `flutter build web`, `git diff --check`로 기능 회귀와 빌드 가능성을 확인했다.
 
 ## 변경 파일 요약
 
@@ -36,6 +38,7 @@
 - `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 완료 미션 액션 비활성화
 - `frontend/test/features/mission/mission_screen_test.dart`: 완료 미션 중복 보상 방지 테스트 추가
 - `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 상세 선택 state를 `MissionChallenge` 객체에서 `missionId`로 변경
+- `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 미션 카드 배지 배치와 진행 조건 텍스트 줄바꿈 개선
 
 ## 검증
 
@@ -51,6 +54,13 @@
 - Playwright + 시스템 Chrome으로 완료 미션 비활성화 화면 캡처: 성공
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공. 선택 미션 ID 기반 state 전환 후 재검증했다.
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공. 기존 목록/상세/완료 미션 테스트가 모두 통과했다.
+- `git diff --check -- frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공. 미션 카드 UI 배치 수정 후 회귀 테스트를 재실행했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build web --no-wasm-dry-run`: 성공. `flutter_secure_storage` SPM 미지원과 Cupertino 아이콘 폰트 경고는 남아 있으나 빌드는 통과했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/cache/dart-sdk/bin/dart format lib/features/mission/presentation/screen/mission_screen.dart`: 실패. Dart VM이 macOS CPU 정보 처리 중 크래시했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter dart format lib/features/mission/presentation/screen/mission_screen.dart`: 실패. Flutter SDK cache 쓰기 권한 문제로 `engine.stamp.tmp`, `engine.realm` 파일을 갱신하지 못했다.
+- `cd frontend/build/web && python3 -m http.server 54638 --bind 127.0.0.1`: 실패. 현재 실행 환경에서 로컬 포트 바인딩 권한이 없어 `PermissionError: [Errno 1] Operation not permitted`가 발생했다.
 
 ## 캡처
 

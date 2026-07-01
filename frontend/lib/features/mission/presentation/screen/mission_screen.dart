@@ -309,28 +309,18 @@ class _MissionCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                mission.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: enabled
-                                      ? AppColors.textPrimary
-                                      : AppColors.textSecondary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0,
-                                ),
-                              ),
-                            ),
-                            if (mission.isNew) ...[
-                              const SizedBox(width: 6),
-                              const _NewBadge(),
-                            ],
-                          ],
+                        Text(
+                          mission.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: enabled
+                                ? AppColors.textPrimary
+                                : AppColors.textSecondary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -347,11 +337,19 @@ class _MissionCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (mission.isNew) const _NewBadge(),
+                  _MissionStatusBadge(status: mission.status),
                   _RewardPill(mission: mission),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(999),
                 child: LinearProgressIndicator(
@@ -364,16 +362,20 @@ class _MissionCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text(
-                    mission.conditionLabel,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
+                  Expanded(
+                    child: Text(
+                      mission.conditionLabel,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                      ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 10),
                   Text(
                     mission.progressLabel,
                     style: const TextStyle(
@@ -877,6 +879,46 @@ class _RewardPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MissionStatusBadge extends StatelessWidget {
+  const _MissionStatusBadge({required this.status});
+
+  final MissionStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      MissionStatus.completed => _missionPrimary,
+      MissionStatus.inProgress => _missionGold,
+      MissionStatus.ready => _missionDark,
+      MissionStatus.locked => AppColors.textSecondary,
+    };
+    final backgroundColor = switch (status) {
+      MissionStatus.completed => const Color(0xFFE6F7EC),
+      MissionStatus.inProgress => const Color(0xFFFFF2C7),
+      MissionStatus.ready => const Color(0xFFFFF8EA),
+      MissionStatus.locked => const Color(0xFFF0EEE8),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.32)),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
       ),
     );
   }
