@@ -32,11 +32,13 @@ class MissionMigrationTest {
     void seedsMvpMissionsInDisplayOrder() {
         List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
 
-        assertThat(missions).hasSize(8);
+        assertThat(missions).hasSize(24);
         assertThat(missions.getFirst().getCode()).isEqualTo("MISSION_JEONGSEON_MARKET_QUIZ");
-        assertThat(missions.getLast().getCode()).isEqualTo("MISSION_EVENT_HWACHEON");
+        assertThat(missions.getLast().getCode()).isEqualTo("MISSION_YANGGU_DUTAYEON_VISIT");
         assertThat(missions.getFirst().getGroup()).isEqualTo(MissionGroup.JUMSOONI);
-        assertThat(missions.getLast().getGroup()).isEqualTo(MissionGroup.EVENT);
+        assertThat(missions)
+            .extracting(Mission::getType)
+            .contains(MissionType.PHOTO_OCR);
     }
 
     @Test

@@ -22,6 +22,7 @@
 4. `mission` 패키지를 `api`, `application`, `domain` 계층으로 구성했다.
 5. 미션 목록/상세/완료 API와 사용자 인증 principal 파싱을 구현했다.
 6. 서비스 단위 테스트, 컨트롤러 테스트, 보안 테스트, migration 테스트를 추가했다.
+7. 사용자 제공 미션 목록 중 기존 seed와 중복되는 남이섬 1,000보/정선 5일장 퀴즈를 제외하고 추가 미션 16개를 `V6__seed_additional_missions.sql`로 분리해 추가했다.
 
 ## 발생한 문제와 해결
 
@@ -29,6 +30,7 @@
 - 같은 테스트 실행에서 `MissionService` 생성자 선택 실패로 Spring context가 뜨지 않았다. 테스트용 `Clock` 주입 생성자와 Spring용 생성자가 함께 있어 생긴 문제라 Spring용 생성자에 `@Autowired`를 명시했다.
 - 프론트 mock의 완료 미션 seed를 그대로 백엔드 기본 상태로 두면 모든 사용자가 완료한 것처럼 보일 수 있었다. 완료 여부는 `user_missions`가 기준이므로 seed의 기본 상태는 완료 전 상태로 조정했다.
 - PR 리뷰에서 동시 완료 요청 시 DB unique 제약의 `DataIntegrityViolationException`이 500으로 노출될 수 있다는 지적이 있었다. 컨트롤러에서 해당 예외를 409 Conflict로 매핑하고 회귀 테스트를 추가했다.
+- 추가 미션 원본은 MySQL/backtick 기반 예시였고 현재 스키마와 달리 `tourist_spot_id`, `reward_value` 컬럼을 포함하고 있었다. 기존 PostgreSQL/Flyway 스키마에 맞춰 `reward_label`, `condition_label`, `display_order`, `default_status`로 변환하고, 이미 PR 브랜치에 올라간 `V5`를 수정하지 않기 위해 `V6` 추가 migration으로 분리했다.
 
 ## 변경 파일 요약
 
@@ -39,6 +41,9 @@
 - `backend/src/test/java/com/gamjamubwatna/mission/**/*`: API, 보안, 서비스, migration 테스트 추가
 - `backend/src/main/java/com/gamjamubwatna/mission/api/MissionController.java`: 동시 중복 완료로 발생할 수 있는 DB unique 제약 예외를 409로 변환
 - `backend/src/test/java/com/gamjamubwatna/mission/api/MissionControllerTest.java`: `DataIntegrityViolationException` 중복 완료 응답 테스트 추가
+- `backend/src/main/resources/db/migration/V6__seed_additional_missions.sql`: 강원 18개 시군 기반 추가 점순이 미션 seed 16개 추가
+- `backend/src/main/java/com/gamjamubwatna/mission/domain/MissionType.java`: OCR 사진 인증 미션 구분을 위한 `PHOTO_OCR` 타입 추가
+- `backend/src/test/java/com/gamjamubwatna/mission/domain/MissionMigrationTest.java`: 총 seed 개수 24개와 `PHOTO_OCR` enum 매핑 검증
 
 ## 검증
 
@@ -47,6 +52,9 @@
 - `cd backend && ./gradlew test`: 성공
 - `cd backend && ./gradlew build`: 성공
 - `cd backend && ./gradlew test --tests 'com.gamjamubwatna.mission.api.MissionControllerTest' --tests '*mission*'`: 성공. 동시 중복 완료 예외 매핑 리뷰 반영 후 재검증했다.
+- `cd backend && ./gradlew test`: 성공
+- `cd backend && ./gradlew test --tests 'com.gamjamubwatna.mission.domain.MissionMigrationTest'`: 성공. `V6` seed와 `PHOTO_OCR` enum 매핑을 검증했다.
+- `cd backend && ./gradlew test --tests '*mission*'`: 성공
 - `cd backend && ./gradlew test`: 성공
 
 ## 남은 리스크
