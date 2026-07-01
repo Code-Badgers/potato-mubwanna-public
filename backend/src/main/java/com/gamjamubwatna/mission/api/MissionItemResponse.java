@@ -1,0 +1,59 @@
+package com.gamjamubwatna.mission.api;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.gamjamubwatna.mission.domain.Mission;
+import com.gamjamubwatna.mission.domain.MissionGroup;
+import com.gamjamubwatna.mission.domain.MissionRewardType;
+import com.gamjamubwatna.mission.domain.MissionStatus;
+import com.gamjamubwatna.mission.domain.MissionType;
+import com.gamjamubwatna.mission.domain.UserMission;
+import java.time.Instant;
+
+public record MissionItemResponse(
+    Long missionId,
+    String code,
+    MissionGroup group,
+    MissionType type,
+    MissionStatus status,
+    String title,
+    String spotName,
+    String cityName,
+    String description,
+    String dialogue,
+    String conditionLabel,
+    MissionRewardType rewardType,
+    String rewardLabel,
+    int progress,
+    int target,
+    boolean active,
+    @JsonProperty("new")
+    boolean isNew,
+    boolean completed,
+    Instant completedAt
+) {
+
+    public static MissionItemResponse from(Mission mission, UserMission userMission) {
+        boolean completed = userMission != null;
+        return new MissionItemResponse(
+            mission.getId(),
+            mission.getCode(),
+            mission.getGroup(),
+            mission.getType(),
+            completed ? MissionStatus.COMPLETED : mission.getDefaultStatus(),
+            mission.getTitle(),
+            mission.getSpotName(),
+            mission.getCityName(),
+            mission.getDescription(),
+            mission.getDialogue(),
+            mission.getConditionLabel(),
+            mission.getRewardType(),
+            mission.getRewardLabel(),
+            completed ? mission.getTarget() : mission.getProgress(),
+            mission.getTarget(),
+            mission.isActive(),
+            mission.isNewMission(),
+            completed,
+            completed ? userMission.getCompletedAt() : null
+        );
+    }
+}
