@@ -80,6 +80,9 @@ public class MissionController {
         } catch (MissionCompletionException exception) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(AuthApiResponse.failure(exception.getMessage()));
+        } catch (org.springframework.dao.DataIntegrityViolationException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(AuthApiResponse.failure("이미 완료한 미션입니다."));
         }
     }
 

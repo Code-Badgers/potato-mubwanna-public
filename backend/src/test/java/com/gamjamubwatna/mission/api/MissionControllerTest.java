@@ -94,6 +94,19 @@ class MissionControllerTest {
     }
 
     @Test
+    void mapsUniqueConstraintRaceToConflict() throws Exception {
+        when(missionService.completeMission(eq(1L), eq(1L)))
+            .thenThrow(new org.springframework.dao.DataIntegrityViolationException(
+                "uk_user_missions_user_mission"
+            ));
+
+        mockMvc.perform(post("/missions/1/complete").with(user("user:1")).with(csrf()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("이미 완료한 미션입니다."));
+    }
+
+    @Test
     void rejectsMalformedUserPrincipal() throws Exception {
         mockMvc.perform(get("/missions").with(user("admin:1")))
             .andExpect(status().isUnauthorized())
