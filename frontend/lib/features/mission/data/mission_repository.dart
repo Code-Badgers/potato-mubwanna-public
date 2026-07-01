@@ -1,174 +1,101 @@
+import 'package:dio/dio.dart';
+
+import '../../../core/constants/api_paths.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/api_response.dart';
 import '../domain/mission_challenge.dart';
 
 class MissionRepository {
-  const MissionRepository();
+  const MissionRepository({required Dio dio}) : _dio = dio;
 
-  List<MissionChallenge> fetchMissions() => _missions;
+  final Dio _dio;
+
+  Future<List<MissionChallenge>> fetchMissions() async {
+    final response = await _request(
+      () => _dio.get<Map<String, dynamic>>(ApiPaths.missions),
+    );
+    final apiResponse = ApiResponse<List<MissionChallenge>>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      (json) {
+        final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+        final missions = data['missions'] as List<dynamic>? ?? const [];
+        return missions.map(MissionChallenge.fromJson).toList();
+      },
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
+  Future<MissionCompletionResult> completeMission(String missionId) async {
+    final response = await _request(
+      () => _dio.post<Map<String, dynamic>>(
+        '${ApiPaths.missions}/$missionId/complete',
+      ),
+    );
+    final apiResponse = ApiResponse<MissionCompletionResult>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      (json) {
+        final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+        return MissionCompletionResult(
+          id: (data['missionId'] as Object?).toString(),
+          rewardType: _rewardTypeFromComplete(data['rewardType'] as String?),
+          rewardLabel: data['rewardLabel'] as String? ?? '',
+        );
+      },
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
+  T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
+    if (!response.success || response.data == null) {
+      throw ApiException(
+        message:
+            response.message.isEmpty ? '미션 정보를 불러오지 못했습니다.' : response.message,
+        code: response.code,
+        statusCode: statusCode,
+      );
+    }
+
+    return response.data!;
+  }
+
+  Future<Response<Map<String, dynamic>>> _request(
+    Future<Response<Map<String, dynamic>>> Function() request,
+  ) async {
+    try {
+      return await request();
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        throw ApiException(
+          message: data['message'] as String? ?? '미션 요청에 실패했습니다.',
+          code: data['code'] as String?,
+          statusCode: error.response?.statusCode,
+        );
+      }
+      rethrow;
+    }
+  }
 }
 
-const _missions = [
-  MissionChallenge(
-    id: 'mission-1004',
-    group: MissionGroup.jumsooni,
-    type: MissionType.quiz,
-    status: MissionStatus.ready,
-    title: '정선 5일장 곤드레 퀴즈',
-    spotName: '정선 5일장',
-    cityName: '정선군',
-    description: '정선 장터에서 점순이가 내는 향토 음식 퀴즈를 풀어보세요.',
-    dialogue: '봄봄이나 동백꽃 읽어봤음 이 정선 사투리쯤은 다 알아들을 줄 알았드마는, 곤드레감자가 뭔지도 모르는 눈치네?',
-    conditionLabel: '정선 5일장 방문 후 퀴즈 정답 맞히기',
-    rewardType: MissionRewardType.item,
-    rewardLabel: '황금감자 성장 아이템',
-    progress: 0,
-    target: 1,
-    isNew: true,
-  ),
-  MissionChallenge(
-    id: 'mission-1001',
-    group: MissionGroup.jumsooni,
-    type: MissionType.visitAndStep,
-    status: MissionStatus.inProgress,
-    title: '남이섬 메타세쿼이아길 감자 챌린지',
-    spotName: '남이섬',
-    cityName: '춘천시',
-    description: '남이섬 반경 내에서 점순이와 함께 1,000보를 걸으세요.',
-    dialogue:
-        '얘! 남이섬까지 와서 가만히 서 있기만 할 기가? 싱그러운 나무들 사이로 나랑 딱 1,000걸음만 같이 걸어보자 마!',
-    conditionLabel: '남이섬 반경 내 1,000보 걷기',
-    rewardType: MissionRewardType.potato,
-    rewardLabel: '수미감자 씨앗',
-    progress: 720,
-    target: 1000,
-    isNew: true,
-  ),
-  MissionChallenge(
-    id: 'mission-1002',
-    group: MissionGroup.jumsooni,
-    type: MissionType.photo,
-    status: MissionStatus.ready,
-    title: '안목 해변에서 하지감자 찾기',
-    spotName: '안목 커피거리',
-    cityName: '강릉시',
-    description: '안목 커피거리 가맹점 매장 영수증 또는 간판을 촬영하세요.',
-    dialogue: '여가 그 유명한 안목 커피거리다 얘! 시원한 바다 보면서 커피 한 잔 하니 조치? 근데 빈손으로 갈 기가?',
-    conditionLabel: '영수증 또는 간판 사진 인증',
-    rewardType: MissionRewardType.potato,
-    rewardLabel: '하지감자 씨앗',
-    progress: 0,
-    target: 1,
-  ),
-  MissionChallenge(
-    id: 'mission-1003',
-    group: MissionGroup.jumsooni,
-    type: MissionType.qrScan,
-    status: MissionStatus.ready,
-    title: '속초 중앙시장 온누리 상품권 미션',
-    spotName: '속초 중앙시장',
-    cityName: '속초시',
-    description: '시장 골목에 숨겨진 QR 안내판을 찾아 스캔하세요.',
-    dialogue: '속초 시장 오면 닭강정은 당연히 무봤겠지? 골목 깊숙이 들어가면 내가 숨겨둔 QR 코드가 보일 끼다.',
-    conditionLabel: '현장 QR 코드 스캔',
-    rewardType: MissionRewardType.coupon,
-    rewardLabel: '온누리 상품권 5,000원',
-    progress: 0,
-    target: 1,
-  ),
-  MissionChallenge(
-    id: 'mission-1005',
-    group: MissionGroup.jumsooni,
-    type: MissionType.visit,
-    status: MissionStatus.ready,
-    title: '한적한 메밀꽃밭의 전설',
-    spotName: '이효석 문학관',
-    cityName: '평창군',
-    description: '관광객이 적은 시간대에 문학관 GPS 반경 50m 안으로 진입하세요.',
-    dialogue: '오매, 여는 참 한적하고 숨어있는 명소네 얘! 요 메밀꽃밭 좌표 안으로 딱 들어와 봐라.',
-    conditionLabel: 'GPS 반경 50m 안에서 방문 인증',
-    rewardType: MissionRewardType.potato,
-    rewardLabel: '전설 평창 수미감자',
-    progress: 0,
-    target: 1,
-  ),
-  MissionChallenge(
-    id: 'mission-1008',
-    group: MissionGroup.jumsooni,
-    type: MissionType.photo,
-    status: MissionStatus.ready,
-    title: '뮤지엄 산 물의 정원 인증샷',
-    spotName: '뮤지엄 산',
-    cityName: '원주시',
-    description: '물의 정원 조형물을 배경으로 사진 인증을 완료하세요.',
-    dialogue: '너 사진 올리는 거 조아하지? 여가 바로 줄을 서서 찍는다는 뮤지엄 산 물의 정원이다 얘!',
-    conditionLabel: '랜드마크 사진 인증',
-    rewardType: MissionRewardType.coupon,
-    rewardLabel: '원주 카페 3,000원 쿠폰',
-    progress: 0,
-    target: 1,
-  ),
-  MissionChallenge(
-    id: 'mission-daily-steps',
-    group: MissionGroup.daily,
-    type: MissionType.visitAndStep,
-    status: MissionStatus.inProgress,
-    title: '10,000걸음 걷기',
-    spotName: '강원도 전역',
-    cityName: '오늘의 감자걸음',
-    description: '오늘 하루 동안 10,000걸음을 채워 감자 코인을 받아보세요.',
-    dialogue: '오늘도 발바닥에 흙 좀 묻혀야 감자맛 나는 여행이지 않겠나 얘!',
-    conditionLabel: '오늘 10,000걸음 달성',
-    rewardType: MissionRewardType.coin,
-    rewardLabel: '감자 코인 x2',
-    progress: 7642,
-    target: 10000,
-  ),
-  MissionChallenge(
-    id: 'mission-daily-stamp',
-    group: MissionGroup.daily,
-    type: MissionType.stamp,
-    status: MissionStatus.completed,
-    title: '스탬프 1개 획득하기',
-    spotName: '방문 인증',
-    cityName: '일일 미션',
-    description: '오늘 방문 인증으로 스탬프를 1개 획득했습니다.',
-    dialogue: '도장 하나 콕 찍었으니 오늘 여행은 벌써 반은 성공이다 마!',
-    conditionLabel: '하루 스탬프 1개 획득',
-    rewardType: MissionRewardType.coin,
-    rewardLabel: '감자 코인 x1',
-    progress: 1,
-    target: 1,
-  ),
-  MissionChallenge(
-    id: 'mission-weekly-cities',
-    group: MissionGroup.weekly,
-    type: MissionType.visit,
-    status: MissionStatus.inProgress,
-    title: '시군 2곳 방문하기',
-    spotName: '강원도 시군',
-    cityName: '주간 미션',
-    description: '이번 주 서로 다른 시군 2곳을 방문해보세요.',
-    dialogue: '한 군데만 보고 강원도를 다 봤다 하면 섭하지. 이번 주엔 두 군데 찍고 오자!',
-    conditionLabel: '서로 다른 시군 2곳 방문',
-    rewardType: MissionRewardType.coin,
-    rewardLabel: '감자 코인 x5',
-    progress: 1,
-    target: 2,
-  ),
-  MissionChallenge(
-    id: 'mission-event-hwacheon',
-    group: MissionGroup.event,
-    type: MissionType.qrScan,
-    status: MissionStatus.locked,
-    title: '[시즌 한정] 얼음나라 산천어 미션',
-    spotName: '화천천 산천어 축제장',
-    cityName: '화천군',
-    description: '겨울 축제 기간에만 열리는 QR 스캔 미션입니다.',
-    dialogue: '꽁꽁 언 화천천 축제장 한가운데 종합 안내소에 내가 스탬프 찍어줄 QR 판넬을 세워뒀다 마!',
-    conditionLabel: '1월 축제 시즌 QR 코드 스캔',
-    rewardType: MissionRewardType.coupon,
-    rewardLabel: '산천어 구이 교환권',
-    progress: 0,
-    target: 1,
-    active: false,
-  ),
-];
+class MissionCompletionResult {
+  const MissionCompletionResult({
+    required this.id,
+    required this.rewardType,
+    required this.rewardLabel,
+  });
+
+  final String id;
+  final MissionRewardType rewardType;
+  final String rewardLabel;
+}
+
+MissionRewardType _rewardTypeFromComplete(String? value) {
+  return switch (value) {
+    'COUPON' => MissionRewardType.coupon,
+    'ITEM' => MissionRewardType.item,
+    'COIN' => MissionRewardType.coin,
+    _ => MissionRewardType.potato,
+  };
+}

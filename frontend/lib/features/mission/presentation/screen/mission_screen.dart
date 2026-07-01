@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../application/mission_controller.dart';
 import '../../domain/mission_challenge.dart';
 
@@ -45,9 +46,36 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 
+  Future<void> _completeMission(MissionChallenge mission) async {
+    try {
+      final completedMission =
+          await ref.read(missionsProvider.notifier).complete(mission.id);
+      if (!mounted) {
+        return;
+      }
+      _showRewardDialog(completedMission);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(error.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar('미션 완료에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final missions = ref.watch(missionsProvider);
+    final missionsState = ref.watch(missionsProvider);
     final selectedMissionId = _selectedMissionId;
     final selectedMission = selectedMissionId == null
         ? null
@@ -57,10 +85,40 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       return _MissionDetailView(
         mission: selectedMission,
         onBack: _closeMissionDetail,
-        onComplete: () => _showRewardDialog(selectedMission),
+        onComplete: () => _completeMission(selectedMission),
       );
     }
 
+    if (selectedMissionId != null && missionsState.isLoading) {
+      return const _MissionScaffold(
+        child: _MissionLoadingState(),
+      );
+    }
+
+    if (selectedMissionId != null && selectedMission == null) {
+      return _MissionScaffold(
+        child: _MissionErrorState(
+          message: '미션 정보를 찾지 못했습니다.',
+          onRetry: _closeMissionDetail,
+        ),
+      );
+    }
+
+    return missionsState.when(
+      loading: () => const _MissionScaffold(
+        child: _MissionLoadingState(),
+      ),
+      error: (error, _) => _MissionScaffold(
+        child: _MissionErrorState(
+          message: error is ApiException ? error.message : '미션 정보를 불러오지 못했습니다.',
+          onRetry: () => ref.read(missionsProvider.notifier).load(),
+        ),
+      ),
+      data: _buildMissionList,
+    );
+  }
+
+  Widget _buildMissionList(List<MissionChallenge> missions) {
     final filteredMissions = _filteredMissions(missions);
     final completedCount = missions
         .where((mission) => mission.status == MissionStatus.completed)
@@ -85,19 +143,125 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-              sliver: SliverList.separated(
-                itemCount: filteredMissions.length,
-                itemBuilder: (_, index) {
-                  final mission = filteredMissions[index];
-                  return _MissionCard(
-                    mission: mission,
-                    onTap: () => _showMissionDetail(mission.id),
-                  );
-                },
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-              ),
+              sliver: filteredMissions.isEmpty
+                  ? const SliverToBoxAdapter(child: _MissionEmptyState())
+                  : SliverList.separated(
+                      itemCount: filteredMissions.length,
+                      itemBuilder: (_, index) {
+                        final mission = filteredMissions[index];
+                        return _MissionCard(
+                          mission: mission,
+                          onTap: () => _showMissionDetail(mission.id),
+                        );
+                      },
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionScaffold extends StatelessWidget {
+  const _MissionScaffold({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(child: child),
+    );
+  }
+}
+
+class _MissionLoadingState extends StatelessWidget {
+  const _MissionLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(color: _missionPrimary),
+    );
+  }
+}
+
+class _MissionErrorState extends StatelessWidget {
+  const _MissionErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: _missionDark,
+              size: 42,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: onRetry,
+              style: FilledButton.styleFrom(
+                backgroundColor: _missionPrimary,
+                foregroundColor: AppColors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('다시 시도'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionEmptyState extends StatelessWidget {
+  const _MissionEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _missionLine),
+      ),
+      child: const Text(
+        '표시할 미션이 없습니다.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0,
         ),
       ),
     );
@@ -470,6 +634,7 @@ class _MissionDetailView extends StatelessWidget {
   static IconData _actionIcon(MissionType type) {
     return switch (type) {
       MissionType.photo => Icons.camera_alt_rounded,
+      MissionType.photoOcr => Icons.document_scanner_rounded,
       MissionType.qrScan => Icons.qr_code_scanner_rounded,
       MissionType.quiz => Icons.quiz_rounded,
       MissionType.visitAndStep => Icons.directions_walk_rounded,
@@ -483,6 +648,7 @@ class _MissionDetailView extends StatelessWidget {
     }
     return switch (mission.type) {
       MissionType.photo => '사진 인증하기',
+      MissionType.photoOcr => '촬영 인증하기',
       MissionType.qrScan => 'QR 스캔하기',
       MissionType.quiz => '퀴즈 풀기',
       MissionType.visitAndStep => '걸음 인증하기',
