@@ -1,0 +1,86 @@
+# Issue 38 Validation
+
+## 작업 목표
+
+- Team B 담당 범위의 점순이 미션 MVP 화면을 구현한다.
+- `artifacts/local-runtime/점순이 미션.txt`의 미션 제목, 타입, 조건, 보상, 대사를 기반으로 앱 내부 미션 콘텐츠 구조를 만든다.
+- `agents_docs/design_references/미션` 이미지는 레이아웃 참고용으로만 사용하고, 점순이 캐릭터, 감자 캐릭터, 배경 이미지는 제외한다.
+
+## 진행 과정
+
+1. 최신 `main`에서 `feat/38-mission` 브랜치를 생성했다.
+2. GitHub Issue #38을 만들고 작업 범위와 제외 범위를 기록했다.
+3. 미션 도메인 모델, mock repository, Riverpod provider를 추가했다.
+4. 기존 placeholder 미션 화면을 미션 목록, 필터, 상세, 완료 보상 모달로 교체했다.
+5. 미션 화면 widget test를 추가했다.
+6. 추가 이미지 요청 사항은 `artifacts/local-runtime/mission_asset_requests.md`에 로컬 기록으로 남겼다.
+7. 미션 카드 제목과 보상 배지가 한 줄에서 서로 밀어내며 긴 제목이 좁게 보이는 문제가 있어, 제목 영역을 넓히고 신규/상태/보상 배지를 제목 아래 `Wrap`으로 분리했다.
+8. 점순이는 미션 카테고리가 아니라 미션을 안내하는 NPC로 해석하는 것이 자연스러워, 상단 필터에서 `점순이`를 제거하고 `전체 / 일일 / 주간 / 이벤트`만 남겼다.
+
+## 발생한 문제와 해결
+
+- `gh`가 PATH에 잡히지 않아 이슈 생성이 처음 실패했다. `/usr/local/bin/gh` 직접 경로로 실행해 Issue #38을 생성했다.
+- `flutter test`를 `flutter analyze`와 병렬 실행했을 때 Flutter startup lock과 ephemeral 파일 삭제 충돌이 발생했다. 순차 실행으로 재검증했다.
+- Widget test가 첫 뷰포트 밖의 미션 카드를 바로 찾으면서 실패했다. 실제 스크롤 가능한 화면 구조에 맞게 `scrollUntilVisible`을 사용하도록 수정했다.
+- Playwright 패키지는 있었지만 브라우저 바이너리가 설치되어 있지 않아 첫 캡처 시도가 실패했다. 시스템 Chrome 실행 파일을 지정해 캡처했다.
+- Flutter Web은 텍스트를 DOM으로 직접 노출하지 않아 Playwright `getByText` 클릭이 실패했다. 모바일 뷰포트 좌표 클릭으로 상세/보상 화면을 캡처했다.
+- PR 리뷰에서 완료된 미션도 다시 완료 버튼을 누를 수 있다는 지적이 있었다. `MissionStatus.completed` 상태는 완료 액션을 비활성화하고 버튼 문구를 `완료된 미션`으로 보여주도록 수정했다.
+- PR 리뷰에서 선택된 미션 객체를 UI state에 직접 보관하면 provider 데이터가 갱신될 때 stale data가 생길 수 있다는 지적이 있었다. 선택 상태는 `missionId`만 저장하고 상세 화면은 `missionByIdProvider`를 다시 watch하도록 수정했다.
+- 추가 디자인 점검 중 로컬 서버 포트 바인딩 권한 문제와 로컬 브라우저 접근 보안 정책으로 새 캡처는 만들지 못했다. 대신 `flutter test`, `flutter analyze`, `flutter build web`, `git diff --check`로 기능 회귀와 빌드 가능성을 확인했다.
+- 미션 필터에서 점순이가 노출되면 사용자에게 점순이가 미션 종류처럼 보일 수 있었다. 필터 옵션은 반복 주기/이벤트 성격만 보여주고, 점순이는 화면 카피와 상세 모달의 NPC 톤으로 남기도록 정리했다.
+
+## 변경 파일 요약
+
+- `frontend/lib/features/mission/domain/mission_challenge.dart`: 미션 그룹, 타입, 상태, 보상 타입, 미션 도메인 모델 추가
+- `frontend/lib/features/mission/data/mission_repository.dart`: 점순이 txt 기반 MVP 미션 mock 데이터 추가
+- `frontend/lib/features/mission/application/mission_controller.dart`: Riverpod provider 추가
+- `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 미션 목록, 필터, 상세, 보상 모달 UI 구현
+- `frontend/test/features/mission/mission_screen_test.dart`: 목록/필터/상세/보상 모달 widget test 추가
+- `artifacts/local-runtime/mission_asset_requests.md`: 커밋 제외 로컬 이미지 요청 기록
+- `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 완료 미션 액션 비활성화
+- `frontend/test/features/mission/mission_screen_test.dart`: 완료 미션 중복 보상 방지 테스트 추가
+- `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 상세 선택 state를 `MissionChallenge` 객체에서 `missionId`로 변경
+- `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 미션 카드 배지 배치와 진행 조건 텍스트 줄바꿈 개선
+- `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 상단 필터에서 점순이 그룹 노출 제거
+- `frontend/test/features/mission/mission_screen_test.dart`: 점순이 필터 제거와 일일 필터 동작 검증
+
+## 검증
+
+- `cd frontend && /Users/mac/Documents/flutter/bin/dart format lib/features/mission test/features/mission`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build web --no-wasm-dry-run`: 성공
+- `python3 -m http.server 54638 --bind 127.0.0.1`: 성공
+- Playwright + 시스템 Chrome으로 `http://127.0.0.1:54638/#/main/missions` 화면 캡처: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공. 완료 미션 비활성화 리뷰 반영 후 재검증했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공. 완료 미션 버튼 비활성화 회귀 테스트를 포함한다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build web --no-wasm-dry-run`: 성공. 리뷰 반영 후 Web build를 재생성했다.
+- Playwright + 시스템 Chrome으로 완료 미션 비활성화 화면 캡처: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공. 선택 미션 ID 기반 state 전환 후 재검증했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공. 기존 목록/상세/완료 미션 테스트가 모두 통과했다.
+- `git diff --check -- frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공. 미션 카드 UI 배치 수정 후 회귀 테스트를 재실행했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter build web --no-wasm-dry-run`: 성공. `flutter_secure_storage` SPM 미지원과 Cupertino 아이콘 폰트 경고는 남아 있으나 빌드는 통과했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/cache/dart-sdk/bin/dart format lib/features/mission/presentation/screen/mission_screen.dart`: 실패. Dart VM이 macOS CPU 정보 처리 중 크래시했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter dart format lib/features/mission/presentation/screen/mission_screen.dart`: 실패. Flutter SDK cache 쓰기 권한 문제로 `engine.stamp.tmp`, `engine.realm` 파일을 갱신하지 못했다.
+- `cd frontend/build/web && python3 -m http.server 54638 --bind 127.0.0.1`: 실패. 현재 실행 환경에서 로컬 포트 바인딩 권한이 없어 `PermissionError: [Errno 1] Operation not permitted`가 발생했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/dart format lib/features/mission/presentation/screen/mission_screen.dart test/features/mission/mission_screen_test.dart`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공. 점순이 필터 제거 후 목록/상세/완료 미션 테스트가 모두 통과했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
+
+## 캡처
+
+- `artifacts/validation/issue-38/mission-list-web.png`
+- `artifacts/validation/issue-38/mission-detail-web.png`
+- `artifacts/validation/issue-38/mission-reward-web.png`
+- `artifacts/validation/issue-38/mission-list-review-fix-web.png`
+- `artifacts/validation/issue-38/mission-daily-filter-web.png`
+- `artifacts/validation/issue-38/mission-completed-disabled-web.png`
+
+## 남은 리스크
+
+- 현재 미션 데이터는 프론트 mock repository 기반이다. 백엔드 API, DB migration, 실제 완료 상태 저장은 후속 작업이 필요하다.
+- QR, OCR, GPS, 걸음 수 인증은 실제 센서/권한/API 연동 전의 UI 흐름만 구현했다.
+- 미션 완료 모달은 로컬 상태를 영구 저장하지 않는다. API 연동 후 완료 상태와 보상 지급 결과를 서버 응답 기준으로 바꿔야 한다.
+- 작업 시작 전부터 수정 상태였던 iOS Xcode 메타파일 2개는 이번 이슈와 무관하여 커밋하지 않는다.
