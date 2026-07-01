@@ -204,9 +204,14 @@ class _MissionFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const visibleGroups = [
+      MissionGroup.daily,
+      MissionGroup.weekly,
+      MissionGroup.event,
+    ];
     final filters = <_MissionFilter>[
       const _MissionFilter(label: '전체'),
-      ...MissionGroup.values.map((group) => _MissionFilter(
+      ...visibleGroups.map((group) => _MissionFilter(
             label: group.label,
             group: group,
           )),

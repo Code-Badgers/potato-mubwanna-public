@@ -4,8 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
 
 void main() {
-  testWidgets('renders mission list and filters jumsooni missions',
-      (tester) async {
+  testWidgets('renders mission list and category filters', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(home: MissionScreen()),
@@ -15,12 +14,16 @@ void main() {
     expect(find.text('미션'), findsOneWidget);
     expect(find.text('점순이와 함께 도전해요'), findsOneWidget);
     expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('점순이'), findsNothing);
+    expect(find.text('일일'), findsOneWidget);
+    expect(find.text('주간'), findsOneWidget);
+    expect(find.text('이벤트'), findsOneWidget);
 
-    await tester.tap(find.text('점순이').first);
+    await tester.tap(find.text('일일').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
-    expect(find.text('10,000걸음 걷기'), findsNothing);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsNothing);
+    expect(find.text('10,000걸음 걷기'), findsOneWidget);
 
     await tester.tap(find.text('전체').first);
     await tester.pumpAndSettle();

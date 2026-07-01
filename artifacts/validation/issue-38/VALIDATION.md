@@ -15,6 +15,7 @@
 5. 미션 화면 widget test를 추가했다.
 6. 추가 이미지 요청 사항은 `artifacts/local-runtime/mission_asset_requests.md`에 로컬 기록으로 남겼다.
 7. 미션 카드 제목과 보상 배지가 한 줄에서 서로 밀어내며 긴 제목이 좁게 보이는 문제가 있어, 제목 영역을 넓히고 신규/상태/보상 배지를 제목 아래 `Wrap`으로 분리했다.
+8. 점순이는 미션 카테고리가 아니라 미션을 안내하는 NPC로 해석하는 것이 자연스러워, 상단 필터에서 `점순이`를 제거하고 `전체 / 일일 / 주간 / 이벤트`만 남겼다.
 
 ## 발생한 문제와 해결
 
@@ -26,6 +27,7 @@
 - PR 리뷰에서 완료된 미션도 다시 완료 버튼을 누를 수 있다는 지적이 있었다. `MissionStatus.completed` 상태는 완료 액션을 비활성화하고 버튼 문구를 `완료된 미션`으로 보여주도록 수정했다.
 - PR 리뷰에서 선택된 미션 객체를 UI state에 직접 보관하면 provider 데이터가 갱신될 때 stale data가 생길 수 있다는 지적이 있었다. 선택 상태는 `missionId`만 저장하고 상세 화면은 `missionByIdProvider`를 다시 watch하도록 수정했다.
 - 추가 디자인 점검 중 로컬 서버 포트 바인딩 권한 문제와 로컬 브라우저 접근 보안 정책으로 새 캡처는 만들지 못했다. 대신 `flutter test`, `flutter analyze`, `flutter build web`, `git diff --check`로 기능 회귀와 빌드 가능성을 확인했다.
+- 미션 필터에서 점순이가 노출되면 사용자에게 점순이가 미션 종류처럼 보일 수 있었다. 필터 옵션은 반복 주기/이벤트 성격만 보여주고, 점순이는 화면 카피와 상세 모달의 NPC 톤으로 남기도록 정리했다.
 
 ## 변경 파일 요약
 
@@ -39,6 +41,8 @@
 - `frontend/test/features/mission/mission_screen_test.dart`: 완료 미션 중복 보상 방지 테스트 추가
 - `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 상세 선택 state를 `MissionChallenge` 객체에서 `missionId`로 변경
 - `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 미션 카드 배지 배치와 진행 조건 텍스트 줄바꿈 개선
+- `frontend/lib/features/mission/presentation/screen/mission_screen.dart`: 상단 필터에서 점순이 그룹 노출 제거
+- `frontend/test/features/mission/mission_screen_test.dart`: 점순이 필터 제거와 일일 필터 동작 검증
 
 ## 검증
 
@@ -61,6 +65,9 @@
 - `cd frontend && /Users/mac/Documents/flutter/bin/cache/dart-sdk/bin/dart format lib/features/mission/presentation/screen/mission_screen.dart`: 실패. Dart VM이 macOS CPU 정보 처리 중 크래시했다.
 - `cd frontend && /Users/mac/Documents/flutter/bin/flutter dart format lib/features/mission/presentation/screen/mission_screen.dart`: 실패. Flutter SDK cache 쓰기 권한 문제로 `engine.stamp.tmp`, `engine.realm` 파일을 갱신하지 못했다.
 - `cd frontend/build/web && python3 -m http.server 54638 --bind 127.0.0.1`: 실패. 현재 실행 환경에서 로컬 포트 바인딩 권한이 없어 `PermissionError: [Errno 1] Operation not permitted`가 발생했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/dart format lib/features/mission/presentation/screen/mission_screen.dart test/features/mission/mission_screen_test.dart`: 성공
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_screen_test.dart`: 성공. 점순이 필터 제거 후 목록/상세/완료 미션 테스트가 모두 통과했다.
+- `cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze`: 성공
 
 ## 캡처
 
