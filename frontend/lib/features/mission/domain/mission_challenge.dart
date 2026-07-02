@@ -129,7 +129,7 @@ class MissionChallenge {
       description: map['description'] as String? ?? '',
       dialogue: map['dialogue'] as String? ?? '',
       conditionLabel: map['conditionLabel'] as String? ?? '',
-      rewardType: _missionRewardTypeFromApi(map['rewardType'] as String?),
+      rewardType: missionRewardTypeFromApi(map['rewardType'] as String?),
       rewardLabel: map['rewardLabel'] as String? ?? '',
       progress: _intFromJson(map['progress'], fallback: 0),
       target: _intFromJson(map['target'], fallback: 1),
@@ -184,7 +184,7 @@ MissionStatus _missionStatusFromApi(String? value) {
   };
 }
 
-MissionRewardType _missionRewardTypeFromApi(String? value) {
+MissionRewardType missionRewardTypeFromApi(String? value) {
   return switch (value) {
     'COUPON' => MissionRewardType.coupon,
     'ITEM' => MissionRewardType.item,

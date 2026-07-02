@@ -37,8 +37,8 @@ class MissionRepository {
       (json) {
         final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
         return MissionCompletionResult(
-          id: (data['missionId'] as Object?).toString(),
-          rewardType: _rewardTypeFromComplete(data['rewardType'] as String?),
+          id: data['missionId']?.toString() ?? '',
+          rewardType: missionRewardTypeFromApi(data['rewardType'] as String?),
           rewardLabel: data['rewardLabel'] as String? ?? '',
         );
       },
@@ -89,13 +89,4 @@ class MissionCompletionResult {
   final String id;
   final MissionRewardType rewardType;
   final String rewardLabel;
-}
-
-MissionRewardType _rewardTypeFromComplete(String? value) {
-  return switch (value) {
-    'COUPON' => MissionRewardType.coupon,
-    'ITEM' => MissionRewardType.item,
-    'COIN' => MissionRewardType.coin,
-    _ => MissionRewardType.potato,
-  };
 }

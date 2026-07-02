@@ -22,6 +22,7 @@ class MissionScreen extends ConsumerStatefulWidget {
 class _MissionScreenState extends ConsumerState<MissionScreen> {
   MissionGroup? _selectedGroup;
   String? _selectedMissionId;
+  bool _isCompleting = false;
 
   List<MissionChallenge> _filteredMissions(List<MissionChallenge> missions) {
     final selectedGroup = _selectedGroup;
@@ -47,6 +48,10 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Future<void> _completeMission(MissionChallenge mission) async {
+    if (_isCompleting) {
+      return;
+    }
+    setState(() => _isCompleting = true);
     try {
       final completedMission =
           await ref.read(missionsProvider.notifier).complete(mission.id);
@@ -64,6 +69,10 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         return;
       }
       _showSnackBar('미션 완료에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      if (mounted) {
+        setState(() => _isCompleting = false);
+      }
     }
   }
 
@@ -85,13 +94,24 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       return _MissionDetailView(
         mission: selectedMission,
         onBack: _closeMissionDetail,
-        onComplete: () => _completeMission(selectedMission),
+        onComplete:
+            _isCompleting ? null : () => _completeMission(selectedMission),
       );
     }
 
     if (selectedMissionId != null && missionsState.isLoading) {
       return const _MissionScaffold(
         child: _MissionLoadingState(),
+      );
+    }
+
+    if (selectedMissionId != null && missionsState.hasError) {
+      final error = missionsState.error;
+      return _MissionScaffold(
+        child: _MissionErrorState(
+          message: error is ApiException ? error.message : '미션 정보를 불러오지 못했습니다.',
+          onRetry: () => ref.read(missionsProvider.notifier).load(),
+        ),
       );
     }
 
@@ -573,7 +593,7 @@ class _MissionDetailView extends StatelessWidget {
 
   final MissionChallenge mission;
   final VoidCallback onBack;
-  final VoidCallback onComplete;
+  final VoidCallback? onComplete;
 
   @override
   Widget build(BuildContext context) {

@@ -84,6 +84,25 @@ void main() {
     expect(find.text('미션 완료!'), findsNothing);
   });
 
+  testWidgets('prevents duplicate completion requests while submitting',
+      (tester) async {
+    final repository = _FakeMissionRepository(
+      completeDelay: const Duration(milliseconds: 120),
+    );
+    await _pumpMissionScreen(tester, repository: repository);
+
+    await tester.tap(find.text('정선 5일장 곤드레 퀴즈'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.completeCallCount, 1);
+    expect(find.text('미션 완료!'), findsOneWidget);
+  });
+
   testWidgets('disables completion action for completed missions',
       (tester) async {
     await _pumpMissionScreen(tester);
@@ -123,15 +142,24 @@ Future<void> _pumpMissionScreen(
 }
 
 class _FakeMissionRepository extends MissionRepository {
-  _FakeMissionRepository({this.completeError}) : super(dio: Dio());
+  _FakeMissionRepository({
+    this.completeError,
+    this.completeDelay = Duration.zero,
+  }) : super(dio: Dio());
 
   final Object? completeError;
+  final Duration completeDelay;
+  int completeCallCount = 0;
 
   @override
   Future<List<MissionChallenge>> fetchMissions() async => _missions;
 
   @override
   Future<MissionCompletionResult> completeMission(String missionId) async {
+    completeCallCount += 1;
+    if (completeDelay > Duration.zero) {
+      await Future<void>.delayed(completeDelay);
+    }
     final error = completeError;
     if (error != null) {
       throw error;
