@@ -14,7 +14,7 @@ void main() {
 
     expect(find.text('미션'), findsOneWidget);
     expect(find.text('점순이와 함께 도전해요'), findsOneWidget);
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('안목 해변에서 하지감자 찾기'), findsOneWidget);
     expect(find.text('점순이'), findsNothing);
     expect(find.text('일일'), findsOneWidget);
     expect(find.text('주간'), findsOneWidget);
@@ -41,14 +41,15 @@ void main() {
       (tester) async {
     await _pumpMissionScreen(tester);
 
-    await tester.tap(find.text('정선 5일장 곤드레 퀴즈'));
-    await tester.pumpAndSettle();
+    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
 
     expect(find.text('점순이의 미션'), findsOneWidget);
     expect(find.text('퀴즈 풀기'), findsOneWidget);
     expect(find.textContaining('황금감자 성장 아이템'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('곤드레감자'));
     await tester.pumpAndSettle();
 
     expect(find.text('미션 완료!'), findsOneWidget);
@@ -60,6 +61,60 @@ void main() {
     final completedButton = tester
         .widget<FilledButton>(find.widgetWithText(FilledButton, '완료된 미션'));
     expect(completedButton.onPressed, isNull);
+  });
+
+  testWidgets('does not complete quiz mission when selected answer is wrong',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    await _pumpMissionScreen(tester, repository: repository);
+
+    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
+
+    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('옥수수감자'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('정답이 틀렸습니다. 다시 풀어주세요.'), findsOneWidget);
+    expect(find.text('미션 완료!'), findsNothing);
+    expect(repository.completeCallCount, 0);
+  });
+
+  testWidgets('does not complete step mission before target progress',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    await _pumpMissionScreen(tester, repository: repository);
+
+    await tester.tap(find.text('일일').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('10,000걸음 걷기'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '걸음 인증하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('걸음을 다 채우고 재시도해주세요.'), findsOneWidget);
+    expect(find.text('미션 완료!'), findsNothing);
+    expect(repository.completeCallCount, 0);
+  });
+
+  testWidgets('completes photo mission after selecting upload source',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    await _pumpMissionScreen(tester, repository: repository);
+
+    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+
+    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.pumpAndSettle();
+    expect(find.text('카메라로 촬영하기'), findsOneWidget);
+    expect(find.text('갤러리에서 선택하기'), findsOneWidget);
+
+    await tester.tap(find.text('갤러리에서 선택하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 완료!'), findsOneWidget);
+    expect(repository.completeCallCount, 1);
   });
 
   testWidgets('shows failure message when completion API rejects',
@@ -74,10 +129,11 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('정선 5일장 곤드레 퀴즈'));
-    await tester.pumpAndSettle();
+    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
 
     await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('곤드레감자'));
     await tester.pumpAndSettle();
 
     expect(find.text('이미 완료한 미션입니다.'), findsOneWidget);
@@ -91,12 +147,11 @@ void main() {
     );
     await _pumpMissionScreen(tester, repository: repository);
 
-    await tester.tap(find.text('정선 5일장 곤드레 퀴즈'));
-    await tester.pumpAndSettle();
+    await _openMission(tester, '시군 2곳 방문하기');
 
-    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
+    await tester.tap(find.widgetWithText(FilledButton, '미션 인증하기'));
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
+    await tester.tap(find.widgetWithText(FilledButton, '미션 인증하기'));
     await tester.pumpAndSettle();
 
     expect(repository.completeCallCount, 1);
@@ -122,6 +177,18 @@ void main() {
 
     expect(find.text('미션 완료!'), findsNothing);
   });
+
+  testWidgets('sorts completed missions below actionable missions',
+      (tester) async {
+    await _pumpMissionScreen(tester);
+
+    await tester.tap(find.text('일일').first);
+    await tester.pumpAndSettle();
+
+    final stepTop = tester.getTopLeft(find.text('10,000걸음 걷기')).dy;
+    final completedTop = tester.getTopLeft(find.text('스탬프 1개 획득하기')).dy;
+    expect(stepTop, lessThan(completedTop));
+  });
 }
 
 Future<void> _pumpMissionScreen(
@@ -138,6 +205,18 @@ Future<void> _pumpMissionScreen(
       child: const MaterialApp(home: MissionScreen()),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openMission(WidgetTester tester, String title) async {
+  await tester.scrollUntilVisible(
+    find.text(title),
+    220,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(find.text(title));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(title));
   await tester.pumpAndSettle();
 }
 
@@ -190,6 +269,22 @@ const _missions = [
     progress: 0,
     target: 1,
     isNew: true,
+  ),
+  MissionChallenge(
+    id: '1002',
+    group: MissionGroup.jumsooni,
+    type: MissionType.photoOcr,
+    status: MissionStatus.ready,
+    title: '안목 해변에서 하지감자 찾기',
+    spotName: '안목 커피거리',
+    cityName: '강릉시',
+    description: '안목 커피거리 가맹점 매장 영수증 또는 간판을 촬영하세요.',
+    dialogue: '여가 그 유명한 안목 커피거리다 얘!',
+    conditionLabel: '영수증 또는 간판 사진 인증',
+    rewardType: MissionRewardType.potato,
+    rewardLabel: '하지감자 씨앗',
+    progress: 0,
+    target: 1,
   ),
   MissionChallenge(
     id: 'daily-steps',

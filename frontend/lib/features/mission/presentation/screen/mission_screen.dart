@@ -26,10 +26,10 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
   List<MissionChallenge> _filteredMissions(List<MissionChallenge> missions) {
     final selectedGroup = _selectedGroup;
-    if (selectedGroup == null) {
-      return missions;
-    }
-    return missions.where((mission) => mission.group == selectedGroup).toList();
+    final filtered = selectedGroup == null
+        ? missions
+        : missions.where((mission) => mission.group == selectedGroup).toList();
+    return [...filtered]..sort(_compareMissionPriority);
   }
 
   void _showMissionDetail(String missionId) {
@@ -76,6 +76,56 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     }
   }
 
+  Future<void> _startMission(MissionChallenge mission) async {
+    final verified = await switch (mission.type) {
+      MissionType.quiz => _showQuizChallenge(mission),
+      MissionType.visitAndStep => _verifyStepMission(mission),
+      MissionType.photo || MissionType.photoOcr => _showPhotoChallenge(mission),
+      _ => Future<bool>.value(true),
+    };
+    if (!mounted || !verified) {
+      return;
+    }
+    await _completeMission(mission);
+  }
+
+  Future<bool> _showQuizChallenge(MissionChallenge mission) async {
+    final correct = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MissionQuizSheet(mission: mission),
+    );
+    if (correct == true) {
+      return true;
+    }
+    if (mounted && correct == false) {
+      _showSnackBar('정답이 틀렸습니다. 다시 풀어주세요.');
+    }
+    return false;
+  }
+
+  Future<bool> _verifyStepMission(MissionChallenge mission) async {
+    if (mission.progress >= mission.target) {
+      return true;
+    }
+    _showSnackBar('걸음을 다 채우고 재시도해주세요.');
+    return false;
+  }
+
+  Future<bool> _showPhotoChallenge(MissionChallenge mission) async {
+    final uploaded = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MissionPhotoSheet(mission: mission),
+    );
+    if (uploaded == true) {
+      return true;
+    }
+    return false;
+  }
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -94,8 +144,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       return _MissionDetailView(
         mission: selectedMission,
         onBack: _closeMissionDetail,
-        onComplete:
-            _isCompleting ? null : () => _completeMission(selectedMission),
+        onComplete: _isCompleting ? null : () => _startMission(selectedMission),
       );
     }
 
@@ -182,6 +231,24 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       ),
     );
   }
+}
+
+int _compareMissionPriority(MissionChallenge a, MissionChallenge b) {
+  final priority = _missionSortPriority(a).compareTo(_missionSortPriority(b));
+  if (priority != 0) {
+    return priority;
+  }
+  return a.title.compareTo(b.title);
+}
+
+int _missionSortPriority(MissionChallenge mission) {
+  if (mission.status == MissionStatus.completed) {
+    return 3;
+  }
+  if (!mission.active || mission.status == MissionStatus.locked) {
+    return 2;
+  }
+  return 1;
 }
 
 class _MissionScaffold extends StatelessWidget {
@@ -920,6 +987,214 @@ class _MissionConditionPanel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MissionQuizSheet extends StatelessWidget {
+  const _MissionQuizSheet({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    const correctAnswer = '곤드레감자';
+    final answers = [
+      correctAnswer,
+      '옥수수감자',
+      '메밀감자',
+    ];
+
+    return _MissionActionSheet(
+      title: '퀴즈 풀기',
+      subtitle: mission.title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '정선 향토 음식 미션에서 점순이가 찾는 감자는 무엇일까요?',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final answer in answers) ...[
+            _MissionSheetButton(
+              icon: Icons.check_circle_outline_rounded,
+              label: answer,
+              onTap: () => Navigator.of(context).pop(answer == correctAnswer),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionPhotoSheet extends StatelessWidget {
+  const _MissionPhotoSheet({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return _MissionActionSheet(
+      title: '인증샷 업로드',
+      subtitle: mission.title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '이미지가 업로드되어야 미션을 완료할 수 있어요.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _MissionSheetButton(
+            icon: Icons.photo_camera_rounded,
+            label: '카메라로 촬영하기',
+            onTap: () => Navigator.of(context).pop(true),
+          ),
+          const SizedBox(height: 8),
+          _MissionSheetButton(
+            icon: Icons.photo_library_rounded,
+            label: '갤러리에서 선택하기',
+            onTap: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionActionSheet extends StatelessWidget {
+  const _MissionActionSheet({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+        ),
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: '닫기',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                child,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionSheetButton extends StatelessWidget {
+  const _MissionSheetButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFEAF8EF),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, color: _missionPrimary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
