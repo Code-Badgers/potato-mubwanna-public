@@ -51,6 +51,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('곤드레감자'));
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
+    await tester.pumpAndSettle();
 
     expect(find.text('미션 완료!'), findsOneWidget);
     expect(find.text('황금감자 성장 아이템을 획득했어요.'), findsOneWidget);
@@ -73,6 +75,8 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('옥수수감자'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('정답이 틀렸습니다. 다시 풀어주세요.'), findsOneWidget);
@@ -112,6 +116,11 @@ void main() {
 
     await tester.tap(find.text('갤러리에서 선택하기'));
     await tester.pumpAndSettle();
+    expect(find.text('갤러리 선택 이미지'), findsOneWidget);
+    expect(find.text('업로드 준비 완료'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, '인증 완료하기'));
+    await tester.pumpAndSettle();
 
     expect(find.text('미션 완료!'), findsOneWidget);
     expect(repository.completeCallCount, 1);
@@ -134,6 +143,8 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('곤드레감자'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('이미 완료한 미션입니다.'), findsOneWidget);

@@ -1011,7 +1011,7 @@ class _MissionConditionPanel extends StatelessWidget {
   }
 }
 
-class _MissionQuizSheet extends StatelessWidget {
+class _MissionQuizSheet extends StatefulWidget {
   const _MissionQuizSheet({
     required this.mission,
     required this.options,
@@ -1021,10 +1021,17 @@ class _MissionQuizSheet extends StatelessWidget {
   final List<String> options;
 
   @override
+  State<_MissionQuizSheet> createState() => _MissionQuizSheetState();
+}
+
+class _MissionQuizSheetState extends State<_MissionQuizSheet> {
+  String? _selectedAnswer;
+
+  @override
   Widget build(BuildContext context) {
     return _MissionActionSheet(
       title: '퀴즈 풀기',
-      subtitle: mission.title,
+      subtitle: widget.mission.title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1039,30 +1046,58 @@ class _MissionQuizSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          for (final answer in options) ...[
-            _MissionSheetButton(
-              icon: Icons.check_circle_outline_rounded,
+          for (final answer in widget.options) ...[
+            _MissionChoiceButton(
               label: answer,
-              onTap: () => Navigator.of(context).pop(answer),
+              selected: _selectedAnswer == answer,
+              onTap: () => setState(() => _selectedAnswer = answer),
             ),
             const SizedBox(height: 8),
           ],
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: _selectedAnswer == null
+                ? null
+                : () => Navigator.of(context).pop(_selectedAnswer),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              backgroundColor: _missionPrimary,
+              foregroundColor: AppColors.surface,
+              disabledBackgroundColor: _missionLine,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            child: const Text('정답 제출하기'),
+          ),
         ],
       ),
     );
   }
 }
 
-class _MissionPhotoSheet extends StatelessWidget {
+class _MissionPhotoSheet extends StatefulWidget {
   const _MissionPhotoSheet({required this.mission});
 
   final MissionChallenge mission;
 
   @override
+  State<_MissionPhotoSheet> createState() => _MissionPhotoSheetState();
+}
+
+class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
+  String? _selectedSourceLabel;
+
+  @override
   Widget build(BuildContext context) {
     return _MissionActionSheet(
       title: '인증샷 업로드',
-      subtitle: mission.title,
+      subtitle: widget.mission.title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1079,13 +1114,39 @@ class _MissionPhotoSheet extends StatelessWidget {
           _MissionSheetButton(
             icon: Icons.photo_camera_rounded,
             label: '카메라로 촬영하기',
-            onTap: () => Navigator.of(context).pop(true),
+            onTap: () => setState(() => _selectedSourceLabel = '카메라 촬영 이미지'),
           ),
           const SizedBox(height: 8),
           _MissionSheetButton(
             icon: Icons.photo_library_rounded,
             label: '갤러리에서 선택하기',
-            onTap: () => Navigator.of(context).pop(true),
+            onTap: () => setState(() => _selectedSourceLabel = '갤러리 선택 이미지'),
+          ),
+          if (_selectedSourceLabel != null) ...[
+            const SizedBox(height: 14),
+            _MissionUploadPreview(label: _selectedSourceLabel!),
+          ],
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _selectedSourceLabel == null
+                ? null
+                : () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.cloud_done_rounded),
+            label: const Text('인증 완료하기'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              backgroundColor: _missionPrimary,
+              foregroundColor: AppColors.surface,
+              disabledBackgroundColor: _missionLine,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
           ),
         ],
       ),
@@ -1166,6 +1227,125 @@ class _MissionActionSheet extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MissionChoiceButton extends StatelessWidget {
+  const _MissionChoiceButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? const Color(0xFFE1F7EA) : AppColors.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? _missionPrimary : _missionLine,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color: selected ? _missionPrimary : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionUploadPreview extends StatelessWidget {
+  const _MissionUploadPreview({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF8EF),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFD5EFDE)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.image_rounded,
+              color: _missionPrimary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  '업로드 준비 완료',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
