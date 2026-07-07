@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../application/mission_controller.dart';
 import '../../domain/mission_challenge.dart';
 
@@ -21,13 +22,14 @@ class MissionScreen extends ConsumerStatefulWidget {
 class _MissionScreenState extends ConsumerState<MissionScreen> {
   MissionGroup? _selectedGroup;
   String? _selectedMissionId;
+  bool _isCompleting = false;
 
   List<MissionChallenge> _filteredMissions(List<MissionChallenge> missions) {
     final selectedGroup = _selectedGroup;
-    if (selectedGroup == null) {
-      return missions;
-    }
-    return missions.where((mission) => mission.group == selectedGroup).toList();
+    final filtered = selectedGroup == null
+        ? missions
+        : missions.where((mission) => mission.group == selectedGroup).toList();
+    return [...filtered]..sort(_compareMissionPriority);
   }
 
   void _showMissionDetail(String missionId) {
@@ -45,9 +47,94 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 
+  Future<void> _completeMission(MissionChallenge mission) async {
+    if (_isCompleting) {
+      return;
+    }
+    setState(() => _isCompleting = true);
+    try {
+      final completedMission =
+          await ref.read(missionsProvider.notifier).complete(mission.id);
+      if (!mounted) {
+        return;
+      }
+      _showRewardDialog(completedMission);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(error.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar('미션 완료에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      if (mounted) {
+        setState(() => _isCompleting = false);
+      }
+    }
+  }
+
+  Future<void> _startMission(MissionChallenge mission) async {
+    final verified = await switch (mission.type) {
+      MissionType.quiz => _showQuizChallenge(mission),
+      MissionType.visitAndStep => _verifyStepMission(mission),
+      MissionType.photo || MissionType.photoOcr => _showPhotoChallenge(mission),
+      _ => Future<bool>.value(true),
+    };
+    if (!mounted || !verified) {
+      return;
+    }
+    await _completeMission(mission);
+  }
+
+  Future<bool> _showQuizChallenge(MissionChallenge mission) async {
+    final correct = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MissionQuizSheet(mission: mission),
+    );
+    if (correct == true) {
+      return true;
+    }
+    if (mounted && correct == false) {
+      _showSnackBar('정답이 틀렸습니다. 다시 풀어주세요.');
+    }
+    return false;
+  }
+
+  Future<bool> _verifyStepMission(MissionChallenge mission) async {
+    if (mission.progress >= mission.target) {
+      return true;
+    }
+    _showSnackBar('걸음을 다 채우고 재시도해주세요.');
+    return false;
+  }
+
+  Future<bool> _showPhotoChallenge(MissionChallenge mission) async {
+    final uploaded = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MissionPhotoSheet(mission: mission),
+    );
+    if (uploaded == true) {
+      return true;
+    }
+    return false;
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final missions = ref.watch(missionsProvider);
+    final missionsState = ref.watch(missionsProvider);
     final selectedMissionId = _selectedMissionId;
     final selectedMission = selectedMissionId == null
         ? null
@@ -57,10 +144,50 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       return _MissionDetailView(
         mission: selectedMission,
         onBack: _closeMissionDetail,
-        onComplete: () => _showRewardDialog(selectedMission),
+        onComplete: _isCompleting ? null : () => _startMission(selectedMission),
       );
     }
 
+    if (selectedMissionId != null && missionsState.isLoading) {
+      return const _MissionScaffold(
+        child: _MissionLoadingState(),
+      );
+    }
+
+    if (selectedMissionId != null && missionsState.hasError) {
+      final error = missionsState.error;
+      return _MissionScaffold(
+        child: _MissionErrorState(
+          message: error is ApiException ? error.message : '미션 정보를 불러오지 못했습니다.',
+          onRetry: () => ref.read(missionsProvider.notifier).load(),
+        ),
+      );
+    }
+
+    if (selectedMissionId != null && selectedMission == null) {
+      return _MissionScaffold(
+        child: _MissionErrorState(
+          message: '미션 정보를 찾지 못했습니다.',
+          onRetry: _closeMissionDetail,
+        ),
+      );
+    }
+
+    return missionsState.when(
+      loading: () => const _MissionScaffold(
+        child: _MissionLoadingState(),
+      ),
+      error: (error, _) => _MissionScaffold(
+        child: _MissionErrorState(
+          message: error is ApiException ? error.message : '미션 정보를 불러오지 못했습니다.',
+          onRetry: () => ref.read(missionsProvider.notifier).load(),
+        ),
+      ),
+      data: _buildMissionList,
+    );
+  }
+
+  Widget _buildMissionList(List<MissionChallenge> missions) {
     final filteredMissions = _filteredMissions(missions);
     final completedCount = missions
         .where((mission) => mission.status == MissionStatus.completed)
@@ -85,19 +212,143 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-              sliver: SliverList.separated(
-                itemCount: filteredMissions.length,
-                itemBuilder: (_, index) {
-                  final mission = filteredMissions[index];
-                  return _MissionCard(
-                    mission: mission,
-                    onTap: () => _showMissionDetail(mission.id),
-                  );
-                },
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-              ),
+              sliver: filteredMissions.isEmpty
+                  ? const SliverToBoxAdapter(child: _MissionEmptyState())
+                  : SliverList.separated(
+                      itemCount: filteredMissions.length,
+                      itemBuilder: (_, index) {
+                        final mission = filteredMissions[index];
+                        return _MissionCard(
+                          mission: mission,
+                          onTap: () => _showMissionDetail(mission.id),
+                        );
+                      },
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+int _compareMissionPriority(MissionChallenge a, MissionChallenge b) {
+  final priority = _missionSortPriority(a).compareTo(_missionSortPriority(b));
+  if (priority != 0) {
+    return priority;
+  }
+  return a.title.compareTo(b.title);
+}
+
+int _missionSortPriority(MissionChallenge mission) {
+  if (mission.status == MissionStatus.completed) {
+    return 3;
+  }
+  if (!mission.active || mission.status == MissionStatus.locked) {
+    return 2;
+  }
+  return 1;
+}
+
+class _MissionScaffold extends StatelessWidget {
+  const _MissionScaffold({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(child: child),
+    );
+  }
+}
+
+class _MissionLoadingState extends StatelessWidget {
+  const _MissionLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(color: _missionPrimary),
+    );
+  }
+}
+
+class _MissionErrorState extends StatelessWidget {
+  const _MissionErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: _missionDark,
+              size: 42,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: onRetry,
+              style: FilledButton.styleFrom(
+                backgroundColor: _missionPrimary,
+                foregroundColor: AppColors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('다시 시도'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionEmptyState extends StatelessWidget {
+  const _MissionEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _missionLine),
+      ),
+      child: const Text(
+        '표시할 미션이 없습니다.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0,
         ),
       ),
     );
@@ -409,7 +660,7 @@ class _MissionDetailView extends StatelessWidget {
 
   final MissionChallenge mission;
   final VoidCallback onBack;
-  final VoidCallback onComplete;
+  final VoidCallback? onComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -470,6 +721,7 @@ class _MissionDetailView extends StatelessWidget {
   static IconData _actionIcon(MissionType type) {
     return switch (type) {
       MissionType.photo => Icons.camera_alt_rounded,
+      MissionType.photoOcr => Icons.document_scanner_rounded,
       MissionType.qrScan => Icons.qr_code_scanner_rounded,
       MissionType.quiz => Icons.quiz_rounded,
       MissionType.visitAndStep => Icons.directions_walk_rounded,
@@ -483,6 +735,7 @@ class _MissionDetailView extends StatelessWidget {
     }
     return switch (mission.type) {
       MissionType.photo => '사진 인증하기',
+      MissionType.photoOcr => '촬영 인증하기',
       MissionType.qrScan => 'QR 스캔하기',
       MissionType.quiz => '퀴즈 풀기',
       MissionType.visitAndStep => '걸음 인증하기',
@@ -734,6 +987,214 @@ class _MissionConditionPanel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MissionQuizSheet extends StatelessWidget {
+  const _MissionQuizSheet({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    const correctAnswer = '곤드레감자';
+    final answers = [
+      correctAnswer,
+      '옥수수감자',
+      '메밀감자',
+    ];
+
+    return _MissionActionSheet(
+      title: '퀴즈 풀기',
+      subtitle: mission.title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '정선 향토 음식 미션에서 점순이가 찾는 감자는 무엇일까요?',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final answer in answers) ...[
+            _MissionSheetButton(
+              icon: Icons.check_circle_outline_rounded,
+              label: answer,
+              onTap: () => Navigator.of(context).pop(answer == correctAnswer),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionPhotoSheet extends StatelessWidget {
+  const _MissionPhotoSheet({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return _MissionActionSheet(
+      title: '인증샷 업로드',
+      subtitle: mission.title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '이미지가 업로드되어야 미션을 완료할 수 있어요.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _MissionSheetButton(
+            icon: Icons.photo_camera_rounded,
+            label: '카메라로 촬영하기',
+            onTap: () => Navigator.of(context).pop(true),
+          ),
+          const SizedBox(height: 8),
+          _MissionSheetButton(
+            icon: Icons.photo_library_rounded,
+            label: '갤러리에서 선택하기',
+            onTap: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionActionSheet extends StatelessWidget {
+  const _MissionActionSheet({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+        ),
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: '닫기',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                child,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionSheetButton extends StatelessWidget {
+  const _MissionSheetButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFEAF8EF),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, color: _missionPrimary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

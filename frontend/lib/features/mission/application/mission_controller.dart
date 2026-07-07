@@ -1,19 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/application/auth_controller.dart';
 import '../data/mission_repository.dart';
 import '../domain/mission_challenge.dart';
 
 final missionRepositoryProvider = Provider<MissionRepository>(
-  (_) => const MissionRepository(),
+  (ref) => MissionRepository(dio: ref.watch(dioClientProvider).dio),
 );
 
-final missionsProvider = Provider<List<MissionChallenge>>(
-  (ref) => ref.watch(missionRepositoryProvider).fetchMissions(),
+final missionsProvider = StateNotifierProvider<MissionController,
+    AsyncValue<List<MissionChallenge>>>(
+  (ref) => MissionController(ref.watch(missionRepositoryProvider))..load(),
 );
 
 final missionByIdProvider = Provider.family<MissionChallenge?, String>(
   (ref, missionId) {
-    for (final mission in ref.watch(missionsProvider)) {
+    final missions = ref.watch(missionsProvider).valueOrNull ?? const [];
+    for (final mission in missions) {
       if (mission.id == missionId) {
         return mission;
       }
@@ -21,3 +24,34 @@ final missionByIdProvider = Provider.family<MissionChallenge?, String>(
     return null;
   },
 );
+
+class MissionController
+    extends StateNotifier<AsyncValue<List<MissionChallenge>>> {
+  MissionController(this._repository) : super(const AsyncValue.loading());
+
+  final MissionRepository _repository;
+
+  Future<void> load() async {
+    state = const AsyncValue.loading();
+    try {
+      state = AsyncValue.data(await _repository.fetchMissions());
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+
+  Future<MissionChallenge> complete(String missionId) async {
+    final missions = state.valueOrNull ?? const <MissionChallenge>[];
+    final mission = missions.firstWhere((mission) => mission.id == missionId);
+    await _repository.completeMission(missionId);
+    final completedMission = mission.copyWith(
+      status: MissionStatus.completed,
+      progress: mission.target,
+    );
+    state = AsyncValue.data([
+      for (final item in missions)
+        if (item.id == missionId) completedMission else item,
+    ]);
+    return completedMission;
+  }
+}
