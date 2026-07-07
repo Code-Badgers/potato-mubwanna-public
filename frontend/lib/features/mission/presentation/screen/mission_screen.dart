@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/mission_controller.dart';
 import '../../domain/mission_challenge.dart';
+import '../../domain/mission_verification.dart';
 
 const _missionPrimary = Color(0xFF56C787);
 const _missionDark = Color(0xFF6A4A2A);
@@ -20,6 +21,8 @@ class MissionScreen extends ConsumerStatefulWidget {
 }
 
 class _MissionScreenState extends ConsumerState<MissionScreen> {
+  static const _verificationService = MissionVerificationService();
+
   MissionGroup? _selectedGroup;
   String? _selectedMissionId;
   bool _isCompleting = false;
@@ -90,27 +93,36 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Future<bool> _showQuizChallenge(MissionChallenge mission) async {
-    final correct = await showModalBottomSheet<bool>(
+    final selectedAnswer = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _MissionQuizSheet(mission: mission),
+      builder: (_) => _MissionQuizSheet(
+        mission: mission,
+        options: _verificationService.quizOptions(mission),
+      ),
     );
-    if (correct == true) {
-      return true;
+    if (selectedAnswer == null) {
+      return false;
     }
-    if (mounted && correct == false) {
-      _showSnackBar('정답이 틀렸습니다. 다시 풀어주세요.');
+    final result = _verificationService.verifyQuizAnswer(
+      mission: mission,
+      selectedAnswer: selectedAnswer,
+    );
+    if (!result.canComplete) {
+      _showSnackBar(result.message);
+      return false;
     }
-    return false;
+    return true;
   }
 
   Future<bool> _verifyStepMission(MissionChallenge mission) async {
-    if (mission.progress >= mission.target) {
-      return true;
+    final result = _verificationService.verifyStepProgress(mission);
+    if (!result.canComplete) {
+      _showSnackBar(result.message);
+      return false;
     }
-    _showSnackBar('걸음을 다 채우고 재시도해주세요.');
-    return false;
+    return true;
   }
 
   Future<bool> _showPhotoChallenge(MissionChallenge mission) async {
@@ -120,10 +132,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _MissionPhotoSheet(mission: mission),
     );
-    if (uploaded == true) {
-      return true;
+    final result = _verificationService.verifyPhotoUpload(
+      mission: mission,
+      uploaded: uploaded == true,
+    );
+    if (!result.canComplete) {
+      if (uploaded == false) {
+        _showSnackBar(result.message);
+      }
+      return false;
     }
-    return false;
+    return true;
   }
 
   void _showSnackBar(String message) {
@@ -993,19 +1012,16 @@ class _MissionConditionPanel extends StatelessWidget {
 }
 
 class _MissionQuizSheet extends StatelessWidget {
-  const _MissionQuizSheet({required this.mission});
+  const _MissionQuizSheet({
+    required this.mission,
+    required this.options,
+  });
 
   final MissionChallenge mission;
+  final List<String> options;
 
   @override
   Widget build(BuildContext context) {
-    const correctAnswer = '곤드레감자';
-    final answers = [
-      correctAnswer,
-      '옥수수감자',
-      '메밀감자',
-    ];
-
     return _MissionActionSheet(
       title: '퀴즈 풀기',
       subtitle: mission.title,
@@ -1023,11 +1039,11 @@ class _MissionQuizSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          for (final answer in answers) ...[
+          for (final answer in options) ...[
             _MissionSheetButton(
               icon: Icons.check_circle_outline_rounded,
               label: answer,
-              onTap: () => Navigator.of(context).pop(answer == correctAnswer),
+              onTap: () => Navigator.of(context).pop(answer),
             ),
             const SizedBox(height: 8),
           ],
