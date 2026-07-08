@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.mission.application.MissionAlreadyCompletedException;
 import com.gamjamubwatna.mission.application.MissionService;
+import com.gamjamubwatna.mission.application.MissionVerificationException;
 import com.gamjamubwatna.mission.domain.MissionGroup;
 import com.gamjamubwatna.mission.domain.MissionRewardType;
 import com.gamjamubwatna.mission.domain.MissionStatus;
@@ -83,6 +84,55 @@ class MissionControllerTest {
     }
 
     @Test
+    void verifiesMission() throws Exception {
+        when(missionService.verifyMission(eq(1L), eq(1L), anyVerifyRequest()))
+            .thenReturn(new MissionVerifyResponse(
+                1L,
+                true,
+                true,
+                Instant.parse("2026-07-01T00:00:00Z"),
+                MissionRewardType.ITEM,
+                "황금감자 성장 아이템"
+            ));
+
+        mockMvc.perform(post("/missions/1/verify")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {
+                      "type": "QUIZ",
+                      "answer": "곤드레감자"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.verified").value(true))
+            .andExpect(jsonPath("$.data.completed").value(true))
+            .andExpect(jsonPath("$.data.rewardLabel").value("황금감자 성장 아이템"));
+    }
+
+    @Test
+    void rejectsMissionVerificationFailure() throws Exception {
+        when(missionService.verifyMission(eq(1L), eq(1L), anyVerifyRequest()))
+            .thenThrow(new MissionVerificationException("정답이 틀렸습니다. 다시 풀어주세요."));
+
+        mockMvc.perform(post("/missions/1/verify")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {
+                      "type": "QUIZ",
+                      "answer": "옥수수감자"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("정답이 틀렸습니다. 다시 풀어주세요."));
+    }
+
+    @Test
     void rejectsDuplicateCompletion() throws Exception {
         when(missionService.completeMission(eq(1L), eq(1L)))
             .thenThrow(new MissionAlreadyCompletedException("이미 완료한 미션입니다."));
@@ -136,5 +186,9 @@ class MissionControllerTest {
             completed,
             completed ? Instant.parse("2026-07-01T00:00:00Z") : null
         );
+    }
+
+    private MissionVerifyRequest anyVerifyRequest() {
+        return org.mockito.ArgumentMatchers.any(MissionVerifyRequest.class);
     }
 }

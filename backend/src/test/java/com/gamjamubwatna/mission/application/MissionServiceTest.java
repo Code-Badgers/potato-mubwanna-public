@@ -12,6 +12,8 @@ import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.mission.api.MissionCompleteResponse;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
+import com.gamjamubwatna.mission.api.MissionVerifyRequest;
+import com.gamjamubwatna.mission.api.MissionVerifyResponse;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionGroup;
 import com.gamjamubwatna.mission.domain.MissionRepository;
@@ -111,6 +113,60 @@ class MissionServiceTest {
     }
 
     @Test
+    void verifiesQuizMissionBeforeCompletion() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_FIRST", MissionStatus.READY, true);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionVerifyResponse result = missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QUIZ, "곤드레감자", null, null, null)
+        );
+
+        assertThat(result.verified()).isTrue();
+        assertThat(result.completed()).isTrue();
+        assertThat(result.rewardLabel()).isEqualTo("황금감자 성장 아이템");
+    }
+
+    @Test
+    void rejectsWrongQuizAnswer() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(
+            mission(1L, "MISSION_FIRST", MissionStatus.READY, true)
+        ));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QUIZ, "옥수수감자", null, null, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("정답이 틀렸습니다. 다시 풀어주세요.");
+    }
+
+    @Test
+    void rejectsInsufficientStepCount() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(
+            mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP)
+        ));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.VISIT_AND_STEP, null, 0, null, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("걸음을 다 채우고 재시도해주세요.");
+    }
+
+    @Test
     void rejectsDuplicateCompletion() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(
@@ -142,10 +198,20 @@ class MissionServiceTest {
     }
 
     private Mission mission(Long id, String code, MissionStatus status, boolean active) {
+        return mission(id, code, status, active, MissionType.QUIZ);
+    }
+
+    private Mission mission(
+        Long id,
+        String code,
+        MissionStatus status,
+        boolean active,
+        MissionType type
+    ) {
         Mission mission = new Mission(
             code,
             MissionGroup.JUMSOONI,
-            MissionType.QUIZ,
+            type,
             status,
             "정선 5일장 곤드레 퀴즈",
             "정선 5일장",
