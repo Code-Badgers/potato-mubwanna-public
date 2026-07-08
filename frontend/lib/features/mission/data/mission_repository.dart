@@ -27,9 +27,20 @@ class MissionRepository {
   }
 
   Future<MissionCompletionResult> completeMission(String missionId) async {
+    return verifyMission(
+      missionId,
+      const MissionVerificationPayload(type: MissionType.visit),
+    );
+  }
+
+  Future<MissionCompletionResult> verifyMission(
+    String missionId,
+    MissionVerificationPayload payload,
+  ) async {
     final response = await _request(
       () => _dio.post<Map<String, dynamic>>(
-        '${ApiPaths.missions}/$missionId/complete',
+        '${ApiPaths.missions}/$missionId/verify',
+        data: payload.toJson(),
       ),
     );
     final apiResponse = ApiResponse<MissionCompletionResult>.fromJson(
@@ -79,6 +90,32 @@ class MissionRepository {
   }
 }
 
+class MissionVerificationPayload {
+  const MissionVerificationPayload({
+    required this.type,
+    this.answer,
+    this.stepCount,
+    this.uploadKey,
+    this.qrCode,
+  });
+
+  final MissionType type;
+  final String? answer;
+  final int? stepCount;
+  final String? uploadKey;
+  final String? qrCode;
+
+  Map<String, Object?> toJson() {
+    return {
+      'type': _missionTypeToApi(type),
+      if (answer != null) 'answer': answer,
+      if (stepCount != null) 'stepCount': stepCount,
+      if (uploadKey != null) 'uploadKey': uploadKey,
+      if (qrCode != null) 'qrCode': qrCode,
+    };
+  }
+}
+
 class MissionCompletionResult {
   const MissionCompletionResult({
     required this.id,
@@ -89,4 +126,17 @@ class MissionCompletionResult {
   final String id;
   final MissionRewardType rewardType;
   final String rewardLabel;
+}
+
+String _missionTypeToApi(MissionType type) {
+  return switch (type) {
+    MissionType.visit => 'VISIT',
+    MissionType.visitAndStep => 'VISIT_AND_STEP',
+    MissionType.photo => 'PHOTO',
+    MissionType.photoOcr => 'PHOTO_OCR',
+    MissionType.qrScan => 'QR_SCAN',
+    MissionType.quiz => 'QUIZ',
+    MissionType.stamp => 'STAMP',
+    MissionType.collection => 'COLLECTION',
+  };
 }

@@ -40,10 +40,13 @@ class MissionController
     }
   }
 
-  Future<MissionChallenge> complete(String missionId) async {
+  Future<MissionChallenge> complete(
+    String missionId,
+    MissionVerificationPayload payload,
+  ) async {
     final missions = state.valueOrNull ?? const <MissionChallenge>[];
     final mission = missions.firstWhere((mission) => mission.id == missionId);
-    await _repository.completeMission(missionId);
+    await _repository.verifyMission(missionId, payload);
     final completedMission = mission.copyWith(
       status: MissionStatus.completed,
       progress: mission.target,
