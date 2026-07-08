@@ -65,7 +65,7 @@ class MissionVerificationService {
       answer,
       '옥수수감자',
       '메밀감자',
-    ];
+    ]..shuffle();
   }
 
   String quizCorrectAnswer(MissionChallenge mission) {
