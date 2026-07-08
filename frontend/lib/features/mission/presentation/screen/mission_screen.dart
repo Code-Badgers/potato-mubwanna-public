@@ -132,14 +132,15 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _MissionPhotoSheet(mission: mission),
     );
+    if (uploaded == null) {
+      return false;
+    }
     final result = _verificationService.verifyPhotoUpload(
       mission: mission,
-      uploaded: uploaded == true,
+      uploaded: uploaded,
     );
     if (!result.canComplete) {
-      if (uploaded == false) {
-        _showSnackBar(result.message);
-      }
+      _showSnackBar(result.message);
       return false;
     }
     return true;
