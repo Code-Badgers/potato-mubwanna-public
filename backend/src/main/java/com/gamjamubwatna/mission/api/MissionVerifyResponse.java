@@ -11,15 +11,4 @@ public record MissionVerifyResponse(
     MissionRewardType rewardType,
     String rewardLabel
 ) {
-
-    public static MissionVerifyResponse from(MissionCompleteResponse response) {
-        return new MissionVerifyResponse(
-            response.missionId(),
-            true,
-            response.completed(),
-            response.completedAt(),
-            response.rewardType(),
-            response.rewardLabel()
-        );
-    }
 }
