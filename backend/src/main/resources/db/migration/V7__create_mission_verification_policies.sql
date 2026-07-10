@@ -11,9 +11,6 @@ CREATE TABLE mission_verification_policies (
     CONSTRAINT uk_mission_verification_policies_mission UNIQUE (mission_id)
 );
 
-CREATE INDEX idx_mission_verification_policies_mission_id
-    ON mission_verification_policies(mission_id);
-
 INSERT INTO mission_verification_policies (
     mission_id,
     verification_type,
