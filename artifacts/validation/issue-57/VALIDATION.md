@@ -15,6 +15,8 @@
 5. 프론트 `MissionRepository.verifyMission`과 `MissionVerificationPayload`를 추가했다.
 6. 미션 화면은 퀴즈/걸음/사진/QR 입력값을 payload로 만들어 서버 검증 API를 호출하도록 변경했다.
 7. 프론트 fake repository 테스트도 서버 검증 실패 흐름을 흉내 내도록 조정했다.
+8. PR 리뷰 반영으로 `completeMission`이 기존 `/missions/{missionId}/complete` endpoint를 계속 호출하도록 복원했다.
+9. PR 리뷰 반영으로 사용하지 않는 `MissionVerifyResponse.from(MissionCompleteResponse)` 정적 팩토리를 제거했다.
 
 ## 발생한 문제와 해결
 
@@ -24,6 +26,12 @@
   - 해결: `completeMission` 호환 wrapper의 payload 생성에 `const`를 추가했다.
 - `agents_docs`가 `.gitignore`에 포함되어 API 문서 변경이 일반 `git add`로 스테이징되지 않았다.
   - 해결: 이번 이슈 범위의 명시적 문서 변경이므로 `git add -f agents_docs/07_api_specification.md`로 스테이징했다.
+- `completeMission` 호환 메서드가 내부적으로 `/verify`에 `VISIT` 타입 payload를 보내고 있어 QUIZ, PHOTO 등 다른 타입 미션에 재사용될 때 타입 불일치가 발생할 수 있었다.
+  - 해결: `completeMission`은 기존 `/complete` endpoint를 호출하도록 복원하고, 회귀 테스트를 추가했다.
+- `MissionVerifyResponse.from(MissionCompleteResponse)`가 프로젝트 내에서 사용되지 않는 dead code였다.
+  - 해결: 미사용 정적 팩토리를 제거하고 백엔드 미션 테스트로 컴파일과 동작을 확인했다.
+- `flutter analyze`와 `flutter test`를 동시에 실행했을 때 Flutter startup lock 및 `ios/Flutter/ephemeral/Packages/.packages` 삭제 충돌이 발생했다.
+  - 해결: `flutter analyze` 완료 후 테스트를 단독 재실행하여 통과를 확인했다.
 
 ## 실행한 검증
 
@@ -32,14 +40,14 @@ cd backend && ./gradlew test --tests '*mission*'
 ```
 
 - 결과: 통과
-- 비고: 첫 실행에서 걸음 테스트 데이터 오류로 실패했고, 수정 후 재실행에서 통과했다.
+- 비고: 첫 실행에서 걸음 테스트 데이터 오류로 실패했고, 수정 후 재실행에서 통과했다. 리뷰 대응 후 dead code 제거 검증으로 재실행했고 통과했다.
 
 ```bash
 cd frontend && /Users/mac/Documents/flutter/bin/flutter test test/features/mission/mission_repository_test.dart test/features/mission/mission_verification_test.dart test/features/mission/mission_screen_test.dart
 ```
 
 - 결과: 통과
-- 비고: `flutter_secure_storage`의 iOS Swift Package Manager 미지원 경고가 출력되었으나 테스트 실패는 아님.
+- 비고: `flutter_secure_storage`의 iOS Swift Package Manager 미지원 경고가 출력되었으나 테스트 실패는 아님. 리뷰 대응 후 단독 재실행했고 통과했다.
 
 ```bash
 cd frontend && /Users/mac/Documents/flutter/bin/flutter analyze
