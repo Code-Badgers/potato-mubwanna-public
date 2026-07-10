@@ -74,6 +74,32 @@ void main() {
     expect(result.rewardLabel, '황금감자 성장 아이템');
   });
 
+  test('keeps completeMission compatible with complete endpoint', () async {
+    final requestedPaths = <String>[];
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestedPaths.add(options.path);
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: _missionCompleteResponse,
+              ),
+            );
+          },
+        ),
+      );
+
+    final result = await MissionRepository(dio: dio).completeMission('1004');
+
+    expect(requestedPaths, ['/missions/1004/complete']);
+    expect(result.id, '1004');
+    expect(result.rewardType, MissionRewardType.item);
+    expect(result.rewardLabel, '황금감자 성장 아이템');
+  });
+
   test('throws ApiException from failed completion response', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
       ..interceptors.add(

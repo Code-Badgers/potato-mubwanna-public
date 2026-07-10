@@ -27,10 +27,17 @@ class MissionRepository {
   }
 
   Future<MissionCompletionResult> completeMission(String missionId) async {
-    return verifyMission(
-      missionId,
-      const MissionVerificationPayload(type: MissionType.visit),
+    final response = await _request(
+      () => _dio.post<Map<String, dynamic>>(
+        '${ApiPaths.missions}/$missionId/complete',
+      ),
     );
+    final apiResponse = ApiResponse<MissionCompletionResult>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      (json) => MissionCompletionResult.fromJson(json),
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
   Future<MissionCompletionResult> verifyMission(
@@ -45,14 +52,7 @@ class MissionRepository {
     );
     final apiResponse = ApiResponse<MissionCompletionResult>.fromJson(
       response.data ?? const <String, dynamic>{},
-      (json) {
-        final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
-        return MissionCompletionResult(
-          id: data['missionId']?.toString() ?? '',
-          rewardType: missionRewardTypeFromApi(data['rewardType'] as String?),
-          rewardLabel: data['rewardLabel'] as String? ?? '',
-        );
-      },
+      (json) => MissionCompletionResult.fromJson(json),
     );
 
     return _requireData(apiResponse, statusCode: response.statusCode);
@@ -126,6 +126,15 @@ class MissionCompletionResult {
   final String id;
   final MissionRewardType rewardType;
   final String rewardLabel;
+
+  factory MissionCompletionResult.fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    return MissionCompletionResult(
+      id: data['missionId']?.toString() ?? '',
+      rewardType: missionRewardTypeFromApi(data['rewardType'] as String?),
+      rewardLabel: data['rewardLabel'] as String? ?? '',
+    );
+  }
 }
 
 String _missionTypeToApi(MissionType type) {
