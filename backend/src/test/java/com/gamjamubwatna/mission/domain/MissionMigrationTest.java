@@ -26,6 +26,9 @@ class MissionMigrationTest {
     private MissionRepository missionRepository;
 
     @Autowired
+    private MissionVerificationPolicyRepository missionVerificationPolicyRepository;
+
+    @Autowired
     private DataSource dataSource;
 
     @Test
@@ -39,6 +42,17 @@ class MissionMigrationTest {
         assertThat(missions)
             .extracting(Mission::getType)
             .contains(MissionType.PHOTO_OCR);
+    }
+
+    @Test
+    void seedsMissionVerificationPolicies() {
+        List<MissionVerificationPolicy> policies = missionVerificationPolicyRepository.findAll();
+
+        assertThat(policies).hasSize(17);
+        assertThat(missionVerificationPolicyRepository.findByMissionId(1L))
+            .get()
+            .extracting(MissionVerificationPolicy::getExpectedAnswer)
+            .isEqualTo("곤드레감자");
     }
 
     @Test
