@@ -172,10 +172,7 @@ public class MissionService {
         switch (mission.getType()) {
             case QUIZ -> validateQuiz(verificationPolicy(mission), request.answer());
             case VISIT_AND_STEP -> validateStep(verificationPolicy(mission), request.stepCount());
-            case PHOTO, PHOTO_OCR -> validateRequiredText(
-                requiredUploadKey(verificationPolicy(mission), request.uploadKey()),
-                "이미지를 업로드한 뒤 다시 시도해주세요."
-            );
+            case PHOTO, PHOTO_OCR -> validatePhoto(verificationPolicy(mission), request.uploadKey());
             case QR_SCAN -> validateQrCode(verificationPolicy(mission), request.qrCode());
             default -> {
                 // 위치/스탬프/수집형은 외부 센서 연동 전까지 활성 상태와 중복 완료 여부만 서버에서 확인한다.
@@ -204,16 +201,18 @@ public class MissionService {
 
     private void validateStep(MissionVerificationPolicy policy, Integer stepCount) {
         Integer minStepCount = policy.getMinStepCount();
-        if (minStepCount == null || stepCount == null || stepCount < minStepCount) {
+        if (minStepCount == null) {
+            throw new MissionVerificationException("미션 걸음 수 정책을 확인할 수 없습니다.");
+        }
+        if (stepCount == null || stepCount < minStepCount) {
             throw new MissionVerificationException("걸음을 다 채우고 재시도해주세요.");
         }
     }
 
-    private String requiredUploadKey(MissionVerificationPolicy policy, String uploadKey) {
-        if (Boolean.TRUE.equals(policy.isRequiredUpload())) {
-            return uploadKey;
+    private void validatePhoto(MissionVerificationPolicy policy, String uploadKey) {
+        if (policy.isRequiredUpload()) {
+            validateRequiredText(uploadKey, "이미지를 업로드한 뒤 다시 시도해주세요.");
         }
-        return "upload-not-required";
     }
 
     private void validateQrCode(MissionVerificationPolicy policy, String qrCode) {

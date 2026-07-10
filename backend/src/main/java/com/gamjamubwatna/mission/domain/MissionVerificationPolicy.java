@@ -46,7 +46,7 @@ public class MissionVerificationPolicy {
     private String expectedQrCode;
 
     @Column(name = "required_upload", nullable = false)
-    private Boolean requiredUpload;
+    private boolean requiredUpload;
 
     @Column(name = "min_step_count")
     private Integer minStepCount;
@@ -65,7 +65,7 @@ public class MissionVerificationPolicy {
         MissionType verificationType,
         String expectedAnswer,
         String expectedQrCode,
-        Boolean requiredUpload,
+        boolean requiredUpload,
         Integer minStepCount,
         Instant now
     ) {
@@ -91,7 +91,7 @@ public class MissionVerificationPolicy {
         return expectedQrCode;
     }
 
-    public Boolean isRequiredUpload() {
+    public boolean isRequiredUpload() {
         return requiredUpload;
     }
 

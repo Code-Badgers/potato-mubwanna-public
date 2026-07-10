@@ -185,6 +185,24 @@ class MissionServiceTest {
     }
 
     @Test
+    void rejectsMissingStepPolicy() {
+        Mission mission = mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(stepPolicy(mission, null)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.VISIT_AND_STEP, null, 1000, null, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("미션 걸음 수 정책을 확인할 수 없습니다.");
+    }
+
+    @Test
     void rejectsWrongQrCodeFromPolicy() {
         Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
