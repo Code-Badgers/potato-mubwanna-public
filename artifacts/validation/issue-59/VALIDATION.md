@@ -14,6 +14,10 @@
 4. `MissionService.verifyMission`이 미션 제목 문자열을 추론하지 않고 정책 테이블을 조회해 검증하도록 변경했다.
 5. 서비스 테스트에 정책 기반 퀴즈, 걸음, QR, 사진 업로드 검증 케이스를 추가했다.
 6. 마이그레이션 테스트에서 정책 seed 개수와 대표 퀴즈 정답 정책을 확인하도록 보강했다.
+7. PR 리뷰 대응으로 `mission_id` unique constraint와 중복되는 별도 index를 제거했다.
+8. `required_upload`는 DB에서 `NOT NULL`이므로 Java 도메인 타입을 `Boolean`에서 primitive `boolean`으로 정리했다.
+9. 사진 인증 검증은 `"upload-not-required"` 같은 sentinel 문자열 없이 정책 값에 따라 업로드 키만 확인하도록 분리했다.
+10. 걸음 수 정책 누락과 사용자의 걸음 수 부족을 서로 다른 오류 메시지로 구분했다.
 
 ## 발생한 문제와 해결
 
@@ -23,6 +27,12 @@
   - 해결: 완료 API 호환 테스트에서 불필요한 정책 stub을 제거했다.
 - 구현 중 비정책 타입을 위해 임시 정책 엔티티를 생성하는 구조가 생겼다.
   - 해결: 정책이 필요한 타입의 switch branch에서만 repository를 조회하도록 정리했다.
+- PR 리뷰에서 `UNIQUE (mission_id)`가 이미 PostgreSQL unique index를 생성하므로 별도 `mission_id` index가 중복이라는 지적이 있었다.
+  - 해결: V7 migration의 중복 index 생성을 제거하고 migration 테스트를 다시 실행했다.
+- PR 리뷰에서 `required_upload`가 nullable하지 않은데 도메인 필드가 `Boolean`인 점과, 사진 인증 우회용 sentinel 문자열이 읽기 어렵다는 지적이 있었다.
+  - 해결: `requiredUpload`를 primitive `boolean`으로 변경하고 `validatePhoto` 메서드로 정책 기반 검증을 명시했다.
+- PR 리뷰에서 걸음 정책 누락과 걸음 부족이 같은 메시지로 처리되는 점이 지적되었다.
+  - 해결: 정책 데이터 누락 시 `"미션 걸음 수 정책을 확인할 수 없습니다."`, 사용자 걸음 수 부족 시 `"걸음을 다 채우고 재시도해주세요."`가 반환되도록 분리하고 테스트를 추가했다.
 
 ## 실행한 검증
 
@@ -32,6 +42,20 @@ cd backend && ./gradlew test --tests '*mission*'
 
 - 결과: 통과
 - 비고: 첫 실행은 테스트 stub 위치 오류로 실패했고 수정 후 통과했다.
+
+```bash
+cd backend && ./gradlew test --tests '*MissionMigrationTest'
+```
+
+- 결과: 통과
+- 비고: 중복 index 제거 후 Flyway V7 migration과 seed 검증이 통과하는지 확인했다.
+
+```bash
+cd backend && ./gradlew test --tests '*mission*'
+```
+
+- 결과: 통과
+- 비고: 리뷰 대응 후 정책 기반 미션 서비스 테스트와 migration 테스트를 함께 재확인했다.
 
 ```bash
 cd backend && ./gradlew build
