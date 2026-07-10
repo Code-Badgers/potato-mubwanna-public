@@ -5,6 +5,8 @@ import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.mission.api.MissionCompleteResponse;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
+import com.gamjamubwatna.mission.api.MissionVerifyRequest;
+import com.gamjamubwatna.mission.api.MissionVerifyResponse;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionRepository;
 import com.gamjamubwatna.mission.domain.MissionStatus;
@@ -108,6 +110,93 @@ public class MissionService {
             mission.getRewardType(),
             mission.getRewardLabel()
         );
+    }
+
+    @Transactional
+    public MissionVerifyResponse verifyMission(
+        Long userId,
+        Long missionId,
+        MissionVerifyRequest request
+    ) {
+        User user = user(userId);
+        Mission mission = mission(missionId);
+        validateCompletionTarget(userId, mission);
+        validateMissionInput(mission, request);
+
+        Instant completedAt = Instant.now(clock);
+        UserMission userMission = userMissionRepository.save(new UserMission(
+            user,
+            mission,
+            completedAt
+        ));
+
+        return new MissionVerifyResponse(
+            mission.getId(),
+            true,
+            true,
+            userMission.getCompletedAt(),
+            mission.getRewardType(),
+            mission.getRewardLabel()
+        );
+    }
+
+    private void validateCompletionTarget(Long userId, Mission mission) {
+        if (!mission.isActive() || mission.getDefaultStatus() == MissionStatus.LOCKED) {
+            throw new MissionCompletionException("아직 완료할 수 없는 미션입니다.");
+        }
+        if (userMissionRepository.existsByUserIdAndMissionId(userId, mission.getId())) {
+            throw new MissionAlreadyCompletedException("이미 완료한 미션입니다.");
+        }
+    }
+
+    private void validateMissionInput(Mission mission, MissionVerifyRequest request) {
+        if (request == null || request.type() == null) {
+            throw new MissionVerificationException("미션 인증 정보를 확인해주세요.");
+        }
+        if (request.type() != mission.getType()) {
+            throw new MissionVerificationException("미션 타입이 일치하지 않습니다.");
+        }
+
+        switch (mission.getType()) {
+            case QUIZ -> validateQuiz(mission, request.answer());
+            case VISIT_AND_STEP -> validateStep(mission, request.stepCount());
+            case PHOTO, PHOTO_OCR -> validateRequiredText(
+                request.uploadKey(),
+                "이미지를 업로드한 뒤 다시 시도해주세요."
+            );
+            case QR_SCAN -> validateRequiredText(
+                request.qrCode(),
+                "QR 코드를 스캔한 뒤 다시 시도해주세요."
+            );
+            default -> {
+                // 위치/스탬프/수집형은 외부 센서 연동 전까지 활성 상태와 중복 완료 여부만 서버에서 확인한다.
+            }
+        }
+    }
+
+    private void validateQuiz(Mission mission, String answer) {
+        if (!expectedQuizAnswer(mission).equals(answer)) {
+            throw new MissionVerificationException("정답이 틀렸습니다. 다시 풀어주세요.");
+        }
+    }
+
+    private void validateStep(Mission mission, Integer stepCount) {
+        if (stepCount == null || stepCount < mission.getTarget()) {
+            throw new MissionVerificationException("걸음을 다 채우고 재시도해주세요.");
+        }
+    }
+
+    private void validateRequiredText(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new MissionVerificationException(message);
+        }
+    }
+
+    private String expectedQuizAnswer(Mission mission) {
+        if (mission.getTitle().contains("곤드레")) {
+            return "곤드레감자";
+        }
+        return "감자";
     }
 
     private void validateUser(Long userId) {

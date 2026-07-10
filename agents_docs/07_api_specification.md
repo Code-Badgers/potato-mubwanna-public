@@ -475,21 +475,58 @@ Query Params:
 GET /api/missions/{missionId}
 ```
 
-### 6.3 미션 완료 처리
+### 6.3 미션 인증 및 완료 처리
 
 ```http
-POST /api/missions/{missionId}/complete
+POST /api/missions/{missionId}/verify
 ```
 
 Request:
 
 ```json
 {
-  "lat": 37.3801,
-  "lng": 128.6609,
-  "answer": "선택 입력값"
+  "type": "QUIZ",
+  "answer": "곤드레감자",
+  "stepCount": null,
+  "uploadKey": null,
+  "qrCode": null
 }
 ```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "missionId": 1004,
+    "verified": true,
+    "completed": true,
+    "completedAt": "2026-07-01T00:00:00Z",
+    "rewardType": "ITEM",
+    "rewardLabel": "황금감자 성장 아이템"
+  }
+}
+```
+
+Validation failure:
+
+```json
+{
+  "success": false,
+  "message": "정답이 틀렸습니다. 다시 풀어주세요.",
+  "code": "MISSION_VERIFICATION_FAILED"
+}
+```
+
+Notes:
+
+- `QUIZ`: `answer`를 검증한다.
+- `VISIT_AND_STEP`: `stepCount`가 미션 목표 걸음 수 이상인지 검증한다.
+- `PHOTO`, `PHOTO_OCR`: `uploadKey` 존재 여부를 검증한다. 실제 OCR 검증은 후속 연동에서 강화한다.
+- `QR_SCAN`: `qrCode` 존재 여부를 검증한다. 실제 QR 코드 매칭은 후속 연동에서 강화한다.
+- 인증 성공 시 서버가 중복 완료 여부를 확인하고 미션 완료와 보상 응답을 함께 처리한다.
 
 ---
 

@@ -81,7 +81,7 @@ void main() {
 
     expect(find.text('정답이 틀렸습니다. 다시 풀어주세요.'), findsOneWidget);
     expect(find.text('미션 완료!'), findsNothing);
-    expect(repository.completeCallCount, 0);
+    expect(repository.completeCallCount, 1);
   });
 
   testWidgets('does not complete step mission before target progress',
@@ -99,7 +99,7 @@ void main() {
 
     expect(find.text('걸음을 다 채우고 재시도해주세요.'), findsOneWidget);
     expect(find.text('미션 완료!'), findsNothing);
-    expect(repository.completeCallCount, 0);
+    expect(repository.completeCallCount, 1);
   });
 
   testWidgets('completes photo mission after selecting upload source',
@@ -245,7 +245,10 @@ class _FakeMissionRepository extends MissionRepository {
   Future<List<MissionChallenge>> fetchMissions() async => _missions;
 
   @override
-  Future<MissionCompletionResult> completeMission(String missionId) async {
+  Future<MissionCompletionResult> verifyMission(
+    String missionId,
+    MissionVerificationPayload payload,
+  ) async {
     completeCallCount += 1;
     if (completeDelay > Duration.zero) {
       await Future<void>.delayed(completeDelay);
@@ -255,6 +258,13 @@ class _FakeMissionRepository extends MissionRepository {
       throw error;
     }
     final mission = _missions.firstWhere((mission) => mission.id == missionId);
+    if (mission.type == MissionType.quiz && payload.answer != '곤드레감자') {
+      throw const ApiException(message: '정답이 틀렸습니다. 다시 풀어주세요.');
+    }
+    if (mission.type == MissionType.visitAndStep &&
+        (payload.stepCount ?? 0) < mission.target) {
+      throw const ApiException(message: '걸음을 다 채우고 재시도해주세요.');
+    }
     return MissionCompletionResult(
       id: mission.id,
       rewardType: mission.rewardType,

@@ -36,7 +36,45 @@ void main() {
     expect(result.last.progress, result.last.target);
   });
 
-  test('completes mission and maps reward response', () async {
+  test('verifies mission and maps reward response', () async {
+    final requestedPaths = <String>[];
+    final requestBodies = <Object?>[];
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestedPaths.add(options.path);
+            requestBodies.add(options.data);
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: _missionCompleteResponse,
+              ),
+            );
+          },
+        ),
+      );
+
+    final result = await MissionRepository(dio: dio).verifyMission(
+      '1004',
+      const MissionVerificationPayload(
+        type: MissionType.quiz,
+        answer: '곤드레감자',
+      ),
+    );
+
+    expect(requestedPaths, ['/missions/1004/verify']);
+    expect(requestBodies.single, {
+      'type': 'QUIZ',
+      'answer': '곤드레감자',
+    });
+    expect(result.id, '1004');
+    expect(result.rewardType, MissionRewardType.item);
+    expect(result.rewardLabel, '황금감자 성장 아이템');
+  });
+
+  test('keeps completeMission compatible with complete endpoint', () async {
     final requestedPaths = <String>[];
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
       ..interceptors.add(
@@ -86,7 +124,10 @@ void main() {
       );
 
     expect(
-      () => MissionRepository(dio: dio).completeMission('1004'),
+      () => MissionRepository(dio: dio).verifyMission(
+        '1004',
+        const MissionVerificationPayload(type: MissionType.quiz),
+      ),
       throwsA(
         isA<ApiException>()
             .having((error) => error.statusCode, 'statusCode', 409)
@@ -154,6 +195,7 @@ const _missionCompleteResponse = <String, Object?>{
   'message': '요청이 성공했습니다.',
   'data': {
     'missionId': 1004,
+    'verified': true,
     'completed': true,
     'completedAt': '2026-07-02T00:00:00Z',
     'rewardType': 'ITEM',

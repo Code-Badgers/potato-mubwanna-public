@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/mission_controller.dart';
+import '../../data/mission_repository.dart';
 import '../../domain/mission_challenge.dart';
 import '../../domain/mission_verification.dart';
 
@@ -50,14 +51,18 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 
-  Future<void> _completeMission(MissionChallenge mission) async {
+  Future<void> _completeMission(
+    MissionChallenge mission,
+    MissionVerificationPayload payload,
+  ) async {
     if (_isCompleting) {
       return;
     }
     setState(() => _isCompleting = true);
     try {
-      final completedMission =
-          await ref.read(missionsProvider.notifier).complete(mission.id);
+      final completedMission = await ref
+          .read(missionsProvider.notifier)
+          .complete(mission.id, payload);
       if (!mounted) {
         return;
       }
@@ -80,19 +85,26 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Future<void> _startMission(MissionChallenge mission) async {
-    final verified = await switch (mission.type) {
+    final payload = await switch (mission.type) {
       MissionType.quiz => _showQuizChallenge(mission),
       MissionType.visitAndStep => _verifyStepMission(mission),
       MissionType.photo || MissionType.photoOcr => _showPhotoChallenge(mission),
-      _ => Future<bool>.value(true),
+      MissionType.qrScan => Future<MissionVerificationPayload?>.value(
+          MissionVerificationPayload(type: mission.type, qrCode: 'mock-qr'),
+        ),
+      _ => Future<MissionVerificationPayload?>.value(
+          MissionVerificationPayload(type: mission.type),
+        ),
     };
-    if (!mounted || !verified) {
+    if (!mounted || payload == null) {
       return;
     }
-    await _completeMission(mission);
+    await _completeMission(mission, payload);
   }
 
-  Future<bool> _showQuizChallenge(MissionChallenge mission) async {
+  Future<MissionVerificationPayload?> _showQuizChallenge(
+    MissionChallenge mission,
+  ) async {
     final selectedAnswer = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -103,29 +115,26 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       ),
     );
     if (selectedAnswer == null) {
-      return false;
+      return null;
     }
-    final result = _verificationService.verifyQuizAnswer(
-      mission: mission,
-      selectedAnswer: selectedAnswer,
+    return MissionVerificationPayload(
+      type: mission.type,
+      answer: selectedAnswer,
     );
-    if (!result.canComplete) {
-      _showSnackBar(result.message);
-      return false;
-    }
-    return true;
   }
 
-  Future<bool> _verifyStepMission(MissionChallenge mission) async {
-    final result = _verificationService.verifyStepProgress(mission);
-    if (!result.canComplete) {
-      _showSnackBar(result.message);
-      return false;
-    }
-    return true;
+  Future<MissionVerificationPayload?> _verifyStepMission(
+    MissionChallenge mission,
+  ) async {
+    return MissionVerificationPayload(
+      type: mission.type,
+      stepCount: mission.progress,
+    );
   }
 
-  Future<bool> _showPhotoChallenge(MissionChallenge mission) async {
+  Future<MissionVerificationPayload?> _showPhotoChallenge(
+    MissionChallenge mission,
+  ) async {
     final uploaded = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -133,7 +142,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       builder: (_) => _MissionPhotoSheet(mission: mission),
     );
     if (uploaded == null) {
-      return false;
+      return null;
     }
     final result = _verificationService.verifyPhotoUpload(
       mission: mission,
@@ -141,9 +150,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
     if (!result.canComplete) {
       _showSnackBar(result.message);
-      return false;
+      return null;
     }
-    return true;
+    return MissionVerificationPayload(
+      type: mission.type,
+      uploadKey: 'mock-${mission.id}',
+    );
   }
 
   void _showSnackBar(String message) {
