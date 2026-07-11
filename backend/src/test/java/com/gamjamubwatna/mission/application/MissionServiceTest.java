@@ -20,6 +20,8 @@ import com.gamjamubwatna.mission.domain.MissionRepository;
 import com.gamjamubwatna.mission.domain.MissionRewardType;
 import com.gamjamubwatna.mission.domain.MissionStatus;
 import com.gamjamubwatna.mission.domain.MissionType;
+import com.gamjamubwatna.mission.domain.MissionVerificationPolicy;
+import com.gamjamubwatna.mission.domain.MissionVerificationPolicyRepository;
 import com.gamjamubwatna.mission.domain.UserMission;
 import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import java.time.Clock;
@@ -41,6 +43,9 @@ class MissionServiceTest {
     private MissionRepository missionRepository;
 
     @Mock
+    private MissionVerificationPolicyRepository missionVerificationPolicyRepository;
+
+    @Mock
     private UserMissionRepository userMissionRepository;
 
     @Mock
@@ -52,6 +57,7 @@ class MissionServiceTest {
     void setUp() {
         missionService = new MissionService(
             missionRepository,
+            missionVerificationPolicyRepository,
             userMissionRepository,
             userRepository,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
@@ -119,6 +125,8 @@ class MissionServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(quizPolicy(mission, "곤드레감자")));
         when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         MissionVerifyResponse result = missionService.verifyMission(
@@ -139,6 +147,11 @@ class MissionServiceTest {
             mission(1L, "MISSION_FIRST", MissionStatus.READY, true)
         ));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(quizPolicy(
+                mission(1L, "MISSION_FIRST", MissionStatus.READY, true),
+                "곤드레감자"
+            )));
 
         assertThatThrownBy(() -> missionService.verifyMission(
             1L,
@@ -156,6 +169,11 @@ class MissionServiceTest {
             mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP)
         ));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(stepPolicy(
+                mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP),
+                1000
+            )));
 
         assertThatThrownBy(() -> missionService.verifyMission(
             1L,
@@ -164,6 +182,60 @@ class MissionServiceTest {
         ))
             .isInstanceOf(MissionVerificationException.class)
             .hasMessage("걸음을 다 채우고 재시도해주세요.");
+    }
+
+    @Test
+    void rejectsMissingStepPolicy() {
+        Mission mission = mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(stepPolicy(mission, null)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.VISIT_AND_STEP, null, 1000, null, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("미션 걸음 수 정책을 확인할 수 없습니다.");
+    }
+
+    @Test
+    void rejectsWrongQrCodeFromPolicy() {
+        Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, "expected-qr")));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QR_SCAN, null, null, null, "wrong-qr")
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("올바르지 않은 QR 코드입니다.");
+    }
+
+    @Test
+    void rejectsPhotoMissionWithoutRequiredUpload() {
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO, null, null, null, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("이미지를 업로드한 뒤 다시 시도해주세요.");
     }
 
     @Test
@@ -243,5 +315,53 @@ class MissionServiceTest {
         );
         ReflectionTestUtils.setField(user, "id", id);
         return user;
+    }
+
+    private MissionVerificationPolicy quizPolicy(Mission mission, String expectedAnswer) {
+        return new MissionVerificationPolicy(
+            mission,
+            MissionType.QUIZ,
+            expectedAnswer,
+            null,
+            false,
+            null,
+            Instant.parse("2026-07-01T00:00:00Z")
+        );
+    }
+
+    private MissionVerificationPolicy stepPolicy(Mission mission, Integer minStepCount) {
+        return new MissionVerificationPolicy(
+            mission,
+            MissionType.VISIT_AND_STEP,
+            null,
+            null,
+            false,
+            minStepCount,
+            Instant.parse("2026-07-01T00:00:00Z")
+        );
+    }
+
+    private MissionVerificationPolicy qrPolicy(Mission mission, String expectedQrCode) {
+        return new MissionVerificationPolicy(
+            mission,
+            MissionType.QR_SCAN,
+            null,
+            expectedQrCode,
+            false,
+            null,
+            Instant.parse("2026-07-01T00:00:00Z")
+        );
+    }
+
+    private MissionVerificationPolicy uploadPolicy(Mission mission) {
+        return new MissionVerificationPolicy(
+            mission,
+            mission.getType(),
+            null,
+            null,
+            true,
+            null,
+            Instant.parse("2026-07-01T00:00:00Z")
+        );
     }
 }
