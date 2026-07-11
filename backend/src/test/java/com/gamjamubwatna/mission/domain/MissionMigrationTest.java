@@ -74,4 +74,24 @@ class MissionMigrationTest {
         assertThat(indexNames)
             .contains("idx_user_missions_user_id", "idx_user_missions_mission_id");
     }
+
+    @Test
+    void createsRewardHistoryLookupIndex() throws Exception {
+        Set<String> indexNames = new HashSet<>();
+        try (
+            Connection connection = dataSource.getConnection();
+            ResultSet indexes = connection.getMetaData()
+                .getIndexInfo(null, null, "reward_histories", false, false)
+        ) {
+            while (indexes.next()) {
+                String indexName = indexes.getString("INDEX_NAME");
+                if (indexName != null) {
+                    indexNames.add(indexName.toLowerCase());
+                }
+            }
+        }
+
+        assertThat(indexNames)
+            .contains("idx_reward_histories_user_id_created_at");
+    }
 }
