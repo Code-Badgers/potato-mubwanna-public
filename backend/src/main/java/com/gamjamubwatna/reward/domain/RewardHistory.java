@@ -77,6 +77,10 @@ public class RewardHistory {
         return user;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public MissionRewardType getRewardType() {
         return rewardType;
     }
