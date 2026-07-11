@@ -9,6 +9,7 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 
 import '../../domain/map_spot.dart';
+import 'map_spot_selection_message.dart';
 
 const _kakaoJavaScriptKey = String.fromEnvironment('KAKAO_JAVASCRIPT_KEY');
 
@@ -85,8 +86,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     _spotSelectedSubscription =
         html.window.on['potato-map-spot-selected-$_viewType'].listen((event) {
       final detail = (event as html.CustomEvent).detail;
-      if (detail is String) {
-        widget.onSpotSelected?.call(detail);
+      final message = detail is js.JsObject
+          ? <String, Object?>{'spotId': detail['spotId']}
+          : detail;
+      final spotId = mapSpotIdFromSelectionMessage(message);
+      if (spotId != null) {
+        widget.onSpotSelected?.call(spotId);
       }
     });
 
@@ -311,7 +316,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
             markerElement.style.borderColor = '#F6C23E';
             selectedMarkerElement = markerElement;
             window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
-              detail: String(spot.id)
+              detail: { spotId: String(spot.id) }
             }));
           });
           markerElements.push(markerElement);

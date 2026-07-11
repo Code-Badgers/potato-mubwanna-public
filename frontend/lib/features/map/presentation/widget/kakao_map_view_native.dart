@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../../domain/map_spot.dart';
+import 'map_spot_selection_message.dart';
 
 const _kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
 const _nativeKakaoMapViewType = 'potato_mubwanna/kakao_map';
@@ -95,8 +96,8 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         if (call.method != 'spotSelected') {
           return;
         }
-        final spotId = call.arguments?.toString();
-        if (spotId != null && spotId.isNotEmpty) {
+        final spotId = mapSpotIdFromSelectionMessage(call.arguments);
+        if (spotId != null) {
           widget.onSpotSelected?.call(spotId);
         }
       });
