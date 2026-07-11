@@ -556,6 +556,33 @@ POST /api/coupons/{userCouponId}/use
 GET /api/rewards/history
 ```
 
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "rewards": [
+      {
+        "rewardHistoryId": 1,
+        "rewardType": "POTATO",
+        "rewardName": "수미감자 씨앗",
+        "sourceType": "MISSION",
+        "sourceId": 1001,
+        "createdAt": "2026-07-11T09:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+Notes:
+
+- 로그인 사용자의 보상 지급 이력을 `createdAt` 내림차순으로 반환한다.
+- 보상 이력이 없으면 `rewards`는 빈 배열이다.
+- 인증 정보가 없거나 JWT 사용자가 존재하지 않으면 `401 Unauthorized`를 반환한다.
+
 ---
 
 ## 8. Audio Guide API
