@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.auth.domain.AuthProvider;
@@ -24,11 +25,15 @@ import com.gamjamubwatna.mission.domain.MissionVerificationPolicy;
 import com.gamjamubwatna.mission.domain.MissionVerificationPolicyRepository;
 import com.gamjamubwatna.mission.domain.UserMission;
 import com.gamjamubwatna.mission.domain.UserMissionRepository;
+import com.gamjamubwatna.reward.domain.RewardHistory;
+import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
+import com.gamjamubwatna.reward.domain.RewardSourceType;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +54,9 @@ class MissionServiceTest {
     private UserMissionRepository userMissionRepository;
 
     @Mock
+    private RewardHistoryRepository rewardHistoryRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     private MissionService missionService;
@@ -59,6 +67,7 @@ class MissionServiceTest {
             missionRepository,
             missionVerificationPolicyRepository,
             userMissionRepository,
+            rewardHistoryRepository,
             userRepository,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
@@ -116,6 +125,9 @@ class MissionServiceTest {
         assertThat(result.completedAt()).isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));
         assertThat(result.rewardType()).isEqualTo(MissionRewardType.ITEM);
         verify(userMissionRepository).save(any(UserMission.class));
+        ArgumentCaptor<RewardHistory> rewardCaptor = ArgumentCaptor.forClass(RewardHistory.class);
+        verify(rewardHistoryRepository).save(rewardCaptor.capture());
+        assertMissionRewardHistory(rewardCaptor.getValue(), mission);
     }
 
     @Test
@@ -138,6 +150,9 @@ class MissionServiceTest {
         assertThat(result.verified()).isTrue();
         assertThat(result.completed()).isTrue();
         assertThat(result.rewardLabel()).isEqualTo("황금감자 성장 아이템");
+        ArgumentCaptor<RewardHistory> rewardCaptor = ArgumentCaptor.forClass(RewardHistory.class);
+        verify(rewardHistoryRepository).save(rewardCaptor.capture());
+        assertMissionRewardHistory(rewardCaptor.getValue(), mission);
     }
 
     @Test
@@ -248,6 +263,7 @@ class MissionServiceTest {
 
         assertThatThrownBy(() -> missionService.completeMission(1L, 1L))
             .isInstanceOf(MissionAlreadyCompletedException.class);
+        verifyNoInteractions(rewardHistoryRepository);
     }
 
     @Test
@@ -315,6 +331,14 @@ class MissionServiceTest {
         );
         ReflectionTestUtils.setField(user, "id", id);
         return user;
+    }
+
+    private void assertMissionRewardHistory(RewardHistory rewardHistory, Mission mission) {
+        assertThat(rewardHistory.getRewardType()).isEqualTo(mission.getRewardType());
+        assertThat(rewardHistory.getRewardName()).isEqualTo(mission.getRewardLabel());
+        assertThat(rewardHistory.getSourceType()).isEqualTo(RewardSourceType.MISSION);
+        assertThat(rewardHistory.getSourceId()).isEqualTo(mission.getId());
+        assertThat(rewardHistory.getCreatedAt()).isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));
     }
 
     private MissionVerificationPolicy quizPolicy(Mission mission, String expectedAnswer) {

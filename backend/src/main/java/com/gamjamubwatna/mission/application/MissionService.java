@@ -14,6 +14,9 @@ import com.gamjamubwatna.mission.domain.MissionVerificationPolicy;
 import com.gamjamubwatna.mission.domain.MissionVerificationPolicyRepository;
 import com.gamjamubwatna.mission.domain.UserMission;
 import com.gamjamubwatna.mission.domain.UserMissionRepository;
+import com.gamjamubwatna.reward.domain.RewardHistory;
+import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
+import com.gamjamubwatna.reward.domain.RewardSourceType;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -30,6 +33,7 @@ public class MissionService {
     private final MissionRepository missionRepository;
     private final MissionVerificationPolicyRepository missionVerificationPolicyRepository;
     private final UserMissionRepository userMissionRepository;
+    private final RewardHistoryRepository rewardHistoryRepository;
     private final UserRepository userRepository;
     private final Clock clock;
 
@@ -38,12 +42,14 @@ public class MissionService {
         MissionRepository missionRepository,
         MissionVerificationPolicyRepository missionVerificationPolicyRepository,
         UserMissionRepository userMissionRepository,
+        RewardHistoryRepository rewardHistoryRepository,
         UserRepository userRepository
     ) {
         this(
             missionRepository,
             missionVerificationPolicyRepository,
             userMissionRepository,
+            rewardHistoryRepository,
             userRepository,
             Clock.systemUTC()
         );
@@ -53,12 +59,14 @@ public class MissionService {
         MissionRepository missionRepository,
         MissionVerificationPolicyRepository missionVerificationPolicyRepository,
         UserMissionRepository userMissionRepository,
+        RewardHistoryRepository rewardHistoryRepository,
         UserRepository userRepository,
         Clock clock
     ) {
         this.missionRepository = missionRepository;
         this.missionVerificationPolicyRepository = missionVerificationPolicyRepository;
         this.userMissionRepository = userMissionRepository;
+        this.rewardHistoryRepository = rewardHistoryRepository;
         this.userRepository = userRepository;
         this.clock = clock;
     }
@@ -114,6 +122,7 @@ public class MissionService {
             mission,
             completedAt
         ));
+        saveMissionRewardHistory(user, mission, completedAt);
 
         return new MissionCompleteResponse(
             mission.getId(),
@@ -141,6 +150,7 @@ public class MissionService {
             mission,
             completedAt
         ));
+        saveMissionRewardHistory(user, mission, completedAt);
 
         return new MissionVerifyResponse(
             mission.getId(),
@@ -150,6 +160,17 @@ public class MissionService {
             mission.getRewardType(),
             mission.getRewardLabel()
         );
+    }
+
+    private void saveMissionRewardHistory(User user, Mission mission, Instant completedAt) {
+        rewardHistoryRepository.save(new RewardHistory(
+            user,
+            mission.getRewardType(),
+            mission.getRewardLabel(),
+            RewardSourceType.MISSION,
+            mission.getId(),
+            completedAt
+        ));
     }
 
     private void validateCompletionTarget(Long userId, Mission mission) {
