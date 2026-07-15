@@ -86,9 +86,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     _spotSelectedSubscription =
         html.window.on['potato-map-spot-selected-$_viewType'].listen((event) {
       final detail = (event as html.CustomEvent).detail;
-      final message = detail is js.JsObject
-          ? <String, Object?>{'spotId': detail['spotId']}
-          : detail;
+      final message = _selectionMessageFromEventDetail(detail);
       final spotId = mapSpotIdFromSelectionMessage(message);
       if (spotId != null) {
         widget.onSpotSelected?.call(spotId);
@@ -98,6 +96,19 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_initializeMapAfterLayout());
     });
+  }
+
+  Object? _selectionMessageFromEventDetail(Object? detail) {
+    if (detail == null || detail is String || detail is Map) {
+      return detail;
+    }
+
+    try {
+      final browserObject = js.JsObject.fromBrowserObject(detail);
+      return <String, Object?>{'spotId': browserObject['spotId']};
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
