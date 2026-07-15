@@ -68,6 +68,24 @@ class CouponDetail extends CouponSummary {
       );
 }
 
+class CouponQr {
+  const CouponQr({
+    required this.userCouponId,
+    required this.payload,
+    required this.expiresAt,
+  });
+
+  final int userCouponId;
+  final String payload;
+  final DateTime expiresAt;
+
+  static CouponQr fromJson(Map<String, dynamic> json) => CouponQr(
+        userCouponId: json['userCouponId'] as int? ?? 0,
+        payload: json['payload'] as String? ?? '',
+        expiresAt: _requiredDateTime(json['expiresAt']),
+      );
+}
+
 DateTime _requiredDateTime(Object? value) {
   if (value is! String || value.isEmpty) {
     throw const FormatException('필수 날짜 형식이 올바르지 않습니다.');

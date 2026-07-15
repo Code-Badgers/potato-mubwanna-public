@@ -90,6 +90,39 @@ void main() {
     expect(find.text('QR 코드는 다음 업데이트에서 제공됩니다.'), findsNothing);
   });
 
+  testWidgets('shows QR and refreshes coupon status after use', (tester) async {
+    final repository = _DetailCouponRepository();
+    await _pumpScreen(
+      tester,
+      overrides: [couponRepositoryProvider.overrideWithValue(repository)],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('감자빵 1개 교환권'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('QR 코드 보기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('쿠폰 QR'), findsOneWidget);
+    expect(find.text('사용 완료 처리'), findsOneWidget);
+    expect(find.bySemanticsLabel('쿠폰 사용 QR 코드'), findsOneWidget);
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.text('쿠폰 QR'), findsOneWidget);
+
+    await tester.tap(find.text('사용 완료 처리'));
+    await tester.pumpAndSettle();
+    expect(find.text('사용 완료 후에는 되돌릴 수 없습니다.'), findsOneWidget);
+    await tester.tap(find.text('사용하기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.usedPayload, 'signed-payload');
+    expect(find.text('쿠폰 QR'), findsNothing);
+    expect(find.text('2026. 07. 15. 사용'), findsOneWidget);
+    expect(find.text('QR 코드 보기'), findsNothing);
+  });
+
   testWidgets('shows a loading state while coupons are requested', (
     tester,
   ) async {
@@ -170,6 +203,8 @@ CouponSummary _summary(int id, String name, CouponStatus status) =>
 class _DetailCouponRepository extends CouponRepository {
   _DetailCouponRepository() : super(dio: Dio());
 
+  String? usedPayload;
+
   @override
   Future<List<CouponSummary>> fetchCoupons() async => [_coupons.first];
 
@@ -179,12 +214,27 @@ class _DetailCouponRepository extends CouponRepository {
         name: '감자빵 1개 교환권',
         description: '제휴 매장에서 사용할 수 있습니다.',
         benefitAmount: 5000,
-        status: CouponStatus.available,
+        status:
+            usedPayload == null ? CouponStatus.available : CouponStatus.used,
         expiresAt: DateTime.parse('2026-12-31T23:59:59Z'),
         usagePlace: '감자마을 제휴점',
         issuedAt: DateTime.parse('2026-07-01T00:00:00Z'),
-        usedAt: null,
+        usedAt:
+            usedPayload == null ? null : DateTime.parse('2026-07-15T00:00:00Z'),
       );
+
+  @override
+  Future<CouponQr> fetchCouponQr(int userCouponId) async => CouponQr(
+        userCouponId: userCouponId,
+        payload: 'signed-payload',
+        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+      );
+
+  @override
+  Future<CouponDetail> useCoupon(int userCouponId, String payload) async {
+    usedPayload = payload;
+    return fetchCoupon(userCouponId);
+  }
 }
 
 class _IdleAuthController extends AuthController {

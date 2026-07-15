@@ -91,6 +91,17 @@ public class UserCoupon {
         return CouponDisplayStatus.AVAILABLE;
     }
 
+    public void use(Instant now) {
+        if (status == UserCouponStatus.USED) {
+            throw new IllegalStateException("이미 사용한 쿠폰입니다.");
+        }
+        if (!expiresAt.isAfter(now)) {
+            throw new IllegalStateException("사용 기간이 만료된 쿠폰입니다.");
+        }
+        status = UserCouponStatus.USED;
+        usedAt = now;
+    }
+
     public Long getId() {
         return id;
     }

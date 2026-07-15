@@ -39,6 +39,33 @@ class CouponRepository {
     return _requireData(result, statusCode: response.statusCode);
   }
 
+  Future<CouponQr> fetchCouponQr(int userCouponId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiPaths.couponQr(userCouponId),
+    );
+    final result = ApiResponse<CouponQr>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      (json) => CouponQr.fromJson(
+        json as Map<String, dynamic>? ?? const <String, dynamic>{},
+      ),
+    );
+    return _requireData(result, statusCode: response.statusCode);
+  }
+
+  Future<CouponDetail> useCoupon(int userCouponId, String payload) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ApiPaths.couponUse(userCouponId),
+      data: {'payload': payload},
+    );
+    final result = ApiResponse<CouponDetail>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      (json) => CouponDetail.fromJson(
+        json as Map<String, dynamic>? ?? const <String, dynamic>{},
+      ),
+    );
+    return _requireData(result, statusCode: response.statusCode);
+  }
+
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(

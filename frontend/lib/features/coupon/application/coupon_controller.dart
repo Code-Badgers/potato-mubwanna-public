@@ -25,3 +25,8 @@ final couponDetailProvider =
   (ref, userCouponId) =>
       ref.watch(couponRepositoryProvider).fetchCoupon(userCouponId),
 );
+
+final couponQrProvider = FutureProvider.autoDispose.family<CouponQr, int>(
+  (ref, userCouponId) =>
+      ref.watch(couponRepositoryProvider).fetchCouponQr(userCouponId),
+);
