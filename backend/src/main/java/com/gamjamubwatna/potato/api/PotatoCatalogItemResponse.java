@@ -12,7 +12,7 @@ public record PotatoCatalogItemResponse(
     String description,
     String acquisitionHint,
     String imageUrl,
-    Double growthGoalDistance
+    double growthGoalDistance
 ) {
 
     public static PotatoCatalogItemResponse from(Potato potato) {

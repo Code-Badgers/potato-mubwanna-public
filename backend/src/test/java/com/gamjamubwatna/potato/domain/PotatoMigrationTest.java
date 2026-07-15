@@ -55,6 +55,6 @@ class PotatoMigrationTest {
         }
 
         assertThat(indexNames)
-            .contains("idx_user_potatoes_user_id", "idx_user_potatoes_user_id_representative");
+            .contains("idx_user_potatoes_user_id_representative");
     }
 }

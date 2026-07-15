@@ -42,13 +42,13 @@ public class Potato {
     private String imageUrl;
 
     @Column(name = "growth_goal_distance", nullable = false)
-    private Double growthGoalDistance;
+    private double growthGoalDistance;
 
-    @Column(name = "display_order", nullable = false, unique = true)
-    private Integer displayOrder;
+    @Column(name = "display_order", nullable = false)
+    private int displayOrder;
 
     @Column(name = "active", nullable = false)
-    private Boolean active;
+    private boolean active;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -67,9 +67,9 @@ public class Potato {
         String description,
         String acquisitionHint,
         String imageUrl,
-        Double growthGoalDistance,
-        Integer displayOrder,
-        Boolean active,
+        double growthGoalDistance,
+        int displayOrder,
+        boolean active,
         Instant now
     ) {
         this.code = code;
@@ -118,15 +118,15 @@ public class Potato {
         return imageUrl;
     }
 
-    public Double getGrowthGoalDistance() {
+    public double getGrowthGoalDistance() {
         return growthGoalDistance;
     }
 
-    public Integer getDisplayOrder() {
+    public int getDisplayOrder() {
         return displayOrder;
     }
 
-    public Boolean isActive() {
+    public boolean isActive() {
         return active;
     }
 }

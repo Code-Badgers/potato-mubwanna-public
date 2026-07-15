@@ -8,7 +8,7 @@ CREATE TABLE potatoes (
     acquisition_hint VARCHAR(255) NOT NULL,
     image_url VARCHAR(500),
     growth_goal_distance DOUBLE PRECISION NOT NULL,
-    display_order INTEGER NOT NULL UNIQUE,
+    display_order INTEGER NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL
@@ -27,9 +27,6 @@ CREATE TABLE user_potatoes (
 
 CREATE INDEX idx_potatoes_active_display_order
     ON potatoes(active, display_order);
-
-CREATE INDEX idx_user_potatoes_user_id
-    ON user_potatoes(user_id);
 
 CREATE INDEX idx_user_potatoes_user_id_representative
     ON user_potatoes(user_id, representative);

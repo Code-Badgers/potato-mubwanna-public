@@ -16,9 +16,9 @@ public record UserPotatoCollectionItemResponse(
     String imageUrl,
     boolean acquired,
     Instant acquiredAt,
-    Integer level,
-    Double growthDistance,
-    Double growthGoalDistance,
+    int level,
+    double growthDistance,
+    double growthGoalDistance,
     boolean representative
 ) {
 
@@ -41,7 +41,7 @@ public record UserPotatoCollectionItemResponse(
             acquired ? userPotato.getLevel() : 0,
             acquired ? userPotato.getGrowthDistance() : 0.0,
             potato.getGrowthGoalDistance(),
-            acquired && Boolean.TRUE.equals(userPotato.isRepresentative())
+            acquired && userPotato.isRepresentative()
         );
     }
 }

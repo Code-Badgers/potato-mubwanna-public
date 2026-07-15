@@ -42,13 +42,13 @@ public class UserPotato {
     private Instant acquiredAt;
 
     @Column(name = "level", nullable = false)
-    private Integer level;
+    private int level;
 
     @Column(name = "growth_distance", nullable = false)
-    private Double growthDistance;
+    private double growthDistance;
 
     @Column(name = "representative", nullable = false)
-    private Boolean representative;
+    private boolean representative;
 
     protected UserPotato() {
     }
@@ -57,9 +57,9 @@ public class UserPotato {
         User user,
         Potato potato,
         Instant acquiredAt,
-        Integer level,
-        Double growthDistance,
-        Boolean representative
+        int level,
+        double growthDistance,
+        boolean representative
     ) {
         this.user = user;
         this.potato = potato;
@@ -85,15 +85,15 @@ public class UserPotato {
         return acquiredAt;
     }
 
-    public Integer getLevel() {
+    public int getLevel() {
         return level;
     }
 
-    public Double getGrowthDistance() {
+    public double getGrowthDistance() {
         return growthDistance;
     }
 
-    public Boolean isRepresentative() {
+    public boolean isRepresentative() {
         return representative;
     }
 }

@@ -57,6 +57,9 @@ cd backend
 - Current Spring Security test setup returns `401` for unauthenticated requests.
 - Fixed the test to match current project security behavior by sending `user("user:1")`.
 
+- PR review pointed out redundant `user_potatoes(user_id)` index, fragile `display_order` uniqueness, and wrapper types on non-null numeric/boolean fields.
+- Removed the redundant index, removed `display_order` database/JPA uniqueness, and changed non-null numeric/boolean entity/DTO fields to primitive types.
+
 ## Remaining Risks
 
 - Representative potato change API is not included in #75.
