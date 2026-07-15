@@ -1,5 +1,6 @@
 package com.gamjamubwatna.coupon.domain;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
@@ -86,5 +87,50 @@ class UserCouponTest {
         ))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("쿠폰 상태는 필수입니다.");
+    }
+
+    @Test
+    void marksAvailableCouponAsUsed() {
+        UserCoupon coupon = new UserCoupon(
+            mock(User.class),
+            mock(Coupon.class),
+            UserCouponStatus.AVAILABLE,
+            ISSUED_AT,
+            EXPIRES_AT,
+            null
+        );
+        Instant usedAt = Instant.parse("2026-07-20T00:00:00Z");
+
+        coupon.use(usedAt);
+
+        assertThat(coupon.displayStatus(usedAt)).isEqualTo(CouponDisplayStatus.USED);
+        assertThat(coupon.getUsedAt()).isEqualTo(usedAt);
+    }
+
+    @Test
+    void rejectsUsingCouponMoreThanOnceOrAfterExpiration() {
+        UserCoupon usedCoupon = new UserCoupon(
+            mock(User.class),
+            mock(Coupon.class),
+            UserCouponStatus.USED,
+            ISSUED_AT,
+            EXPIRES_AT,
+            Instant.parse("2026-07-20T00:00:00Z")
+        );
+        UserCoupon expiredCoupon = new UserCoupon(
+            mock(User.class),
+            mock(Coupon.class),
+            UserCouponStatus.AVAILABLE,
+            ISSUED_AT,
+            EXPIRES_AT,
+            null
+        );
+
+        assertThatThrownBy(() -> usedCoupon.use(Instant.parse("2026-07-21T00:00:00Z")))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("이미 사용한 쿠폰입니다.");
+        assertThatThrownBy(() -> expiredCoupon.use(EXPIRES_AT))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("사용 기간이 만료된 쿠폰입니다.");
     }
 }
