@@ -16,6 +16,13 @@ class CouponTest {
     }
 
     @Test
+    void rejectsBlankCouponCodeWhenProvided() {
+        assertThatThrownBy(() -> new Coupon(" ", "교환권", "설명", 0, "제휴점", 30))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("쿠폰 코드는 공백일 수 없습니다.");
+    }
+
+    @Test
     void rejectsNegativeBenefitAmount() {
         assertThatThrownBy(() -> new Coupon("감자빵 교환권", "설명", -1, "제휴점"))
             .isInstanceOf(IllegalArgumentException.class)

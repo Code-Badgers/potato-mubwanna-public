@@ -49,6 +49,9 @@ public class Coupon {
         String usagePlace,
         int validDays
     ) {
+        if (code != null && code.isBlank()) {
+            throw new IllegalArgumentException("쿠폰 코드는 공백일 수 없습니다.");
+        }
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("쿠폰 이름은 필수입니다.");
         }

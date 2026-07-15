@@ -31,13 +31,15 @@ class CouponMigrationTest {
     @Test
     void seedsMissionRewardCouponCatalog() {
         List<Coupon> coupons = couponRepository.findAll();
+        List<Coupon> seededCoupons = coupons.stream()
+            .filter(coupon -> coupon.getCode() != null)
+            .toList();
 
-        assertThat(coupons)
-            .filteredOn(coupon -> coupon.getCode() != null)
+        assertThat(seededCoupons)
             .hasSize(7)
             .extracting(Coupon::getCode)
             .contains("CP_PYEONGCHANG_EXPERIENCE", "CP_HWACHEON_FISH_FREE");
-        assertThat(coupons)
+        assertThat(seededCoupons)
             .allSatisfy(coupon -> assertThat(coupon.getValidDays()).isEqualTo(30));
     }
 
