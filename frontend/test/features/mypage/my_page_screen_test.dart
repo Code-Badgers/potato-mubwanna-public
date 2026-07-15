@@ -12,6 +12,7 @@ import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
+import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
 import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
@@ -314,7 +315,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _myPageProviderOverrides(),
+        overrides: [
+          ..._myPageProviderOverrides(),
+          couponListProvider.overrideWith((ref) async => const []),
+        ],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
@@ -323,7 +327,7 @@ void main() {
     await tester.tap(find.text('보상함'));
     await tester.pumpAndSettle();
 
-    expect(find.text('보상 데이터 연동을 준비하고 있어요.'), findsOneWidget);
+    expect(find.text('사용 가능한 쿠폰이 없어요.'), findsOneWidget);
     expect(router.canPop(), isTrue);
 
     router.pop();
