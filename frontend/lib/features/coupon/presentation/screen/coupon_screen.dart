@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
@@ -484,11 +485,185 @@ class _CouponDetailSheet extends ConsumerWidget {
                   label: '사용일',
                   value: '${_formatDate(coupon.usedAt!)} 사용',
                 ),
+              if (coupon.status == CouponStatus.available) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      builder: (_) => _CouponQrDialog(
+                        userCouponId: userCouponId,
+                      ),
+                    ),
+                    icon: const Icon(Icons.qr_code_2_rounded),
+                    label: const Text('QR 코드 보기'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+class _CouponQrDialog extends ConsumerStatefulWidget {
+  const _CouponQrDialog({required this.userCouponId});
+
+  final int userCouponId;
+
+  @override
+  ConsumerState<_CouponQrDialog> createState() => _CouponQrDialogState();
+}
+
+class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
+  bool _isUsing = false;
+  String? _useError;
+
+  @override
+  Widget build(BuildContext context) {
+    final qr = ref.watch(couponQrProvider(widget.userCouponId));
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Expanded(child: Text('쿠폰 QR')),
+          IconButton(
+            tooltip: 'QR 새로고침',
+            onPressed: _isUsing
+                ? null
+                : () => ref.invalidate(
+                      couponQrProvider(widget.userCouponId),
+                    ),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 280,
+        child: qr.when(
+          loading: () => const SizedBox(
+            height: 280,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, __) => SizedBox(
+            height: 220,
+            child: _CouponError(
+              onRetry: () => ref.invalidate(
+                couponQrProvider(widget.userCouponId),
+              ),
+            ),
+          ),
+          data: (value) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              QrImageView(
+                data: value.payload,
+                size: 220,
+                backgroundColor: Colors.white,
+                semanticsLabel: '쿠폰 사용 QR 코드',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${_formatDateTime(value.expiresAt)}까지 유효',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '현장에서 직원 확인 후 사용 완료를 눌러주세요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              if (_useError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _useError!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.error, fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _isUsing ? null : () => _confirmAndUse(value),
+                  child: _isUsing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('사용 완료 처리'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isUsing ? null : () => Navigator.of(context).pop(),
+          child: const Text('닫기'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmAndUse(CouponQr qr) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('쿠폰을 사용하시겠어요?'),
+        content: const Text('사용 완료 후에는 되돌릴 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('사용하기'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _useCoupon(qr);
+    }
+  }
+
+  Future<void> _useCoupon(CouponQr qr) async {
+    setState(() {
+      _isUsing = true;
+      _useError = null;
+    });
+    try {
+      await ref
+          .read(couponRepositoryProvider)
+          .useCoupon(widget.userCouponId, qr.payload);
+      ref.invalidate(couponListProvider);
+      ref.invalidate(couponDetailProvider(widget.userCouponId));
+      ref.invalidate(couponQrProvider(widget.userCouponId));
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isUsing = false;
+          _useError = '쿠폰 사용 처리에 실패했습니다. 다시 시도해주세요.';
+        });
+      }
+    }
   }
 }
 
@@ -589,6 +764,13 @@ String _formatDate(DateTime date) {
   final month = local.month.toString().padLeft(2, '0');
   final day = local.day.toString().padLeft(2, '0');
   return '${local.year}. $month. $day.';
+}
+
+String _formatDateTime(DateTime date) {
+  final local = date.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${_formatDate(local)} $hour:$minute';
 }
 
 enum _CouponTab { available, completed }

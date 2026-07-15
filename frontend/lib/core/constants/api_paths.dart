@@ -16,4 +16,6 @@ class ApiPaths {
   static const myPotatoes = '/potatoes/me';
   static const myCoupons = '/coupons/me';
   static String couponDetail(int userCouponId) => '/coupons/$userCouponId';
+  static String couponQr(int userCouponId) => '/coupons/$userCouponId/qr';
+  static String couponUse(int userCouponId) => '/coupons/$userCouponId/use';
 }
