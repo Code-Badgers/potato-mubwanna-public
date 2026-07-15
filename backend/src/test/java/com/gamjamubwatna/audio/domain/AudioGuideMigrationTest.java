@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,10 +30,10 @@ class AudioGuideMigrationTest {
     private DataSource dataSource;
 
     @Test
-    void createsAudioGuideRepositoryAndSpotIndex() throws Exception {
+    void createsAudioGuideRepositoryAndSpotLanguageUniqueIndex() throws Exception {
         assertThat(audioGuideRepository.findAll()).isEmpty();
 
-        Set<String> indexNames = new HashSet<>();
+        Map<String, List<String>> uniqueIndexColumns = new HashMap<>();
         try (
             Connection connection = dataSource.getConnection();
             ResultSet indexes = connection.getMetaData()
@@ -39,12 +41,15 @@ class AudioGuideMigrationTest {
         ) {
             while (indexes.next()) {
                 String indexName = indexes.getString("INDEX_NAME");
-                if (indexName != null) {
-                    indexNames.add(indexName.toLowerCase());
+                String columnName = indexes.getString("COLUMN_NAME");
+                if (indexName != null && columnName != null && !indexes.getBoolean("NON_UNIQUE")) {
+                    uniqueIndexColumns.computeIfAbsent(indexName, ignored -> new ArrayList<>())
+                        .add(columnName.toLowerCase());
                 }
             }
         }
 
-        assertThat(indexNames).contains("idx_audio_guides_tourist_spot_id");
+        assertThat(uniqueIndexColumns.values())
+            .contains(List.of("tourist_spot_id", "language"));
     }
 }

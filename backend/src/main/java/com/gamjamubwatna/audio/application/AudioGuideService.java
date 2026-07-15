@@ -12,7 +12,6 @@ import java.time.Clock;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AudioGuideService {
@@ -45,7 +44,6 @@ public class AudioGuideService {
         this.clock = clock;
     }
 
-    @Transactional
     public AudioGuideResponse getAudioGuide(Long spotId) {
         TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(spotId)
             .orElseThrow(() -> new AudioGuideNotFoundException("관광지를 찾을 수 없습니다."));

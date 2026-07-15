@@ -11,5 +11,3 @@ CREATE TABLE audio_guides (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT uk_audio_guides_spot_language UNIQUE (tourist_spot_id, language)
 );
-
-CREATE INDEX idx_audio_guides_tourist_spot_id ON audio_guides(tourist_spot_id);
