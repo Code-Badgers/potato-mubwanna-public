@@ -16,6 +16,9 @@ public class Coupon {
     @Column(name = "coupon_id")
     private Long id;
 
+    @Column(name = "code", unique = true, length = 80)
+    private String code;
+
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
@@ -28,10 +31,27 @@ public class Coupon {
     @Column(name = "usage_place", nullable = false, length = 255)
     private String usagePlace;
 
+    @Column(name = "valid_days", nullable = false)
+    private int validDays;
+
     protected Coupon() {
     }
 
     public Coupon(String name, String description, int benefitAmount, String usagePlace) {
+        this(null, name, description, benefitAmount, usagePlace, 30);
+    }
+
+    public Coupon(
+        String code,
+        String name,
+        String description,
+        int benefitAmount,
+        String usagePlace,
+        int validDays
+    ) {
+        if (code != null && code.isBlank()) {
+            throw new IllegalArgumentException("쿠폰 코드는 공백일 수 없습니다.");
+        }
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("쿠폰 이름은 필수입니다.");
         }
@@ -44,10 +64,15 @@ public class Coupon {
         if (usagePlace == null || usagePlace.isBlank()) {
             throw new IllegalArgumentException("사용 장소는 필수입니다.");
         }
+        if (validDays <= 0) {
+            throw new IllegalArgumentException("쿠폰 유효일은 1일 이상이어야 합니다.");
+        }
+        this.code = code;
         this.name = name;
         this.description = description;
         this.benefitAmount = benefitAmount;
         this.usagePlace = usagePlace;
+        this.validDays = validDays;
     }
 
     public Long getId() {
@@ -56,6 +81,10 @@ public class Coupon {
 
     public String getName() {
         return name;
+    }
+
+    public String getCode() {
+        return code;
     }
 
     public String getDescription() {
@@ -68,5 +97,9 @@ public class Coupon {
 
     public String getUsagePlace() {
         return usagePlace;
+    }
+
+    public int getValidDays() {
+        return validDays;
     }
 }

@@ -59,6 +59,9 @@ public class Mission {
     @Column(name = "reward_label", nullable = false, length = 120)
     private String rewardLabel;
 
+    @Column(name = "reward_coupon_id")
+    private Long rewardCouponId;
+
     @Column(name = "progress", nullable = false)
     private Integer progress;
 
@@ -174,6 +177,10 @@ public class Mission {
 
     public String getRewardLabel() {
         return rewardLabel;
+    }
+
+    public Long getRewardCouponId() {
+        return rewardCouponId;
     }
 
     public Integer getProgress() {

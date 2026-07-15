@@ -10,6 +10,11 @@ import static org.mockito.Mockito.when;
 import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.coupon.domain.Coupon;
+import com.gamjamubwatna.coupon.domain.CouponDisplayStatus;
+import com.gamjamubwatna.coupon.domain.CouponRepository;
+import com.gamjamubwatna.coupon.domain.UserCoupon;
+import com.gamjamubwatna.coupon.domain.UserCouponRepository;
 import com.gamjamubwatna.mission.api.MissionCompleteResponse;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
@@ -57,6 +62,12 @@ class MissionServiceTest {
     private RewardHistoryRepository rewardHistoryRepository;
 
     @Mock
+    private CouponRepository couponRepository;
+
+    @Mock
+    private UserCouponRepository userCouponRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     private MissionService missionService;
@@ -68,6 +79,8 @@ class MissionServiceTest {
             missionVerificationPolicyRepository,
             userMissionRepository,
             rewardHistoryRepository,
+            couponRepository,
+            userCouponRepository,
             userRepository,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
@@ -264,6 +277,55 @@ class MissionServiceTest {
         assertThatThrownBy(() -> missionService.completeMission(1L, 1L))
             .isInstanceOf(MissionAlreadyCompletedException.class);
         verifyNoInteractions(rewardHistoryRepository);
+        verifyNoInteractions(userCouponRepository);
+    }
+
+    @Test
+    void issuesCouponForCouponRewardMission() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_COUPON", MissionStatus.READY, true);
+        ReflectionTestUtils.setField(mission, "rewardType", MissionRewardType.COUPON);
+        ReflectionTestUtils.setField(mission, "rewardCouponId", 7L);
+        Coupon coupon = new Coupon(
+            "CP_TEST",
+            "감자 쿠폰",
+            "테스트 쿠폰",
+            3000,
+            "테스트 제휴점",
+            30
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(couponRepository.findById(7L)).thenReturn(Optional.of(coupon));
+
+        missionService.completeMission(1L, 1L);
+
+        ArgumentCaptor<UserCoupon> couponCaptor = ArgumentCaptor.forClass(UserCoupon.class);
+        verify(userCouponRepository).save(couponCaptor.capture());
+        UserCoupon issuedCoupon = couponCaptor.getValue();
+        assertThat(issuedCoupon.getCoupon()).isSameAs(coupon);
+        assertThat(issuedCoupon.getIssuedAt()).isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));
+        assertThat(issuedCoupon.getExpiresAt()).isEqualTo(Instant.parse("2026-07-31T00:00:00Z"));
+        assertThat(issuedCoupon.displayStatus(Instant.parse("2026-07-01T00:00:00Z")))
+            .isEqualTo(CouponDisplayStatus.AVAILABLE);
+    }
+
+    @Test
+    void rejectsCouponRewardWithoutCouponMapping() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_COUPON", MissionStatus.READY, true);
+        ReflectionTestUtils.setField(mission, "rewardType", MissionRewardType.COUPON);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThatThrownBy(() -> missionService.completeMission(1L, 1L))
+            .isInstanceOf(MissionCompletionException.class)
+            .hasMessage("미션 쿠폰 보상 매핑을 찾을 수 없습니다.");
+        verifyNoInteractions(couponRepository, userCouponRepository);
     }
 
     @Test
