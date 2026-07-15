@@ -20,6 +20,8 @@
 
 컨트롤러 POST 테스트를 처음 실행했을 때 Spring MVC 슬라이스의 기본 CSRF 보호로 `403`이 발생했다. 실제 애플리케이션은 `SecurityConfig`에서 stateless API의 CSRF를 비활성화하므로, 컨트롤러 단위 테스트 요청에 `csrf()`를 추가해 테스트 환경과 실제 보안 구성을 구분했다.
 
+Gemini 리뷰 피드백 3건은 모두 보안과 사용 안정성에 필요한 내용으로 판단해 반영했다. QR 서명·만료 검증을 DB 잠금보다 먼저 실행하고, HMAC 키를 UTF-8 기준 최소 32바이트로 제한했으며, QR 다이얼로그는 바깥 영역 탭으로 닫히지 않게 했다. 위조 payload가 저장소 잠금 메서드를 호출하지 않는 테스트, 짧은 키 거부 테스트, 다이얼로그 barrier 유지 위젯 테스트를 추가했다.
+
 ## 변경 파일 요약
 
 - `backend/src/main/java/com/gamjamubwatna/coupon/**`: QR 토큰, 조회·사용 서비스, API DTO와 엔드포인트, 쿠폰 사용 도메인 규칙
@@ -33,9 +35,9 @@
 ### Backend
 
 - `backend\\gradlew.bat test --tests 'com.gamjamubwatna.coupon.*'`
-  - 결과: 쿠폰 테스트 29개 통과
+  - 결과: 쿠폰 테스트 31개 통과
 - `backend\\gradlew.bat build`
-  - 결과: 전체 테스트 111개 및 빌드 통과
+  - 결과: 전체 테스트 113개 및 빌드 통과
 
 ### Frontend
 
@@ -82,5 +84,5 @@ Docker Desktop을 백그라운드로 시작하고 일회성 `postgres:16`, `redi
 ## 다음 작업
 
 - #68 PR 머지 후 이 브랜치를 최신 `main` 위로 정리한다.
-- PR 리뷰와 CI를 확인하고 필요한 피드백을 반영한다.
+- 반영된 리뷰 커밋의 후속 피드백과 CI를 확인한다.
 - #69 머지 후 #70 통합 검증을 진행한다.

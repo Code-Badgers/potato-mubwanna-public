@@ -107,6 +107,10 @@ void main() {
     expect(find.text('사용 완료 처리'), findsOneWidget);
     expect(find.bySemanticsLabel('쿠폰 사용 QR 코드'), findsOneWidget);
 
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.text('쿠폰 QR'), findsOneWidget);
+
     await tester.tap(find.text('사용 완료 처리'));
     await tester.pumpAndSettle();
     expect(find.text('사용 완료 후에는 되돌릴 수 없습니다.'), findsOneWidget);

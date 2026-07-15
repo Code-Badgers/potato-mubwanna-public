@@ -45,6 +45,11 @@ public class CouponQrTokenProvider {
         if (secret == null || secret.isBlank()) {
             throw new IllegalArgumentException("쿠폰 QR 서명 키는 필수입니다.");
         }
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException(
+                "쿠폰 QR 서명 키는 최소 32바이트(256비트) 이상이어야 합니다."
+            );
+        }
         if (ttlSeconds <= 0) {
             throw new IllegalArgumentException("쿠폰 QR 만료 시간은 0보다 커야 합니다.");
         }

@@ -3,6 +3,8 @@ package com.gamjamubwatna.coupon.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,7 +58,7 @@ class CouponCommandServiceTest {
             tokenProvider,
             clock
         );
-        when(userRepository.existsById(1L)).thenReturn(true);
+        org.mockito.Mockito.lenient().when(userRepository.existsById(1L)).thenReturn(true);
     }
 
     @Test
@@ -105,28 +107,31 @@ class CouponCommandServiceTest {
             .isInstanceOf(CouponConflictException.class)
             .hasMessage("이미 사용한 쿠폰입니다.");
 
-        UserCoupon availableCoupon = userCoupon(
-            3L,
-            UserCouponStatus.AVAILABLE,
-            NOW.plusSeconds(600),
-            null
-        );
-        String otherCouponPayload = tokenProvider.create(9L, 1L, availableCoupon.getExpiresAt())
+        String otherCouponPayload = tokenProvider.create(9L, 1L, NOW.plusSeconds(600))
             .payload();
-        when(userCouponRepository.findByIdAndUserIdForUpdate(3L, 1L))
-            .thenReturn(Optional.of(availableCoupon));
 
         assertThatThrownBy(() -> service.useCoupon(1L, 3L, otherCouponPayload))
             .isInstanceOf(CouponConflictException.class)
             .hasMessage("쿠폰 QR payload가 일치하지 않습니다.");
+        verify(userCouponRepository).findByIdAndUserIdForUpdate(3L, 1L);
     }
 
     @Test
     void hidesCouponNotOwnedByUser() {
+        String payload = tokenProvider.create(9L, 1L, NOW.plusSeconds(600)).payload();
         when(userCouponRepository.findByIdAndUserIdForUpdate(9L, 1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.useCoupon(1L, 9L, "payload"))
+        assertThatThrownBy(() -> service.useCoupon(1L, 9L, payload))
             .isInstanceOf(CouponNotFoundException.class);
+    }
+
+    @Test
+    void rejectsInvalidPayloadBeforeAcquiringCouponLock() {
+        assertThatThrownBy(() -> service.useCoupon(1L, 3L, "invalid-payload"))
+            .isInstanceOf(CouponConflictException.class)
+            .hasMessage("쿠폰 QR payload가 유효하지 않거나 만료되었습니다.");
+
+        verify(userCouponRepository, never()).findByIdAndUserIdForUpdate(3L, 1L);
     }
 
     private UserCoupon userCoupon(

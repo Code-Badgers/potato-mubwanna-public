@@ -63,14 +63,14 @@ public class CouponCommandService {
     }
 
     public CouponDetailResponse useCoupon(Long userId, Long userCouponId, String payload) {
-        validateUser(userId);
-        UserCoupon userCoupon = userCouponRepository.findByIdAndUserIdForUpdate(userCouponId, userId)
-            .orElseThrow(() -> new CouponNotFoundException("쿠폰을 찾을 수 없습니다."));
-
         CouponQrClaims claims = parsePayload(payload);
         if (!userCouponId.equals(claims.userCouponId()) || !userId.equals(claims.userId())) {
             throw new CouponConflictException("쿠폰 QR payload가 일치하지 않습니다.");
         }
+
+        validateUser(userId);
+        UserCoupon userCoupon = userCouponRepository.findByIdAndUserIdForUpdate(userCouponId, userId)
+            .orElseThrow(() -> new CouponNotFoundException("쿠폰을 찾을 수 없습니다."));
 
         Instant now = clock.instant();
         try {

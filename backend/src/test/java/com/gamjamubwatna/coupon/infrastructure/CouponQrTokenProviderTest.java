@@ -58,6 +58,18 @@ class CouponQrTokenProviderTest {
             .hasMessage("쿠폰 QR payload가 유효하지 않거나 만료되었습니다.");
     }
 
+    @Test
+    void rejectsSigningKeyShorterThan32Bytes() {
+        assertThatThrownBy(() -> new CouponQrTokenProvider(
+            new ObjectMapper(),
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            "short-secret",
+            300
+        ))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("쿠폰 QR 서명 키는 최소 32바이트(256비트) 이상이어야 합니다.");
+    }
+
     private CouponQrTokenProvider providerAt(Instant instant) {
         return new CouponQrTokenProvider(
             new ObjectMapper(),

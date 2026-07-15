@@ -492,6 +492,7 @@ class _CouponDetailSheet extends ConsumerWidget {
                   child: FilledButton.icon(
                     onPressed: () => showDialog<void>(
                       context: context,
+                      barrierDismissible: false,
                       builder: (_) => _CouponQrDialog(
                         userCouponId: userCouponId,
                       ),
