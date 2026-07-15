@@ -69,6 +69,16 @@ void main() {
       ),
     );
   });
+
+  test('rejects malformed optional coupon dates', () {
+    expect(
+      () => CouponDetail.fromJson({
+        ...(_couponDetailResponse['data']! as Map<String, Object?>),
+        'usedAt': 'not-a-date',
+      }),
+      throwsFormatException,
+    );
+  });
 }
 
 const _couponListResponse = <String, Object?>{

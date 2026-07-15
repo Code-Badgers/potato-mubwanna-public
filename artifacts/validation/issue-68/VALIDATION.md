@@ -41,7 +41,7 @@ flutter analyze
 flutter test
 ```
 
-- 결과: 성공, 81개 테스트 통과
+- 결과: 성공, 82개 테스트 통과
 - 기존 마이페이지 보상함 이동 테스트를 실데이터 화면의 빈 상태 기준으로 갱신
 
 ### Web 빌드
@@ -57,3 +57,10 @@ flutter build web --dart-define=KAKAO_JAVASCRIPT_KEY=test-key --dart-define=KAKA
 
 - 현재 DB에는 사용자 쿠폰을 자동 발급하는 흐름이 없어 실제 계정에서는 빈 상태가 정상입니다.
 - QR 표시와 사용 처리는 #69, 미션 보상 쿠폰 발급과 실제 전체 흐름은 #70에서 검증합니다.
+
+## Gemini 리뷰 반영
+
+- 값이 있는 날짜 필드는 `DateTime.parse`로 엄격하게 파싱해 잘못된 API 계약을 오류 상태로 전파
+- 잘못된 선택 날짜가 `null`로 숨겨지지 않는지 테스트 추가
+- 목록의 `ValueKey`를 내부 `Material`이 아닌 최상위 `_CouponCard`에 지정
+- 쿠폰 테스트 10개 및 `flutter analyze` 통과

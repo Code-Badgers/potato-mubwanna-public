@@ -20,8 +20,8 @@ final couponListProvider = FutureProvider.autoDispose<List<CouponSummary>?>((
   return ref.watch(couponRepositoryProvider).fetchCoupons();
 });
 
-final couponDetailProvider = FutureProvider.autoDispose
-    .family<CouponDetail, int>(
-      (ref, userCouponId) =>
-          ref.watch(couponRepositoryProvider).fetchCoupon(userCouponId),
-    );
+final couponDetailProvider =
+    FutureProvider.autoDispose.family<CouponDetail, int>(
+  (ref, userCouponId) =>
+      ref.watch(couponRepositoryProvider).fetchCoupon(userCouponId),
+);

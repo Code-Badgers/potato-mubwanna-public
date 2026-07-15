@@ -4,11 +4,11 @@ enum CouponStatus {
   expired;
 
   static CouponStatus fromApiValue(String value) => switch (value) {
-    'AVAILABLE' => CouponStatus.available,
-    'USED' => CouponStatus.used,
-    'EXPIRED' => CouponStatus.expired,
-    _ => throw FormatException('알 수 없는 쿠폰 상태입니다: $value'),
-  };
+        'AVAILABLE' => CouponStatus.available,
+        'USED' => CouponStatus.used,
+        'EXPIRED' => CouponStatus.expired,
+        _ => throw FormatException('알 수 없는 쿠폰 상태입니다: $value'),
+      };
 }
 
 class CouponSummary {
@@ -29,13 +29,13 @@ class CouponSummary {
   final DateTime expiresAt;
 
   static CouponSummary fromJson(Map<String, dynamic> json) => CouponSummary(
-    userCouponId: json['userCouponId'] as int? ?? 0,
-    name: json['name'] as String? ?? '',
-    description: json['description'] as String? ?? '',
-    benefitAmount: (json['benefitAmount'] as num?)?.toInt() ?? 0,
-    status: CouponStatus.fromApiValue(json['status'] as String? ?? ''),
-    expiresAt: _requiredDateTime(json['expiresAt']),
-  );
+        userCouponId: json['userCouponId'] as int? ?? 0,
+        name: json['name'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        benefitAmount: (json['benefitAmount'] as num?)?.toInt() ?? 0,
+        status: CouponStatus.fromApiValue(json['status'] as String? ?? ''),
+        expiresAt: _requiredDateTime(json['expiresAt']),
+      );
 }
 
 class CouponDetail extends CouponSummary {
@@ -56,29 +56,28 @@ class CouponDetail extends CouponSummary {
   final DateTime? usedAt;
 
   static CouponDetail fromJson(Map<String, dynamic> json) => CouponDetail(
-    userCouponId: json['userCouponId'] as int? ?? 0,
-    name: json['name'] as String? ?? '',
-    description: json['description'] as String? ?? '',
-    benefitAmount: (json['benefitAmount'] as num?)?.toInt() ?? 0,
-    status: CouponStatus.fromApiValue(json['status'] as String? ?? ''),
-    expiresAt: _requiredDateTime(json['expiresAt']),
-    usagePlace: json['usagePlace'] as String? ?? '',
-    issuedAt: _requiredDateTime(json['issuedAt']),
-    usedAt: _optionalDateTime(json['usedAt']),
-  );
+        userCouponId: json['userCouponId'] as int? ?? 0,
+        name: json['name'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        benefitAmount: (json['benefitAmount'] as num?)?.toInt() ?? 0,
+        status: CouponStatus.fromApiValue(json['status'] as String? ?? ''),
+        expiresAt: _requiredDateTime(json['expiresAt']),
+        usagePlace: json['usagePlace'] as String? ?? '',
+        issuedAt: _requiredDateTime(json['issuedAt']),
+        usedAt: _optionalDateTime(json['usedAt']),
+      );
 }
 
 DateTime _requiredDateTime(Object? value) {
-  final parsed = _optionalDateTime(value);
-  if (parsed == null) {
+  if (value is! String || value.isEmpty) {
     throw const FormatException('필수 날짜 형식이 올바르지 않습니다.');
   }
-  return parsed;
+  return DateTime.parse(value);
 }
 
 DateTime? _optionalDateTime(Object? value) {
   if (value is! String || value.isEmpty) {
     return null;
   }
-  return DateTime.tryParse(value);
+  return DateTime.parse(value);
 }

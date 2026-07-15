@@ -42,9 +42,8 @@ class CouponRepository {
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(
-        message: response.message.isEmpty
-            ? '쿠폰을 불러오지 못했습니다.'
-            : response.message,
+        message:
+            response.message.isEmpty ? '쿠폰을 불러오지 못했습니다.' : response.message,
         code: response.code,
         statusCode: statusCode,
       );

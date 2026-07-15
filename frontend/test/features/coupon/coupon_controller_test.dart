@@ -55,13 +55,13 @@ void main() {
 }
 
 CouponSummary _coupon(int id) => CouponSummary(
-  userCouponId: id,
-  name: '쿠폰 $id',
-  description: '설명',
-  benefitAmount: 5000,
-  status: CouponStatus.available,
-  expiresAt: DateTime.parse('2026-12-31T23:59:59Z'),
-);
+      userCouponId: id,
+      name: '쿠폰 $id',
+      description: '설명',
+      benefitAmount: 5000,
+      status: CouponStatus.available,
+      expiresAt: DateTime.parse('2026-12-31T23:59:59Z'),
+    );
 
 class _QueuedCouponRepository extends CouponRepository {
   _QueuedCouponRepository(this._coupons) : super(dio: Dio());
@@ -79,10 +79,10 @@ class _QueuedCouponRepository extends CouponRepository {
 
 class _SessionAuthRepository extends AuthRepository {
   _SessionAuthRepository()
-    : super(
-        dio: Dio(),
-        tokenStorage: const TokenStorage(FlutterSecureStorage()),
-      );
+      : super(
+          dio: Dio(),
+          tokenStorage: const TokenStorage(FlutterSecureStorage()),
+        );
 
   @override
   Future<void> refreshSession() async {}

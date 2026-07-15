@@ -59,6 +59,7 @@ void main() {
 
     expect(find.text('사용 가능 1'), findsOneWidget);
     expect(find.text('사용 완료 2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('coupon-1')), findsOneWidget);
     expect(find.text('감자빵 1개 교환권'), findsOneWidget);
     expect(find.text('사용한 쿠폰'), findsNothing);
 

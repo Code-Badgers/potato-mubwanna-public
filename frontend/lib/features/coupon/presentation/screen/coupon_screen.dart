@@ -31,12 +31,12 @@ class CouponScreen extends ConsumerWidget {
               child: switch (authStatus) {
                 AuthStatus.authenticated => const _CouponInbox(),
                 AuthStatus.loading => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                    child: CircularProgressIndicator(),
+                  ),
                 AuthStatus.idle || AuthStatus.failure => AuthRequiredView(
-                  description: '보상함을 확인하려면 로그인해주세요.',
-                  onLogin: () => context.go('/login'),
-                ),
+                    description: '보상함을 확인하려면 로그인해주세요.',
+                    onLogin: () => context.go('/login'),
+                  ),
               },
             ),
           ],
@@ -72,9 +72,8 @@ class _CouponInboxState extends ConsumerState<_CouponInbox> {
         final completed = allCoupons
             .where((coupon) => coupon.status != CouponStatus.available)
             .toList(growable: false);
-        final selected = _selectedTab == _CouponTab.available
-            ? available
-            : completed;
+        final selected =
+            _selectedTab == _CouponTab.available ? available : completed;
 
         return Column(
           children: [
@@ -103,6 +102,7 @@ class _CouponInboxState extends ConsumerState<_CouponInbox> {
                         }
                         final coupon = selected[index - 1];
                         return _CouponCard(
+                          key: ValueKey('coupon-${coupon.userCouponId}'),
                           coupon: coupon,
                           onTap: () =>
                               _showCouponDetail(context, coupon.userCouponId),
@@ -286,7 +286,11 @@ class _CouponSummaryCard extends StatelessWidget {
 }
 
 class _CouponCard extends StatelessWidget {
-  const _CouponCard({required this.coupon, required this.onTap});
+  const _CouponCard({
+    super.key,
+    required this.coupon,
+    required this.onTap,
+  });
 
   final CouponSummary coupon;
   final VoidCallback onTap;
@@ -296,7 +300,6 @@ class _CouponCard extends StatelessWidget {
     final available = coupon.status == CouponStatus.available;
 
     return Material(
-      key: ValueKey('coupon-${coupon.userCouponId}'),
       color: available ? AppColors.surface : const Color(0xFFF4F3EF),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
@@ -366,20 +369,20 @@ class _CouponStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, background, foreground) = switch (status) {
       CouponStatus.available => (
-        '사용 가능',
-        const Color(0xFFE5F6EA),
-        const Color(0xFF31764A),
-      ),
+          '사용 가능',
+          const Color(0xFFE5F6EA),
+          const Color(0xFF31764A),
+        ),
       CouponStatus.used => (
-        '사용 완료',
-        const Color(0xFFE3E1DB),
-        AppColors.textSecondary,
-      ),
+          '사용 완료',
+          const Color(0xFFE3E1DB),
+          AppColors.textSecondary,
+        ),
       CouponStatus.expired => (
-        '기간 만료',
-        const Color(0xFFF4E4E1),
-        AppColors.error,
-      ),
+          '기간 만료',
+          const Color(0xFFF4E4E1),
+          AppColors.error,
+        ),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -575,9 +578,9 @@ class _CouponError extends StatelessWidget {
 
 String _formatAmount(int amount) {
   final value = amount.toString().replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
+        RegExp(r'\B(?=(\d{3})+(?!\d))'),
+        (_) => ',',
+      );
   return '$value원';
 }
 
