@@ -33,6 +33,50 @@ void main() {
     expect(find.text('상세보기'), findsOneWidget);
   });
 
+  testWidgets('updates the place card when a different map marker is selected',
+      (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) => Stack(
+              children: [
+                for (var index = 0; index < spots.length; index++)
+                  Positioned(
+                    left: 24 + (index * 64),
+                    top: 180,
+                    child: TextButton(
+                      key: ValueKey('marker-${spots[index].id}'),
+                      onPressed: () => onSpotSelected(spots[index].id),
+                      child: Text('마커 ${spots[index].id}'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('정선 5일장'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('marker-2')));
+    await tester.pump();
+
+    expect(find.text('감자 카페'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsNothing);
+  });
+
   testWidgets('shows one actionable area when the spot API fails', (
     tester,
   ) async {

@@ -34,6 +34,7 @@ class NativeKakaoMapView(
     private val mapView = MapView(context)
     private val channel = MethodChannel(messenger, "potato_mubwanna/kakao_map_$viewId")
     private val spotLabels = mutableListOf<Label>()
+    private val spotIdByLabelId = mutableMapOf<String, String>()
     private var kakaoMap: KakaoMap? = null
 
     init {
@@ -77,8 +78,9 @@ class NativeKakaoMapView(
                         this@NativeKakaoMapView.kakaoMap = kakaoMap
                         addSpotLabels(kakaoMap, spots)
                         kakaoMap.setOnLabelClickListener { _, _, label ->
-                            val spotId = label.labelId.removePrefix("potato-")
-                            channel.invokeMethod("spotSelected", spotId)
+                            val spotId = spotIdByLabelId[label.labelId]
+                                ?: label.labelId.removePrefix("potato-")
+                            channel.invokeMethod("spotSelected", mapOf("spotId" to spotId))
                             true
                         }
                         kakaoMap.setOnCameraMoveEndListener { map, cameraPosition, _ ->
@@ -131,6 +133,7 @@ class NativeKakaoMapView(
         val layer = labelManager.layer ?: return
         layer.removeAll()
         spotLabels.clear()
+        spotIdByLabelId.clear()
         if (spots.isEmpty()) return
 
         val styleCache = mutableMapOf<String, LabelStyles>()
@@ -161,6 +164,7 @@ class NativeKakaoMapView(
             )
             label.show()
             spotLabels.add(label)
+            spotIdByLabelId[label.labelId] = spotId
         }
         scaleSpotLabels(kakaoMap, kakaoMap.cameraPosition)
     }

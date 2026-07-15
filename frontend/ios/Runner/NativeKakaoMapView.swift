@@ -184,7 +184,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 #if DEBUG
       print("[NativeKakaoMapView] spotSelected \(spotID)")
 #endif
-      self?.channel.invokeMethod("spotSelected", arguments: spotID)
+      self?.channel.invokeMethod("spotSelected", arguments: ["spotId": spotID])
     }
   }
 

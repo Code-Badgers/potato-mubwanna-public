@@ -11,6 +11,11 @@ import '../../application/map_spot_controller.dart';
 import '../../domain/map_spot.dart';
 import '../widget/kakao_map_view.dart';
 
+typedef MapViewBuilder = Widget Function(
+  List<MapSpot> spots,
+  ValueChanged<String> onSpotSelected,
+);
+
 const _mapPrimary = Color(0xFF36D98F);
 const _mapDark = Color(0xFF509B64);
 const _rareGold = Color(0xFFF6C23E);
@@ -18,10 +23,12 @@ const _rareGold = Color(0xFFF6C23E);
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({
     this.hasMapConfiguration,
+    this.mapViewBuilder,
     super.key,
   });
 
   final bool? hasMapConfiguration;
+  final MapViewBuilder? mapViewBuilder;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -164,6 +171,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           child: _PotatoMapPreview(
                             spots: visibleSpots,
                             onSpotSelected: _selectSpotById,
+                            mapViewBuilder: widget.mapViewBuilder,
                           ),
                         ),
                         Positioned(
@@ -715,11 +723,13 @@ class _RouteModeChip extends StatelessWidget {
 class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
     required this.spots,
-    this.onSpotSelected,
+    required this.onSpotSelected,
+    this.mapViewBuilder,
   });
 
   final List<MapSpot> spots;
-  final ValueChanged<String>? onSpotSelected;
+  final ValueChanged<String> onSpotSelected;
+  final MapViewBuilder? mapViewBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -730,10 +740,11 @@ class _PotatoMapPreview extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: KakaoMapView(
-                spots: spots,
-                onSpotSelected: onSpotSelected,
-              ),
+              child: mapViewBuilder?.call(spots, onSpotSelected) ??
+                  KakaoMapView(
+                    spots: spots,
+                    onSpotSelected: onSpotSelected,
+                  ),
             ),
           ],
         ),
