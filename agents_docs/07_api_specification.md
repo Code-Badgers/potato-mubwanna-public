@@ -404,6 +404,31 @@ POST /api/stamps/rewards/claim
 GET /api/potatoes
 ```
 
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "totalCount": 5,
+    "items": [
+      {
+        "potatoId": 1,
+        "code": "POTATO_HAJI_GANGNEUNG",
+        "name": "하지감자",
+        "region": "강릉시",
+        "rarity": "COMMON",
+        "description": "강릉 여행길에서 처음 만나기 좋은 기본 감자입니다.",
+        "acquisitionHint": "강릉 감자 스팟 방문 인증",
+        "imageUrl": null,
+        "growthGoalDistance": 3000.0
+      }
+    ]
+  }
+}
+```
+
 ### 5.2 내 감자 도감 조회
 
 ```http
@@ -416,18 +441,28 @@ Response:
 {
   "success": true,
   "message": "요청이 성공했습니다.",
-  "data": [
-    {
-      "potatoId": 1,
-      "name": "하지감자",
-      "region": "강릉시",
-      "rarity": "NORMAL",
-      "imageUrl": "https://...",
-      "acquired": true,
-      "level": 2,
-      "distance": 1500.0
-    }
-  ]
+  "data": {
+    "totalCount": 5,
+    "acquiredCount": 1,
+    "items": [
+      {
+        "potatoId": 1,
+        "code": "POTATO_HAJI_GANGNEUNG",
+        "name": "하지감자",
+        "region": "강릉시",
+        "rarity": "COMMON",
+        "description": "강릉 여행길에서 처음 만나기 좋은 기본 감자입니다.",
+        "acquisitionHint": "강릉 감자 스팟 방문 인증",
+        "imageUrl": null,
+        "acquired": true,
+        "acquiredAt": "2026-07-01T00:00:00Z",
+        "level": 2,
+        "growthDistance": 1500.0,
+        "growthGoalDistance": 3000.0,
+        "representative": true
+      }
+    ]
+  }
 }
 ```
 
