@@ -41,6 +41,14 @@
 - 결과: 성공
 - Gradle 출력: `BUILD SUCCESSFUL in 44s`
 
+### Gemini 리뷰 반영
+
+- `Coupon` 생성자에 필수 문자열과 음수 혜택 금액 검증 추가
+- `UserCoupon` 생성자에 필수 참조, 발급/만료 시간, 상태/사용 일시 정합성 검증 추가
+- 도메인 생성자 테스트 6개 추가
+- 쿠폰 국소 테스트 결과: `BUILD SUCCESSFUL in 18s`
+- 백엔드 전체 테스트 및 빌드 결과: `BUILD SUCCESSFUL in 38s`
+
 ## 남은 작업
 
 - #68 Flutter 보상함 실데이터 연동

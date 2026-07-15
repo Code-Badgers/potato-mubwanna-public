@@ -55,6 +55,24 @@ public class UserCoupon {
         Instant expiresAt,
         Instant usedAt
     ) {
+        if (user == null) {
+            throw new IllegalArgumentException("쿠폰 소유 사용자는 필수입니다.");
+        }
+        if (coupon == null) {
+            throw new IllegalArgumentException("쿠폰 정보는 필수입니다.");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("쿠폰 상태는 필수입니다.");
+        }
+        if (issuedAt == null || expiresAt == null || !expiresAt.isAfter(issuedAt)) {
+            throw new IllegalArgumentException("만료 시간은 발급 시간보다 이후여야 합니다.");
+        }
+        if (status == UserCouponStatus.AVAILABLE && usedAt != null) {
+            throw new IllegalArgumentException("사용 가능한 쿠폰은 사용 일시를 가질 수 없습니다.");
+        }
+        if (status == UserCouponStatus.USED && usedAt == null) {
+            throw new IllegalArgumentException("사용된 쿠폰은 사용 일시를 가져야 합니다.");
+        }
         this.user = user;
         this.coupon = coupon;
         this.status = status;

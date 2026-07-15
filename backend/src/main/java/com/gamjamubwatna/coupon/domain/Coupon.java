@@ -32,6 +32,18 @@ public class Coupon {
     }
 
     public Coupon(String name, String description, int benefitAmount, String usagePlace) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("쿠폰 이름은 필수입니다.");
+        }
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("쿠폰 설명은 필수입니다.");
+        }
+        if (benefitAmount < 0) {
+            throw new IllegalArgumentException("혜택 금액은 0원 이상이어야 합니다.");
+        }
+        if (usagePlace == null || usagePlace.isBlank()) {
+            throw new IllegalArgumentException("사용 장소는 필수입니다.");
+        }
         this.name = name;
         this.description = description;
         this.benefitAmount = benefitAmount;
