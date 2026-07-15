@@ -22,6 +22,12 @@
 - Flutter는 새 Map payload와 기존 String payload를 모두 해석해 이전 앱 빌드와의 호환성을 유지한다.
 - 지도 선택 콜백을 테스트할 수 있는 지도 빌더 주입 지점을 추가했다.
 
+### Web CustomEvent 브라우저 객체 타입 불일치
+
+- 문제: `CustomEvent.detail`의 네이티브 JavaScript 객체는 Dart 런타임에서 항상 `js.JsObject`로 판별되지 않는다.
+- 영향: raw JS 객체가 Map 패턴과 일치하지 않아 Web 마커 선택 ID가 `null`로 처리될 수 있었다.
+- 해결: String과 Dart Map은 그대로 사용하고, 나머지 객체는 `JsObject.fromBrowserObject`로 감싼 뒤 `spotId`를 추출한다. 변환 실패 이벤트는 무시한다.
+
 ## 변경 파일
 
 - `frontend/lib/features/map/presentation/screen/map_screen.dart`: 지도 선택 콜백 기반 카드 갱신 테스트 지점 추가
@@ -81,11 +87,23 @@ flutter build apk --debug --no-pub
 - 결과: `Built build/app/outputs/flutter-apk/app-debug.apk`
 - Kotlin label ID 역매핑 변경 컴파일 통과
 
+### Web 디버그 빌드
+
+```bash
+flutter build web --debug --no-pub \
+  --dart-define=KAKAO_JAVASCRIPT_KEY=test-key
+```
+
+- 결과: `Built build/web`
+- `JsObject.fromBrowserObject` 기반 Web 선택 payload 변환 컴파일 통과
+- 빌드에는 실제 키가 아닌 컴파일 검증용 값만 사용했다.
+
 ## 확인된 경고
 
 - `flutter_secure_storage`가 아직 iOS Swift Package Manager를 지원하지 않는다는 기존 경고가 있다.
 - Android 프로젝트와 Kakao Flutter SDK가 Kotlin Gradle Plugin을 적용하며 향후 Flutter에서 Built-in Kotlin 이전이 필요하다는 기존 경고가 있다.
-- 두 경고 모두 현재 빌드 실패 원인은 아니며 #65 범위 밖이다.
+- WebAssembly dry run에서 `flutter_secure_storage_web`, `geolocator_web`의 `dart:html` 호환 경고가 있다.
+- 이 경고들은 현재 빌드 실패 원인이 아니며 #65 범위 밖이다.
 
 ## 남은 리스크
 
