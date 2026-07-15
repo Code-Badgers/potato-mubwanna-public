@@ -2,6 +2,11 @@ package com.gamjamubwatna.mission.application;
 
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.coupon.domain.Coupon;
+import com.gamjamubwatna.coupon.domain.CouponRepository;
+import com.gamjamubwatna.coupon.domain.UserCoupon;
+import com.gamjamubwatna.coupon.domain.UserCouponRepository;
+import com.gamjamubwatna.coupon.domain.UserCouponStatus;
 import com.gamjamubwatna.mission.api.MissionCompleteResponse;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
@@ -9,6 +14,7 @@ import com.gamjamubwatna.mission.api.MissionVerifyRequest;
 import com.gamjamubwatna.mission.api.MissionVerifyResponse;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionRepository;
+import com.gamjamubwatna.mission.domain.MissionRewardType;
 import com.gamjamubwatna.mission.domain.MissionStatus;
 import com.gamjamubwatna.mission.domain.MissionVerificationPolicy;
 import com.gamjamubwatna.mission.domain.MissionVerificationPolicyRepository;
@@ -18,6 +24,7 @@ import com.gamjamubwatna.reward.domain.RewardHistory;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +41,8 @@ public class MissionService {
     private final MissionVerificationPolicyRepository missionVerificationPolicyRepository;
     private final UserMissionRepository userMissionRepository;
     private final RewardHistoryRepository rewardHistoryRepository;
+    private final CouponRepository couponRepository;
+    private final UserCouponRepository userCouponRepository;
     private final UserRepository userRepository;
     private final Clock clock;
 
@@ -43,6 +52,8 @@ public class MissionService {
         MissionVerificationPolicyRepository missionVerificationPolicyRepository,
         UserMissionRepository userMissionRepository,
         RewardHistoryRepository rewardHistoryRepository,
+        CouponRepository couponRepository,
+        UserCouponRepository userCouponRepository,
         UserRepository userRepository
     ) {
         this(
@@ -50,6 +61,8 @@ public class MissionService {
             missionVerificationPolicyRepository,
             userMissionRepository,
             rewardHistoryRepository,
+            couponRepository,
+            userCouponRepository,
             userRepository,
             Clock.systemUTC()
         );
@@ -60,6 +73,8 @@ public class MissionService {
         MissionVerificationPolicyRepository missionVerificationPolicyRepository,
         UserMissionRepository userMissionRepository,
         RewardHistoryRepository rewardHistoryRepository,
+        CouponRepository couponRepository,
+        UserCouponRepository userCouponRepository,
         UserRepository userRepository,
         Clock clock
     ) {
@@ -67,6 +82,8 @@ public class MissionService {
         this.missionVerificationPolicyRepository = missionVerificationPolicyRepository;
         this.userMissionRepository = userMissionRepository;
         this.rewardHistoryRepository = rewardHistoryRepository;
+        this.couponRepository = couponRepository;
+        this.userCouponRepository = userCouponRepository;
         this.userRepository = userRepository;
         this.clock = clock;
     }
@@ -163,6 +180,7 @@ public class MissionService {
     }
 
     private void saveMissionRewardHistory(User user, Mission mission, Instant completedAt) {
+        // 완료 기록, 보상 이력, 쿠폰 발급을 한 트랜잭션에 묶어 일부만 남는 상태를 막는다.
         rewardHistoryRepository.save(new RewardHistory(
             user,
             mission.getRewardType(),
@@ -170,6 +188,28 @@ public class MissionService {
             RewardSourceType.MISSION,
             mission.getId(),
             completedAt
+        ));
+        issueCouponReward(user, mission, completedAt);
+    }
+
+    private void issueCouponReward(User user, Mission mission, Instant completedAt) {
+        if (mission.getRewardType() != MissionRewardType.COUPON) {
+            return;
+        }
+        Long rewardCouponId = mission.getRewardCouponId();
+        if (rewardCouponId == null) {
+            throw new MissionCompletionException("미션 쿠폰 보상 매핑을 찾을 수 없습니다.");
+        }
+        Coupon coupon = couponRepository.findById(rewardCouponId)
+            .orElseThrow(() -> new MissionCompletionException("미션 쿠폰 정보를 찾을 수 없습니다."));
+        Instant expiresAt = completedAt.plus(Duration.ofDays(coupon.getValidDays()));
+        userCouponRepository.save(new UserCoupon(
+            user,
+            coupon,
+            UserCouponStatus.AVAILABLE,
+            completedAt,
+            expiresAt,
+            null
         ));
     }
 

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,22 @@ class CouponMigrationTest {
 
     @Autowired
     private DataSource dataSource;
+
+    @Autowired
+    private CouponRepository couponRepository;
+
+    @Test
+    void seedsMissionRewardCouponCatalog() {
+        List<Coupon> coupons = couponRepository.findAll();
+
+        assertThat(coupons)
+            .filteredOn(coupon -> coupon.getCode() != null)
+            .hasSize(7)
+            .extracting(Coupon::getCode)
+            .contains("CP_PYEONGCHANG_EXPERIENCE", "CP_HWACHEON_FISH_FREE");
+        assertThat(coupons)
+            .allSatisfy(coupon -> assertThat(coupon.getValidDays()).isEqualTo(30));
+    }
 
     @Test
     void createsUserCouponLookupIndexes() throws Exception {

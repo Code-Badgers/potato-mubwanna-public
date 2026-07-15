@@ -56,6 +56,19 @@ class MissionMigrationTest {
     }
 
     @Test
+    void mapsEveryCouponRewardMissionToCouponCatalog() {
+        List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
+
+        assertThat(missions)
+            .filteredOn(mission -> mission.getRewardType() == MissionRewardType.COUPON)
+            .hasSize(7)
+            .allSatisfy(mission -> assertThat(mission.getRewardCouponId()).isNotNull());
+        assertThat(missions)
+            .filteredOn(mission -> mission.getRewardType() != MissionRewardType.COUPON)
+            .allSatisfy(mission -> assertThat(mission.getRewardCouponId()).isNull());
+    }
+
+    @Test
     void createsUserMissionLookupIndexes() throws Exception {
         Set<String> indexNames = new HashSet<>();
         try (
