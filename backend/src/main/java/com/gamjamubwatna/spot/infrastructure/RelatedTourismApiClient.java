@@ -158,11 +158,11 @@ public class RelatedTourismApiClient {
         List<RelatedTourismSpot> item
     ) {
         @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
-        private RelatedTourismItems(String value) {
-            this(List.of());
+        private static RelatedTourismItems from(String value) {
             if (value != null && !value.isBlank()) {
                 throw new IllegalArgumentException("items 문자열 응답 형식이 올바르지 않습니다.");
             }
+            return new RelatedTourismItems(List.of());
         }
     }
 }
