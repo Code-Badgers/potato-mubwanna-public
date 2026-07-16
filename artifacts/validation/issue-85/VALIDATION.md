@@ -59,6 +59,12 @@ flutter build web `
 
 기존 의존성의 WebAssembly 호환성 안내와 `CupertinoIcons` 글꼴 안내가 출력됐지만 빌드 실패나 이번 변경의 오류는 없었다.
 
+## Gemini 리뷰 반영
+
+- 초기화 post-frame callback이 실행되기 전에 위젯이 해제될 수 있으므로 메서드 시작 시 `mounted`를 확인하도록 보완했다.
+- Kakao SDK 비동기 대기 중 위젯이 해제된 뒤 예외가 발생할 수 있으므로 오류 안내를 표시하기 전에도 `mounted`를 확인한다.
+- 반영 후 지도 집중 테스트 6건, 정적 분석, Flutter 전체 테스트 92건을 다시 실행해 모두 통과했다.
+
 ## 실제 런타임 검증
 
 - 로컬 PostgreSQL과 Redis, Spring Boot API를 실행하고 `정선 5일장` 테스트 관광지를 준비했다.

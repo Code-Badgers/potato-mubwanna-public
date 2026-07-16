@@ -122,6 +122,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   }
 
   Future<void> _initializeMapAfterLayout() async {
+    if (!mounted) {
+      return;
+    }
+
     if (_kakaoJavaScriptKey.isEmpty) {
       _showMessage('지도 설정이 완료되지 않았습니다. 앱 관리자에게 문의해주세요.');
       return;
@@ -151,6 +155,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       _injectKakaoMapScript();
       _messageElement.style.display = 'none';
     } catch (_) {
+      if (!mounted) {
+        return;
+      }
       _showMessage(
         '카카오맵을 불러오지 못했습니다. 잠시 후 페이지를 새로고침해주세요.',
       );
