@@ -103,6 +103,25 @@ class RelatedTourismApiClientTest {
     }
 
     @Test
+    void encodesDecodedServiceKeyAsQueryComponent() throws Exception {
+        AtomicReference<String> rawQuery = new AtomicReference<>();
+        startServer("""
+            {
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {"items": {"item": []}}
+              }
+            }
+            """, rawQuery);
+
+        client("decoded+service/key==").searchRelatedSpots("뮤지엄산", "51130");
+
+        assertThat(rawQuery.get())
+            .contains("serviceKey=decoded%2Bservice%2Fkey%3D%3D")
+            .doesNotContain("serviceKey=decoded+service/key");
+    }
+
+    @Test
     void rejectsApiErrorResponse() throws Exception {
         startServer("""
             {
