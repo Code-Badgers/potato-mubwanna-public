@@ -46,6 +46,14 @@ coupon:
     ttl-seconds: ${COUPON_QR_TTL_SECONDS:300}
 
 external:
+  related-tourism-api:
+    base-url: ${RELATED_TOURISM_API_BASE_URL:https://apis.data.go.kr/B551011/TarRlteTarService1}
+    search-keyword-path: ${RELATED_TOURISM_API_SEARCH_KEYWORD_PATH:/searchKeyword1}
+    service-key: ${RELATED_TOURISM_API_SERVICE_KEY:}
+    mobile-os: ${RELATED_TOURISM_API_MOBILE_OS:ETC}
+    mobile-app: ${RELATED_TOURISM_API_MOBILE_APP:potato-mubwanna}
+    base-year-month: ${RELATED_TOURISM_API_BASE_YM:202504}
+    area-code: ${RELATED_TOURISM_API_AREA_CODE:51}
   odii-api:
     base-url: ${ODII_API_BASE_URL:https://apis.data.go.kr/B551011/Odii}
     story-search-path: ${ODII_API_STORY_SEARCH_PATH:/storySearchList}
