@@ -46,6 +46,13 @@ coupon:
     ttl-seconds: ${COUPON_QR_TTL_SECONDS:300}
 
 external:
+  odii-api:
+    base-url: ${ODII_API_BASE_URL:https://apis.data.go.kr/B551011/Odii}
+    story-search-path: ${ODII_API_STORY_SEARCH_PATH:/storySearchList}
+    service-key: ${ODII_API_SERVICE_KEY:}
+    mobile-os: ${ODII_API_MOBILE_OS:ETC}
+    mobile-app: ${ODII_API_MOBILE_APP:potato-mubwanna}
+    language: ${ODII_API_LANGUAGE:ko}
   tour-api:
     base-url: ${TOUR_API_BASE_URL:https://apis.data.go.kr/B551011/KorService2}
     search-keyword-path: ${TOUR_API_SEARCH_KEYWORD_PATH:/searchKeyword2}

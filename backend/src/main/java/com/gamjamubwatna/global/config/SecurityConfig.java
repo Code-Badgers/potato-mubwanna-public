@@ -40,6 +40,7 @@ public class SecurityConfig {
                     "/auth/refresh",
                     "/auth/logout",
                     "/spots/**",
+                    "/audio-guides/**",
                     "/health",
                     "/docs/**",
                     "/v3/api-docs/**",
