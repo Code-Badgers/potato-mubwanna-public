@@ -3,7 +3,7 @@
 ## 검증 범위
 
 - `GET /api/spots/{spotId}/recommendations` 응답 계약
-- 한국관광공사 연관 관광지 API `searchKeyword1` 요청 및 JSON 파싱
+- 한국관광공사 연관 관광지 API `searchKeyword1` 요청 및 최상위 `response` 래퍼 JSON 파싱
 - 인코딩/디코딩 서비스 키의 이중 인코딩 방지
 - 강원특별자치도 18개 시군구 코드 변환
 - 기준 관광지명과 시군구 정확 일치, 외부 추천 순위 정렬 및 중복 제거
@@ -35,7 +35,7 @@ cd backend
 
 결과: `BUILD SUCCESSFUL`
 
-- 공식 응답 구조를 반환하는 로컬 HTTP 서버로 실제 `RestClient` 요청/파싱 검증
+- 공식 응답의 최상위 `response` 래퍼를 반환하는 로컬 HTTP 서버로 실제 `RestClient` 요청/파싱 검증
 - 인코딩 서비스 키가 이중 인코딩되지 않는지 검증
 - 단일 `item` 객체 응답과 API 오류 응답 처리 검증
 - 외부 순위 정렬, 중복 제거, 활성 관광지 매핑, 최대 3개 제한 검증
@@ -49,6 +49,8 @@ cd backend
 ```
 
 결과: `BUILD SUCCESSFUL`, `157 tests`, 실패 `0`, 오류 `0`, 제외 `0`
+
+리뷰 반영 후 첫 전체 테스트 재실행은 앞서 실행 중이던 Gradle 프로세스가 `build/test-results/test/binary/output.bin`을 잠가 정리 단계에서 실패했다. `.\gradlew.bat --stop`으로 잔류 데몬을 종료한 뒤 같은 전체 테스트를 다시 실행해 정상 통과했다.
 
 ### 백엔드 빌드
 

@@ -28,30 +28,32 @@ class RelatedTourismApiClientTest {
         AtomicReference<String> rawQuery = new AtomicReference<>();
         startServer("""
             {
-              "header": {"resultCode": "0000", "resultMsg": "OK"},
-              "body": {
-                "items": {
-                  "item": [
-                    {
-                      "baseYm": "202504",
-                      "tAtsCd": "source-code",
-                      "tAtsNm": "뮤지엄산",
-                      "areaCd": "51",
-                      "areaNm": "강원특별자치도",
-                      "signguCd": "51130",
-                      "signguNm": "원주시",
-                      "rlteTatsCd": "related-code",
-                      "rlteTatsNm": "원주소금산출렁다리",
-                      "rlteRegnCd": "51",
-                      "rlteRegnNm": "강원특별자치도",
-                      "rlteSignguCd": "51130",
-                      "rlteSignguNm": "원주시",
-                      "rlteCtgryLclsNm": "관광지",
-                      "rlteCtgryMclsNm": "기타관광",
-                      "rlteCtgrySclsNm": "기타관광",
-                      "rlteRank": "2"
-                    }
-                  ]
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {
+                  "items": {
+                    "item": [
+                      {
+                        "baseYm": "202504",
+                        "tAtsCd": "source-code",
+                        "tAtsNm": "뮤지엄산",
+                        "areaCd": "51",
+                        "areaNm": "강원특별자치도",
+                        "signguCd": "51130",
+                        "signguNm": "원주시",
+                        "rlteTatsCd": "related-code",
+                        "rlteTatsNm": "원주소금산출렁다리",
+                        "rlteRegnCd": "51",
+                        "rlteRegnNm": "강원특별자치도",
+                        "rlteSignguCd": "51130",
+                        "rlteSignguNm": "원주시",
+                        "rlteCtgryLclsNm": "관광지",
+                        "rlteCtgryMclsNm": "기타관광",
+                        "rlteCtgrySclsNm": "기타관광",
+                        "rlteRank": "2"
+                      }
+                    ]
+                  }
                 }
               }
             }
@@ -80,14 +82,16 @@ class RelatedTourismApiClientTest {
     void acceptsSingleItemObjectFromGateway() throws Exception {
         startServer("""
             {
-              "header": {"resultCode": "0000", "resultMsg": "OK"},
-              "body": {
-                "items": {
-                  "item": {
-                    "tAtsNm": "뮤지엄산",
-                    "signguCd": "51130",
-                    "rlteTatsNm": "원주소금산출렁다리",
-                    "rlteRank": "1"
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {
+                  "items": {
+                    "item": {
+                      "tAtsNm": "뮤지엄산",
+                      "signguCd": "51130",
+                      "rlteTatsNm": "원주소금산출렁다리",
+                      "rlteRank": "1"
+                    }
                   }
                 }
               }
@@ -102,8 +106,10 @@ class RelatedTourismApiClientTest {
     void rejectsApiErrorResponse() throws Exception {
         startServer("""
             {
-              "header": {"resultCode": "30", "resultMsg": "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"},
-              "body": {"items": {"item": []}}
+              "response": {
+                "header": {"resultCode": "30", "resultMsg": "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"},
+                "body": {"items": {"item": []}}
+              }
             }
             """, new AtomicReference<>());
 

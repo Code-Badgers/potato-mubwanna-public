@@ -49,12 +49,12 @@ public class RelatedTourismApiClient {
         }
 
         try {
-            RelatedTourismResponse response = restClient.get()
+            RelatedTourismApiResponse apiResponse = restClient.get()
                 .uri(searchUri(keyword, signguCode))
                 .retrieve()
-                .body(RelatedTourismResponse.class);
+                .body(RelatedTourismApiResponse.class);
 
-            validateResponse(response);
+            RelatedTourismResponse response = validatedResponse(apiResponse);
             if (response.body() == null
                 || response.body().items() == null
                 || response.body().items().item() == null) {
@@ -68,16 +68,20 @@ public class RelatedTourismApiClient {
         }
     }
 
-    private void validateResponse(RelatedTourismResponse response) {
-        if (response == null || response.header() == null) {
+    private RelatedTourismResponse validatedResponse(RelatedTourismApiResponse apiResponse) {
+        if (apiResponse == null
+            || apiResponse.response() == null
+            || apiResponse.response().header() == null) {
             throw new RelatedTourismApiException("연관 관광지 API 응답 형식을 확인할 수 없습니다.");
         }
+        RelatedTourismResponse response = apiResponse.response();
         String resultCode = response.header().resultCode();
         if (!"00".equals(resultCode) && !"0000".equals(resultCode)) {
             throw new RelatedTourismApiException(
                 "연관 관광지 API 오류: %s".formatted(response.header().resultMsg())
             );
         }
+        return response;
     }
 
     private URI searchUri(String keyword, String signguCode) {
@@ -134,6 +138,9 @@ public class RelatedTourismApiClient {
         String rlteCtgrySclsNm,
         String rlteRank
     ) {
+    }
+
+    private record RelatedTourismApiResponse(RelatedTourismResponse response) {
     }
 
     private record RelatedTourismResponse(RelatedTourismHeader header, RelatedTourismBody body) {
