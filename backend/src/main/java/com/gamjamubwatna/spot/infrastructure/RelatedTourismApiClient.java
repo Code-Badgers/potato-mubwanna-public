@@ -1,5 +1,6 @@
 package com.gamjamubwatna.spot.infrastructure;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -156,5 +157,12 @@ public class RelatedTourismApiClient {
         @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
         List<RelatedTourismSpot> item
     ) {
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+        private RelatedTourismItems(String value) {
+            this(List.of());
+            if (value != null && !value.isBlank()) {
+                throw new IllegalArgumentException("items 문자열 응답 형식이 올바르지 않습니다.");
+            }
+        }
     }
 }

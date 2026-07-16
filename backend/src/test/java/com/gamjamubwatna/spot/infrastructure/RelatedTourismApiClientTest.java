@@ -103,6 +103,37 @@ class RelatedTourismApiClientTest {
     }
 
     @Test
+    void returnsEmptyListWhenGatewayRepresentsItemsAsEmptyString() throws Exception {
+        startServer("""
+            {
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {"items": ""}
+              }
+            }
+            """, new AtomicReference<>());
+
+        assertThat(client("service-key").searchRelatedSpots("정선 5일장", "51770"))
+            .isEmpty();
+    }
+
+    @Test
+    void rejectsNonEmptyStringItemsFromGateway() throws Exception {
+        startServer("""
+            {
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {"items": "unexpected"}
+              }
+            }
+            """, new AtomicReference<>());
+
+        assertThatThrownBy(() -> client("service-key").searchRelatedSpots("정선 5일장", "51770"))
+            .isInstanceOf(RelatedTourismApiException.class)
+            .hasMessageContaining("연관 관광지 API 호출에 실패했습니다");
+    }
+
+    @Test
     void rejectsApiErrorResponse() throws Exception {
         startServer("""
             {
