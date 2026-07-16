@@ -8,7 +8,7 @@
 - 관광지명 정확 일치 및 한국어 음원 선택
 - 최초 조회 시 저장 후 재조회에서 캐시 재사용
 - 관광지/해설 미존재 404, 외부 연동 실패 503
-- Flyway `V11__create_audio_guides.sql`과 JPA 스키마 및 복합 유니크 인덱스 일치
+- Flyway `V12__create_audio_guides.sql`과 JPA 스키마 및 복합 유니크 인덱스 일치
 
 ## 공식 명세 확인
 
