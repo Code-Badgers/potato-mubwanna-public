@@ -9,6 +9,7 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 
 import '../../domain/map_spot.dart';
+import 'map_layout_waiter.dart';
 import 'map_spot_selection_message.dart';
 
 const _kakaoJavaScriptKey = String.fromEnvironment('KAKAO_JAVASCRIPT_KEY');
@@ -121,17 +122,21 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   }
 
   Future<void> _initializeMapAfterLayout() async {
-    await Future<void>.delayed(const Duration(milliseconds: 80));
-    if (!mounted) {
-      return;
-    }
-
     if (_kakaoJavaScriptKey.isEmpty) {
       _showMessage('지도 설정이 완료되지 않았습니다. 앱 관리자에게 문의해주세요.');
       return;
     }
 
-    if (_mapElement.clientWidth == 0 || _mapElement.clientHeight == 0) {
+    // HtmlElementView는 첫 프레임 뒤에도 DOM 배치가 늦을 수 있어 실제 크기가 생길 때까지 기다린다.
+    final hasLayout = await waitForMapLayout(
+      hasLayout: () =>
+          _mapElement.clientWidth > 0 && _mapElement.clientHeight > 0,
+      shouldContinue: () => mounted,
+    );
+    if (!hasLayout) {
+      if (!mounted) {
+        return;
+      }
       _showMessage('지도 화면을 준비하지 못했습니다. 페이지를 새로고침해주세요.');
       return;
     }
