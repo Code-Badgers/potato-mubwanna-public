@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsFlag;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,8 @@ import 'package:potato_mubwanna/features/coupon/application/coupon_controller.da
 import 'package:potato_mubwanna/features/coupon/data/coupon_repository.dart';
 import 'package:potato_mubwanna/features/coupon/domain/coupon.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
+import 'package:potato_mubwanna/features/reward/application/reward_history_controller.dart';
+import 'package:potato_mubwanna/features/reward/domain/reward_history.dart';
 
 void main() {
   testWidgets('shows a login prompt instead of coupons for guests', (
@@ -160,11 +163,170 @@ void main() {
 
     expect(find.text('사용 가능한 쿠폰이 없어요.'), findsOneWidget);
   });
+
+  testWidgets('shows reward history with Korean type and source labels', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      overrides: [
+        couponListProvider.overrideWith((ref) async => const []),
+        rewardHistoryProvider.overrideWith((ref) async => _rewardHistory),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('reward-box-history-tab')),
+    );
+    await tester.pumpAndSettle();
+
+    final couponReward = find.text('강원 감자 제휴점 할인권');
+    final potatoReward = find.text('수미감자 씨앗');
+    expect(couponReward, findsOneWidget);
+    expect(potatoReward, findsOneWidget);
+    expect(
+      tester.getTopLeft(couponReward).dy,
+      lessThan(tester.getTopLeft(potatoReward).dy),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('reward-history-2')),
+        matching: find.text('쿠폰'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('스탬프 보상'), findsOneWidget);
+    expect(find.text('감자'), findsOneWidget);
+    expect(find.text('미션 보상'), findsOneWidget);
+    expect(find.text('2026. 07. 17. 18:30 지급'), findsOneWidget);
+  });
+
+  testWidgets('announces the selected reward box section', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _pumpScreen(
+      tester,
+      overrides: [
+        couponListProvider.overrideWith((ref) async => const []),
+        rewardHistoryProvider.overrideWith((ref) async => const []),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final couponTab = find.byKey(const ValueKey('reward-box-coupon-tab'));
+    final historyTab = find.byKey(const ValueKey('reward-box-history-tab'));
+    expect(_isSelectedSemantics(tester, couponTab), isTrue);
+    expect(_isSelectedSemantics(tester, historyTab), isFalse);
+
+    await tester.tap(historyTab);
+    await tester.pumpAndSettle();
+
+    expect(_isSelectedSemantics(tester, historyTab), isTrue);
+    semantics.dispose();
+  });
+
+  testWidgets('keeps reward box sections usable with large text', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      textScaleFactor: 2,
+      overrides: [
+        couponListProvider.overrideWith((ref) async => _coupons),
+        rewardHistoryProvider.overrideWith((ref) async => _rewardHistory),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(
+      find.byKey(const ValueKey('reward-box-history-tab')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('강원 감자 제휴점 할인권'), findsOneWidget);
+  });
+
+  testWidgets('shows an empty state when reward history does not exist', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      overrides: [
+        couponListProvider.overrideWith((ref) async => const []),
+        rewardHistoryProvider.overrideWith((ref) async => const []),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('reward-box-history-tab')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('아직 받은 보상이 없어요.'), findsOneWidget);
+  });
+
+  testWidgets('shows reward history loading while the request is pending', (
+    tester,
+  ) async {
+    final completer = Completer<List<RewardHistory>?>();
+    await _pumpScreen(
+      tester,
+      overrides: [
+        couponListProvider.overrideWith((ref) async => const []),
+        rewardHistoryProvider.overrideWith((ref) => completer.future),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('reward-box-history-tab')),
+    );
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('retries after reward history loading fails', (tester) async {
+    var requestCount = 0;
+    await _pumpScreen(
+      tester,
+      overrides: [
+        couponListProvider.overrideWith((ref) async => const []),
+        rewardHistoryProvider.overrideWith((ref) {
+          requestCount += 1;
+          if (requestCount == 1) {
+            return Future<List<RewardHistory>?>.error(Exception('network'));
+          }
+          return Future.value(_rewardHistory);
+        }),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('reward-box-history-tab')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('보상 내역을 불러오지 못했습니다.'), findsOneWidget);
+    expect(requestCount, 1);
+
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+
+    expect(requestCount, 2);
+    expect(find.text('강원 감자 제휴점 할인권'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required List<Override> overrides,
+  double textScaleFactor = 1,
 }) async {
   tester.view.physicalSize = const Size(430, 932);
   tester.view.devicePixelRatio = 1;
@@ -179,15 +341,54 @@ Future<void> _pumpScreen(
         ),
         ...overrides,
       ],
-      child: const MaterialApp(home: CouponScreen()),
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: _withTextScale(MediaQuery.of(context), textScaleFactor),
+          child: child!,
+        ),
+        home: const CouponScreen(),
+      ),
     ),
   );
+}
+
+bool _isSelectedSemantics(WidgetTester tester, Finder finder) {
+  // Keep this test compatible with Flutter versions before flagsCollection.
+  // ignore: deprecated_member_use
+  return tester.getSemantics(finder).getSemanticsData().hasFlag(
+        SemanticsFlag.isSelected,
+      );
+}
+
+MediaQueryData _withTextScale(MediaQueryData data, double textScaleFactor) {
+  // Keep this test compatible with Flutter versions before TextScaler.
+  // ignore: deprecated_member_use
+  return data.copyWith(textScaleFactor: textScaleFactor);
 }
 
 final _coupons = [
   _summary(1, '감자빵 1개 교환권', CouponStatus.available),
   _summary(2, '사용한 쿠폰', CouponStatus.used),
   _summary(3, '기간 만료 쿠폰', CouponStatus.expired),
+];
+
+final _rewardHistory = [
+  RewardHistory(
+    rewardHistoryId: 2,
+    rewardType: RewardType.coupon,
+    rewardName: '강원 감자 제휴점 할인권',
+    sourceType: RewardSourceType.stamp,
+    sourceId: 6,
+    createdAt: DateTime(2026, 7, 17, 18, 30),
+  ),
+  RewardHistory(
+    rewardHistoryId: 1,
+    rewardType: RewardType.potato,
+    rewardName: '수미감자 씨앗',
+    sourceType: RewardSourceType.mission,
+    sourceId: 1001,
+    createdAt: DateTime(2026, 7, 11, 18),
+  ),
 ];
 
 CouponSummary _summary(int id, String name, CouponStatus status) =>
