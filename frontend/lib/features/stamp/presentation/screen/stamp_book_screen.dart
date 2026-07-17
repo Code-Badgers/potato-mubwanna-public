@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
 
@@ -16,6 +17,31 @@ class StampBookScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stampBook = ref.watch(stampBookProvider);
+    final claimState = ref.watch(stampRewardClaimProvider);
+    ref.listen(stampRewardClaimProvider, (_, next) {
+      next.whenOrNull(
+        data: (result) {
+          if (result == null) {
+            return;
+          }
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('보상 수령이 완료됐어요. 쿠폰함에서 확인해 주세요.'),
+              ),
+            );
+        },
+        error: (error, _) {
+          final message = error is ApiException && error.message.isNotEmpty
+              ? error.message
+              : '보상을 받지 못했습니다. 잠시 후 다시 시도해 주세요.';
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(message)));
+        },
+      );
+    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -23,7 +49,13 @@ class StampBookScreen extends ConsumerWidget {
         child: stampBook.when(
           data: (value) => value == null
               ? const _SignedOutState()
-              : _StampBookBody(stampBook: value),
+              : _StampBookBody(
+                  stampBook: value,
+                  isClaiming: claimState.isLoading,
+                  onClaim: (targetCount) => ref
+                      .read(stampRewardClaimProvider.notifier)
+                      .claim(targetCount),
+                ),
           loading: () => const _StampBookStatusBody(
             child: Center(child: CircularProgressIndicator()),
           ),
@@ -58,9 +90,15 @@ class _StampBookStatusBody extends StatelessWidget {
 }
 
 class _StampBookBody extends StatelessWidget {
-  const _StampBookBody({required this.stampBook});
+  const _StampBookBody({
+    required this.stampBook,
+    required this.isClaiming,
+    required this.onClaim,
+  });
 
   final StampBook stampBook;
+  final bool isClaiming;
+  final ValueChanged<int> onClaim;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +131,13 @@ class _StampBookBody extends StatelessWidget {
             },
           ),
         ),
-        SliverToBoxAdapter(child: _RewardCard(reward: reward)),
+        SliverToBoxAdapter(
+          child: _RewardCard(
+            reward: reward,
+            isClaiming: isClaiming,
+            onClaim: onClaim,
+          ),
+        ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
@@ -141,9 +185,11 @@ class _ProgressSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
     final targetCount = reward.nextTargetCount;
-    final rewardMessage = reward.completed || targetCount == null
-        ? '모든 보상 기준을 달성했어요'
-        : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
+    final rewardMessage = reward.canClaim
+        ? '${reward.claimableTargetCount}개 달성 보상을 받을 수 있어요'
+        : reward.completed || targetCount == null
+            ? '모든 보상 기준을 달성했어요'
+            : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -343,13 +389,20 @@ class _StampTile extends StatelessWidget {
 }
 
 class _RewardCard extends StatelessWidget {
-  const _RewardCard({required this.reward});
+  const _RewardCard({
+    required this.reward,
+    required this.isClaiming,
+    required this.onClaim,
+  });
 
   final NextStampReward reward;
+  final bool isClaiming;
+  final ValueChanged<int> onClaim;
 
   @override
   Widget build(BuildContext context) {
     final targetCount = reward.nextTargetCount;
+    final claimableTargetCount = reward.claimableTargetCount;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -375,9 +428,9 @@ class _RewardCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '다음 보상',
-                  style: TextStyle(
+                Text(
+                  reward.canClaim ? '받을 수 있는 보상' : '다음 보상',
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
@@ -385,7 +438,43 @@ class _RewardCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                if (reward.completed || targetCount == null)
+                if (reward.canClaim && claimableTargetCount != null) ...[
+                  Text(
+                    '$claimableTargetCount개 달성 보상이 준비됐어요.',
+                    style: const TextStyle(
+                      color: _stampDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      key: const ValueKey('stamp-reward-claim-button'),
+                      onPressed: isClaiming
+                          ? null
+                          : () => onClaim(claimableTargetCount),
+                      child: isClaiming
+                          ? const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('보상 받는 중...'),
+                              ],
+                            )
+                          : Text('$claimableTargetCount개 보상 받기'),
+                    ),
+                  ),
+                ] else if (reward.completed || targetCount == null)
                   const Text(
                     '18개 시군 랠리를 모두 완주했어요.',
                     style: TextStyle(
