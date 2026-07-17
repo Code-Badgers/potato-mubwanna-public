@@ -1,15 +1,19 @@
 package com.gamjamubwatna.stamp.application;
 
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
+import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
 import com.gamjamubwatna.stamp.api.StampItemResponse;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
 import com.gamjamubwatna.stamp.domain.Stamp;
 import com.gamjamubwatna.stamp.domain.StampRepository;
+import com.gamjamubwatna.stamp.domain.StampRewardPolicy;
 import com.gamjamubwatna.stamp.domain.UserStamp;
 import com.gamjamubwatna.stamp.domain.UserStampRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -19,20 +23,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class StampQueryService {
 
-    private static final List<Integer> REWARD_TARGETS = List.of(6, 12, 18);
-
     private final StampRepository stampRepository;
     private final UserStampRepository userStampRepository;
     private final UserRepository userRepository;
+    private final RewardHistoryRepository rewardHistoryRepository;
 
     public StampQueryService(
         StampRepository stampRepository,
         UserStampRepository userStampRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        RewardHistoryRepository rewardHistoryRepository
     ) {
         this.stampRepository = stampRepository;
         this.userStampRepository = userStampRepository;
         this.userRepository = userRepository;
+        this.rewardHistoryRepository = rewardHistoryRepository;
     }
 
     public StampBookResponse getStampBook(Long userId) {
@@ -59,16 +64,25 @@ public class StampQueryService {
     public StampRewardStatusResponse getRewardStatus(Long userId) {
         validateUser(userId);
         int acquiredCount = userStampRepository.countByUserId(userId);
-        Integer nextTargetCount = REWARD_TARGETS.stream()
-            .filter(target -> target > acquiredCount)
-            .findFirst()
-            .orElse(null);
+        Integer nextTargetCount = StampRewardPolicy.nextTargetCount(acquiredCount);
+        Set<Long> claimedTargetCounts = Set.copyOf(
+            rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
+                userId,
+                RewardSourceType.STAMP
+            )
+        );
+        Integer claimableTargetCount = StampRewardPolicy.claimableTargetCount(
+            acquiredCount,
+            claimedTargetCounts
+        );
 
         return new StampRewardStatusResponse(
             acquiredCount,
             nextTargetCount,
             nextTargetCount == null ? 0 : nextTargetCount - acquiredCount,
-            nextTargetCount == null
+            nextTargetCount == null,
+            claimableTargetCount != null,
+            claimableTargetCount
         );
     }
 

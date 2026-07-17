@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
+import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
 import com.gamjamubwatna.stamp.domain.Stamp;
@@ -36,6 +38,9 @@ class StampQueryServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private RewardHistoryRepository rewardHistoryRepository;
+
     private StampQueryService stampQueryService;
 
     @BeforeEach
@@ -43,7 +48,8 @@ class StampQueryServiceTest {
         stampQueryService = new StampQueryService(
             stampRepository,
             userStampRepository,
-            userRepository
+            userRepository,
+            rewardHistoryRepository
         );
     }
 
@@ -93,6 +99,10 @@ class StampQueryServiceTest {
     ) {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userStampRepository.countByUserId(1L)).thenReturn(acquiredCount);
+        when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
+            1L,
+            RewardSourceType.STAMP
+        )).thenReturn(List.of());
 
         StampRewardStatusResponse result = stampQueryService.getRewardStatus(1L);
 
@@ -100,6 +110,55 @@ class StampQueryServiceTest {
         assertThat(result.nextTargetCount()).isEqualTo(nextTargetCount);
         assertThat(result.remainingCount()).isEqualTo(remainingCount);
         assertThat(result.completed()).isEqualTo(completed);
+        assertThat(result.claimable()).isEqualTo(acquiredCount >= 6);
+        assertThat(result.claimableTargetCount()).isEqualTo(acquiredCount >= 6 ? 6 : null);
+    }
+
+    @Test
+    void returnsLowestAchievedUnclaimedRewardTarget() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userStampRepository.countByUserId(1L)).thenReturn(18);
+        when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
+            1L,
+            RewardSourceType.STAMP
+        )).thenReturn(List.of(6L, 12L));
+
+        StampRewardStatusResponse result = stampQueryService.getRewardStatus(1L);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.claimable()).isTrue();
+        assertThat(result.claimableTargetCount()).isEqualTo(18);
+    }
+
+    @Test
+    void keepsLowerTargetClaimableWhenHigherTargetWasClaimedFirst() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userStampRepository.countByUserId(1L)).thenReturn(12);
+        when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
+            1L,
+            RewardSourceType.STAMP
+        )).thenReturn(List.of(12L));
+
+        StampRewardStatusResponse result = stampQueryService.getRewardStatus(1L);
+
+        assertThat(result.claimable()).isTrue();
+        assertThat(result.claimableTargetCount()).isEqualTo(6);
+    }
+
+    @Test
+    void returnsNoClaimableTargetAfterAllRewardsWereClaimed() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userStampRepository.countByUserId(1L)).thenReturn(18);
+        when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
+            1L,
+            RewardSourceType.STAMP
+        )).thenReturn(List.of(6L, 12L, 18L));
+
+        StampRewardStatusResponse result = stampQueryService.getRewardStatus(1L);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.claimable()).isFalse();
+        assertThat(result.claimableTargetCount()).isNull();
     }
 
     @Test
