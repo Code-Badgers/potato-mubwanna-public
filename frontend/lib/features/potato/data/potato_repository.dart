@@ -22,6 +22,23 @@ class PotatoRepository {
     return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
+  Future<PotatoRepresentativeResult> updateRepresentativePotato(
+    String potatoId,
+  ) async {
+    final response = await _request(
+      () => _dio.patch<Map<String, dynamic>>(
+        ApiPaths.representativePotato,
+        data: {'potatoId': int.tryParse(potatoId)},
+      ),
+    );
+    final apiResponse = ApiResponse<PotatoRepresentativeResult>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      PotatoRepresentativeResult.fromJson,
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(
