@@ -2,13 +2,17 @@ package com.gamjamubwatna.potato.api;
 
 import com.gamjamubwatna.auth.api.AuthApiResponse;
 import com.gamjamubwatna.potato.application.PotatoAuthenticationException;
+import com.gamjamubwatna.potato.application.PotatoCommandService;
 import com.gamjamubwatna.potato.application.PotatoQueryService;
+import com.gamjamubwatna.potato.application.PotatoRepresentativeException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,9 +23,14 @@ public class PotatoController {
     private static final Pattern USER_PRINCIPAL_PATTERN = Pattern.compile("^user:([1-9]\\d*)$");
 
     private final PotatoQueryService potatoQueryService;
+    private final PotatoCommandService potatoCommandService;
 
-    public PotatoController(PotatoQueryService potatoQueryService) {
+    public PotatoController(
+        PotatoQueryService potatoQueryService,
+        PotatoCommandService potatoCommandService
+    ) {
         this.potatoQueryService = potatoQueryService;
+        this.potatoCommandService = potatoCommandService;
     }
 
     // 감자 도감 진입 전 앱이 표시할 전체 감자 카탈로그를 정렬 순서대로 조회한다.
@@ -42,6 +51,28 @@ public class PotatoController {
         } catch (PotatoAuthenticationException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        }
+    }
+
+    // 도감에서 사용자가 보유한 감자 중 하나를 대표 감자로 지정한다.
+    @PatchMapping("/me/representative")
+    public ResponseEntity<AuthApiResponse<PotatoRepresentativeResponse>> updateRepresentativePotato(
+        Authentication authentication,
+        @RequestBody PotatoRepresentativeRequest request
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                potatoCommandService.updateRepresentativePotato(
+                    userId(authentication),
+                    request.potatoId()
+                )
+            ));
+        } catch (PotatoAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        } catch (PotatoRepresentativeException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(AuthApiResponse.failure(exception.getMessage()));
         }
     }
 

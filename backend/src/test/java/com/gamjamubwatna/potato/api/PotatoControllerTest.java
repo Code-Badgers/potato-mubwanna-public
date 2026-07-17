@@ -2,13 +2,17 @@ package com.gamjamubwatna.potato.api;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.potato.application.PotatoCommandService;
 import com.gamjamubwatna.potato.application.PotatoQueryService;
+import com.gamjamubwatna.potato.application.PotatoRepresentativeException;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +30,9 @@ class PotatoControllerTest {
 
     @MockitoBean
     private PotatoQueryService potatoQueryService;
+
+    @MockitoBean
+    private PotatoCommandService potatoCommandService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -69,6 +76,37 @@ class PotatoControllerTest {
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("인증 정보를 확인할 수 없습니다."));
+    }
+
+    @Test
+    void updatesRepresentativePotato() throws Exception {
+        when(potatoCommandService.updateRepresentativePotato(eq(1L), eq(2L)))
+            .thenReturn(new PotatoRepresentativeResponse(2L, true));
+
+        mockMvc.perform(patch("/potatoes/me/representative")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"potatoId\":2}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.potatoId").value(2))
+            .andExpect(jsonPath("$.data.representative").value(true));
+    }
+
+    @Test
+    void rejectsUnacquiredRepresentativePotato() throws Exception {
+        when(potatoCommandService.updateRepresentativePotato(eq(1L), eq(99L)))
+            .thenThrow(new PotatoRepresentativeException("획득한 감자만 대표 감자로 설정할 수 있습니다."));
+
+        mockMvc.perform(patch("/potatoes/me/representative")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"potatoId\":99}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("획득한 감자만 대표 감자로 설정할 수 있습니다."));
     }
 
     private PotatoCatalogItemResponse catalogItem() {

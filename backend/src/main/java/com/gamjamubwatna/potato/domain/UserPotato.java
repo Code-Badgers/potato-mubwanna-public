@@ -96,4 +96,12 @@ public class UserPotato {
     public boolean isRepresentative() {
         return representative;
     }
+
+    public void markRepresentative() {
+        representative = true;
+    }
+
+    public void unmarkRepresentative() {
+        representative = false;
+    }
 }
