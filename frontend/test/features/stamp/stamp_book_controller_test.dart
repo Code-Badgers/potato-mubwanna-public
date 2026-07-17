@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -6,6 +8,7 @@ import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
+import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
 import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller.dart';
 import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
@@ -53,6 +56,101 @@ void main() {
     );
     expect(repository.fetchCount, 2);
   });
+
+  test('reward claim refreshes the rallybook and coupon list after success',
+      () async {
+    var stampBookRefreshCount = 0;
+    var couponListRefreshCount = 0;
+    final repository = _ClaimStampRepository();
+    final controller = StampRewardClaimController(
+      repository,
+      onStampBookRefresh: () => stampBookRefreshCount += 1,
+      onCouponListRefresh: () => couponListRefreshCount += 1,
+    );
+
+    final result = await controller.claim(6);
+
+    expect(repository.claimCount, 1);
+    expect(repository.requestedTargetCount, 6);
+    expect(result?.userCouponId, 21);
+    expect(controller.state.valueOrNull?.couponName, '강원 감자 할인권');
+    expect(stampBookRefreshCount, 1);
+    expect(couponListRefreshCount, 1);
+  });
+
+  test('reward claim ignores a second request while the first is pending',
+      () async {
+    final completer = Completer<StampRewardClaimResult>();
+    final repository = _ClaimStampRepository(completer: completer);
+    final controller = StampRewardClaimController(
+      repository,
+      onStampBookRefresh: () {},
+      onCouponListRefresh: () {},
+    );
+
+    final firstClaim = controller.claim(6);
+    final secondClaim = controller.claim(6);
+
+    expect(controller.state.isLoading, isTrue);
+    expect(repository.claimCount, 1);
+    expect(await secondClaim, isNull);
+
+    completer.complete(_claimResult);
+    expect(await firstClaim, same(_claimResult));
+    expect(repository.claimCount, 1);
+  });
+
+  test('pending reward claim survives auto-dispose and refreshes both caches',
+      () async {
+    final completer = Completer<StampRewardClaimResult>();
+    final repository = _ClaimStampRepository(completer: completer);
+    var stampBookLoadCount = 0;
+    var couponListLoadCount = 0;
+    final container = ProviderContainer(
+      overrides: [
+        stampRepositoryProvider.overrideWithValue(repository),
+        stampBookProvider.overrideWith((ref) async {
+          stampBookLoadCount += 1;
+          return null;
+        }),
+        couponListProvider.overrideWith((ref) async {
+          couponListLoadCount += 1;
+          return null;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    final stampBookSubscription = container.listen(
+      stampBookProvider,
+      (_, __) {},
+    );
+    final couponListSubscription = container.listen(
+      couponListProvider,
+      (_, __) {},
+    );
+    addTearDown(stampBookSubscription.close);
+    addTearDown(couponListSubscription.close);
+    await container.read(stampBookProvider.future);
+    await container.read(couponListProvider.future);
+
+    final claimSubscription = container.listen(
+      stampRewardClaimProvider,
+      (_, __) {},
+    );
+    final claimFuture =
+        container.read(stampRewardClaimProvider.notifier).claim(6);
+    claimSubscription.close();
+    await container.pump();
+
+    completer.complete(_claimResult);
+
+    expect(await claimFuture, same(_claimResult));
+    await container.pump();
+    await container.read(stampBookProvider.future);
+    await container.read(couponListProvider.future);
+    expect(stampBookLoadCount, 2);
+    expect(couponListLoadCount, 2);
+  });
 }
 
 StampBook _stampBook(int acquiredCount) => StampBook(
@@ -66,6 +164,8 @@ StampBook _stampBook(int acquiredCount) => StampBook(
         nextTargetCount: 6,
         remainingCount: 6 - acquiredCount,
         completed: false,
+        claimable: false,
+        claimableTargetCount: null,
       ),
     );
 
@@ -82,6 +182,34 @@ class _QueuedStampRepository extends StampRepository {
     return book;
   }
 }
+
+class _ClaimStampRepository extends StampRepository {
+  _ClaimStampRepository({this.completer}) : super(dio: Dio());
+
+  final Completer<StampRewardClaimResult>? completer;
+  int claimCount = 0;
+  int? requestedTargetCount;
+
+  @override
+  Future<StampRewardClaimResult> claimReward(
+    StampRewardClaimRequest request,
+  ) async {
+    claimCount += 1;
+    requestedTargetCount = request.targetCount;
+    if (completer != null) {
+      return completer!.future;
+    }
+    return _claimResult;
+  }
+}
+
+final _claimResult = StampRewardClaimResult(
+  targetCount: 6,
+  rewardHistoryId: 10,
+  userCouponId: 21,
+  couponName: '강원 감자 할인권',
+  expiresAt: DateTime.parse('2026-08-16T00:00:00Z'),
+);
 
 class _SessionAuthRepository extends AuthRepository {
   _SessionAuthRepository()

@@ -388,11 +388,77 @@ Response:
 GET /api/stamps/rewards/check
 ```
 
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "acquiredCount": 12,
+    "nextTargetCount": 18,
+    "remainingCount": 6,
+    "completed": false,
+    "claimable": true,
+    "claimableTargetCount": 6
+  }
+}
+```
+
+- 보상 기준은 6개, 12개, 18개다.
+- `nextTargetCount`는 현재 획득 수보다 큰 다음 기준이며 기존 조회 의미를 유지한다.
+- `claimableTargetCount`는 달성했지만 아직 수령하지 않은 가장 낮은 기준이다. 없으면 `null`이다.
+- `claimable`은 `claimableTargetCount`가 있을 때 `true`다.
+- 18개를 모두 획득해 `completed=true`여도 미수령 보상이 있으면 `claimable=true`일 수 있다.
+
 ### 4.4 스탬프 보상 수령
 
 ```http
 POST /api/stamps/rewards/claim
 ```
+
+Request:
+
+```json
+{
+  "targetCount": 6
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "targetCount": 6,
+    "rewardHistoryId": 10,
+    "userCouponId": 21,
+    "couponName": "강원 감자 제휴점 3,000원 할인권",
+    "expiresAt": "2026-08-16T00:00:00Z"
+  }
+}
+```
+
+처리 규칙:
+
+- `targetCount`는 6, 12, 18 중 하나여야 한다.
+- 획득 스탬프 수가 기준 이상일 때만 해당 보상을 수령할 수 있다.
+- 달성한 각 기준 보상은 독립적으로 수령할 수 있으며, 낮은 기준부터 순서대로 수령할 필요는 없다.
+- 한 사용자는 각 기준 보상을 한 번만 수령할 수 있다.
+- 수령 성공 시 `RewardHistory`의 `sourceType`은 `STAMP`, `sourceId`는 기준 개수로 저장한다.
+- 보상 이력과 사용자 쿠폰은 한 트랜잭션에서 생성하며, 동시 요청에서도 하나만 발급한다.
+- 지원하지 않는 기준은 `400 Bad Request`, 조건 미달·이미 수령·동시 중복은 `409 Conflict`를 반환한다.
+- 인증 정보가 없으면 `401 Unauthorized`, 정책 쿠폰이 누락되면 `500 Internal Server Error`를 반환한다.
+
+MVP 쿠폰 정책:
+
+| 기준 | 쿠폰 코드 | 쿠폰명 | 혜택 | 유효기간 |
+| --- | --- | --- | --- | --- |
+| 6개 | `CP_STAMP_6_LOCAL_3000` | 강원 감자 제휴점 3,000원 할인권 | 3,000원 | 발급 후 30일 |
+| 12개 | `CP_STAMP_12_LOCAL_5000` | 강원 감자 제휴점 5,000원 할인권 | 5,000원 | 발급 후 30일 |
+| 18개 | `CP_STAMP_18_COMPLETE_10000` | 강원 감자 랠리 완주 10,000원 할인권 | 10,000원 | 발급 후 30일 |
 
 ---
 

@@ -4,13 +4,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.stamp.application.StampQueryService;
+import com.gamjamubwatna.stamp.application.StampRewardConfigurationException;
+import com.gamjamubwatna.stamp.application.StampRewardConflictException;
+import com.gamjamubwatna.stamp.application.StampRewardInvalidTargetException;
+import com.gamjamubwatna.stamp.application.StampRewardService;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -27,6 +33,9 @@ class StampControllerTest {
 
     @MockitoBean
     private StampQueryService stampQueryService;
+
+    @MockitoBean
+    private StampRewardService stampRewardService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -59,7 +68,7 @@ class StampControllerTest {
     @Test
     void returnsAuthenticatedUsersNextRewardStatus() throws Exception {
         when(stampQueryService.getRewardStatus(eq(1L)))
-            .thenReturn(new StampRewardStatusResponse(8, 12, 4, false));
+            .thenReturn(new StampRewardStatusResponse(8, 12, 4, false, true, 6));
 
         mockMvc.perform(get("/stamps/rewards/check").with(user("user:1")))
             .andExpect(status().isOk())
@@ -67,7 +76,108 @@ class StampControllerTest {
             .andExpect(jsonPath("$.data.acquiredCount").value(8))
             .andExpect(jsonPath("$.data.nextTargetCount").value(12))
             .andExpect(jsonPath("$.data.remainingCount").value(4))
-            .andExpect(jsonPath("$.data.completed").value(false));
+            .andExpect(jsonPath("$.data.completed").value(false))
+            .andExpect(jsonPath("$.data.claimable").value(true))
+            .andExpect(jsonPath("$.data.claimableTargetCount").value(6));
+    }
+
+    @Test
+    void claimsAchievedStampReward() throws Exception {
+        when(stampRewardService.claimReward(eq(1L), eq(6)))
+            .thenReturn(new StampRewardClaimResponse(
+                6,
+                10L,
+                21L,
+                "강원 감자 제휴점 3,000원 할인권",
+                Instant.parse("2026-08-16T00:00:00Z")
+            ));
+
+        mockMvc.perform(post("/stamps/rewards/claim")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"targetCount": 6}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.targetCount").value(6))
+            .andExpect(jsonPath("$.data.rewardHistoryId").value(10))
+            .andExpect(jsonPath("$.data.userCouponId").value(21))
+            .andExpect(jsonPath("$.data.couponName")
+                .value("강원 감자 제휴점 3,000원 할인권"))
+            .andExpect(jsonPath("$.data.expiresAt").value("2026-08-16T00:00:00Z"));
+    }
+
+    @Test
+    void rejectsUnsupportedRewardTarget() throws Exception {
+        when(stampRewardService.claimReward(eq(1L), eq(7)))
+            .thenThrow(new StampRewardInvalidTargetException(
+                "지원하지 않는 스탬프 보상 기준입니다."
+            ));
+
+        mockMvc.perform(post("/stamps/rewards/claim")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"targetCount": 7}
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void rejectsMissingRewardTarget() throws Exception {
+        when(stampRewardService.claimReward(eq(1L), org.mockito.ArgumentMatchers.isNull()))
+            .thenThrow(new StampRewardInvalidTargetException(
+                "지원하지 않는 스탬프 보상 기준입니다."
+            ));
+
+        mockMvc.perform(post("/stamps/rewards/claim")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void mapsDuplicateRewardClaimToConflict() throws Exception {
+        when(stampRewardService.claimReward(eq(1L), eq(6)))
+            .thenThrow(new StampRewardConflictException("이미 수령한 스탬프 보상입니다."));
+
+        mockMvc.perform(post("/stamps/rewards/claim")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"targetCount": 6}
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("이미 수령한 스탬프 보상입니다."));
+    }
+
+    @Test
+    void mapsMissingPolicyCouponToServerError() throws Exception {
+        when(stampRewardService.claimReward(eq(1L), eq(6)))
+            .thenThrow(new StampRewardConfigurationException(
+                "스탬프 보상 쿠폰 정보를 찾을 수 없습니다."
+            ));
+
+        mockMvc.perform(post("/stamps/rewards/claim")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"targetCount": 6}
+                    """))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message")
+                .value("스탬프 보상 쿠폰 정보를 찾을 수 없습니다."));
     }
 
     @Test

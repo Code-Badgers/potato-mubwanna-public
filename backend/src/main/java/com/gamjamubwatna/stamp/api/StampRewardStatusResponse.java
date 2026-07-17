@@ -4,6 +4,8 @@ public record StampRewardStatusResponse(
     int acquiredCount,
     Integer nextTargetCount,
     int remainingCount,
-    boolean completed
+    boolean completed,
+    boolean claimable,
+    Integer claimableTargetCount
 ) {
 }

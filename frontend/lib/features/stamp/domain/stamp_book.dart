@@ -73,12 +73,18 @@ class NextStampReward {
     required this.nextTargetCount,
     required this.remainingCount,
     required this.completed,
+    required this.claimable,
+    required this.claimableTargetCount,
   });
 
   final int acquiredCount;
   final int? nextTargetCount;
   final int remainingCount;
   final bool completed;
+  final bool claimable;
+  final int? claimableTargetCount;
+
+  bool get canClaim => claimable && claimableTargetCount != null;
 
   static NextStampReward fromJson(Object? json) {
     final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
@@ -88,6 +94,8 @@ class NextStampReward {
       nextTargetCount: data['nextTargetCount'] as int?,
       remainingCount: data['remainingCount'] as int? ?? 0,
       completed: data['completed'] as bool? ?? false,
+      claimable: data['claimable'] as bool? ?? false,
+      claimableTargetCount: data['claimableTargetCount'] as int?,
     );
   }
 }

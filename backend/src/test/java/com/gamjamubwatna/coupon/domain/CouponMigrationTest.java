@@ -29,18 +29,43 @@ class CouponMigrationTest {
     private CouponRepository couponRepository;
 
     @Test
-    void seedsMissionRewardCouponCatalog() {
+    void seedsMissionAndStampRewardCouponCatalog() {
         List<Coupon> coupons = couponRepository.findAll();
         List<Coupon> seededCoupons = coupons.stream()
             .filter(coupon -> coupon.getCode() != null)
             .toList();
 
         assertThat(seededCoupons)
-            .hasSize(7)
+            .hasSize(10)
             .extracting(Coupon::getCode)
-            .contains("CP_PYEONGCHANG_EXPERIENCE", "CP_HWACHEON_FISH_FREE");
+            .contains(
+                "CP_PYEONGCHANG_EXPERIENCE",
+                "CP_HWACHEON_FISH_FREE",
+                "CP_STAMP_6_LOCAL_3000",
+                "CP_STAMP_12_LOCAL_5000",
+                "CP_STAMP_18_COMPLETE_10000"
+            );
         assertThat(seededCoupons)
             .allSatisfy(coupon -> assertThat(coupon.getValidDays()).isEqualTo(30));
+        assertThat(seededCoupons.stream()
+            .filter(coupon -> coupon.getCode().startsWith("CP_STAMP_")))
+            .hasSize(3);
+        assertThat(seededCoupons.stream()
+            .filter(coupon -> !coupon.getCode().startsWith("CP_STAMP_")))
+            .hasSize(7);
+
+        assertThat(couponRepository.findByCode("CP_STAMP_6_LOCAL_3000"))
+            .get()
+            .extracting(Coupon::getName, Coupon::getBenefitAmount)
+            .containsExactly("강원 감자 제휴점 3,000원 할인권", 3000);
+        assertThat(couponRepository.findByCode("CP_STAMP_12_LOCAL_5000"))
+            .get()
+            .extracting(Coupon::getName, Coupon::getBenefitAmount)
+            .containsExactly("강원 감자 제휴점 5,000원 할인권", 5000);
+        assertThat(couponRepository.findByCode("CP_STAMP_18_COMPLETE_10000"))
+            .get()
+            .extracting(Coupon::getName, Coupon::getBenefitAmount)
+            .containsExactly("강원 감자 랠리 완주 10,000원 할인권", 10000);
     }
 
     @Test

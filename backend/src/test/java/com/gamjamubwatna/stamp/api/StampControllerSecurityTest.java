@@ -2,10 +2,12 @@ package com.gamjamubwatna.stamp.api;
 
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gamjamubwatna.stamp.application.StampQueryService;
+import com.gamjamubwatna.stamp.application.StampRewardService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -30,6 +32,9 @@ class StampControllerSecurityTest {
     @MockitoBean
     private StampQueryService stampQueryService;
 
+    @MockitoBean
+    private StampRewardService stampRewardService;
+
     @Test
     void rejectsStampBookRequestWithoutBearerToken() throws Exception {
         mockMvc.perform(get("/stamps/me"))
@@ -48,5 +53,19 @@ class StampControllerSecurityTest {
             .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
 
         verifyNoInteractions(stampQueryService);
+    }
+
+    @Test
+    void rejectsRewardClaimRequestWithoutBearerToken() throws Exception {
+        mockMvc.perform(post("/stamps/rewards/claim")
+                .contentType("application/json")
+                .content("""
+                    {"targetCount": 6}
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+
+        verifyNoInteractions(stampRewardService);
     }
 }

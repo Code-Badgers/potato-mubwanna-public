@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
+import '../../coupon/application/coupon_controller.dart';
 import '../data/stamp_repository.dart';
 import '../domain/stamp_book.dart';
 
@@ -20,3 +21,56 @@ final stampBookProvider = FutureProvider.autoDispose<StampBook?>(
     return ref.watch(stampRepositoryProvider).fetchStampBook();
   },
 );
+
+final stampRewardClaimProvider = StateNotifierProvider.autoDispose<
+    StampRewardClaimController, AsyncValue<StampRewardClaimResult?>>(
+  (ref) => StampRewardClaimController(
+    ref.watch(stampRepositoryProvider),
+    onStampBookRefresh: () => ref.invalidate(stampBookProvider),
+    onCouponListRefresh: () => ref.invalidate(couponListProvider),
+    acquireKeepAlive: ref.keepAlive,
+  ),
+);
+
+class StampRewardClaimController
+    extends StateNotifier<AsyncValue<StampRewardClaimResult?>> {
+  StampRewardClaimController(
+    this._repository, {
+    required void Function() onStampBookRefresh,
+    required void Function() onCouponListRefresh,
+    KeepAliveLink Function()? acquireKeepAlive,
+  })  : _onStampBookRefresh = onStampBookRefresh,
+        _onCouponListRefresh = onCouponListRefresh,
+        _acquireKeepAlive = acquireKeepAlive,
+        super(const AsyncValue.data(null));
+
+  final StampRepository _repository;
+  final void Function() _onStampBookRefresh;
+  final void Function() _onCouponListRefresh;
+  final KeepAliveLink Function()? _acquireKeepAlive;
+
+  Future<StampRewardClaimResult?> claim(int targetCount) async {
+    // UI 재빌드 전의 연속 입력도 서버로 중복 전달되지 않게 컨트롤러에서 한 번 더 막는다.
+    if (state.isLoading) {
+      return null;
+    }
+
+    // 화면 이탈 뒤 응답이 도착해도 상태 갱신과 두 캐시 무효화를 끝낼 때까지 유지한다.
+    final keepAliveLink = _acquireKeepAlive?.call();
+    try {
+      state = const AsyncValue.loading();
+      final result = await _repository.claimReward(
+        StampRewardClaimRequest(targetCount: targetCount),
+      );
+      state = AsyncValue.data(result);
+      _onStampBookRefresh();
+      _onCouponListRefresh();
+      return result;
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      return null;
+    } finally {
+      keepAliveLink?.close();
+    }
+  }
+}

@@ -37,6 +37,23 @@ class StampRepository {
     return StampBook(progress: progress, nextReward: reward);
   }
 
+  Future<StampRewardClaimResult> claimReward(
+    StampRewardClaimRequest request,
+  ) async {
+    final response = await _request(
+      () => _dio.post<Map<String, dynamic>>(
+        ApiPaths.stampRewardClaim,
+        data: request.toJson(),
+      ),
+    );
+    final apiResponse = ApiResponse<StampRewardClaimResult>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      StampRewardClaimResult.fromJson,
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(
@@ -48,5 +65,58 @@ class StampRepository {
     }
 
     return response.data!;
+  }
+
+  Future<Response<Map<String, dynamic>>> _request(
+    Future<Response<Map<String, dynamic>>> Function() request,
+  ) async {
+    try {
+      return await request();
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        throw ApiException(
+          message: data['message'] as String? ?? '보상 수령에 실패했습니다.',
+          code: data['code'] as String?,
+          statusCode: error.response?.statusCode,
+        );
+      }
+      rethrow;
+    }
+  }
+}
+
+class StampRewardClaimRequest {
+  const StampRewardClaimRequest({required this.targetCount});
+
+  final int targetCount;
+
+  Map<String, Object?> toJson() => {'targetCount': targetCount};
+}
+
+class StampRewardClaimResult {
+  const StampRewardClaimResult({
+    required this.targetCount,
+    required this.rewardHistoryId,
+    required this.userCouponId,
+    required this.couponName,
+    required this.expiresAt,
+  });
+
+  final int targetCount;
+  final int rewardHistoryId;
+  final int userCouponId;
+  final String couponName;
+  final DateTime expiresAt;
+
+  factory StampRewardClaimResult.fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    return StampRewardClaimResult(
+      targetCount: data['targetCount'] as int? ?? 0,
+      rewardHistoryId: data['rewardHistoryId'] as int? ?? 0,
+      userCouponId: data['userCouponId'] as int? ?? 0,
+      couponName: data['couponName'] as String? ?? '',
+      expiresAt: DateTime.parse(data['expiresAt'] as String? ?? ''),
+    );
   }
 }
