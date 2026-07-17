@@ -116,7 +116,9 @@ public class RelatedTourismApiClient {
 
     private String encodeServiceKey(String value) {
         // 포털이 제공한 Encoding 키의 '%'를 다시 인코딩하면 인증에 실패한다.
-        return value.contains("%") ? value : encode(value);
+        return value.contains("%")
+            ? value
+            : UriUtils.encode(value, StandardCharsets.UTF_8);
     }
 
     public record RelatedTourismSpot(
