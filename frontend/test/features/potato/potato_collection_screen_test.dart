@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
+import 'package:potato_mubwanna/features/potato/data/potato_repository.dart';
 import 'package:potato_mubwanna/features/potato/domain/potato_collection.dart';
 import 'package:potato_mubwanna/features/potato/presentation/screen/potato_collection_screen.dart';
 
@@ -9,9 +11,9 @@ void main() {
   testWidgets('renders potato collection summary and grid', (tester) async {
     await _pumpScreen(
       tester,
-      override: potatoCollectionProvider.overrideWith(
-        (ref) async => _collection(),
-      ),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
     );
     await tester.pumpAndSettle();
 
@@ -30,9 +32,9 @@ void main() {
   ) async {
     await _pumpScreen(
       tester,
-      override: potatoCollectionProvider.overrideWith(
-        (ref) async => _collection(),
-      ),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
     );
     await tester.pumpAndSettle();
 
@@ -47,17 +49,40 @@ void main() {
   testWidgets('shows a signed out state for guests', (tester) async {
     await _pumpScreen(
       tester,
-      override: potatoCollectionProvider.overrideWith((ref) async => null),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => null),
+      ],
     );
     await tester.pumpAndSettle();
 
     expect(find.text('로그인 후 수집한 감자를 확인할 수 있습니다.'), findsOneWidget);
   });
+
+  testWidgets('updates representative potato from the picker', (tester) async {
+    final repository = _FakePotatoRepository();
+
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+        potatoRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('대표 감자 변경'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('하지감자').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.updatedPotatoId, '1');
+    expect(find.text('대표 감자를 하지감자로 변경했어요.'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpScreen(
   WidgetTester tester, {
-  required Override override,
+  required List<Override> overrides,
 }) async {
   tester.view.physicalSize = const Size(430, 932);
   tester.view.devicePixelRatio = 1;
@@ -66,10 +91,27 @@ Future<void> _pumpScreen(
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [override],
+      overrides: overrides,
       child: const MaterialApp(home: PotatoCollectionScreen()),
     ),
   );
+}
+
+class _FakePotatoRepository extends PotatoRepository {
+  _FakePotatoRepository() : super(dio: Dio());
+
+  String? updatedPotatoId;
+
+  @override
+  Future<PotatoRepresentativeResult> updateRepresentativePotato(
+    String potatoId,
+  ) async {
+    updatedPotatoId = potatoId;
+    return PotatoRepresentativeResult(
+      potatoId: potatoId,
+      representative: true,
+    );
+  }
 }
 
 PotatoCollection _collection() {

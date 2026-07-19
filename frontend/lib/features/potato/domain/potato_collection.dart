@@ -109,6 +109,24 @@ class PotatoCollectionItem {
   }
 }
 
+class PotatoRepresentativeResult {
+  const PotatoRepresentativeResult({
+    required this.potatoId,
+    required this.representative,
+  });
+
+  final String potatoId;
+  final bool representative;
+
+  static PotatoRepresentativeResult fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    return PotatoRepresentativeResult(
+      potatoId: data['potatoId']?.toString() ?? '',
+      representative: data['representative'] as bool? ?? false,
+    );
+  }
+}
+
 PotatoRarity potatoRarityFromApi(String? value) {
   return switch (value) {
     'RARE' => PotatoRarity.rare,

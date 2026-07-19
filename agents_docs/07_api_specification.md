@@ -538,7 +538,42 @@ Response:
 GET /api/potatoes/{potatoId}
 ```
 
-### 5.4 감자 성장 처리
+### 5.4 대표 감자 변경
+
+```http
+PATCH /api/potatoes/me/representative
+```
+
+Request:
+
+```json
+{
+  "potatoId": 2
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "potatoId": 2,
+    "representative": true
+  }
+}
+```
+
+처리 규칙:
+
+- 로그인한 사용자가 이미 획득한 감자만 대표 감자로 설정할 수 있다.
+- 같은 감자를 다시 대표 감자로 설정해도 성공 응답을 반환한다.
+- 성공 시 기존 대표 감자는 해제하고 요청한 감자만 대표 감자로 유지한다.
+- 미획득 감자이거나 존재하지 않는 감자를 요청하면 `400 Bad Request`를 반환한다.
+- 인증 정보가 없거나 사용자 정보가 유효하지 않으면 `401 Unauthorized`를 반환한다.
+
+### 5.5 감자 성장 처리
 
 ```http
 POST /api/potatoes/{potatoId}/grow

@@ -23,6 +23,7 @@ class PotatoCollectionScreen extends ConsumerStatefulWidget {
 class _PotatoCollectionScreenState
     extends ConsumerState<PotatoCollectionScreen> {
   PotatoRarity? _selectedRarity;
+  bool _isUpdatingRepresentative = false;
 
   List<PotatoCollectionItem> _filteredItems(List<PotatoCollectionItem> items) {
     final selectedRarity = _selectedRarity;
@@ -46,8 +47,52 @@ class _PotatoCollectionScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _RepresentativePotatoSheet(collection: collection),
+      builder: (sheetContext) => _RepresentativePotatoSheet(
+        collection: collection,
+        onSelect: (item) {
+          Navigator.of(sheetContext).pop();
+          _updateRepresentativePotato(item);
+        },
+      ),
     );
+  }
+
+  Future<void> _updateRepresentativePotato(PotatoCollectionItem item) async {
+    if (item.representative || _isUpdatingRepresentative) {
+      return;
+    }
+
+    setState(() => _isUpdatingRepresentative = true);
+    try {
+      await ref
+          .read(potatoRepositoryProvider)
+          .updateRepresentativePotato(item.id);
+      ref.invalidate(potatoCollectionProvider);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('대표 감자를 ${item.name}로 변경했어요.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('대표 감자를 변경하지 못했습니다.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingRepresentative = false);
+      }
+    }
   }
 
   @override
@@ -68,6 +113,7 @@ class _PotatoCollectionScreenState
                     setState(() => _selectedRarity = rarity);
                   },
                   onTapItem: _showPotatoDetail,
+                  updatingRepresentative: _isUpdatingRepresentative,
                   onChangeRepresentative: () {
                     _showRepresentativePicker(collection);
                   },
@@ -97,6 +143,7 @@ class _PotatoCollectionBody extends StatelessWidget {
     required this.filteredItems,
     required this.onRarityChanged,
     required this.onTapItem,
+    required this.updatingRepresentative,
     required this.onChangeRepresentative,
   });
 
@@ -105,6 +152,7 @@ class _PotatoCollectionBody extends StatelessWidget {
   final List<PotatoCollectionItem> filteredItems;
   final ValueChanged<PotatoRarity?> onRarityChanged;
   final ValueChanged<PotatoCollectionItem> onTapItem;
+  final bool updatingRepresentative;
   final VoidCallback onChangeRepresentative;
 
   @override
@@ -119,6 +167,7 @@ class _PotatoCollectionBody extends StatelessWidget {
             item: representative,
             acquiredCount: collection.acquiredCount,
             totalCount: collection.totalCount,
+            updating: updatingRepresentative,
             onChangeRepresentative: onChangeRepresentative,
           ),
         ),
@@ -194,12 +243,14 @@ class _RepresentativePotatoCard extends StatelessWidget {
     required this.item,
     required this.acquiredCount,
     required this.totalCount,
+    required this.updating,
     required this.onChangeRepresentative,
   });
 
   final PotatoCollectionItem? item;
   final int acquiredCount;
   final int totalCount;
+  final bool updating;
   final VoidCallback onChangeRepresentative;
 
   @override
@@ -304,7 +355,8 @@ class _RepresentativePotatoCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: potato == null ? null : onChangeRepresentative,
+              onPressed:
+                  potato == null || updating ? null : onChangeRepresentative,
               style: FilledButton.styleFrom(
                 backgroundColor: _potatoPrimary,
                 disabledBackgroundColor: const Color(0xFFBFE5CC),
@@ -314,14 +366,23 @@ class _RepresentativePotatoCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
-                '대표 감자 변경',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
-                ),
-              ),
+              child: updating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      '대표 감자 변경',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -800,9 +861,13 @@ class _PotatoDetailSheet extends StatelessWidget {
 }
 
 class _RepresentativePotatoSheet extends StatelessWidget {
-  const _RepresentativePotatoSheet({required this.collection});
+  const _RepresentativePotatoSheet({
+    required this.collection,
+    required this.onSelect,
+  });
 
   final PotatoCollection collection;
+  final ValueChanged<PotatoCollectionItem> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -857,7 +922,10 @@ class _RepresentativePotatoSheet extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               final item = acquiredItems[index];
-              return _RepresentativePotatoOption(item: item);
+              return _RepresentativePotatoOption(
+                item: item,
+                onSelect: () => onSelect(item),
+              );
             },
           ),
         ],
@@ -867,65 +935,76 @@ class _RepresentativePotatoSheet extends StatelessWidget {
 }
 
 class _RepresentativePotatoOption extends StatelessWidget {
-  const _RepresentativePotatoOption({required this.item});
+  const _RepresentativePotatoOption({
+    required this.item,
+    required this.onSelect,
+  });
 
   final PotatoCollectionItem item;
+  final VoidCallback onSelect;
 
   @override
   Widget build(BuildContext context) {
     final selected = item.representative;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: selected
-            ? _potatoPrimary.withValues(alpha: 0.12)
-            : AppColors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: selected ? _potatoPrimary : _potatoLine,
-          width: selected ? 1.6 : 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(9),
-        child: Column(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
+        onTap: selected ? null : onSelect,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: selected
+                ? _potatoPrimary.withValues(alpha: 0.12)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? _potatoPrimary : _potatoLine,
+              width: selected ? 1.6 : 1,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(9),
+            child: Column(
               children: [
-                const _PotatoArtSlot(locked: false, size: 66),
-                if (selected)
-                  Positioned(
-                    right: -5,
-                    top: -5,
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: _potatoPrimary,
-                        shape: BoxShape.circle,
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const _PotatoArtSlot(locked: false, size: 66),
+                    if (selected)
+                      Positioned(
+                        right: -5,
+                        top: -5,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: const BoxDecoration(
+                            color: _potatoPrimary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 15,
+                          ),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 15,
-                      ),
-                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
                   ),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
