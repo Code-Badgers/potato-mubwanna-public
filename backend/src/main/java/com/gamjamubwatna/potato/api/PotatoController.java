@@ -54,6 +54,21 @@ public class PotatoController {
         }
     }
 
+    // 도감 상단 카드에서 대표 감자 성장까지 남은 거리와 사용자의 걸음 요약을 표시한다.
+    @GetMapping("/me/growth-summary")
+    public ResponseEntity<AuthApiResponse<PotatoGrowthSummaryResponse>> getMyPotatoGrowthSummary(
+        Authentication authentication
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                potatoQueryService.getGrowthSummary(userId(authentication))
+            ));
+        } catch (PotatoAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        }
+    }
+
     // 도감에서 사용자가 보유한 감자 중 하나를 대표 감자로 지정한다.
     @PatchMapping("/me/representative")
     public ResponseEntity<AuthApiResponse<PotatoRepresentativeResponse>> updateRepresentativePotato(

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.potato.api.PotatoCatalogResponse;
+import com.gamjamubwatna.potato.api.PotatoGrowthSummaryResponse;
 import com.gamjamubwatna.potato.api.UserPotatoCollectionResponse;
 import com.gamjamubwatna.potato.domain.Potato;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
@@ -92,6 +93,47 @@ class PotatoQueryServiceTest {
         when(userRepository.existsById(99L)).thenReturn(false);
 
         assertThatThrownBy(() -> potatoQueryService.getMyPotatoes(99L))
+            .isInstanceOf(PotatoAuthenticationException.class);
+    }
+
+    @Test
+    void returnsGrowthSummaryWithRepresentativeRemainingDistance() {
+        Potato potato = potato(1L, "하지감자", PotatoRarity.COMMON);
+        UserPotato representativePotato = new UserPotato(
+            mock(User.class),
+            potato,
+            Instant.parse("2026-07-01T00:00:00Z"),
+            2,
+            1500.0,
+            true
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representativePotato));
+
+        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L);
+
+        assertThat(result.todaySteps()).isEqualTo(7842);
+        assertThat(result.dailyStepGoal()).isEqualTo(10000);
+        assertThat(result.weeklyDistanceKm()).isEqualTo(28.4);
+        assertThat(result.monthlyDistanceKm()).isEqualTo(116.8);
+        assertThat(result.remainingDistanceKmForRepresentative()).isEqualTo(1.5);
+    }
+
+    @Test
+    void returnsZeroRemainingDistanceWhenRepresentativePotatoIsMissing() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of());
+
+        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L);
+
+        assertThat(result.remainingDistanceKmForRepresentative()).isZero();
+    }
+
+    @Test
+    void rejectsDeletedUserForGrowthSummary() {
+        when(userRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> potatoQueryService.getGrowthSummary(99L))
             .isInstanceOf(PotatoAuthenticationException.class);
     }
 
