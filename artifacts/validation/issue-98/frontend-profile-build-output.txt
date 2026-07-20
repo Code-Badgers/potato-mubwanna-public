@@ -1,4 +1,6 @@
+Waiting for another flutter command to release the startup lock...
 The following plugins do not support Swift Package Manager for ios:
+  - health
   - flutter_secure_storage
 This will become an error in a future version of Flutter. Please contact the plugin maintainers to request Swift Package Manager adoption.
 Compiling lib/main.dart for the Web...                          
@@ -19,5 +21,5 @@ Consider addressing these issues to enable wasm builds. See docs for more info: 
 Use --no-wasm-dry-run to disable these warnings.
 Expected to find fonts for (MaterialIcons, packages/cupertino_icons/CupertinoIcons), but found (MaterialIcons). This usually means you are referring to font families in an IconData class but not including them in the assets section of your pubspec.yaml, are missing the package that would include them, or are missing "uses-material-design: true".
 Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 17192 bytes (99.0% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
-Compiling lib/main.dart for the Web...                             58.2s
+Compiling lib/main.dart for the Web...                             56.7s
 ✓ Built build/web
