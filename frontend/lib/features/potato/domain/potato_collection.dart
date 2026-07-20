@@ -149,6 +149,24 @@ class PotatoGrowthSummary {
     return (todaySteps / dailyStepGoal).clamp(0, 1);
   }
 
+  PotatoGrowthSummary copyWith({
+    int? todaySteps,
+    int? dailyStepGoal,
+    double? weeklyDistanceKm,
+    double? monthlyDistanceKm,
+    double? remainingDistanceKmForRepresentative,
+  }) {
+    return PotatoGrowthSummary(
+      todaySteps: todaySteps ?? this.todaySteps,
+      dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
+      weeklyDistanceKm: weeklyDistanceKm ?? this.weeklyDistanceKm,
+      monthlyDistanceKm: monthlyDistanceKm ?? this.monthlyDistanceKm,
+      remainingDistanceKmForRepresentative:
+          remainingDistanceKmForRepresentative ??
+              this.remainingDistanceKmForRepresentative,
+    );
+  }
+
   static PotatoGrowthSummary fromJson(Object? json) {
     final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
     return PotatoGrowthSummary(

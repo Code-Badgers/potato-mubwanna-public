@@ -3,9 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/potato_repository.dart';
 import '../domain/potato_collection.dart';
+import '../domain/step_count_reader.dart';
 
 final potatoRepositoryProvider = Provider<PotatoRepository>(
   (ref) => PotatoRepository(dio: ref.watch(dioClientProvider).dio),
+);
+
+final stepCountReaderProvider = Provider<StepCountReader>(
+  (ref) => createStepCountReader(),
 );
 
 final potatoCollectionProvider =
@@ -29,5 +34,13 @@ final potatoGrowthSummaryProvider =
     return null;
   }
 
-  return ref.watch(potatoRepositoryProvider).fetchGrowthSummary();
+  final summary =
+      await ref.watch(potatoRepositoryProvider).fetchGrowthSummary();
+  final todaySteps = await ref.watch(stepCountReaderProvider).readTodaySteps();
+
+  if (todaySteps == null) {
+    return summary;
+  }
+
+  return summary.copyWith(todaySteps: todaySteps);
 });
