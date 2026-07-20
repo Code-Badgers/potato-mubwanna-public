@@ -114,7 +114,12 @@ Future<void> _pumpScreen(
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: overrides,
+      overrides: [
+        potatoGrowthSummaryProvider.overrideWith(
+          (ref) async => _growthSummary(),
+        ),
+        ...overrides,
+      ],
       child: const MaterialApp(home: PotatoCollectionScreen()),
     ),
   );
@@ -135,6 +140,16 @@ class _FakePotatoRepository extends PotatoRepository {
       representative: true,
     );
   }
+}
+
+PotatoGrowthSummary _growthSummary() {
+  return const PotatoGrowthSummary(
+    todaySteps: 7842,
+    dailyStepGoal: 10000,
+    weeklyDistanceKm: 28.4,
+    monthlyDistanceKm: 116.8,
+    remainingDistanceKmForRepresentative: 1.8,
+  );
 }
 
 PotatoCollection _collection() {

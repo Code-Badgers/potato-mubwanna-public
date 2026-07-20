@@ -127,6 +127,60 @@ class PotatoRepresentativeResult {
   }
 }
 
+class PotatoGrowthSummary {
+  const PotatoGrowthSummary({
+    required this.todaySteps,
+    required this.dailyStepGoal,
+    required this.weeklyDistanceKm,
+    required this.monthlyDistanceKm,
+    required this.remainingDistanceKmForRepresentative,
+  });
+
+  final int todaySteps;
+  final int dailyStepGoal;
+  final double weeklyDistanceKm;
+  final double monthlyDistanceKm;
+  final double remainingDistanceKmForRepresentative;
+
+  double get stepRatio {
+    if (dailyStepGoal <= 0) {
+      return 0;
+    }
+    return (todaySteps / dailyStepGoal).clamp(0, 1);
+  }
+
+  PotatoGrowthSummary copyWith({
+    int? todaySteps,
+    int? dailyStepGoal,
+    double? weeklyDistanceKm,
+    double? monthlyDistanceKm,
+    double? remainingDistanceKmForRepresentative,
+  }) {
+    return PotatoGrowthSummary(
+      todaySteps: todaySteps ?? this.todaySteps,
+      dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
+      weeklyDistanceKm: weeklyDistanceKm ?? this.weeklyDistanceKm,
+      monthlyDistanceKm: monthlyDistanceKm ?? this.monthlyDistanceKm,
+      remainingDistanceKmForRepresentative:
+          remainingDistanceKmForRepresentative ??
+              this.remainingDistanceKmForRepresentative,
+    );
+  }
+
+  static PotatoGrowthSummary fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    return PotatoGrowthSummary(
+      todaySteps: data['todaySteps'] as int? ?? 0,
+      dailyStepGoal: data['dailyStepGoal'] as int? ?? 0,
+      weeklyDistanceKm: (data['weeklyDistanceKm'] as num?)?.toDouble() ?? 0,
+      monthlyDistanceKm: (data['monthlyDistanceKm'] as num?)?.toDouble() ?? 0,
+      remainingDistanceKmForRepresentative:
+          (data['remainingDistanceKmForRepresentative'] as num?)?.toDouble() ??
+              0,
+    );
+  }
+}
+
 PotatoRarity potatoRarityFromApi(String? value) {
   return switch (value) {
     'RARE' => PotatoRarity.rare,

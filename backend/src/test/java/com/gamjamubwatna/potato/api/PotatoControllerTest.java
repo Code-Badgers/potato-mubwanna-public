@@ -71,6 +71,21 @@ class PotatoControllerTest {
     }
 
     @Test
+    void returnsAuthenticatedUsersPotatoGrowthSummary() throws Exception {
+        when(potatoQueryService.getGrowthSummary(eq(1L)))
+            .thenReturn(new PotatoGrowthSummaryResponse(7842, 10000, 28.4, 116.8, 1.5));
+
+        mockMvc.perform(get("/potatoes/me/growth-summary").with(user("user:1")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.todaySteps").value(7842))
+            .andExpect(jsonPath("$.data.dailyStepGoal").value(10000))
+            .andExpect(jsonPath("$.data.weeklyDistanceKm").value(28.4))
+            .andExpect(jsonPath("$.data.monthlyDistanceKm").value(116.8))
+            .andExpect(jsonPath("$.data.remainingDistanceKmForRepresentative").value(1.5));
+    }
+
+    @Test
     void rejectsMalformedUserPrincipal() throws Exception {
         mockMvc.perform(get("/potatoes/me").with(user("admin:1")))
             .andExpect(status().isUnauthorized())

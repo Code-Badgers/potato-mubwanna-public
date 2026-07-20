@@ -573,7 +573,39 @@ Response:
 - 미획득 감자이거나 존재하지 않는 감자를 요청하면 `400 Bad Request`를 반환한다.
 - 인증 정보가 없거나 사용자 정보가 유효하지 않으면 `401 Unauthorized`를 반환한다.
 
-### 5.5 감자 성장 처리
+### 5.5 내 감자 성장 요약 조회
+
+```http
+GET /api/potatoes/me/growth-summary
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "todaySteps": 7842,
+    "dailyStepGoal": 10000,
+    "weeklyDistanceKm": 28.4,
+    "monthlyDistanceKm": 116.8,
+    "remainingDistanceKmForRepresentative": 1.8
+  }
+}
+```
+
+처리 규칙:
+
+- 로그인 사용자의 감자 도감 홈 상단 `오늘의 감자걸음` 카드에 필요한 수치를 내려준다.
+- MVP 단계에서는 실제 HealthKit/Google Fit 연동 전까지 서버 정책값 또는 저장된 활동 집계값을 반환할 수 있다.
+- `todaySteps`는 당일 걸음 수, `dailyStepGoal`은 당일 목표 걸음 수다.
+- `weeklyDistanceKm`, `monthlyDistanceKm`는 주간/월간 누적 이동거리다.
+- `remainingDistanceKmForRepresentative`는 대표 감자의 다음 성장 목표까지 남은 거리다.
+- 대표 감자가 없거나 성장 목표를 계산할 수 없으면 `remainingDistanceKmForRepresentative`는 `0.0`을 반환한다.
+- 인증 정보가 없거나 사용자 정보가 유효하지 않으면 `401 Unauthorized`를 반환한다.
+
+### 5.6 감자 성장 처리
 
 ```http
 POST /api/potatoes/{potatoId}/grow
