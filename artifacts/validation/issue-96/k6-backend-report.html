@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>Issue 96 k6 Backend Smoke Report</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #1f2a1f; background: #f8fbf5; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    p { color: #5f6b5b; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap: 14px; margin-top: 24px; }
+    .card { background: white; border: 1px solid #dfe8dd; border-radius: 10px; padding: 18px; box-shadow: 0 8px 24px rgba(31, 42, 31, 0.08); }
+    .label { color: #657060; font-size: 13px; font-weight: 700; }
+    .value { margin-top: 8px; font-size: 26px; font-weight: 900; }
+    .ok { color: #2fba70; }
+  </style>
+</head>
+<body>
+  <h1>Issue 96 Backend k6 Smoke Report</h1>
+  <p>대상: GET /api/spots · 5 VUs · 20초</p>
+  <div class="grid">
+    <section class="card"><div class="label">Checks</div><div class="value ok">100.00%</div></section>
+    <section class="card"><div class="label">Requests</div><div class="value ">100</div></section>
+    <section class="card"><div class="label">Failed Rate</div><div class="value ok">0.00%</div></section>
+    <section class="card"><div class="label">Avg Duration</div><div class="value ">4.55 ms</div></section>
+    <section class="card"><div class="label">P95 Duration</div><div class="value ok">6.18 ms</div></section>
+    <section class="card"><div class="label">Max Duration</div><div class="value ">7.41 ms</div></section>
+  </div>
+</body>
+</html>

@@ -78,6 +78,29 @@ void main() {
     expect(repository.updatedPotatoId, '1');
     expect(find.text('대표 감자를 하지감자로 변경했어요.'), findsOneWidget);
   });
+
+  testWidgets('updates representative potato from the detail sheet', (
+    tester,
+  ) async {
+    final repository = _FakePotatoRepository();
+
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+        potatoRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('하지감자').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('대표 감자로 설정'));
+    await tester.pumpAndSettle();
+
+    expect(repository.updatedPotatoId, '1');
+    expect(find.text('대표 감자를 하지감자로 변경했어요.'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpScreen(

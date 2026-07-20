@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>Issue 96 Frontend Profile Build</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:40px;background:#f8fbf5;color:#1f2a1f}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:white;border:1px solid #dfe8dd;border-radius:10px;padding:18px;box-shadow:0 8px 24px rgba(31,42,31,.08)}.label{color:#657060;font-weight:700}.value{font-size:30px;font-weight:900;margin-top:8px}pre{white-space:pre-wrap;background:white;padding:16px;border:1px solid #dfe8dd;border-radius:10px}</style></head>
+<body><h1>Issue 96 Frontend Profile Build</h1><p>명령: flutter build web --profile</p><div class="grid"><section class="card"><div class="label">Build Time</div><div class="value">78.38s</div></section><section class="card"><div class="label">build/web</div><div class="value">51MB</div></section><section class="card"><div class="label">main.dart.js</div><div class="value">9.2MB</div></section></div><h2>주의 로그</h2><pre>WebAssembly.
+
+package:flutter_secure_storage_web/flutter_secure_storage_web.dart 5:1 - dart:html unsupported (0)
+package:flutter_secure_storage_web/flutter_secure_storage_web.dart 6:1 - dart:js_util unsupported (15)
+package:flutter_secure_storage_web/src/subtle.dart 21:1 - dart:html unsupported (0)
+package:flutter_secure_storage_web/src/subtle.dart 22:1 - dart:js_util unsupported (15)
+package:flutter_secure_storage_web/src/subtle.dart 26:1 - package:js/js.dart unsupported (14)
+package:geolocator_web/src/html_geolocation_manager.dart 1:1 - dart:html unsupported (0)
+package:geolocator_web/src/html_permissions_manager.dart 1:1 - dart:html unsupported (0)
+package:geolocator_web/src/utils.dart 2:1 - dart:html unsupported (0)
+
+Consider addressing these issues to enable wasm builds. See docs for more info: https://docs.flutter.dev/platform-integration/web/wasm
+
+Use --no-wasm-dry-run to disable these warnings.
+Expected to find fonts for (MaterialIcons, packages/cupertino_icons/CupertinoIcons), but found (MaterialIcons). This usually means you are referring to font families in an IconData class but not including them in the assets section of your pubspec.yaml, are missing the package that would include them, or are missing "uses-material-design: true".
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 17192 bytes (99.0% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Compiling lib/main.dart for the Web...                             76.1s
+✓ Built build/web
+real 78.38
+user 163.89
+sys 21.00
+</pre></body></html>

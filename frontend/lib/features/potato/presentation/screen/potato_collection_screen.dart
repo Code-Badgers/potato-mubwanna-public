@@ -38,7 +38,14 @@ class _PotatoCollectionScreenState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _PotatoDetailSheet(item: item),
+      builder: (sheetContext) => _PotatoDetailSheet(
+        item: item,
+        updatingRepresentative: _isUpdatingRepresentative,
+        onSetRepresentative: () {
+          Navigator.of(sheetContext).pop();
+          _updateRepresentativePotato(item);
+        },
+      ),
     );
   }
 
@@ -774,9 +781,15 @@ class _MetaChip extends StatelessWidget {
 }
 
 class _PotatoDetailSheet extends StatelessWidget {
-  const _PotatoDetailSheet({required this.item});
+  const _PotatoDetailSheet({
+    required this.item,
+    required this.updatingRepresentative,
+    required this.onSetRepresentative,
+  });
 
   final PotatoCollectionItem item;
+  final bool updatingRepresentative;
+  final VoidCallback onSetRepresentative;
 
   @override
   Widget build(BuildContext context) {
@@ -834,7 +847,9 @@ class _PotatoDetailSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: locked ? null : () => Navigator.of(context).pop(),
+              onPressed: locked || item.representative || updatingRepresentative
+                  ? null
+                  : onSetRepresentative,
               style: FilledButton.styleFrom(
                 backgroundColor: _potatoPrimary,
                 disabledBackgroundColor: const Color(0xFFBFE5CC),
@@ -844,14 +859,23 @@ class _PotatoDetailSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text(
-                item.representative ? '대표 감자로 설정됨' : '대표 감자로 설정',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
+              child: updatingRepresentative
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      item.representative ? '대표 감자로 설정됨' : '대표 감자로 설정',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
             ),
           ),
         ],
