@@ -19,3 +19,15 @@ final potatoCollectionProvider =
 
   return ref.watch(potatoRepositoryProvider).fetchMyPotatoes();
 });
+
+final potatoGrowthSummaryProvider =
+    FutureProvider.autoDispose<PotatoGrowthSummary?>((ref) async {
+  final authStatus = ref.watch(
+    authControllerProvider.select((state) => state.status),
+  );
+  if (authStatus != AuthStatus.authenticated) {
+    return null;
+  }
+
+  return ref.watch(potatoRepositoryProvider).fetchGrowthSummary();
+});

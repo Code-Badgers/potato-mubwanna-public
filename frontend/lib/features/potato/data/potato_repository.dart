@@ -22,6 +22,18 @@ class PotatoRepository {
     return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
+  Future<PotatoGrowthSummary> fetchGrowthSummary() async {
+    final response = await _request(
+      () => _dio.get<Map<String, dynamic>>(ApiPaths.potatoGrowthSummary),
+    );
+    final apiResponse = ApiResponse<PotatoGrowthSummary>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      PotatoGrowthSummary.fromJson,
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
   Future<PotatoRepresentativeResult> updateRepresentativePotato(
     String potatoId,
   ) async {
