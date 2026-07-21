@@ -1,9 +1,17 @@
 package com.gamjamubwatna.potato.application;
 
+import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncRequest;
+import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncResponse;
 import com.gamjamubwatna.potato.api.PotatoRepresentativeResponse;
+import com.gamjamubwatna.potato.domain.ActivitySource;
+import com.gamjamubwatna.potato.domain.UserDailyActivity;
+import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,14 +19,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PotatoCommandService {
 
+    private static final int MAX_DAILY_STEPS = 100_000;
+    private static final double MAX_DAILY_DISTANCE_METERS = 100_000.0;
+
     private final UserPotatoRepository userPotatoRepository;
+    private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
 
     public PotatoCommandService(
         UserPotatoRepository userPotatoRepository,
+        UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository
     ) {
         this.userPotatoRepository = userPotatoRepository;
+        this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
     }
 
@@ -49,5 +63,52 @@ public class PotatoCommandService {
         });
 
         return PotatoRepresentativeResponse.from(selected);
+    }
+
+    @Transactional
+    public PotatoDailyActivitySyncResponse syncDailyActivity(
+        Long userId,
+        PotatoDailyActivitySyncRequest request
+    ) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new PotatoAuthenticationException("사용자를 찾을 수 없습니다."));
+        validateDailyActivityRequest(request);
+
+        LocalDate activityDate = request.activityDate();
+        ActivitySource source = request.source();
+        Instant now = Instant.now();
+
+        UserDailyActivity activity = userDailyActivityRepository
+            .findByUserIdAndActivityDateAndSource(userId, activityDate, source)
+            .map(existing -> {
+                existing.update(request.steps(), request.distanceMeters(), now);
+                return existing;
+            })
+            .orElseGet(() -> new UserDailyActivity(
+                user,
+                activityDate,
+                request.steps(),
+                request.distanceMeters(),
+                source,
+                now
+            ));
+
+        return PotatoDailyActivitySyncResponse.from(userDailyActivityRepository.save(activity));
+    }
+
+    private void validateDailyActivityRequest(PotatoDailyActivitySyncRequest request) {
+        if (request == null || request.activityDate() == null || request.source() == null) {
+            throw new PotatoActivityException("걸음 수 동기화 정보를 확인할 수 없습니다.");
+        }
+        if (request.steps() == null || request.steps() < 0 || request.steps() > MAX_DAILY_STEPS) {
+            throw new PotatoActivityException("걸음 수가 허용 범위를 벗어났습니다.");
+        }
+        if (
+            request.distanceMeters() == null
+                || request.distanceMeters() < 0
+                || request.distanceMeters() > MAX_DAILY_DISTANCE_METERS
+        ) {
+            throw new PotatoActivityException("이동 거리가 허용 범위를 벗어났습니다.");
+        }
     }
 }

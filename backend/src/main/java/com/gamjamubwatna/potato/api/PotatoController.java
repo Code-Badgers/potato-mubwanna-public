@@ -1,6 +1,7 @@
 package com.gamjamubwatna.potato.api;
 
 import com.gamjamubwatna.auth.api.AuthApiResponse;
+import com.gamjamubwatna.potato.application.PotatoActivityException;
 import com.gamjamubwatna.potato.application.PotatoAuthenticationException;
 import com.gamjamubwatna.potato.application.PotatoCommandService;
 import com.gamjamubwatna.potato.application.PotatoQueryService;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -66,6 +68,25 @@ public class PotatoController {
         } catch (PotatoAuthenticationException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        }
+    }
+
+    // HealthKit/Health Connect에서 읽은 일일 걸음 수를 서버 집계로 동기화한다.
+    @PutMapping("/me/activity/daily")
+    public ResponseEntity<AuthApiResponse<PotatoDailyActivitySyncResponse>> syncDailyActivity(
+        Authentication authentication,
+        @RequestBody PotatoDailyActivitySyncRequest request
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                potatoCommandService.syncDailyActivity(userId(authentication), request)
+            ));
+        } catch (PotatoAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        } catch (PotatoActivityException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(AuthApiResponse.failure(exception.getMessage()));
         }
     }
 

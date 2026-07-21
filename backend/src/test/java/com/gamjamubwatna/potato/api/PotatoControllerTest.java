@@ -6,15 +6,19 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.potato.application.PotatoActivityException;
 import com.gamjamubwatna.potato.application.PotatoCommandService;
 import com.gamjamubwatna.potato.application.PotatoQueryService;
 import com.gamjamubwatna.potato.application.PotatoRepresentativeException;
+import com.gamjamubwatna.potato.domain.ActivitySource;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,6 +95,73 @@ class PotatoControllerTest {
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("인증 정보를 확인할 수 없습니다."));
+    }
+
+    @Test
+    void syncsDailyActivity() throws Exception {
+        when(potatoCommandService.syncDailyActivity(
+            eq(1L),
+            eq(new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                8420,
+                5894.0,
+                ActivitySource.HEALTH_CONNECT
+            ))
+        )).thenReturn(new PotatoDailyActivitySyncResponse(
+            LocalDate.parse("2026-07-21"),
+            8420,
+            5894.0,
+            ActivitySource.HEALTH_CONNECT,
+            Instant.parse("2026-07-21T00:00:00Z")
+        ));
+
+        mockMvc.perform(put("/potatoes/me/activity/daily")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {
+                      "activityDate": "2026-07-21",
+                      "steps": 8420,
+                      "distanceMeters": 5894.0,
+                      "source": "HEALTH_CONNECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.activityDate").value("2026-07-21"))
+            .andExpect(jsonPath("$.data.steps").value(8420))
+            .andExpect(jsonPath("$.data.distanceMeters").value(5894.0))
+            .andExpect(jsonPath("$.data.source").value("HEALTH_CONNECT"));
+    }
+
+    @Test
+    void rejectsInvalidDailyActivity() throws Exception {
+        when(potatoCommandService.syncDailyActivity(
+            eq(1L),
+            eq(new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                -1,
+                10.0,
+                ActivitySource.HEALTH_CONNECT
+            ))
+        )).thenThrow(new PotatoActivityException("걸음 수가 허용 범위를 벗어났습니다."));
+
+        mockMvc.perform(put("/potatoes/me/activity/daily")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {
+                      "activityDate": "2026-07-21",
+                      "steps": -1,
+                      "distanceMeters": 10.0,
+                      "source": "HEALTH_CONNECT"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("걸음 수가 허용 범위를 벗어났습니다."));
     }
 
     @Test
