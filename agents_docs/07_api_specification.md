@@ -598,14 +598,58 @@ Response:
 처리 규칙:
 
 - 로그인 사용자의 감자 도감 홈 상단 `오늘의 감자걸음` 카드에 필요한 수치를 내려준다.
-- MVP 단계에서는 실제 HealthKit/Google Fit 연동 전까지 서버 정책값 또는 저장된 활동 집계값을 반환할 수 있다.
+- 저장된 일일 활동 집계값을 우선 반환한다.
+- 저장된 활동 집계가 없으면 MVP 기본값 또는 `0`을 반환할 수 있다.
 - `todaySteps`는 당일 걸음 수, `dailyStepGoal`은 당일 목표 걸음 수다.
 - `weeklyDistanceKm`, `monthlyDistanceKm`는 주간/월간 누적 이동거리다.
 - `remainingDistanceKmForRepresentative`는 대표 감자의 다음 성장 목표까지 남은 거리다.
 - 대표 감자가 없거나 성장 목표를 계산할 수 없으면 `remainingDistanceKmForRepresentative`는 `0.0`을 반환한다.
 - 인증 정보가 없거나 사용자 정보가 유효하지 않으면 `401 Unauthorized`를 반환한다.
 
-### 5.6 감자 성장 처리
+### 5.6 내 일일 걸음 수 동기화
+
+```http
+PUT /api/potatoes/me/activity/daily
+```
+
+Request:
+
+```json
+{
+  "activityDate": "2026-07-21",
+  "steps": 8420,
+  "distanceMeters": 5894.0,
+  "source": "HEALTH_CONNECT"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "activityDate": "2026-07-21",
+    "steps": 8420,
+    "distanceMeters": 5894.0,
+    "source": "HEALTH_CONNECT",
+    "syncedAt": "2026-07-21T12:00:00Z"
+  }
+}
+```
+
+처리 규칙:
+
+- 로그인 사용자의 HealthKit 또는 Health Connect 일일 활동 집계를 서버에 저장한다.
+- `activityDate`는 사용자 로컬 기준 날짜다.
+- `source`는 `HEALTH_KIT`, `HEALTH_CONNECT`, `MANUAL`, `UNKNOWN` 중 하나다.
+- 같은 사용자, 날짜, 출처 조합은 새 row를 만들지 않고 최신 값으로 갱신한다.
+- `steps`와 `distanceMeters`는 음수일 수 없다.
+- `steps`가 비정상적으로 크거나 `distanceMeters`가 비정상적으로 크면 `400 Bad Request`를 반환한다.
+- 인증 정보가 없거나 사용자 정보가 유효하지 않으면 `401 Unauthorized`를 반환한다.
+
+### 5.7 감자 성장 처리
 
 ```http
 POST /api/potatoes/{potatoId}/grow

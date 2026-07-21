@@ -8,8 +8,11 @@ import com.gamjamubwatna.potato.api.UserPotatoCollectionItemResponse;
 import com.gamjamubwatna.potato.api.UserPotatoCollectionResponse;
 import com.gamjamubwatna.potato.domain.Potato;
 import com.gamjamubwatna.potato.domain.PotatoRepository;
+import com.gamjamubwatna.potato.domain.UserDailyActivity;
+import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -28,15 +31,18 @@ public class PotatoQueryService {
 
     private final PotatoRepository potatoRepository;
     private final UserPotatoRepository userPotatoRepository;
+    private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
 
     public PotatoQueryService(
         PotatoRepository potatoRepository,
         UserPotatoRepository userPotatoRepository,
+        UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository
     ) {
         this.potatoRepository = potatoRepository;
         this.userPotatoRepository = userPotatoRepository;
+        this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
     }
 
@@ -80,24 +86,67 @@ public class PotatoQueryService {
 
     @Transactional(readOnly = true)
     public PotatoGrowthSummaryResponse getGrowthSummary(Long userId) {
+        return getGrowthSummary(userId, LocalDate.now());
+    }
+
+    PotatoGrowthSummaryResponse getGrowthSummary(Long userId, LocalDate today) {
         if (!userRepository.existsById(userId)) {
             throw new PotatoAuthenticationException("사용자를 찾을 수 없습니다.");
         }
 
+        LocalDate startOfMonth = today.withDayOfMonth(1);
+        LocalDate startOfWeek = today.minusDays(6);
+        LocalDate queryStartDate = startOfMonth.isBefore(startOfWeek) ? startOfMonth : startOfWeek;
+        List<UserDailyActivity> activities =
+            userDailyActivityRepository.findByUserIdAndActivityDateBetween(
+                userId,
+                queryStartDate,
+                today
+            );
+        if (activities.isEmpty()) {
+            return mvpGrowthSummary(userId);
+        }
+
+        int todaySteps = activities.stream()
+            .filter(activity -> activity.getActivityDate().isEqual(today))
+            .mapToInt(UserDailyActivity::getSteps)
+            .sum();
+        double weeklyDistanceKm = activities.stream()
+            .filter(activity -> !activity.getActivityDate().isBefore(startOfWeek))
+            .mapToDouble(UserDailyActivity::getDistanceMeters)
+            .sum() / METERS_PER_KILOMETER;
+        double monthlyDistanceKm = activities.stream()
+            .filter(activity -> !activity.getActivityDate().isBefore(startOfMonth))
+            .mapToDouble(UserDailyActivity::getDistanceMeters)
+            .sum() / METERS_PER_KILOMETER;
+
+        return new PotatoGrowthSummaryResponse(
+            todaySteps,
+            MVP_DAILY_STEP_GOAL,
+            weeklyDistanceKm,
+            monthlyDistanceKm,
+            remainingDistanceKmForRepresentative(userId)
+        );
+    }
+
+    private PotatoGrowthSummaryResponse mvpGrowthSummary(Long userId) {
+        return new PotatoGrowthSummaryResponse(
+            MVP_TODAY_STEPS,
+            MVP_DAILY_STEP_GOAL,
+            MVP_WEEKLY_DISTANCE_KM,
+            MVP_MONTHLY_DISTANCE_KM,
+            remainingDistanceKmForRepresentative(userId)
+        );
+    }
+
+    private double remainingDistanceKmForRepresentative(Long userId) {
         double remainingDistanceKmForRepresentative = userPotatoRepository.findByUserId(userId)
             .stream()
             .filter(UserPotato::isRepresentative)
             .findFirst()
             .map(this::remainingGrowthDistanceKm)
             .orElse(0.0);
-
-        return new PotatoGrowthSummaryResponse(
-            MVP_TODAY_STEPS,
-            MVP_DAILY_STEP_GOAL,
-            MVP_WEEKLY_DISTANCE_KM,
-            MVP_MONTHLY_DISTANCE_KM,
-            remainingDistanceKmForRepresentative
-        );
+        return remainingDistanceKmForRepresentative;
     }
 
     private double remainingGrowthDistanceKm(UserPotato userPotato) {

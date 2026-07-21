@@ -34,13 +34,16 @@ final potatoGrowthSummaryProvider =
     return null;
   }
 
-  final summary =
-      await ref.watch(potatoRepositoryProvider).fetchGrowthSummary();
-  final todaySteps = await ref.watch(stepCountReaderProvider).readTodaySteps();
+  final repository = ref.watch(potatoRepositoryProvider);
+  final snapshot = await ref.watch(stepCountReaderProvider).readTodaySteps();
 
-  if (todaySteps == null) {
-    return summary;
+  if (snapshot != null) {
+    try {
+      await repository.syncDailyActivity(snapshot);
+    } catch (_) {
+      // 동기화 실패가 도감 진입 자체를 막으면 안 되므로, 서버의 마지막 집계값을 계속 사용한다.
+    }
   }
 
-  return summary.copyWith(todaySteps: todaySteps);
+  return repository.fetchGrowthSummary();
 });

@@ -2,18 +2,26 @@ package com.gamjamubwatna.potato.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncRequest;
+import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncResponse;
 import com.gamjamubwatna.potato.api.PotatoRepresentativeResponse;
+import com.gamjamubwatna.potato.domain.ActivitySource;
 import com.gamjamubwatna.potato.domain.Potato;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
+import com.gamjamubwatna.potato.domain.UserDailyActivity;
+import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,13 +36,20 @@ class PotatoCommandServiceTest {
     private UserPotatoRepository userPotatoRepository;
 
     @Mock
+    private UserDailyActivityRepository userDailyActivityRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     private PotatoCommandService potatoCommandService;
 
     @BeforeEach
     void setUp() {
-        potatoCommandService = new PotatoCommandService(userPotatoRepository, userRepository);
+        potatoCommandService = new PotatoCommandService(
+            userPotatoRepository,
+            userDailyActivityRepository,
+            userRepository
+        );
     }
 
     @Test
@@ -83,6 +98,85 @@ class PotatoCommandServiceTest {
 
         assertThatThrownBy(() -> potatoCommandService.updateRepresentativePotato(99L, 1L))
             .isInstanceOf(PotatoAuthenticationException.class);
+    }
+
+    @Test
+    void createsDailyActivityWhenActivityDoesNotExist() {
+        User user = mock(User.class);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
+            1L,
+            LocalDate.parse("2026-07-21"),
+            ActivitySource.HEALTH_CONNECT
+        )).thenReturn(Optional.empty());
+        when(userDailyActivityRepository.save(any(UserDailyActivity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoDailyActivitySyncResponse result = potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                8420,
+                5894.0,
+                ActivitySource.HEALTH_CONNECT
+            )
+        );
+
+        assertThat(result.activityDate()).isEqualTo(LocalDate.parse("2026-07-21"));
+        assertThat(result.steps()).isEqualTo(8420);
+        assertThat(result.distanceMeters()).isEqualTo(5894.0);
+        assertThat(result.source()).isEqualTo(ActivitySource.HEALTH_CONNECT);
+        assertThat(result.syncedAt()).isNotNull();
+    }
+
+    @Test
+    void updatesDailyActivityWhenActivityAlreadyExists() {
+        UserDailyActivity activity = new UserDailyActivity(
+            mock(User.class),
+            LocalDate.parse("2026-07-21"),
+            3000,
+            2100.0,
+            ActivitySource.HEALTH_KIT,
+            Instant.parse("2026-07-21T00:00:00Z")
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mock(User.class)));
+        when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
+            1L,
+            LocalDate.parse("2026-07-21"),
+            ActivitySource.HEALTH_KIT
+        )).thenReturn(Optional.of(activity));
+        when(userDailyActivityRepository.save(any(UserDailyActivity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoDailyActivitySyncResponse result = potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                9000,
+                6300.0,
+                ActivitySource.HEALTH_KIT
+            )
+        );
+
+        assertThat(result.steps()).isEqualTo(9000);
+        assertThat(result.distanceMeters()).isEqualTo(6300.0);
+    }
+
+    @Test
+    void rejectsNegativeSteps() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mock(User.class)));
+
+        assertThatThrownBy(() -> potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                -1,
+                100.0,
+                ActivitySource.HEALTH_CONNECT
+            )
+        ))
+            .isInstanceOf(PotatoActivityException.class)
+            .hasMessage("걸음 수가 허용 범위를 벗어났습니다.");
     }
 
     private UserPotato userPotato(Long id, Potato potato, boolean representative) {
