@@ -4,6 +4,7 @@ import '../../../core/constants/api_paths.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_response.dart';
 import '../domain/potato_collection.dart';
+import '../domain/step_count_reader.dart';
 
 class PotatoRepository {
   const PotatoRepository({required Dio dio}) : _dio = dio;
@@ -32,6 +33,20 @@ class PotatoRepository {
     );
 
     return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
+  Future<void> syncDailyActivity(StepCountSnapshot snapshot) async {
+    await _request(
+      () => _dio.put<Map<String, dynamic>>(
+        ApiPaths.potatoDailyActivity,
+        data: {
+          'activityDate': _formatDate(snapshot.activityDate),
+          'steps': snapshot.steps,
+          'distanceMeters': snapshot.distanceMeters,
+          'source': activitySyncSourceToApi(snapshot.source),
+        },
+      ),
+    );
   }
 
   Future<PotatoRepresentativeResult> updateRepresentativePotato(
@@ -80,5 +95,12 @@ class PotatoRepository {
       }
       rethrow;
     }
+  }
+
+  String _formatDate(DateTime date) {
+    final local = date.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day';
   }
 }

@@ -16,6 +16,7 @@ class ApiPaths {
   static const potatoes = '/potatoes';
   static const myPotatoes = '/potatoes/me';
   static const potatoGrowthSummary = '/potatoes/me/growth-summary';
+  static const potatoDailyActivity = '/potatoes/me/activity/daily';
   static const representativePotato = '/potatoes/me/representative';
   static const myCoupons = '/coupons/me';
   static String couponDetail(int userCouponId) => '/coupons/$userCouponId';

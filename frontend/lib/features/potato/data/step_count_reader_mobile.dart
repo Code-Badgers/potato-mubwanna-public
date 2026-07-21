@@ -10,11 +10,16 @@ StepCountReader createPlatformStepCountReader() => HealthStepCountReader();
 class HealthStepCountReader implements StepCountReader {
   HealthStepCountReader({Health? health}) : _health = health ?? Health();
 
+  static const _estimatedMetersPerStep = 0.7;
+
   final Health _health;
 
   @override
-  Future<int?> readTodaySteps() async {
+  Future<StepCountSnapshot?> readTodaySteps() async {
     try {
+      final source = Platform.isIOS
+          ? ActivitySyncSource.healthKit
+          : ActivitySyncSource.healthConnect;
       if (Platform.isAndroid) {
         final activityPermission =
             await Permission.activityRecognition.request();
@@ -42,7 +47,17 @@ class HealthStepCountReader implements StepCountReader {
         includeManualEntry: false,
       );
 
-      return steps?.clamp(0, 1000000);
+      final safeSteps = steps?.clamp(0, 1000000);
+      if (safeSteps == null) {
+        return null;
+      }
+
+      return StepCountSnapshot(
+        activityDate: startOfToday,
+        steps: safeSteps,
+        distanceMeters: safeSteps * _estimatedMetersPerStep,
+        source: source,
+      );
     } catch (_) {
       return null;
     }

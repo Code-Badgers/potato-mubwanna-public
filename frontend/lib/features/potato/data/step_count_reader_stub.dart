@@ -7,5 +7,5 @@ class UnsupportedStepCountReader implements StepCountReader {
   const UnsupportedStepCountReader();
 
   @override
-  Future<int?> readTodaySteps() async => null;
+  Future<StepCountSnapshot?> readTodaySteps() async => null;
 }
