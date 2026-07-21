@@ -6,6 +6,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../reward/application/reward_history_controller.dart';
+import '../../../reward/domain/reward_history.dart';
 import '../../application/coupon_controller.dart';
 import '../../domain/coupon.dart';
 
@@ -30,7 +32,7 @@ class CouponScreen extends ConsumerWidget {
             const _CouponHeader(),
             Expanded(
               child: switch (authStatus) {
-                AuthStatus.authenticated => const _CouponInbox(),
+                AuthStatus.authenticated => const _RewardBox(),
                 AuthStatus.loading => const Center(
                     child: CircularProgressIndicator(),
                   ),
@@ -42,6 +44,81 @@ class CouponScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RewardBox extends StatefulWidget {
+  const _RewardBox();
+
+  @override
+  State<_RewardBox> createState() => _RewardBoxState();
+}
+
+class _RewardBoxState extends State<_RewardBox> {
+  _RewardBoxSection _selectedSection = _RewardBoxSection.coupons;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+          child: _RewardBoxSectionBar(
+            selectedSection: _selectedSection,
+            onChanged: (section) => setState(() => _selectedSection = section),
+          ),
+        ),
+        Expanded(
+          child: switch (_selectedSection) {
+            _RewardBoxSection.coupons => const _CouponInbox(),
+            _RewardBoxSection.history => const _RewardHistoryInbox(),
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _RewardBoxSectionBar extends StatelessWidget {
+  const _RewardBoxSectionBar({
+    required this.selectedSection,
+    required this.onChanged,
+  });
+
+  final _RewardBoxSection selectedSection;
+  final ValueChanged<_RewardBoxSection> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F4EB),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SegmentButton(
+              key: const ValueKey('reward-box-coupon-tab'),
+              label: '쿠폰',
+              selected: selectedSection == _RewardBoxSection.coupons,
+              onTap: () => onChanged(_RewardBoxSection.coupons),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _SegmentButton(
+              key: const ValueKey('reward-box-history-tab'),
+              label: '보상 내역',
+              selected: selectedSection == _RewardBoxSection.history,
+              onTap: () => onChanged(_RewardBoxSection.history),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -155,6 +232,154 @@ class _CouponHeader extends StatelessWidget {
   }
 }
 
+class _RewardHistoryInbox extends ConsumerWidget {
+  const _RewardHistoryInbox();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final history = ref.watch(rewardHistoryProvider);
+
+    return history.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => _RewardHistoryError(
+        onRetry: () => ref.invalidate(rewardHistoryProvider),
+      ),
+      data: (value) {
+        final rewards = value ?? const <RewardHistory>[];
+        if (rewards.isEmpty) {
+          return const _RewardHistoryEmpty();
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          itemCount: rewards.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final reward = rewards[index];
+            return _RewardHistoryCard(
+              key: ValueKey('reward-history-${reward.rewardHistoryId}'),
+              reward: reward,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _RewardHistoryCard extends StatelessWidget {
+  const _RewardHistoryCard({super.key, required this.reward});
+
+  final RewardHistory reward;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color) = switch (reward.rewardType) {
+      RewardType.potato => (
+          Icons.agriculture_rounded,
+          const Color(0xFF9A642D),
+        ),
+      RewardType.coupon => (
+          Icons.confirmation_number_rounded,
+          _couponPrimary,
+        ),
+      RewardType.item => (
+          Icons.inventory_2_rounded,
+          const Color(0xFF6C63A8),
+        ),
+      RewardType.coin => (
+          Icons.monetization_on_rounded,
+          _couponGold,
+        ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _couponLine),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withAlpha(36),
+            foregroundColor: color,
+            child: Icon(icon, size: 21),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  reward.rewardName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _RewardHistoryChip(
+                      label: reward.rewardType.label,
+                      color: color,
+                    ),
+                    _RewardHistoryChip(
+                      label: reward.sourceType.label,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${_formatDateTime(reward.createdAt)} 지급',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardHistoryChip extends StatelessWidget {
+  const _RewardHistoryChip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(26),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
 class _CouponTabBar extends StatelessWidget {
   const _CouponTabBar({
     required this.selectedTab,
@@ -171,7 +396,7 @@ class _CouponTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 48,
+      constraints: const BoxConstraints(minHeight: 48),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: const Color(0xFFF0EEE8),
@@ -180,7 +405,7 @@ class _CouponTabBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _CouponTabButton(
+            child: _SegmentButton(
               label: '사용 가능 $availableCount',
               selected: selectedTab == _CouponTab.available,
               onTap: () => onChanged(_CouponTab.available),
@@ -188,7 +413,7 @@ class _CouponTabBar extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Expanded(
-            child: _CouponTabButton(
+            child: _SegmentButton(
               label: '사용 완료 $completedCount',
               selected: selectedTab == _CouponTab.completed,
               onTap: () => onChanged(_CouponTab.completed),
@@ -200,8 +425,9 @@ class _CouponTabBar extends StatelessWidget {
   }
 }
 
-class _CouponTabButton extends StatelessWidget {
-  const _CouponTabButton({
+class _SegmentButton extends StatelessWidget {
+  const _SegmentButton({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -213,19 +439,28 @@ class _CouponTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.surface : Colors.transparent,
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        onTap: onTap,
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? AppColors.surface : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
         ),
@@ -726,6 +961,54 @@ class _CouponEmpty extends StatelessWidget {
   }
 }
 
+class _RewardHistoryEmpty extends StatelessWidget {
+  const _RewardHistoryEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Text(
+          '아직 받은 보상이 없어요.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RewardHistoryError extends StatelessWidget {
+  const _RewardHistoryError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '보상 내역을 불러오지 못했습니다.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: onRetry, child: const Text('다시 시도')),
+        ],
+      ),
+    );
+  }
+}
+
 class _CouponError extends StatelessWidget {
   const _CouponError({required this.onRetry});
 
@@ -773,5 +1056,7 @@ String _formatDateTime(DateTime date) {
   final minute = local.minute.toString().padLeft(2, '0');
   return '${_formatDate(local)} $hour:$minute';
 }
+
+enum _RewardBoxSection { coupons, history }
 
 enum _CouponTab { available, completed }
