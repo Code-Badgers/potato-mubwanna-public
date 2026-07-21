@@ -86,30 +86,37 @@ public class PotatoQueryService {
 
     @Transactional(readOnly = true)
     public PotatoGrowthSummaryResponse getGrowthSummary(Long userId) {
+        return getGrowthSummary(userId, LocalDate.now());
+    }
+
+    PotatoGrowthSummaryResponse getGrowthSummary(Long userId, LocalDate today) {
         if (!userRepository.existsById(userId)) {
             throw new PotatoAuthenticationException("사용자를 찾을 수 없습니다.");
         }
 
-        LocalDate today = LocalDate.now();
-        List<UserDailyActivity> monthlyActivities =
+        LocalDate startOfMonth = today.withDayOfMonth(1);
+        LocalDate startOfWeek = today.minusDays(6);
+        LocalDate queryStartDate = startOfMonth.isBefore(startOfWeek) ? startOfMonth : startOfWeek;
+        List<UserDailyActivity> activities =
             userDailyActivityRepository.findByUserIdAndActivityDateBetween(
                 userId,
-                today.withDayOfMonth(1),
+                queryStartDate,
                 today
             );
-        if (monthlyActivities.isEmpty()) {
+        if (activities.isEmpty()) {
             return mvpGrowthSummary(userId);
         }
 
-        int todaySteps = monthlyActivities.stream()
+        int todaySteps = activities.stream()
             .filter(activity -> activity.getActivityDate().isEqual(today))
             .mapToInt(UserDailyActivity::getSteps)
             .sum();
-        double weeklyDistanceKm = monthlyActivities.stream()
-            .filter(activity -> !activity.getActivityDate().isBefore(today.minusDays(6)))
+        double weeklyDistanceKm = activities.stream()
+            .filter(activity -> !activity.getActivityDate().isBefore(startOfWeek))
             .mapToDouble(UserDailyActivity::getDistanceMeters)
             .sum() / METERS_PER_KILOMETER;
-        double monthlyDistanceKm = monthlyActivities.stream()
+        double monthlyDistanceKm = activities.stream()
+            .filter(activity -> !activity.getActivityDate().isBefore(startOfMonth))
             .mapToDouble(UserDailyActivity::getDistanceMeters)
             .sum() / METERS_PER_KILOMETER;
 

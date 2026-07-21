@@ -106,6 +106,7 @@ class PotatoQueryServiceTest {
 
     @Test
     void returnsGrowthSummaryWithRepresentativeRemainingDistance() {
+        LocalDate today = LocalDate.parse("2026-07-21");
         Potato potato = potato(1L, "하지감자", PotatoRarity.COMMON);
         UserPotato representativePotato = new UserPotato(
             mock(User.class),
@@ -118,12 +119,12 @@ class PotatoQueryServiceTest {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userDailyActivityRepository.findByUserIdAndActivityDateBetween(
             1L,
-            LocalDate.now().withDayOfMonth(1),
-            LocalDate.now()
+            today.withDayOfMonth(1),
+            today
         )).thenReturn(List.of());
         when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representativePotato));
 
-        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L);
+        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L, today);
 
         assertThat(result.todaySteps()).isEqualTo(7842);
         assertThat(result.dailyStepGoal()).isEqualTo(10000);
@@ -134,22 +135,23 @@ class PotatoQueryServiceTest {
 
     @Test
     void returnsZeroRemainingDistanceWhenRepresentativePotatoIsMissing() {
+        LocalDate today = LocalDate.parse("2026-07-21");
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userDailyActivityRepository.findByUserIdAndActivityDateBetween(
             1L,
-            LocalDate.now().withDayOfMonth(1),
-            LocalDate.now()
+            today.withDayOfMonth(1),
+            today
         )).thenReturn(List.of());
         when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of());
 
-        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L);
+        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L, today);
 
         assertThat(result.remainingDistanceKmForRepresentative()).isZero();
     }
 
     @Test
     void returnsGrowthSummaryFromStoredActivities() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.parse("2026-07-21");
         Potato potato = potato(1L, "하지감자", PotatoRarity.COMMON);
         UserPotato representativePotato = new UserPotato(
             mock(User.class),
@@ -171,12 +173,45 @@ class PotatoQueryServiceTest {
         ));
         when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representativePotato));
 
-        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L);
+        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L, today);
 
         assertThat(result.todaySteps()).isEqualTo(8420);
         assertThat(result.dailyStepGoal()).isEqualTo(10000);
         assertThat(result.weeklyDistanceKm()).isEqualTo(7.994);
         assertThat(result.monthlyDistanceKm()).isEqualTo(8.694);
+        assertThat(result.remainingDistanceKmForRepresentative()).isEqualTo(1.5);
+    }
+
+    @Test
+    void includesPreviousMonthActivitiesInWeeklyDistanceAtStartOfMonth() {
+        LocalDate today = LocalDate.parse("2026-08-03");
+        Potato potato = potato(1L, "하지감자", PotatoRarity.COMMON);
+        UserPotato representativePotato = new UserPotato(
+            mock(User.class),
+            potato,
+            Instant.parse("2026-07-01T00:00:00Z"),
+            2,
+            1500.0,
+            true
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userDailyActivityRepository.findByUserIdAndActivityDateBetween(
+            1L,
+            LocalDate.parse("2026-07-28"),
+            today
+        )).thenReturn(List.of(
+            activity(LocalDate.parse("2026-07-29"), 2000, 1400.0),
+            activity(LocalDate.parse("2026-08-01"), 3000, 2100.0),
+            activity(today, 4000, 2800.0)
+        ));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representativePotato));
+
+        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L, today);
+
+        assertThat(result.todaySteps()).isEqualTo(4000);
+        assertThat(result.dailyStepGoal()).isEqualTo(10000);
+        assertThat(result.weeklyDistanceKm()).isEqualTo(6.3);
+        assertThat(result.monthlyDistanceKm()).isEqualTo(4.9);
         assertThat(result.remainingDistanceKmForRepresentative()).isEqualTo(1.5);
     }
 
