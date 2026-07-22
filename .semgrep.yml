@@ -7,8 +7,8 @@ rules:
     pattern-regex: 'import\s+javax\.persistence\.'
     paths:
       include:
-        - backend/src/main/**/*.java
-        - backend/src/test/**/*.java
+        - /backend/src/main/**/*.java
+        - /backend/src/test/**/*.java
 
   - id: potato.java.no-console-output
     languages:
@@ -20,7 +20,7 @@ rules:
       - pattern: System.err.$METHOD(...)
     paths:
       include:
-        - backend/src/main/**/*.java
+        - /backend/src/main/**/*.java
 
   - id: potato.flutter.no-direct-dio-construction
     languages:
@@ -30,9 +30,9 @@ rules:
     pattern: Dio(...)
     paths:
       include:
-        - frontend/lib/**/*.dart
+        - /frontend/lib/**/*.dart
       exclude:
-        - frontend/lib/core/network/**
+        - /frontend/lib/core/network/**
 
   - id: potato.flutter.no-debug-output
     languages:
@@ -44,4 +44,4 @@ rules:
       - pattern: debugPrint(...)
     paths:
       include:
-        - frontend/lib/**/*.dart
+        - /frontend/lib/**/*.dart
