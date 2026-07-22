@@ -1,0 +1,105 @@
+package com.gamjamubwatna.visit.application;
+
+import com.gamjamubwatna.auth.domain.User;
+import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.spot.domain.TouristSpot;
+import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.visit.api.VisitVerifyRequest;
+import com.gamjamubwatna.visit.api.VisitVerifyResponse;
+import com.gamjamubwatna.visit.domain.UserVisit;
+import com.gamjamubwatna.visit.domain.UserVisitRepository;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class VisitVerificationService {
+
+    private final UserRepository userRepository;
+    private final TouristSpotRepository touristSpotRepository;
+    private final UserVisitRepository userVisitRepository;
+    private final VisitDistancePolicy visitDistancePolicy;
+    private final Clock clock;
+
+    @Autowired
+    public VisitVerificationService(
+        UserRepository userRepository,
+        TouristSpotRepository touristSpotRepository,
+        UserVisitRepository userVisitRepository,
+        VisitDistancePolicy visitDistancePolicy
+    ) {
+        this(userRepository, touristSpotRepository, userVisitRepository, visitDistancePolicy, Clock.systemUTC());
+    }
+
+    VisitVerificationService(
+        UserRepository userRepository,
+        TouristSpotRepository touristSpotRepository,
+        UserVisitRepository userVisitRepository,
+        VisitDistancePolicy visitDistancePolicy,
+        Clock clock
+    ) {
+        this.userRepository = userRepository;
+        this.touristSpotRepository = touristSpotRepository;
+        this.userVisitRepository = userVisitRepository;
+        this.visitDistancePolicy = visitDistancePolicy;
+        this.clock = clock;
+    }
+
+    @Transactional
+    public VisitVerifyResponse verifyVisit(Long userId, VisitVerifyRequest request) {
+        validateRequest(request);
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new VisitAuthenticationException("인증 정보를 확인할 수 없습니다."));
+        TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(request.spotId())
+            .orElseThrow(() -> new VisitNotFoundException("감자 스팟을 찾을 수 없습니다."));
+        if (userVisitRepository.existsByUserIdAndTouristSpotId(userId, spot.getId())) {
+            throw new VisitDuplicateException("이미 방문 인증한 감자 스팟입니다.");
+        }
+
+        BigDecimal distanceMeters = visitDistancePolicy.distanceMeters(
+            spot.getLatitude(),
+            spot.getLongitude(),
+            request.latitude(),
+            request.longitude()
+        );
+        if (!visitDistancePolicy.isWithinRadius(distanceMeters, spot.getVerificationRadiusMeter())) {
+            throw new VisitVerificationException("방문 인증 가능 범위를 벗어났습니다.");
+        }
+
+        userVisitRepository.save(new UserVisit(user, spot, distanceMeters, Instant.now(clock)));
+
+        return new VisitVerifyResponse(
+            spot.getId(),
+            true,
+            distanceMeters,
+            spot.getVerificationRadiusMeter(),
+            false,
+            false,
+            false
+        );
+    }
+
+    private void validateRequest(VisitVerifyRequest request) {
+        if (request == null || request.spotId() == null || request.spotId() < 1) {
+            throw new VisitVerificationException("방문 인증할 감자 스팟을 확인할 수 없습니다.");
+        }
+        if (!isValidLatitude(request.latitude()) || !isValidLongitude(request.longitude())) {
+            throw new VisitVerificationException("방문 인증 위치를 확인할 수 없습니다.");
+        }
+    }
+
+    private boolean isValidLatitude(BigDecimal latitude) {
+        return latitude != null
+            && latitude.compareTo(BigDecimal.valueOf(-90)) >= 0
+            && latitude.compareTo(BigDecimal.valueOf(90)) <= 0;
+    }
+
+    private boolean isValidLongitude(BigDecimal longitude) {
+        return longitude != null
+            && longitude.compareTo(BigDecimal.valueOf(-180)) >= 0
+            && longitude.compareTo(BigDecimal.valueOf(180)) <= 0;
+    }
+}
