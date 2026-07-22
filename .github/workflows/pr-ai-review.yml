@@ -1,0 +1,61 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths:
+      - ".github/workflows/pr-ai-review.yml"
+      - ".github/prompts/pr-review.prompt.yml"
+      - ".github/scripts/**"
+      - "backend/**"
+      - "frontend/**"
+
+concurrency:
+  group: ai-pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  models: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: AI code review
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare review input
+        id: prepare
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/prepare-ai-review.mjs
+
+      - name: Review pull request
+        id: inference
+        uses: actions/ai-inference@a7805884c80886efc241e94a5351df715968a0ad # v2.1.1
+        with:
+          prompt-file: .github/prompts/pr-review.prompt.yml
+          file_input: |
+            review_input: ${{ steps.prepare.outputs.input-file }}
+
+      - name: Publish review
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AI_RESPONSE_FILE: ${{ steps.inference.outputs.response-file }}
+          AI_RESPONSE: ${{ steps.inference.outputs.response }}
+          REVIEW_INPUT_TRUNCATED: ${{ steps.prepare.outputs.truncated }}
+        run: node .github/scripts/publish-ai-review.mjs
