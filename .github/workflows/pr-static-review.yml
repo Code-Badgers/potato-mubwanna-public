@@ -48,7 +48,7 @@ jobs:
       - name: Scan changed code
         run: >-
           semgrep scan
-          --config auto
+          --config p/default
           --config .semgrep.yml
           --metrics=off
           --sarif
