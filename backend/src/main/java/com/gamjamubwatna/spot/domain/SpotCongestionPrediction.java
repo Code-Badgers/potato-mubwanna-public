@@ -67,6 +67,16 @@ public class SpotCongestionPrediction {
         this.createdAt = createdAt;
     }
 
+    public void update(
+        Integer predictedVisitors,
+        Integer baselineVisitors,
+        CongestionLevel congestionLevel
+    ) {
+        this.predictedVisitors = predictedVisitors;
+        this.baselineVisitors = baselineVisitors;
+        this.congestionLevel = congestionLevel;
+    }
+
     public Long getId() {
         return id;
     }

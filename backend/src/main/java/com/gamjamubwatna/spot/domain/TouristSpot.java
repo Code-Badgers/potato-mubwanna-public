@@ -177,6 +177,14 @@ public class TouristSpot {
         this.updatedAt = now;
     }
 
+    public void updateCongestionLevel(CongestionLevel congestionLevel, Instant now) {
+        if (congestionLevel == null) {
+            return;
+        }
+        this.congestionLevel = congestionLevel;
+        this.updatedAt = now;
+    }
+
     public Long getId() {
         return id;
     }
