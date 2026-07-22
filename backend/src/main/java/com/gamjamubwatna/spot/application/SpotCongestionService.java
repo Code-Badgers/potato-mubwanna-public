@@ -10,6 +10,7 @@ import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class SpotCongestionService {
     private final CongestionLevelPolicy congestionLevelPolicy;
     private final Clock clock;
 
+    @Autowired
     public SpotCongestionService(
         TouristSpotRepository touristSpotRepository,
         SpotCongestionPredictionRepository spotCongestionPredictionRepository,
