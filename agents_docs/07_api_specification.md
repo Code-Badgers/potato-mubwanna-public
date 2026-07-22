@@ -345,16 +345,16 @@ Response:
 ### 4.2 GPS 방문 인증
 
 ```http
-POST /api/stamps/verify
+POST /api/visits/verify
 ```
 
 Request:
 
 ```json
 {
-  "touristSpotId": 1,
-  "lat": 37.3801,
-  "lng": 128.6609
+  "spotId": 1,
+  "latitude": 37.3801,
+  "longitude": 128.6609
 }
 ```
 
@@ -363,24 +363,27 @@ Response:
 ```json
 {
   "success": true,
-  "message": "요청이 성공했습니다.",
+  "message": "방문 인증이 완료되었습니다.",
   "data": {
+    "spotId": 1,
     "verified": true,
-    "stampAcquired": true,
-    "stamp": {
-      "id": 1,
-      "cityName": "정선군",
-      "stampName": "정선 곤드레감자 스탬프"
-    },
-    "potatoAcquired": true,
-    "potato": {
-      "id": 3,
-      "name": "곤드레감자",
-      "rarity": "RARE"
-    }
+    "distanceMeters": 23.5,
+    "verificationRadiusMeter": 100,
+    "stampIssued": false,
+    "potatoAcquired": false,
+    "missionAvailable": false
   }
 }
 ```
+
+Error:
+
+| HTTP Status | 조건 |
+| --- | --- |
+| 400 | 좌표 누락, 좌표 범위 오류, 방문 인증 반경 초과 |
+| 401 | 인증 정보 없음 또는 잘못된 사용자 principal |
+| 404 | 존재하지 않거나 비활성화된 감자 스팟 |
+| 409 | 이미 방문 인증한 감자 스팟 |
 
 ### 4.3 보상 가능 여부 확인
 
