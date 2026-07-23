@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../application/map_spot_controller.dart';
+import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import '../widget/kakao_map_view.dart';
 
@@ -114,6 +115,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return route;
   }
 
+  List<MapSpot> _routeSpotsFromBackend(
+    List<MapSpot> spots,
+    FavoriteSpotRoute route,
+  ) {
+    if (!route.hasRoute) {
+      return const [];
+    }
+    final spotsById = {for (final spot in spots) spot.id: spot};
+    return route.waypoints
+        .map((waypoint) => spotsById[waypoint.spotId])
+        .whereType<MapSpot>()
+        .toList();
+  }
+
   void _selectCategory(int index) {
     setState(() {
       _selectedCategoryIndex = index;
@@ -138,6 +153,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget build(BuildContext context) {
     final spotsState = ref.watch(mapSpotsProvider);
     final favoriteSpotsState = ref.watch(favoriteSpotControllerProvider);
+    final favoriteSpotRouteState = ref.watch(favoriteSpotRouteProvider);
     final favoriteSpotIds = favoriteSpotsState.valueOrNull ?? <String>{};
 
     return Scaffold(
@@ -165,6 +181,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       favoriteSpotIds,
                       selectedSpot,
                     );
+                    final backendRoute = favoriteSpotRouteState.valueOrNull;
+                    final backendRouteSpots = backendRoute == null
+                        ? const <MapSpot>[]
+                        : _routeSpotsFromBackend(spots, backendRoute);
+                    final recommendedRouteSpots = backendRouteSpots.length >= 2
+                        ? backendRouteSpots
+                        : routeSpots;
+                    final recommendedRouteDistanceKm =
+                        backendRouteSpots.length >= 2
+                            ? backendRoute?.totalDistanceKm
+                            : null;
                     return Stack(
                       children: [
                         Positioned.fill(
@@ -202,7 +229,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         else
                           _RouteRecommendationSheet(
                             selectedSpot: selectedSpot,
-                            routeSpots: routeSpots,
+                            routeSpots: recommendedRouteSpots,
+                            routeDistanceKm: recommendedRouteDistanceKm,
                             favoriteCount: favoriteSpotIds.length,
                             isFavorite:
                                 favoriteSpotIds.contains(selectedSpot.id),
@@ -213,6 +241,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                       favoriteSpotControllerProvider.notifier,
                                     )
                                     .toggle(selectedSpot.id);
+                                ref.invalidate(favoriteSpotRouteProvider);
                               } on FavoriteSpotToggleException catch (error) {
                                 if (!context.mounted) {
                                   return;
@@ -258,6 +287,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
   const _RouteRecommendationSheet({
     required this.selectedSpot,
     required this.routeSpots,
+    required this.routeDistanceKm,
     required this.favoriteCount,
     required this.isFavorite,
     required this.onFavoritePressed,
@@ -266,6 +296,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
 
   final MapSpot selectedSpot;
   final List<MapSpot> routeSpots;
+  final double? routeDistanceKm;
   final int favoriteCount;
   final bool isFavorite;
   final Future<void> Function() onFavoritePressed;
@@ -274,7 +305,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasRoute = routeSpots.length >= 2;
-    final totalDistance = routeSpots.totalRouteDistanceKm;
+    final totalDistance = routeDistanceKm ?? routeSpots.totalRouteDistanceKm;
     return DraggableScrollableSheet(
       minChildSize: 0.24,
       initialChildSize: hasRoute ? 0.34 : 0.28,

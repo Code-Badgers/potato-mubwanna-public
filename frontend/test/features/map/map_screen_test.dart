@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/map/application/map_spot_controller.dart';
 import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
+import 'package:potato_mubwanna/features/map/domain/favorite_spot_route.dart';
 import 'package:potato_mubwanna/features/map/domain/map_spot.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
 
@@ -16,6 +17,7 @@ void main() {
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
           ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: const MaterialApp(
           home: MapScreen(hasMapConfiguration: true),
@@ -44,6 +46,7 @@ void main() {
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
           ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: MaterialApp(
           home: MapScreen(
@@ -89,6 +92,7 @@ void main() {
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
           ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: const MaterialApp(home: MapScreen()),
       ),
@@ -112,6 +116,7 @@ void main() {
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
           ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: const MaterialApp(
           home: MapScreen(hasMapConfiguration: false),
@@ -127,14 +132,86 @@ void main() {
     );
     expect(find.text('감자 스팟 정보를 불러오지 못했습니다.'), findsNothing);
   });
+
+  testWidgets('uses backend recommended route when available', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _route),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(hasMapConfiguration: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('추천 동선'), findsOneWidget);
+    expect(find.text('3곳 · 직선 12.3km'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsWidgets);
+    expect(find.text('감자 체험장'), findsOneWidget);
+    expect(find.text('감자 카페'), findsOneWidget);
+  });
 }
 
-FavoriteSpotController _favoriteController() {
+FavoriteSpotController _favoriteController([Set<String> spotIds = const {}]) {
   return FavoriteSpotController(
     MapSpotRepository(dio: Dio()),
     const LocalFavoriteSpotStorage(),
-  )..state = const AsyncValue.data(<String>{});
+  )..state = AsyncValue.data(spotIds);
 }
+
+const _emptyRoute = FavoriteSpotRoute(
+  routeName: '나만의 감자 동선',
+  totalDistanceKm: 0,
+  estimatedMinutes: 0,
+  waypoints: [],
+  polyline: [],
+);
+
+const _route = FavoriteSpotRoute(
+  routeName: '나만의 감자 동선',
+  totalDistanceKm: 12.3,
+  estimatedMinutes: 30,
+  waypoints: [
+    FavoriteSpotRouteWaypoint(
+      order: 1,
+      spotId: '1',
+      name: '정선 5일장',
+      category: 'POTATO_MARKET',
+      latitude: 37.38,
+      longitude: 128.66,
+      distanceFromPreviousKm: 0,
+    ),
+    FavoriteSpotRouteWaypoint(
+      order: 2,
+      spotId: '3',
+      name: '감자 체험장',
+      category: 'POTATO_EXPERIENCE',
+      latitude: 37.40,
+      longitude: 128.68,
+      distanceFromPreviousKm: 6.1,
+    ),
+    FavoriteSpotRouteWaypoint(
+      order: 3,
+      spotId: '2',
+      name: '감자 카페',
+      category: 'POTATO_CAFE',
+      latitude: 37.39,
+      longitude: 128.67,
+      distanceFromPreviousKm: 6.2,
+    ),
+  ],
+  polyline: [
+    FavoriteSpotRoutePoint(latitude: 37.38, longitude: 128.66),
+    FavoriteSpotRoutePoint(latitude: 37.40, longitude: 128.68),
+    FavoriteSpotRoutePoint(latitude: 37.39, longitude: 128.67),
+  ],
+);
 
 const _spots = [
   MapSpot(
