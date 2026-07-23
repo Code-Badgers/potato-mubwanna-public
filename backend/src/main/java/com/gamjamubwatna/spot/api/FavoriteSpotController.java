@@ -27,6 +27,12 @@ public class FavoriteSpotController {
         return AuthApiResponse.success(favoriteSpotService.getFavoriteSpots(currentUserId(authentication)));
     }
 
+    // 저장된 감자 스팟을 지도 Polyline과 추천 동선 바텀시트에서 사용할 순서형 경로로 변환한다.
+    @GetMapping("/route")
+    public AuthApiResponse<FavoriteSpotRouteResponse> getFavoriteSpotRoute(Authentication authentication) {
+        return AuthApiResponse.success(favoriteSpotService.getFavoriteSpotRoute(currentUserId(authentication)));
+    }
+
     // 지도 하단 카드에서 선택한 감자 스팟을 내 동선에 저장한다.
     @PostMapping("/{spotId}")
     public AuthApiResponse<FavoriteSpotToggleResponse> addFavoriteSpot(

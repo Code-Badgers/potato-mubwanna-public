@@ -11,6 +11,7 @@ import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.spot.api.FavoriteSpotToggleResponse;
+import com.gamjamubwatna.spot.api.FavoriteSpotRouteResponse;
 import com.gamjamubwatna.spot.domain.FavoriteSpot;
 import com.gamjamubwatna.spot.domain.FavoriteSpotRepository;
 import com.gamjamubwatna.spot.domain.SpotCategory;
@@ -19,6 +20,7 @@ import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -78,6 +80,44 @@ class FavoriteSpotServiceTest {
         verify(favoriteSpotRepository).delete(favoriteSpot);
     }
 
+    @Test
+    void getFavoriteSpotRouteConnectsNearestSpotsFromLatestFavorite() {
+        User user = user(1L);
+        TouristSpot jeongseon = spot(10L, "정선 5일장", "37.3801000", "128.6609000");
+        TouristSpot gangneung = spot(20L, "강릉 감자빵 카페", "37.7519000", "128.8961000");
+        TouristSpot chuncheon = spot(30L, "춘천 감자밭", "37.8813000", "127.7298000");
+        when(favoriteSpotRepository.findByUserIdWithTouristSpot(1L))
+            .thenReturn(List.of(
+                new FavoriteSpot(user, jeongseon, Instant.parse("2026-06-21T03:00:00Z")),
+                new FavoriteSpot(user, chuncheon, Instant.parse("2026-06-21T02:00:00Z")),
+                new FavoriteSpot(user, gangneung, Instant.parse("2026-06-21T01:00:00Z"))
+            ));
+
+        FavoriteSpotRouteResponse response = favoriteSpotService.getFavoriteSpotRoute(1L);
+
+        assertThat(response.routeName()).isEqualTo("나만의 감자 동선");
+        assertThat(response.waypoints()).extracting("spotId")
+            .containsExactly(10L, 20L, 30L);
+        assertThat(response.polyline()).hasSize(3);
+        assertThat(response.totalDistanceKm()).isGreaterThan(0);
+        assertThat(response.estimatedMinutes()).isGreaterThan(0);
+        assertThat(response.waypoints().get(0).distanceFromPreviousKm()).isZero();
+        assertThat(response.waypoints().get(1).distanceFromPreviousKm()).isGreaterThan(0);
+    }
+
+    @Test
+    void getFavoriteSpotRouteReturnsEmptyRouteWhenFavoriteSpotIsEmpty() {
+        when(favoriteSpotRepository.findByUserIdWithTouristSpot(1L))
+            .thenReturn(List.of());
+
+        FavoriteSpotRouteResponse response = favoriteSpotService.getFavoriteSpotRoute(1L);
+
+        assertThat(response.totalDistanceKm()).isZero();
+        assertThat(response.estimatedMinutes()).isZero();
+        assertThat(response.waypoints()).isEmpty();
+        assertThat(response.polyline()).isEmpty();
+    }
+
     private User user(Long id) {
         User user = new User(
             AuthProvider.KAKAO,
@@ -92,13 +132,17 @@ class FavoriteSpotServiceTest {
     }
 
     private TouristSpot spot(Long id) {
+        return spot(id, "정선 감자옹심이", "37.3801000", "128.6609000");
+    }
+
+    private TouristSpot spot(Long id, String name, String latitude, String longitude) {
         TouristSpot spot = new TouristSpot(
             "content-10",
             39,
-            "정선 감자옹심이",
+            name,
             SpotCategory.POTATO_RESTAURANT,
-            new BigDecimal("37.3801000"),
-            new BigDecimal("128.6609000"),
+            new BigDecimal(latitude),
+            new BigDecimal(longitude),
             "강원특별자치도 정선군",
             "정선군",
             "",
