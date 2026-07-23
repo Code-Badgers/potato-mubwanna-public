@@ -40,6 +40,16 @@ class PotatoSpotClassifierTest {
     }
 
     @Test
+    void classifiesPotatoMarketEvenWhenLocalFoodKeywordHasWhitespace() {
+        PotatoSpotClassification classification = classifier
+            .classify(38, "평창 로컬 푸드 감자 판매장", "강원특별자치도 평창군")
+            .orElseThrow();
+
+        assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_MARKET);
+        assertThat(classification.tags()).isEqualTo("감자,직판장");
+    }
+
+    @Test
     void classifiesPotatoCafeFromDessertKeyword() {
         PotatoSpotClassification classification = classifier
             .classify(39, "강릉 감자 젤라또 카페", "강원특별자치도 강릉시")
@@ -47,6 +57,16 @@ class PotatoSpotClassifierTest {
 
         assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_CAFE);
         assertThat(classification.tags()).isEqualTo("감자,디저트");
+    }
+
+    @Test
+    void classifiesPotatoBreadEvenWhenKeywordHasWhitespace() {
+        PotatoSpotClassification classification = classifier
+            .classify(39, "강릉 감자 빵 베이커리", "강원특별자치도 강릉시")
+            .orElseThrow();
+
+        assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_CAFE);
+        assertThat(classification.tags()).isEqualTo("감자,감자빵");
     }
 
     @Test

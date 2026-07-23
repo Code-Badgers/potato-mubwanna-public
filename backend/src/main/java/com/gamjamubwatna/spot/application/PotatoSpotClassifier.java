@@ -128,12 +128,17 @@ public class PotatoSpotClassifier {
     }
 
     private boolean containsAny(String text, String... keywords) {
+        String normalizedText = removeWhitespace(text);
         for (String keyword : keywords) {
-            if (text.contains(keyword)) {
+            if (text.contains(keyword) || normalizedText.contains(removeWhitespace(keyword))) {
                 return true;
             }
         }
         return false;
+    }
+
+    private String removeWhitespace(String value) {
+        return value.replaceAll("\\s+", "");
     }
 
     private String nullToBlank(String value) {
