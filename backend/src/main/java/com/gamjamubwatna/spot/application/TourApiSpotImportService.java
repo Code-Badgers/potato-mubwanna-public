@@ -198,16 +198,28 @@ public class TourApiSpotImportService {
 
     private Integer inferContentTypeId(String categoryName) {
         String text = nullToBlank(categoryName);
-        if (text.contains("시장") || text.contains("쇼핑") || text.contains("마트")) {
+        if (containsAny(text, "시장", "쇼핑", "마트", "상점", "기념품", "특산품", "농수축산물")) {
             return 38;
         }
-        if (text.contains("관광") || text.contains("명소")) {
+        if (containsAny(text, "관광", "명소")) {
             return 12;
         }
-        if (text.contains("체험")) {
+        if (containsAny(text, "문화시설", "박물관", "미술관", "전시관")) {
+            return 14;
+        }
+        if (containsAny(text, "체험", "레저", "스포츠")) {
             return 28;
         }
         return 39;
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        for (String keyword : keywords) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isMissingRequiredCoordinate(TourApiSpotItem item) {

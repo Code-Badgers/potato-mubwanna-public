@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.spot.infrastructure.KakaoLocalClient;
@@ -19,6 +20,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class TourApiSpotImportServiceTest {
 
@@ -116,5 +118,85 @@ class TourApiSpotImportServiceTest {
 
         assertThat(savedCount).isEqualTo(1);
         verify(repository).save(any(TouristSpot.class));
+    }
+
+    @Test
+    void mapsKakaoLocalShoppingCategoryToShopContentType() {
+        TourApiClient tourApiClient = mock(TourApiClient.class);
+        KakaoLocalClient kakaoLocalClient = mock(KakaoLocalClient.class);
+        TouristSpotRepository repository = mock(TouristSpotRepository.class);
+        when(tourApiClient.searchPotatoSpots(1, 15)).thenReturn(List.of());
+        when(kakaoLocalClient.searchPotatoSpots(1, 15))
+            .thenReturn(List.of(new KakaoLocalSpotItem(
+                "kakao-shop-1",
+                "강원 감자 특산품 판매장",
+                "가정,생활 > 식품판매 > 농수축산물",
+                "강원특별자치도 평창군 감자길 2",
+                "",
+                "https://place.map.kakao.com/kakao-shop-1",
+                "128.7071000",
+                "37.3702000"
+            )));
+        when(repository.findByContentId("KAKAO_LOCAL:kakao-shop-1")).thenReturn(Optional.empty());
+        when(repository.findByNameAndAddress("강원 감자 특산품 판매장", "강원특별자치도 평창군 감자길 2"))
+            .thenReturn(Optional.empty());
+        when(repository.save(any(TouristSpot.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TourApiSpotImportService importService = new TourApiSpotImportService(
+            tourApiClient,
+            kakaoLocalClient,
+            new PotatoSpotClassifier(),
+            repository,
+            Clock.fixed(Instant.parse("2026-06-20T00:00:00Z"), ZoneOffset.UTC)
+        );
+
+        int savedCount = importService.importPotatoSpots(1, 15);
+
+        ArgumentCaptor<TouristSpot> captor = ArgumentCaptor.forClass(TouristSpot.class);
+        assertThat(savedCount).isEqualTo(1);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getContentTypeId()).isEqualTo(38);
+        assertThat(captor.getValue().getCategory()).isEqualTo(SpotCategory.POTATO_SHOP);
+        assertThat(captor.getValue().getPotatoTags()).isEqualTo("감자,기념품");
+    }
+
+    @Test
+    void mapsKakaoLocalTourCategoryToTourContentType() {
+        TourApiClient tourApiClient = mock(TourApiClient.class);
+        KakaoLocalClient kakaoLocalClient = mock(KakaoLocalClient.class);
+        TouristSpotRepository repository = mock(TouristSpotRepository.class);
+        when(tourApiClient.searchPotatoSpots(1, 15)).thenReturn(List.of());
+        when(kakaoLocalClient.searchPotatoSpots(1, 15))
+            .thenReturn(List.of(new KakaoLocalSpotItem(
+                "kakao-tour-1",
+                "평창 고랭지 감자밭",
+                "여행 > 관광,명소",
+                "강원특별자치도 평창군 감자길 3",
+                "",
+                "https://place.map.kakao.com/kakao-tour-1",
+                "128.7151000",
+                "37.3812000"
+            )));
+        when(repository.findByContentId("KAKAO_LOCAL:kakao-tour-1")).thenReturn(Optional.empty());
+        when(repository.findByNameAndAddress("평창 고랭지 감자밭", "강원특별자치도 평창군 감자길 3"))
+            .thenReturn(Optional.empty());
+        when(repository.save(any(TouristSpot.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TourApiSpotImportService importService = new TourApiSpotImportService(
+            tourApiClient,
+            kakaoLocalClient,
+            new PotatoSpotClassifier(),
+            repository,
+            Clock.fixed(Instant.parse("2026-06-20T00:00:00Z"), ZoneOffset.UTC)
+        );
+
+        int savedCount = importService.importPotatoSpots(1, 15);
+
+        ArgumentCaptor<TouristSpot> captor = ArgumentCaptor.forClass(TouristSpot.class);
+        assertThat(savedCount).isEqualTo(1);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getContentTypeId()).isEqualTo(12);
+        assertThat(captor.getValue().getCategory()).isEqualTo(SpotCategory.POTATO_TOUR);
+        assertThat(captor.getValue().getPotatoTags()).isEqualTo("감자,관광");
     }
 }
