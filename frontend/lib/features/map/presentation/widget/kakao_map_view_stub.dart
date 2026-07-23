@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 
 class KakaoMapView extends StatelessWidget {
   const KakaoMapView({
     super.key,
     required this.spots,
+    this.routePolyline = const [],
     this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
+  final List<FavoriteSpotRoutePoint> routePolyline;
   final ValueChanged<String>? onSpotSelected;
 
   @override

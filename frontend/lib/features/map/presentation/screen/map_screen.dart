@@ -192,11 +192,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         backendRouteSpots.length >= 2
                             ? backendRoute?.totalDistanceKm
                             : null;
+                    final recommendedRoutePolyline =
+                        backendRouteSpots.length >= 2
+                            ? backendRoute?.polyline ??
+                                const <FavoriteSpotRoutePoint>[]
+                            : routeSpots
+                                .map(
+                                  (spot) => FavoriteSpotRoutePoint(
+                                    latitude: spot.latitude,
+                                    longitude: spot.longitude,
+                                  ),
+                                )
+                                .toList();
                     return Stack(
                       children: [
                         Positioned.fill(
                           child: _PotatoMapPreview(
                             spots: visibleSpots,
+                            routePolyline: recommendedRoutePolyline,
                             onSpotSelected: _selectSpotById,
                             mapViewBuilder: widget.mapViewBuilder,
                           ),
@@ -754,11 +767,13 @@ class _RouteModeChip extends StatelessWidget {
 class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
     required this.spots,
+    required this.routePolyline,
     required this.onSpotSelected,
     this.mapViewBuilder,
   });
 
   final List<MapSpot> spots;
+  final List<FavoriteSpotRoutePoint> routePolyline;
   final ValueChanged<String> onSpotSelected;
   final MapViewBuilder? mapViewBuilder;
 
@@ -774,6 +789,7 @@ class _PotatoMapPreview extends StatelessWidget {
               child: mapViewBuilder?.call(spots, onSpotSelected) ??
                   KakaoMapView(
                     spots: spots,
+                    routePolyline: routePolyline,
                     onSpotSelected: onSpotSelected,
                   ),
             ),
