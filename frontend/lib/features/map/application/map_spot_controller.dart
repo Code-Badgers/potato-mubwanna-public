@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../auth/application/auth_controller.dart';
 import '../data/map_spot_repository.dart';
+import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
 
 final mapSpotRepositoryProvider = Provider<MapSpotRepository>(
@@ -12,6 +13,10 @@ final mapSpotRepositoryProvider = Provider<MapSpotRepository>(
 
 final mapSpotsProvider = FutureProvider<List<MapSpot>>(
   (ref) => ref.watch(mapSpotRepositoryProvider).fetchSpots(),
+);
+
+final favoriteSpotRouteProvider = FutureProvider<FavoriteSpotRoute>(
+  (ref) => ref.watch(mapSpotRepositoryProvider).fetchFavoriteSpotRoute(),
 );
 
 final favoriteSpotControllerProvider =

@@ -9,6 +9,7 @@ class ApiPaths {
   static String spotDetail(String spotId) => '/spots/$spotId';
   static String spotAudioGuide(String spotId) => '/audio-guides/spots/$spotId';
   static const favoriteSpots = '/me/favorite-spots';
+  static const favoriteSpotRoute = '/me/favorite-spots/route';
   static const nearbySpots = '/spots/nearby';
   static const stampVerify = '/stamps/verify';
   static const myStamps = '/stamps/me';

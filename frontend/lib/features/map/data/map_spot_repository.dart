@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/constants/api_paths.dart';
 import '../domain/favorite_spot.dart';
+import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
 
 class MapSpotRepository {
@@ -37,6 +38,15 @@ class MapSpotRepository {
         .whereType<Map<String, dynamic>>()
         .map(FavoriteSpot.fromJson)
         .toList();
+  }
+
+  Future<FavoriteSpotRoute> fetchFavoriteSpotRoute() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiPaths.favoriteSpotRoute,
+    );
+    return FavoriteSpotRoute.fromJson(
+      response.data?['data'] as Map<String, dynamic>? ?? const {},
+    );
   }
 
   Future<FavoriteSpotToggleResult> addFavoriteSpot(String spotId) async {
