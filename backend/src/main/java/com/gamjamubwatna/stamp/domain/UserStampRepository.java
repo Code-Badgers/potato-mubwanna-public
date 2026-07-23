@@ -16,4 +16,6 @@ public interface UserStampRepository extends JpaRepository<UserStamp, Long> {
     List<UserStamp> findByUserIdWithStamp(@Param("userId") Long userId);
 
     int countByUserId(Long userId);
+
+    boolean existsByUserIdAndStampId(Long userId, Long stampId);
 }

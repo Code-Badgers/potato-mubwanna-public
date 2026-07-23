@@ -13,6 +13,7 @@ import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.stamp.application.VisitStampIssuanceService;
 import com.gamjamubwatna.visit.api.VisitVerifyRequest;
 import com.gamjamubwatna.visit.api.VisitVerifyResponse;
 import com.gamjamubwatna.visit.domain.UserVisit;
@@ -31,6 +32,7 @@ class VisitVerificationServiceTest {
     private UserRepository userRepository;
     private TouristSpotRepository touristSpotRepository;
     private UserVisitRepository userVisitRepository;
+    private VisitStampIssuanceService visitStampIssuanceService;
     private VisitVerificationService visitVerificationService;
 
     @BeforeEach
@@ -38,11 +40,13 @@ class VisitVerificationServiceTest {
         userRepository = mock(UserRepository.class);
         touristSpotRepository = mock(TouristSpotRepository.class);
         userVisitRepository = mock(UserVisitRepository.class);
+        visitStampIssuanceService = mock(VisitStampIssuanceService.class);
         visitVerificationService = new VisitVerificationService(
             userRepository,
             touristSpotRepository,
             userVisitRepository,
             new VisitDistancePolicy(),
+            visitStampIssuanceService,
             Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -54,6 +58,7 @@ class VisitVerificationServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
         when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
+        when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
 
         VisitVerifyResponse result = visitVerificationService.verifyVisit(
             1L,
@@ -68,10 +73,11 @@ class VisitVerificationServiceTest {
         assertThat(result.spotId()).isEqualTo(10L);
         assertThat(result.distanceMeters()).isEqualByComparingTo("0.00");
         assertThat(result.verificationRadiusMeter()).isEqualTo(100);
-        assertThat(result.stampIssued()).isFalse();
+        assertThat(result.stampIssued()).isTrue();
         assertThat(result.potatoAcquired()).isFalse();
         assertThat(result.missionAvailable()).isFalse();
         verify(userVisitRepository).save(any(UserVisit.class));
+        verify(visitStampIssuanceService).issueStamp(any(), any(), any());
     }
 
     @Test

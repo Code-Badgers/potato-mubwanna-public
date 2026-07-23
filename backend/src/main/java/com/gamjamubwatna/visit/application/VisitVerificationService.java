@@ -4,6 +4,7 @@ import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.stamp.application.VisitStampIssuanceService;
 import com.gamjamubwatna.visit.api.VisitVerifyRequest;
 import com.gamjamubwatna.visit.api.VisitVerifyResponse;
 import com.gamjamubwatna.visit.domain.UserVisit;
@@ -22,6 +23,7 @@ public class VisitVerificationService {
     private final TouristSpotRepository touristSpotRepository;
     private final UserVisitRepository userVisitRepository;
     private final VisitDistancePolicy visitDistancePolicy;
+    private final VisitStampIssuanceService visitStampIssuanceService;
     private final Clock clock;
 
     @Autowired
@@ -29,9 +31,17 @@ public class VisitVerificationService {
         UserRepository userRepository,
         TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
-        VisitDistancePolicy visitDistancePolicy
+        VisitDistancePolicy visitDistancePolicy,
+        VisitStampIssuanceService visitStampIssuanceService
     ) {
-        this(userRepository, touristSpotRepository, userVisitRepository, visitDistancePolicy, Clock.systemUTC());
+        this(
+            userRepository,
+            touristSpotRepository,
+            userVisitRepository,
+            visitDistancePolicy,
+            visitStampIssuanceService,
+            Clock.systemUTC()
+        );
     }
 
     VisitVerificationService(
@@ -39,12 +49,14 @@ public class VisitVerificationService {
         TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
+        VisitStampIssuanceService visitStampIssuanceService,
         Clock clock
     ) {
         this.userRepository = userRepository;
         this.touristSpotRepository = touristSpotRepository;
         this.userVisitRepository = userVisitRepository;
         this.visitDistancePolicy = visitDistancePolicy;
+        this.visitStampIssuanceService = visitStampIssuanceService;
         this.clock = clock;
     }
 
@@ -69,14 +81,16 @@ public class VisitVerificationService {
             throw new VisitVerificationException("방문 인증 가능 범위를 벗어났습니다.");
         }
 
-        userVisitRepository.save(new UserVisit(user, spot, distanceMeters, Instant.now(clock)));
+        Instant verifiedAt = Instant.now(clock);
+        userVisitRepository.save(new UserVisit(user, spot, distanceMeters, verifiedAt));
+        boolean stampIssued = visitStampIssuanceService.issueStamp(user, spot, verifiedAt);
 
         return new VisitVerifyResponse(
             spot.getId(),
             true,
             distanceMeters,
             spot.getVerificationRadiusMeter(),
-            false,
+            stampIssued,
             false,
             false
         );

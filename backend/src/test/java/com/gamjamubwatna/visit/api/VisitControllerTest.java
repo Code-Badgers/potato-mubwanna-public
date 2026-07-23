@@ -47,7 +47,7 @@ class VisitControllerTest {
                 true,
                 new BigDecimal("23.50"),
                 100,
-                false,
+                true,
                 false,
                 false
             ));
@@ -66,7 +66,7 @@ class VisitControllerTest {
             .andExpect(jsonPath("$.data.verified").value(true))
             .andExpect(jsonPath("$.data.distanceMeters").value(23.50))
             .andExpect(jsonPath("$.data.verificationRadiusMeter").value(100))
-            .andExpect(jsonPath("$.data.stampIssued").value(false))
+            .andExpect(jsonPath("$.data.stampIssued").value(true))
             .andExpect(jsonPath("$.data.potatoAcquired").value(false))
             .andExpect(jsonPath("$.data.missionAvailable").value(false));
     }
