@@ -303,7 +303,46 @@ Response:
 }
 ```
 
-### 3.8 연관 관광지 추천
+### 3.8 내 동선 추천 경로 조회
+
+로그인한 사용자가 지도에서 저장한 감자 스팟을 가까운 순서의 추천 동선으로 조회한다. 프론트 지도 Polyline 렌더링과 추천 동선 바텀시트에 사용한다.
+
+```http
+GET /api/me/favorite-spots/route
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "routeName": "나만의 감자 동선",
+    "totalDistanceKm": 18.4,
+    "estimatedMinutes": 65,
+    "waypoints": [
+      {
+        "order": 1,
+        "spotId": 1,
+        "name": "정선 5일장",
+        "category": "POTATO_TOUR",
+        "latitude": 37.3801,
+        "longitude": 128.6609,
+        "distanceFromPreviousKm": 0
+      }
+    ],
+    "polyline": [
+      {
+        "latitude": 37.3801,
+        "longitude": 128.6609
+      }
+    ]
+  }
+}
+```
+
+### 3.9 연관 관광지 추천
 
 ```http
 GET /api/spots/{spotId}/recommendations
