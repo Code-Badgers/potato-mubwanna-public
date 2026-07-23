@@ -40,8 +40,11 @@ public class PotatoSpotClassifier {
     }
 
     private SpotCategory classifyCategory(Integer contentTypeId, String text) {
-        if (containsAny(text, "맥주", "브루어리", "양조", "펍", "술")) {
+        if (containsAny(text, "맥주", "브루어리", "양조", "펍", "술", "바", "페어링")) {
             return SpotCategory.POTATO_BREWERY;
+        }
+        if (containsAny(text, "체험", "만들기", "클래스", "공방", "농장", "팜")) {
+            return SpotCategory.POTATO_EXPERIENCE;
         }
         if (containsAny(text, "시장", "전통시장", "직판장", "로컬푸드", "농협", "마트", "상회")) {
             return SpotCategory.POTATO_MARKET;
@@ -51,6 +54,12 @@ public class PotatoSpotClassifier {
         }
         if (containsAny(text, "빵", "간식", "떡", "과자", "알감자", "회오리감자", "휴게소")) {
             return SpotCategory.POTATO_SNACK;
+        }
+        if (containsAny(text, "기념품", "굿즈", "특산품", "판매장")) {
+            return SpotCategory.POTATO_SHOP;
+        }
+        if (containsAny(text, "축제", "박물관", "연구소", "감자밭", "감자꽃", "고랭지")) {
+            return SpotCategory.POTATO_TOUR;
         }
 
         return switch (contentTypeId) {
@@ -72,16 +81,27 @@ public class PotatoSpotClassifier {
             "알감자",
             "회오리감자",
             "고랭지",
-            "로컬푸드"
+            "로컬푸드",
+            "감자꽃",
+            "감자밭"
         );
     }
 
     private String extractTags(String text) {
+        if (containsAny(text, "페어링", "바")) {
+            return "감자,바&페어링";
+        }
         if (containsAny(text, "맥주", "브루어리", "양조", "펍")) {
             return "감자,감자맥주";
         }
+        if (containsAny(text, "체험", "만들기", "클래스", "공방", "농장", "팜")) {
+            return "감자,체험";
+        }
         if (containsAny(text, "시장", "직판장", "로컬푸드", "농협", "마트")) {
             return "감자,직판장";
+        }
+        if (containsAny(text, "축제", "박물관", "연구소", "감자밭", "감자꽃", "고랭지")) {
+            return "감자,관광";
         }
         if (containsAny(text, "카페", "디저트", "젤라또")) {
             return "감자,디저트";
@@ -97,6 +117,9 @@ public class PotatoSpotClassifier {
         }
         if (containsAny(text, "감자떡", "떡")) {
             return "감자,감자떡";
+        }
+        if (containsAny(text, "기념품", "굿즈", "특산품", "판매장")) {
+            return "감자,기념품";
         }
         if (containsAny(text, "알감자", "회오리감자", "휴게소")) {
             return "감자,간식";
