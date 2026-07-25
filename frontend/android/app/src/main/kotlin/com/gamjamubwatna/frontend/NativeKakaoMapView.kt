@@ -36,6 +36,7 @@ class NativeKakaoMapView(
     private val spotLabels = mutableListOf<Label>()
     private val spotIdByLabelId = mutableMapOf<String, String>()
     private var kakaoMap: KakaoMap? = null
+    private var routePolyline = pointMaps(params["routePolyline"])
 
     init {
         val appKey = params["nativeAppKey"] as? String
@@ -52,6 +53,11 @@ class NativeKakaoMapView(
                     "updateSpots" -> {
                         val nextSpots = spotMaps(call.arguments)
                         kakaoMap?.let { addSpotLabels(it, nextSpots) }
+                        result.success(null)
+                    }
+                    "updateRoutePolyline" -> {
+                        routePolyline = pointMaps(call.arguments)
+                        kakaoMap?.let { renderRoutePolyline(it) }
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -77,6 +83,7 @@ class NativeKakaoMapView(
                     override fun onMapReady(kakaoMap: KakaoMap) {
                         this@NativeKakaoMapView.kakaoMap = kakaoMap
                         addSpotLabels(kakaoMap, spots)
+                        renderRoutePolyline(kakaoMap)
                         kakaoMap.setOnLabelClickListener { _, _, label ->
                             val spotId = spotIdByLabelId[label.labelId]
                                 ?: label.labelId.removePrefix("potato-")
@@ -182,6 +189,11 @@ class NativeKakaoMapView(
         }
     }
 
+    private fun renderRoutePolyline(kakaoMap: KakaoMap) {
+        // 실제 Shape 렌더링은 플랫폼별 SDK API로 분리 구현하고, bridge 단계에서는 좌표 수신만 보장한다.
+        if (routePolyline.size < 2) return
+    }
+
     private fun markerBitmap(text: String, strokeColor: Int): Bitmap {
         val width = if (text.contains("★")) 42 else 36
         val height = 36
@@ -215,6 +227,10 @@ class NativeKakaoMapView(
     }
 
     private fun spotMaps(value: Any?): List<Map<*, *>> {
+        return pointMaps(value)
+    }
+
+    private fun pointMaps(value: Any?): List<Map<*, *>> {
         return (value as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
     }
 

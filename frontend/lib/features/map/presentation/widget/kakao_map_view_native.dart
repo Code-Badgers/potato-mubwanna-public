@@ -42,15 +42,29 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           })
       .toList();
 
+  List<Map<String, Object>> get _routePolylinePayload => widget.routePolyline
+      .map((point) => {
+            'latitude': point.latitude,
+            'longitude': point.longitude,
+          })
+      .toList();
+
   @override
   void didUpdateWidget(covariant KakaoMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.spots == widget.spots) {
-      return;
-    }
     final channel = _channel;
     if (channel != null) {
-      unawaited(channel.invokeMethod<void>('updateSpots', _spotPayload));
+      if (oldWidget.spots != widget.spots) {
+        unawaited(channel.invokeMethod<void>('updateSpots', _spotPayload));
+      }
+      if (oldWidget.routePolyline != widget.routePolyline) {
+        unawaited(
+          channel.invokeMethod<void>(
+            'updateRoutePolyline',
+            _routePolylinePayload,
+          ),
+        );
+      }
     }
   }
 
@@ -68,6 +82,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           widget.spots.isEmpty ? 128.1555 : widget.spots.first.longitude,
       'zoomLevel': 9,
       'spots': _spotPayload,
+      'routePolyline': _routePolylinePayload,
     };
 
     if (Platform.isAndroid) {

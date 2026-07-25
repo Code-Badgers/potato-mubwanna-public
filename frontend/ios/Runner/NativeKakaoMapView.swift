@@ -19,6 +19,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private let longitude: Double
   private let zoomLevel: Int
   private var spots: [[AnyHashable: Any]]
+  private var routePolyline: [[AnyHashable: Any]]
   private var isAuthenticated = false
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
@@ -37,6 +38,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     longitude = Self.doubleValue(params["longitude"]) ?? 128.6609
     zoomLevel = Self.intValue(params["zoomLevel"]) ?? 9
     spots = Self.spotMaps(from: params["spots"])
+    routePolyline = Self.pointMaps(from: params["routePolyline"])
     container = NativeKakaoMapContainer(frame: frame)
     channel = FlutterMethodChannel(
       name: "potato_mubwanna/kakao_map_\(viewId)",
@@ -44,13 +46,19 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     )
     super.init()
     channel.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "updateSpots" else {
-        result(FlutterMethodNotImplemented)
+      if call.method == "updateSpots" {
+        self?.spots = Self.spotMaps(from: call.arguments)
+        self?.addSpotPois()
+        result(nil)
         return
       }
-      self?.spots = Self.spotMaps(from: call.arguments)
-      self?.addSpotPois()
-      result(nil)
+      if call.method == "updateRoutePolyline" {
+        self?.routePolyline = Self.pointMaps(from: call.arguments)
+        self?.renderRoutePolyline()
+        result(nil)
+        return
+      }
+      result(FlutterMethodNotImplemented)
     }
 
     let nativeAppKey = params["nativeAppKey"] as? String ?? ""
@@ -104,6 +112,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       bindMapEventHandlers(mapView)
     }
     addSpotPois()
+    renderRoutePolyline()
   }
 
   func poiDidTapped(kakaoMap: KakaoMap, layerID: String, poiID: String, position: MapPoint) {
@@ -276,6 +285,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
   }
 
+  private func renderRoutePolyline() {
+    // 실제 Shape 렌더링은 플랫폼별 SDK API로 분리 구현하고, bridge 단계에서는 좌표 수신만 보장한다.
+  }
+
   private func sizeKeyForZoomLevel(_ zoomLevel: Int) -> String {
     if zoomLevel <= 5 {
       return "large"
@@ -374,6 +387,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   private static func spotMaps(from value: Any?) -> [[AnyHashable: Any]] {
+    pointMaps(from: value)
+  }
+
+  private static func pointMaps(from value: Any?) -> [[AnyHashable: Any]] {
     if let maps = value as? [[AnyHashable: Any]] {
       return maps
     }
