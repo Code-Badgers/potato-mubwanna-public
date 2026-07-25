@@ -8,6 +8,7 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import 'map_layout_waiter.dart';
 import 'map_spot_selection_message.dart';
@@ -18,10 +19,12 @@ class KakaoMapView extends StatefulWidget {
   const KakaoMapView({
     super.key,
     required this.spots,
+    this.routePolyline = const [],
     this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
+  final List<FavoriteSpotRoutePoint> routePolyline;
   final ValueChanged<String>? onSpotSelected;
 
   @override
@@ -115,7 +118,8 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   @override
   void didUpdateWidget(covariant KakaoMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.spots == widget.spots) {
+    if (oldWidget.spots == widget.spots &&
+        oldWidget.routePolyline == widget.routePolyline) {
       return;
     }
     _injectKakaoMapScript();
@@ -241,6 +245,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
             })
         .toList());
+    final routePolyline = jsonEncode(widget.routePolyline
+        .map((point) => {
+              'lat': point.latitude,
+              'lng': point.longitude,
+            })
+        .toList());
 
     final script = html.ScriptElement()
       ..type = 'text/javascript'
@@ -265,8 +275,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   window.kakao.maps.load(function () {
     try {
       const spots = $spots;
+      const routePolyline = $routePolyline;
       if (mapElement.__potatoRenderSpots) {
         mapElement.__potatoRenderSpots(spots);
+        if (mapElement.__potatoRenderRoutePolyline) {
+          mapElement.__potatoRenderRoutePolyline(routePolyline);
+        }
         return;
       }
 
@@ -292,6 +306,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       let selectedMarkerElement = null;
       const markerElements = [];
       let markerOverlays = [];
+      let routePolylineOverlay = null;
 
       function markerScale(level) {
         return Math.max(0.52, Math.min(0.88, 1.05 - ((level - 4) * 0.10)));
@@ -356,8 +371,30 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         applyMarkerScale();
       }
 
+      function renderRoutePolyline(points) {
+        if (routePolylineOverlay) {
+          routePolylineOverlay.setMap(null);
+          routePolylineOverlay = null;
+        }
+        if (!points || points.length < 2) {
+          return;
+        }
+        routePolylineOverlay = new window.kakao.maps.Polyline({
+          path: points.map(function (point) {
+            return new window.kakao.maps.LatLng(point.lat, point.lng);
+          }),
+          strokeWeight: 5,
+          strokeColor: '#F6C23E',
+          strokeOpacity: 0.92,
+          strokeStyle: 'solid'
+        });
+        routePolylineOverlay.setMap(map);
+      }
+
       mapElement.__potatoRenderSpots = renderSpots;
+      mapElement.__potatoRenderRoutePolyline = renderRoutePolyline;
       renderSpots(spots);
+      renderRoutePolyline(routePolyline);
 
       window.kakao.maps.event.addListener(map, 'zoom_changed', applyMarkerScale);
 

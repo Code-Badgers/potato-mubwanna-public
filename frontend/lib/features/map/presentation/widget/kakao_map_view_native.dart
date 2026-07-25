@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import 'map_spot_selection_message.dart';
 
@@ -15,10 +16,12 @@ class KakaoMapView extends StatefulWidget {
   const KakaoMapView({
     super.key,
     required this.spots,
+    this.routePolyline = const [],
     this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
+  final List<FavoriteSpotRoutePoint> routePolyline;
   final ValueChanged<String>? onSpotSelected;
 
   @override
