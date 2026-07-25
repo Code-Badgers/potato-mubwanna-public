@@ -20,6 +20,10 @@ import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
+import com.kakao.vectormap.shape.MapPoints
+import com.kakao.vectormap.shape.PolylineOptions
+import com.kakao.vectormap.shape.ShapeLayerOptions
+import com.kakao.vectormap.shape.ShapeLayerPass
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
@@ -37,6 +41,7 @@ class NativeKakaoMapView(
     private val spotIdByLabelId = mutableMapOf<String, String>()
     private var kakaoMap: KakaoMap? = null
     private var routePolyline = pointMaps(params["routePolyline"])
+    private val routeLayerId = "potatoRouteLayer"
 
     init {
         val appKey = params["nativeAppKey"] as? String
@@ -190,8 +195,34 @@ class NativeKakaoMapView(
     }
 
     private fun renderRoutePolyline(kakaoMap: KakaoMap) {
-        // 실제 Shape 렌더링은 플랫폼별 SDK API로 분리 구현하고, bridge 단계에서는 좌표 수신만 보장한다.
-        if (routePolyline.size < 2) return
+        val shapeManager = kakaoMap.shapeManager ?: return
+        val routeLayer = shapeManager.getLayer(routeLayerId)
+            ?: shapeManager.addLayer(
+                ShapeLayerOptions.from(routeLayerId, 8, ShapeLayerPass.Route),
+            )
+            ?: return
+
+        routeLayer.removeAll()
+        if (routePolyline.size < 2) {
+            return
+        }
+
+        val points = routePolyline.mapNotNull { point ->
+            val latitude = (point["latitude"] as? Number)?.toDouble() ?: return@mapNotNull null
+            val longitude = (point["longitude"] as? Number)?.toDouble() ?: return@mapNotNull null
+            LatLng.from(latitude, longitude)
+        }
+        if (points.size < 2) {
+            return
+        }
+
+        val options = PolylineOptions.from(
+            MapPoints.fromLatLng(points),
+            12f,
+            Color.parseColor("#F6C23E"),
+        ).setZOrder(8)
+        routeLayer.addPolyline(options)?.show()
+        routeLayer.showAllPolyline()
     }
 
     private fun markerBitmap(text: String, strokeColor: Int): Bitmap {
