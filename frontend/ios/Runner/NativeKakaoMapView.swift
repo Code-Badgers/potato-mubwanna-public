@@ -23,9 +23,13 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private var isAuthenticated = false
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
+  private let routeLayerID = "potatoRouteLayer"
+  private let routeStyleID = "potatoRoutePolylineStyle"
+  private let routeShapeID = "potatoRoutePolyline"
   private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
   private var spotIDByPoiID: [String: String] = [:]
   private var eventHandlers: [DisposableEventHandler] = []
+  private var didRegisterRouteStyle = false
 
   init(
     frame: CGRect,
@@ -286,7 +290,62 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   private func renderRoutePolyline() {
-    // 실제 Shape 렌더링은 플랫폼별 SDK API로 분리 구현하고, bridge 단계에서는 좌표 수신만 보장한다.
+    guard let mapView = mapController?.getView("potatoMap") as? KakaoMap else {
+      return
+    }
+    let shapeManager = mapView.getShapeManager()
+    let layer = shapeManager.getShapeLayer(layerID: routeLayerID) ??
+      shapeManager.addShapeLayer(layerID: routeLayerID, zOrder: 8, passType: .route)
+    guard let layer else {
+      return
+    }
+
+    layer.clearAllShapes()
+    guard routePolyline.count >= 2 else {
+      return
+    }
+
+    let points = routePolyline.compactMap { point -> MapPoint? in
+      guard
+        let latitude = Self.doubleValue(point["latitude"]),
+        let longitude = Self.doubleValue(point["longitude"])
+      else {
+        return nil
+      }
+      return MapPoint(longitude: longitude, latitude: latitude)
+    }
+    guard points.count >= 2 else {
+      return
+    }
+
+    registerRoutePolylineStyleIfNeeded(shapeManager)
+    let options = MapPolylineShapeOptions(
+      shapeID: routeShapeID,
+      styleID: routeStyleID,
+      zOrder: 8
+    )
+    options.polylines = [MapPolyline(line: points, styleIndex: 0)]
+    layer.addMapPolylineShape(options)?.show()
+  }
+
+  private func registerRoutePolylineStyleIfNeeded(_ shapeManager: ShapeManager) {
+    guard !didRegisterRouteStyle else {
+      return
+    }
+    let bodyColor = UIColor(red: 0.965, green: 0.761, blue: 0.243, alpha: 0.92)
+    let strokeColor = UIColor.white.withAlphaComponent(0.88)
+    let levelStyle = PerLevelPolylineStyle(
+      bodyColor: bodyColor,
+      bodyWidth: 7,
+      strokeColor: strokeColor,
+      strokeWidth: 2,
+      level: 0
+    )
+    let style = PolylineStyle(styles: [levelStyle])
+    shapeManager.addPolylineStyleSet(
+      PolylineStyleSet(styleSetID: routeStyleID, styles: [style], capType: .round)
+    )
+    didRegisterRouteStyle = true
   }
 
   private func sizeKeyForZoomLevel(_ zoomLevel: Int) -> String {
