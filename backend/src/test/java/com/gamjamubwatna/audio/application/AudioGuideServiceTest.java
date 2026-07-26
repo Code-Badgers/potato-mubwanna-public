@@ -97,6 +97,48 @@ class AudioGuideServiceTest {
     }
 
     @Test
+    void selectsQualifiedOdiiTitleContainingSpotName() {
+        TouristSpot spot = spot("오죽헌");
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty());
+        when(odiiApiClient.searchStories("오죽헌")).thenReturn(List.of(
+            story("21", "강릉 오죽헌(초등 교과연계)", "ko", "https://example.com/audio.mp3")
+        ));
+        when(audioGuideRepository.save(any(AudioGuide.class))).thenAnswer(invocation -> {
+            AudioGuide guide = invocation.getArgument(0);
+            ReflectionTestUtils.setField(guide, "id", 9L);
+            return guide;
+        });
+
+        var response = audioGuideService.getAudioGuide(1L);
+
+        assertThat(response.id()).isEqualTo(9L);
+        assertThat(response.audioUrl()).isEqualTo("https://example.com/audio.mp3");
+    }
+
+    @Test
+    void treatsFiveDayMarketAndKoreanNumberAsSameName() {
+        TouristSpot spot = spot("정선 5일장");
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty());
+        when(odiiApiClient.searchStories("정선 5일장")).thenReturn(List.of(
+            story("21", "정선오일장", "ko", "https://example.com/audio.mp3")
+        ));
+        when(audioGuideRepository.save(any(AudioGuide.class))).thenAnswer(invocation -> {
+            AudioGuide guide = invocation.getArgument(0);
+            ReflectionTestUtils.setField(guide, "id", 10L);
+            return guide;
+        });
+
+        var response = audioGuideService.getAudioGuide(1L);
+
+        assertThat(response.id()).isEqualTo(10L);
+        assertThat(response.audioUrl()).isEqualTo("https://example.com/audio.mp3");
+    }
+
+    @Test
     void rejectsUnknownSpot() {
         when(touristSpotRepository.findByIdAndActiveTrue(99L)).thenReturn(Optional.empty());
 
