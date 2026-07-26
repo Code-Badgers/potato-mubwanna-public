@@ -19,12 +19,17 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private let longitude: Double
   private let zoomLevel: Int
   private var spots: [[AnyHashable: Any]]
+  private var routePolyline: [[AnyHashable: Any]]
   private var isAuthenticated = false
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
+  private let routeLayerID = "potatoRouteLayer"
+  private let routeStyleID = "potatoRoutePolylineStyle"
+  private let routeShapeID = "potatoRoutePolyline"
   private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
   private var spotIDByPoiID: [String: String] = [:]
   private var eventHandlers: [DisposableEventHandler] = []
+  private var didRegisterRouteStyle = false
 
   init(
     frame: CGRect,
@@ -37,6 +42,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     longitude = Self.doubleValue(params["longitude"]) ?? 128.6609
     zoomLevel = Self.intValue(params["zoomLevel"]) ?? 9
     spots = Self.spotMaps(from: params["spots"])
+    routePolyline = Self.pointMaps(from: params["routePolyline"])
     container = NativeKakaoMapContainer(frame: frame)
     channel = FlutterMethodChannel(
       name: "potato_mubwanna/kakao_map_\(viewId)",
@@ -44,13 +50,19 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     )
     super.init()
     channel.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "updateSpots" else {
-        result(FlutterMethodNotImplemented)
+      if call.method == "updateSpots" {
+        self?.spots = Self.spotMaps(from: call.arguments)
+        self?.addSpotPois()
+        result(nil)
         return
       }
-      self?.spots = Self.spotMaps(from: call.arguments)
-      self?.addSpotPois()
-      result(nil)
+      if call.method == "updateRoutePolyline" {
+        self?.routePolyline = Self.pointMaps(from: call.arguments)
+        self?.renderRoutePolyline()
+        result(nil)
+        return
+      }
+      result(FlutterMethodNotImplemented)
     }
 
     let nativeAppKey = params["nativeAppKey"] as? String ?? ""
@@ -104,6 +116,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       bindMapEventHandlers(mapView)
     }
     addSpotPois()
+    renderRoutePolyline()
   }
 
   func poiDidTapped(kakaoMap: KakaoMap, layerID: String, poiID: String, position: MapPoint) {
@@ -276,6 +289,65 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
   }
 
+  private func renderRoutePolyline() {
+    guard let mapView = mapController?.getView("potatoMap") as? KakaoMap else {
+      return
+    }
+    let shapeManager = mapView.getShapeManager()
+    let layer = shapeManager.getShapeLayer(layerID: routeLayerID) ??
+      shapeManager.addShapeLayer(layerID: routeLayerID, zOrder: 8, passType: .route)
+    guard let layer else {
+      return
+    }
+
+    layer.clearAllShapes()
+    guard routePolyline.count >= 2 else {
+      return
+    }
+
+    let points = routePolyline.compactMap { point -> MapPoint? in
+      guard
+        let latitude = Self.doubleValue(point["latitude"]),
+        let longitude = Self.doubleValue(point["longitude"])
+      else {
+        return nil
+      }
+      return MapPoint(longitude: longitude, latitude: latitude)
+    }
+    guard points.count >= 2 else {
+      return
+    }
+
+    registerRoutePolylineStyleIfNeeded(shapeManager)
+    let options = MapPolylineShapeOptions(
+      shapeID: routeShapeID,
+      styleID: routeStyleID,
+      zOrder: 8
+    )
+    options.polylines = [MapPolyline(line: points, styleIndex: 0)]
+    layer.addMapPolylineShape(options)?.show()
+  }
+
+  private func registerRoutePolylineStyleIfNeeded(_ shapeManager: ShapeManager) {
+    guard !didRegisterRouteStyle else {
+      return
+    }
+    let bodyColor = UIColor(red: 0.965, green: 0.761, blue: 0.243, alpha: 0.92)
+    let strokeColor = UIColor.white.withAlphaComponent(0.88)
+    let levelStyle = PerLevelPolylineStyle(
+      bodyColor: bodyColor,
+      bodyWidth: 7,
+      strokeColor: strokeColor,
+      strokeWidth: 2,
+      level: 0
+    )
+    let style = PolylineStyle(styles: [levelStyle])
+    shapeManager.addPolylineStyleSet(
+      PolylineStyleSet(styleSetID: routeStyleID, styles: [style], capType: .round)
+    )
+    didRegisterRouteStyle = true
+  }
+
   private func sizeKeyForZoomLevel(_ zoomLevel: Int) -> String {
     if zoomLevel <= 5 {
       return "large"
@@ -374,6 +446,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   private static func spotMaps(from value: Any?) -> [[AnyHashable: Any]] {
+    pointMaps(from: value)
+  }
+
+  private static func pointMaps(from value: Any?) -> [[AnyHashable: Any]] {
     if let maps = value as? [[AnyHashable: Any]] {
       return maps
     }

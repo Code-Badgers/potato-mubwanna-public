@@ -20,6 +20,10 @@ import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
+import com.kakao.vectormap.shape.MapPoints
+import com.kakao.vectormap.shape.PolylineOptions
+import com.kakao.vectormap.shape.ShapeLayerOptions
+import com.kakao.vectormap.shape.ShapeLayerPass
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
@@ -36,6 +40,8 @@ class NativeKakaoMapView(
     private val spotLabels = mutableListOf<Label>()
     private val spotIdByLabelId = mutableMapOf<String, String>()
     private var kakaoMap: KakaoMap? = null
+    private var routePolyline = pointMaps(params["routePolyline"])
+    private val routeLayerId = "potatoRouteLayer"
 
     init {
         val appKey = params["nativeAppKey"] as? String
@@ -52,6 +58,11 @@ class NativeKakaoMapView(
                     "updateSpots" -> {
                         val nextSpots = spotMaps(call.arguments)
                         kakaoMap?.let { addSpotLabels(it, nextSpots) }
+                        result.success(null)
+                    }
+                    "updateRoutePolyline" -> {
+                        routePolyline = pointMaps(call.arguments)
+                        kakaoMap?.let { renderRoutePolyline(it) }
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -77,6 +88,7 @@ class NativeKakaoMapView(
                     override fun onMapReady(kakaoMap: KakaoMap) {
                         this@NativeKakaoMapView.kakaoMap = kakaoMap
                         addSpotLabels(kakaoMap, spots)
+                        renderRoutePolyline(kakaoMap)
                         kakaoMap.setOnLabelClickListener { _, _, label ->
                             val spotId = spotIdByLabelId[label.labelId]
                                 ?: label.labelId.removePrefix("potato-")
@@ -182,6 +194,37 @@ class NativeKakaoMapView(
         }
     }
 
+    private fun renderRoutePolyline(kakaoMap: KakaoMap) {
+        val shapeManager = kakaoMap.shapeManager ?: return
+        val routeLayer = shapeManager.getLayer(routeLayerId)
+            ?: shapeManager.addLayer(
+                ShapeLayerOptions.from(routeLayerId, 8, ShapeLayerPass.Route),
+            )
+            ?: return
+
+        routeLayer.removeAll()
+        if (routePolyline.size < 2) {
+            return
+        }
+
+        val points = routePolyline.mapNotNull { point ->
+            val latitude = (point["latitude"] as? Number)?.toDouble() ?: return@mapNotNull null
+            val longitude = (point["longitude"] as? Number)?.toDouble() ?: return@mapNotNull null
+            LatLng.from(latitude, longitude)
+        }
+        if (points.size < 2) {
+            return
+        }
+
+        val options = PolylineOptions.from(
+            MapPoints.fromLatLng(points),
+            12f,
+            Color.parseColor("#F6C23E"),
+        ).setZOrder(8)
+        routeLayer.addPolyline(options)?.show()
+        routeLayer.showAllPolyline()
+    }
+
     private fun markerBitmap(text: String, strokeColor: Int): Bitmap {
         val width = if (text.contains("★")) 42 else 36
         val height = 36
@@ -215,6 +258,10 @@ class NativeKakaoMapView(
     }
 
     private fun spotMaps(value: Any?): List<Map<*, *>> {
+        return pointMaps(value)
+    }
+
+    private fun pointMaps(value: Any?): List<Map<*, *>> {
         return (value as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
     }
 
