@@ -17,14 +17,16 @@ Build Toolchain:
 
 - Android Gradle Plugin 9.0.1
 - Gradle 9.1.0
-- Kotlin Gradle Plugin 2.3.20
+- Android app module: AGP 9.0.1 Built-in Kotlin
+- Flutter plugin compatibility: Kotlin Gradle Plugin 2.3.20
 - Android build JDK: Java 17
 - iOS CocoaPods
 
 Build Toolchain Notes:
 
 - Flutter 3.44.1 stable로 업그레이드해 Web/iOS 빌드 호환성을 확보한다.
-- Flutter 3.44.1의 Android 템플릿은 declarative Gradle plugin 적용 방식이 필요하므로 Android Gradle Plugin 9.0.1, Gradle 9.1.0, Kotlin Gradle Plugin 2.3.20으로 갱신한다.
+- Flutter 3.44.1의 Android 템플릿은 declarative Gradle plugin 적용 방식이 필요하므로 Android Gradle Plugin 9.0.1과 Gradle 9.1.0을 사용한다.
+- 앱 모듈은 AGP 9.0.1 Built-in Kotlin으로 컴파일한다. 아직 레거시 Kotlin Gradle Plugin을 적용하는 Flutter 플러그인은 전역 호환 모드와 Kotlin Gradle Plugin 2.3.20을 유지하고 단계적으로 전환한다.
 - Android 빌드는 현재 Java 17로 실행한다. 백엔드의 Java 21 기준과 다르며, 백엔드는 Spring Boot 3.5.x 실행 런타임이고 프론트 Android 빌드 JDK는 Flutter/Android Gradle Plugin 호환성 기준으로 관리한다.
 - Android minSdkVersion은 `health` 13.3.1 요구사항에 맞춰 26(Android 8.0)으로 설정한다. Kakao Maps Android SDK v2 요구사항도 함께 충족한다.
 - Android는 Firebase 계열 의존성으로 64K method limit을 넘기므로 multidex를 사용한다.
