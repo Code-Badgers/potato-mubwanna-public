@@ -2,11 +2,14 @@ PODS:
   - Flutter (1.0.0)
   - flutter_secure_storage (6.0.0):
     - Flutter
+  - health (13.3.1):
+    - Flutter
   - KakaoMapsSDK (2.12.12)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
+  - health (from `.symlinks/plugins/health/ios`)
   - KakaoMapsSDK
 
 SPEC REPOS:
@@ -18,12 +21,15 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
+  health:
+    :path: ".symlinks/plugins/health/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
+  health: 4decf5d74e8f54c58a8c07a385fc72f629a831d9
   KakaoMapsSDK: 95c5ca99ff8eb32d55bce0a18e1c395afa562e85
 
-PODFILE CHECKSUM: cfd856c1b764edfe349bf478be0759fb7d04b8be
+PODFILE CHECKSUM: d73b635d3780cf2991c33444de8b2e2d95c87df0
 
 COCOAPODS: 1.16.2
