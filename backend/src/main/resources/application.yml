@@ -79,6 +79,7 @@ external:
     mobile-os: ${CONGESTION_API_MOBILE_OS:ETC}
     mobile-app: ${CONGESTION_API_MOBILE_APP:potato-mubwanna}
     content-id-param: ${CONGESTION_API_CONTENT_ID_PARAM:contentId}
+    sync-on-startup: ${CONGESTION_API_SYNC_ON_STARTUP:false}
   kakao-local:
     keyword-search-url: ${KAKAO_LOCAL_KEYWORD_SEARCH_URL:https://dapi.kakao.com/v2/local/search/keyword.json}
     rest-api-key: ${KAKAO_REST_API_KEY:}
