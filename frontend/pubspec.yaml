@@ -34,6 +34,11 @@ dev_dependencies:
   freezed: ^2.3.5
   json_serializable: ^6.7.0
 
+dependency_overrides:
+  # health 13.3.1 caps device_info_plus to 12.x, but 12.4.0 fails to compile
+  # on Xcode 26 because it calls NSProcessInfo#isiOSAppOnVision.
+  device_info_plus: 12.3.0
+
 flutter:
   uses-material-design: true
   assets:
