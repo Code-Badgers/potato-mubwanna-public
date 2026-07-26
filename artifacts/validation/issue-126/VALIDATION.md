@@ -72,7 +72,7 @@ cd backend
 
 - Odii 집중 테스트 통과
 - Kakao 인증 집중 테스트 통과
-- 전체 249개 테스트 통과, failure/error/skip 0
+- 최신 `main` 병합 후 전체 260개 테스트 통과, failure/error/skip 0
 - Kakao 토큰 client 테스트에서 form-urlencoded 필드와 access token 응답 매핑 확인
 
 ### Frontend
