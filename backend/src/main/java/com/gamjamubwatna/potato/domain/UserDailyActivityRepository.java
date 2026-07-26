@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface UserDailyActivityRepository extends JpaRepository<UserDailyActivity, Long> {
 
@@ -18,4 +20,11 @@ public interface UserDailyActivityRepository extends JpaRepository<UserDailyActi
         LocalDate startDate,
         LocalDate endDate
     );
+
+    @Query("""
+        SELECT COALESCE(SUM(activity.steps), 0)
+        FROM UserDailyActivity activity
+        WHERE activity.user.id = :userId
+        """)
+    long sumStepsByUserId(@Param("userId") Long userId);
 }

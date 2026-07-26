@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.user.application.UserActivitySummaryService;
+import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
 import com.gamjamubwatna.user.application.UserProfileService;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserProfileService userProfileService;
+
+    @MockitoBean
+    private UserActivitySummaryService userActivitySummaryService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -63,6 +68,36 @@ class UserControllerTest {
         mockMvc.perform(get("/users/me").with(user("admin:1")))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void getMyActivitySummaryReturnsAuthenticatedUserSummary() throws Exception {
+        when(userActivitySummaryService.getActivitySummary(eq(1L)))
+            .thenReturn(new UserActivitySummaryResponse(256_842L, 12, 7L));
+
+        mockMvc.perform(get("/users/me/activity-summary").with(user("user:1")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.totalSteps").value(256842))
+            .andExpect(jsonPath("$.data.stampCount").value(12))
+            .andExpect(jsonPath("$.data.ownedPotatoCount").value(7));
+    }
+
+    @Test
+    void getMyActivitySummaryRejectsUnauthenticatedRequest() throws Exception {
+        mockMvc.perform(get("/users/me/activity-summary"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getMyActivitySummaryRejectsDeletedUser() throws Exception {
+        doThrow(new UserProfileAuthenticationException("사용자를 찾을 수 없습니다."))
+            .when(userActivitySummaryService).getActivitySummary(1L);
+
+        mockMvc.perform(get("/users/me/activity-summary").with(user("user:1")))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("인증 정보를 확인할 수 없습니다."));
     }
 
     @Test
