@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../application/user_activity_summary_controller.dart';
 import '../../application/user_profile_controller.dart';
+import '../../domain/user_activity_summary.dart';
 import '../../domain/user_profile.dart';
 
 const _mypagePrimary = Color(0xFF56C787);
@@ -33,6 +35,7 @@ class MyPageScreen extends ConsumerWidget {
     }
 
     final profileState = ref.watch(userProfileProvider);
+    final activitySummaryState = ref.watch(userActivitySummaryProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -54,7 +57,12 @@ class MyPageScreen extends ConsumerWidget {
                   ),
                 ),
                 SliverToBoxAdapter(child: _ProfileSummary(profile: profile)),
-                const SliverToBoxAdapter(child: _TravelStats()),
+                SliverToBoxAdapter(
+                  child: _TravelStats(
+                    summaryState: activitySummaryState,
+                    onRetry: () => ref.invalidate(userActivitySummaryProvider),
+                  ),
+                ),
                 const SliverToBoxAdapter(child: _QuickActionGrid()),
                 const SliverToBoxAdapter(child: _TravelBanner()),
                 SliverToBoxAdapter(
@@ -300,7 +308,13 @@ class _ProfileAvatar extends StatelessWidget {
 }
 
 class _TravelStats extends StatelessWidget {
-  const _TravelStats();
+  const _TravelStats({
+    required this.summaryState,
+    required this.onRetry,
+  });
+
+  final AsyncValue<UserActivitySummary?> summaryState;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -319,21 +333,77 @@ class _TravelStats extends StatelessWidget {
           ),
         ],
       ),
-      child: const Row(
-        children: [
-          Expanded(
-            child: _StatItem(label: '누적 걸음 수', value: '-'),
-          ),
-          _VerticalDivider(),
-          Expanded(
-            child: _StatItem(label: '누적 스탬프 수', value: '-'),
-          ),
-          _VerticalDivider(),
-          Expanded(
-            child: _StatItem(label: '보유 감자 수', value: '-'),
-          ),
-        ],
+      child: summaryState.when(
+        data: (summary) => _TravelStatRow(
+          summary: summary ?? UserActivitySummary.empty,
+        ),
+        loading: () => const _TravelStatRow(
+          summary: UserActivitySummary.empty,
+          isLoading: true,
+        ),
+        error: (_, __) => Column(
+          children: [
+            const _TravelStatRow(
+              summary: UserActivitySummary.empty,
+              hasError: true,
+            ),
+            const SizedBox(height: 10),
+            TextButton.icon(
+              key: const ValueKey('activity-summary-retry'),
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('활동 요약 다시 시도'),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _TravelStatRow extends StatelessWidget {
+  const _TravelStatRow({
+    required this.summary,
+    this.isLoading = false,
+    this.hasError = false,
+  });
+
+  final UserActivitySummary summary;
+  final bool isLoading;
+  final bool hasError;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = isLoading ? '…' : '-';
+    return Row(
+      children: [
+        Expanded(
+          child: _StatItem(
+            label: '누적 걸음 수',
+            value: isLoading || hasError
+                ? placeholder
+                : _formatInt(summary.totalSteps),
+          ),
+        ),
+        const _VerticalDivider(),
+        Expanded(
+          child: _StatItem(
+            label: '누적 스탬프 수',
+            value: isLoading || hasError
+                ? placeholder
+                : _formatInt(summary.stampCount),
+          ),
+        ),
+        const _VerticalDivider(),
+        Expanded(
+          child: _StatItem(
+            label: '보유 감자 수',
+            value: isLoading || hasError
+                ? placeholder
+                : _formatInt(summary.ownedPotatoCount),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -392,6 +462,13 @@ class _VerticalDivider extends StatelessWidget {
       color: _mypageLine,
     );
   }
+}
+
+String _formatInt(int value) {
+  return value.toString().replaceAllMapped(
+        RegExp(r'\B(?=(\d{3})+(?!\d))'),
+        (_) => ',',
+      );
 }
 
 class _QuickActionGrid extends StatelessWidget {
