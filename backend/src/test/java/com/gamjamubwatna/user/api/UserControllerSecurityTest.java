@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.user.application.UserActivitySummaryService;
 import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
 import com.gamjamubwatna.user.application.UserProfileService;
 import java.nio.charset.StandardCharsets;
@@ -47,6 +48,9 @@ class UserControllerSecurityTest {
 
     @MockitoBean
     private UserProfileService userProfileService;
+
+    @MockitoBean
+    private UserActivitySummaryService userActivitySummaryService;
 
     @Test
     void returnsProfileThroughJwtSecurityFilter() throws Exception {

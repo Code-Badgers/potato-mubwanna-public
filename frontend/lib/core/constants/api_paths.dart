@@ -5,6 +5,7 @@ class ApiPaths {
   static const authRefresh = '/auth/refresh';
   static const authLogout = '/auth/logout';
   static const myProfile = '/users/me';
+  static const myActivitySummary = '/users/me/activity-summary';
   static const spots = '/spots';
   static String spotDetail(String spotId) => '/spots/$spotId';
   static String spotAudioGuide(String spotId) => '/audio-guides/spots/$spotId';

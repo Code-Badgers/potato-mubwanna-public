@@ -1,6 +1,7 @@
 package com.gamjamubwatna.user.api;
 
 import com.gamjamubwatna.auth.api.AuthApiResponse;
+import com.gamjamubwatna.user.application.UserActivitySummaryService;
 import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
 import com.gamjamubwatna.user.application.UserProfileService;
 import java.util.regex.Matcher;
@@ -19,9 +20,14 @@ public class UserController {
     private static final Pattern USER_PRINCIPAL_PATTERN = Pattern.compile("^user:([1-9]\\d*)$");
 
     private final UserProfileService userProfileService;
+    private final UserActivitySummaryService userActivitySummaryService;
 
-    public UserController(UserProfileService userProfileService) {
+    public UserController(
+        UserProfileService userProfileService,
+        UserActivitySummaryService userActivitySummaryService
+    ) {
         this.userProfileService = userProfileService;
+        this.userActivitySummaryService = userActivitySummaryService;
     }
 
     // 로그인 세션을 복원한 사용자가 마이페이지에서 자신의 저장된 계정 정보를 조회한다.
@@ -30,6 +36,21 @@ public class UserController {
         try {
             return ResponseEntity.ok(AuthApiResponse.success(
                 userProfileService.getProfile(userId(authentication))
+            ));
+        } catch (UserProfileAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        }
+    }
+
+    // 로그인 사용자가 마이페이지에서 누적 걸음, 스탬프, 감자 수집 결과를 확인한다.
+    @GetMapping("/me/activity-summary")
+    public ResponseEntity<AuthApiResponse<UserActivitySummaryResponse>> getMyActivitySummary(
+        Authentication authentication
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                userActivitySummaryService.getActivitySummary(userId(authentication))
             ));
         } catch (UserProfileAuthenticationException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

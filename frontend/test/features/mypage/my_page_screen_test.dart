@@ -14,7 +14,9 @@ import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
+import 'package:potato_mubwanna/features/mypage/application/user_activity_summary_controller.dart';
 import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
+import 'package:potato_mubwanna/features/mypage/domain/user_activity_summary.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
@@ -62,7 +64,7 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('renders real profile data without placeholder statistics',
+  testWidgets('renders real profile and activity summary data',
       (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
@@ -85,11 +87,12 @@ void main() {
     expect(find.text('6,420 / 10,000'), findsNothing);
 
     expect(find.text('누적 걸음 수'), findsOneWidget);
-    expect(find.text('256,842'), findsNothing);
+    expect(find.text('256,842'), findsOneWidget);
     expect(find.text('누적 스탬프 수'), findsOneWidget);
     expect(find.text('보유 감자 수'), findsOneWidget);
-    expect(find.text('12'), findsNothing);
-    expect(find.text('-'), findsNWidgets(3));
+    expect(find.text('12'), findsOneWidget);
+    expect(find.text('7'), findsOneWidget);
+    expect(find.text('-'), findsNothing);
 
     expect(find.text('보상함'), findsOneWidget);
     expect(find.text('여행 기록'), findsOneWidget);
@@ -102,6 +105,39 @@ void main() {
     expect(find.text('공지사항'), findsOneWidget);
     expect(find.text('고객센터'), findsOneWidget);
     expect(find.text('로그아웃'), findsOneWidget);
+  });
+
+  testWidgets('shows activity summary loading placeholders', (tester) async {
+    final completer = Completer<UserActivitySummary?>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(overrides: [
+          userActivitySummaryProvider.overrideWith((ref) => completer.future),
+        ]),
+        child: const MaterialApp(home: MyPageScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('…'), findsNWidgets(3));
+  });
+
+  testWidgets('shows an activity summary retry action on failure',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(overrides: [
+          userActivitySummaryProvider.overrideWith(
+            (ref) async => throw Exception('network unavailable'),
+          ),
+        ]),
+        child: const MaterialApp(home: MyPageScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('-'), findsNWidgets(3));
+    expect(find.text('활동 요약 다시 시도'), findsOneWidget);
   });
 
   testWidgets('renders the fetched nickname in the profile summary',
@@ -461,6 +497,13 @@ List<Override> _myPageProviderOverrides({
         email: 'user@example.com',
         profileImage: '',
         createdAt: null,
+      ),
+    ),
+    userActivitySummaryProvider.overrideWith(
+      (ref) async => const UserActivitySummary(
+        totalSteps: 256842,
+        stampCount: 12,
+        ownedPotatoCount: 7,
       ),
     ),
     ...overrides,

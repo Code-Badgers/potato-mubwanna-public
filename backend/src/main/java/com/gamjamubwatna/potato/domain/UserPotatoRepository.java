@@ -8,4 +8,6 @@ public interface UserPotatoRepository extends JpaRepository<UserPotato, Long> {
 
     @EntityGraph(attributePaths = "potato")
     List<UserPotato> findByUserId(Long userId);
+
+    long countByUserId(Long userId);
 }
