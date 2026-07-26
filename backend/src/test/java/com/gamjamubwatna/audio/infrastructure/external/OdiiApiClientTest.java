@@ -28,22 +28,24 @@ class OdiiApiClientTest {
         AtomicReference<String> rawQuery = new AtomicReference<>();
         startServer("""
             {
-              "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
-              "body": {
-                "items": {
-                  "item": [
-                    {
-                      "tid": "10",
-                      "tlid": "11",
-                      "stid": "20",
-                      "stlid": "21",
-                      "title": "정선 5일장",
-                      "audioTitle": "정선 5일장 이야기",
-                      "script": "정선 5일장은...",
-                      "audioUrl": "https://example.com/audio.mp3",
-                      "langCode": "ko"
-                    }
-                  ]
+              "response": {
+                "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
+                "body": {
+                  "items": {
+                    "item": [
+                      {
+                        "tid": "10",
+                        "tlid": "11",
+                        "stid": "20",
+                        "stlid": "21",
+                        "title": "정선 5일장",
+                        "audioTitle": "정선 5일장 이야기",
+                        "script": "정선 5일장은...",
+                        "audioUrl": "https://example.com/audio.mp3",
+                        "langCode": "ko"
+                      }
+                    ]
+                  }
                 }
               }
             }
@@ -69,8 +71,10 @@ class OdiiApiClientTest {
     void rejectsApiErrorResponse() throws Exception {
         startServer("""
             {
-              "header": {"resultCode": "30", "resultMsg": "SERVICE KEY IS NOT REGISTERED ERROR"},
-              "body": {"items": {"item": []}}
+              "response": {
+                "header": {"resultCode": "30", "resultMsg": "SERVICE KEY IS NOT REGISTERED ERROR"},
+                "body": {"items": {"item": []}}
+              }
             }
             """, new AtomicReference<>());
 

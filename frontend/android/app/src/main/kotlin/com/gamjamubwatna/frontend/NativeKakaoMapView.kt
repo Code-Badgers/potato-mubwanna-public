@@ -35,7 +35,7 @@ class NativeKakaoMapView(
     messenger: BinaryMessenger,
 ) : PlatformView {
     private val container = FrameLayout(context)
-    private val mapView = MapView(context)
+    private var mapView: MapView? = null
     private val channel = MethodChannel(messenger, "potato_mubwanna/kakao_map_$viewId")
     private val spotLabels = mutableListOf<Label>()
     private val spotIdByLabelId = mutableMapOf<String, String>()
@@ -68,47 +68,58 @@ class NativeKakaoMapView(
                     else -> result.notImplemented()
                 }
             }
-            initializeSdk(context, appKey)
-            container.addView(
-                mapView,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                ),
-            )
-            mapView.start(
-                object : MapLifeCycleCallback() {
-                    override fun onMapDestroy() = Unit
+            try {
+                initializeSdk(context, appKey)
+                val createdMapView = MapView(context)
+                mapView = createdMapView
+                container.addView(
+                    createdMapView,
+                    FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                    ),
+                )
+                createdMapView.start(
+                    object : MapLifeCycleCallback() {
+                        override fun onMapDestroy() = Unit
 
-                    override fun onMapError(error: Exception) {
-                        showFallback(context, "카카오맵 인증 또는 로딩에 실패했습니다.")
-                    }
-                },
-                object : KakaoMapReadyCallback() {
-                    override fun onMapReady(kakaoMap: KakaoMap) {
-                        this@NativeKakaoMapView.kakaoMap = kakaoMap
-                        addSpotLabels(kakaoMap, spots)
-                        renderRoutePolyline(kakaoMap)
-                        kakaoMap.setOnLabelClickListener { _, _, label ->
-                            val spotId = spotIdByLabelId[label.labelId]
-                                ?: label.labelId.removePrefix("potato-")
-                            channel.invokeMethod("spotSelected", mapOf("spotId" to spotId))
-                            true
+                        override fun onMapError(error: Exception) {
+                            showFallback(context, "카카오맵 인증 또는 로딩에 실패했습니다.")
                         }
-                        kakaoMap.setOnCameraMoveEndListener { map, cameraPosition, _ ->
-                            scaleSpotLabels(map, cameraPosition)
+
+                    },
+                    object : KakaoMapReadyCallback() {
+                        override fun onMapReady(kakaoMap: KakaoMap) {
+                            this@NativeKakaoMapView.kakaoMap = kakaoMap
+                            addSpotLabels(kakaoMap, spots)
+                            renderRoutePolyline(kakaoMap)
+                            kakaoMap.setOnLabelClickListener { _, _, label ->
+                                val spotId = spotIdByLabelId[label.labelId]
+                                    ?: label.labelId.removePrefix("potato-")
+                                channel.invokeMethod("spotSelected", mapOf("spotId" to spotId))
+                                true
+                            }
+                            kakaoMap.setOnCameraMoveEndListener { map, cameraPosition, _ ->
+                                scaleSpotLabels(map, cameraPosition)
+                            }
                         }
-                    }
 
-                    override fun getPosition(): LatLng {
-                        return LatLng.from(latitude, longitude)
-                    }
+                        override fun getPosition(): LatLng {
+                            return LatLng.from(latitude, longitude)
+                        }
 
-                    override fun getZoomLevel(): Int {
-                        return zoomLevel
-                    }
-                },
-            )
+                        override fun getZoomLevel(): Int {
+                            return zoomLevel
+                        }
+                    },
+                )
+            } catch (_: UnsatisfiedLinkError) {
+                mapView = null
+                showFallback(
+                    context,
+                    "이 에뮬레이터 CPU에서는 카카오맵을 실행할 수 없습니다. ARM64 기기에서 확인해주세요.",
+                )
+            }
         }
     }
 
@@ -118,7 +129,7 @@ class NativeKakaoMapView(
 
     override fun dispose() {
         channel.setMethodCallHandler(null)
-        mapView.pause()
+        mapView?.pause()
     }
 
     private fun showFallback(context: Context, message: String) {

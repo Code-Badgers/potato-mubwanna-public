@@ -1,19 +1,24 @@
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:js' as js;
+import 'dart:math';
 
 import '../../../app/config/app_environment.dart';
 import 'kakao_login_exception.dart';
+import 'kakao_login_result.dart';
 
 class KakaoLoginService {
   const KakaoLoginService();
 
   static const _sdkElementId = 'kakao-js-sdk';
   static const _sdkUrl =
-      'https://t1.kakaocdn.net/kakao_js_sdk/2.7.5/kakao.min.js';
+      'https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js';
   static const _profileConsentScope = 'profile_nickname,account_email';
+  static const _stateStorageKey = 'potato-kakao-oauth-state';
+  static const _redirectUriStorageKey = 'potato-kakao-redirect-uri';
 
   Future<void> preload() async {
     if (AppEnvironment.kakaoJavaScriptKey.isEmpty) {
@@ -24,7 +29,7 @@ class KakaoLoginService {
     _initializeSdk();
   }
 
-  Future<String> loginAndReadAccessToken() async {
+  Future<KakaoLoginResult> login() async {
     if (AppEnvironment.kakaoJavaScriptKey.isEmpty) {
       throw const KakaoLoginUnsupportedException(
         'KAKAO_JAVASCRIPT_KEY가 설정되지 않았습니다.',
@@ -33,7 +38,57 @@ class KakaoLoginService {
 
     await _loadSdk();
     _initializeSdk();
-    return _loginWithPopup();
+    return _authorize();
+  }
+
+  KakaoAuthorizationCallback? readAuthorizationCallback() {
+    final query = Uri.base.queryParameters;
+    final authorizationCode = query['code'];
+    final oauthError = query['error'];
+    if (authorizationCode == null && oauthError == null) {
+      return null;
+    }
+
+    final expectedState = html.window.sessionStorage[_stateStorageKey];
+    final returnedState = query['state'];
+    if (expectedState == null ||
+        expectedState.isEmpty ||
+        returnedState != expectedState) {
+      throw const KakaoLoginUnsupportedException(
+        '카카오 로그인 요청을 확인할 수 없습니다. 다시 시도해주세요.',
+      );
+    }
+    if (oauthError != null) {
+      throw const KakaoLoginUnsupportedException('카카오 로그인이 취소되었습니다.');
+    }
+
+    final redirectUri =
+        html.window.sessionStorage[_redirectUriStorageKey] ?? '';
+    if (authorizationCode == null ||
+        authorizationCode.isEmpty ||
+        redirectUri.isEmpty) {
+      throw const KakaoLoginUnsupportedException(
+        '카카오 로그인 응답이 올바르지 않습니다. 다시 시도해주세요.',
+      );
+    }
+
+    return KakaoAuthorizationCallback(
+      authorizationCode: authorizationCode,
+      redirectUri: redirectUri,
+    );
+  }
+
+  void clearAuthorizationCallback() {
+    html.window.sessionStorage.remove(_stateStorageKey);
+    html.window.sessionStorage.remove(_redirectUriStorageKey);
+    if (Uri.base.queryParameters.containsKey('code') ||
+        Uri.base.queryParameters.containsKey('error')) {
+      html.window.history.replaceState(
+        null,
+        html.document.title,
+        Uri.base.replace(query: '').toString(),
+      );
+    }
   }
 
   Future<void> _loadSdk() {
@@ -93,36 +148,27 @@ class KakaoLoginService {
     }
   }
 
-  Future<String> _loginWithPopup() {
+  KakaoLoginResult _authorize() {
     final kakao = js.context['Kakao'] as js.JsObject;
     final auth = kakao['Auth'] as js.JsObject;
-    final completer = Completer<String>();
+    final state = _newState();
+    final redirectUri = AppEnvironment.effectiveKakaoLoginRedirectUri;
+    html.window.sessionStorage[_stateStorageKey] = state;
+    html.window.sessionStorage[_redirectUriStorageKey] = redirectUri;
 
-    auth.callMethod('login', [
+    auth.callMethod('authorize', [
       js.JsObject.jsify({
+        'redirectUri': redirectUri,
         'scope': _profileConsentScope,
-        'success': js.JsFunction.withThis((_, Object authObject) {
-          final tokenObject = authObject as js.JsObject;
-          final accessToken = tokenObject['access_token'] as String? ?? '';
-          if (accessToken.isEmpty) {
-            completer.completeError(
-              const KakaoLoginUnsupportedException(
-                '카카오 access token을 가져오지 못했습니다.',
-              ),
-            );
-            return;
-          }
-
-          completer.complete(accessToken);
-        }),
-        'fail': js.JsFunction.withThis((_, Object error) {
-          completer.completeError(
-            KakaoLoginUnsupportedException('카카오 로그인에 실패했습니다. $error'),
-          );
-        }),
+        'state': state,
       }),
     ]);
+    return const KakaoAuthorizationRedirectResult();
+  }
 
-    return completer.future;
+  String _newState() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64UrlEncode(bytes).replaceAll('=', '');
   }
 }

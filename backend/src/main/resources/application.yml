@@ -35,6 +35,8 @@ springdoc:
 auth:
   kakao:
     user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+    token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}
+    rest-api-key: ${KAKAO_REST_API_KEY:}
   jwt:
     secret: ${JWT_SECRET:local-development-jwt-secret-change-me-please}
     access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:3600}

@@ -8,6 +8,7 @@ import com.gamjamubwatna.auth.domain.RefreshTokenRepository;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.auth.infrastructure.KakaoAuthorizationCodeClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserInfo;
 import java.time.Clock;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final KakaoUserClient kakaoUserClient;
+    private final KakaoAuthorizationCodeClient kakaoAuthorizationCodeClient;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -28,21 +30,31 @@ public class AuthService {
     @Autowired
     public AuthService(
         KakaoUserClient kakaoUserClient,
+        KakaoAuthorizationCodeClient kakaoAuthorizationCodeClient,
         JwtTokenProvider jwtTokenProvider,
         UserRepository userRepository,
         RefreshTokenRepository refreshTokenRepository
     ) {
-        this(kakaoUserClient, jwtTokenProvider, userRepository, refreshTokenRepository, Clock.systemUTC());
+        this(
+            kakaoUserClient,
+            kakaoAuthorizationCodeClient,
+            jwtTokenProvider,
+            userRepository,
+            refreshTokenRepository,
+            Clock.systemUTC()
+        );
     }
 
     public AuthService(
         KakaoUserClient kakaoUserClient,
+        KakaoAuthorizationCodeClient kakaoAuthorizationCodeClient,
         JwtTokenProvider jwtTokenProvider,
         UserRepository userRepository,
         RefreshTokenRepository refreshTokenRepository,
         Clock clock
     ) {
         this.kakaoUserClient = kakaoUserClient;
+        this.kakaoAuthorizationCodeClient = kakaoAuthorizationCodeClient;
         this.jwtTokenProvider = jwtTokenProvider;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -55,6 +67,18 @@ public class AuthService {
         User user = findOrCreateUser(kakaoUser);
 
         return issueTokens(user);
+    }
+
+    @Transactional
+    public AuthLoginResponse loginWithKakaoAuthorizationCode(
+        String authorizationCode,
+        String redirectUri
+    ) {
+        String kakaoAccessToken = kakaoAuthorizationCodeClient.exchange(
+            authorizationCode,
+            redirectUri
+        );
+        return loginWithKakao(kakaoAccessToken);
     }
 
     @Transactional

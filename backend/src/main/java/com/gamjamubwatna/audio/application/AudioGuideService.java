@@ -10,6 +10,7 @@ import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Comparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -57,9 +58,9 @@ public class AudioGuideService {
         try {
             OdiiStory story = odiiApiClient.searchStories(spot.getName()).stream()
                 .filter(this::isKorean)
-                .filter(item -> normalized(item.title()).equals(normalized(spot.getName())))
                 .filter(item -> item.audioUrl() != null && !item.audioUrl().isBlank())
-                .findFirst()
+                .filter(item -> matchScore(item.title(), spot.getName()) < Integer.MAX_VALUE)
+                .min(Comparator.comparingInt(item -> matchScore(item.title(), spot.getName())))
                 .orElseThrow(() -> new AudioGuideNotFoundException("이 관광지의 오디오 가이드를 찾을 수 없습니다."));
 
             AudioGuide audioGuide = new AudioGuide(
@@ -97,8 +98,33 @@ public class AudioGuideService {
         return value;
     }
 
+    private int matchScore(String storyTitle, String spotName) {
+        String normalizedStoryTitle = normalized(storyTitle);
+        String normalizedSpotName = normalized(spotName);
+        if (normalizedStoryTitle.isEmpty() || normalizedSpotName.length() < 3) {
+            return Integer.MAX_VALUE;
+        }
+        if (normalizedStoryTitle.equals(normalizedSpotName)) {
+            return 0;
+        }
+        if (normalizedStoryTitle.contains(normalizedSpotName)) {
+            return 1;
+        }
+        if (normalizedSpotName.contains(normalizedStoryTitle)) {
+            return 2;
+        }
+        return Integer.MAX_VALUE;
+    }
+
     private String normalized(String value) {
-        return value == null ? "" : value.trim().replaceAll("\\s+", " ");
+        if (value == null) {
+            return "";
+        }
+        // Odii는 같은 장터를 "5일장"과 "오일장"처럼 다르게 표기하므로 비교 전에 표기만 통일한다.
+        return value
+            .replace("5일장", "오일장")
+            .replaceAll("[^\\p{L}\\p{N}]", "")
+            .toLowerCase();
     }
 
     private String blankToNull(String value) {

@@ -43,11 +43,12 @@ public class OdiiApiClient {
         }
 
         try {
-            OdiiSearchResponse response = restClient.get()
+            OdiiSearchEnvelope envelope = restClient.get()
                 .uri(searchUri(keyword))
                 .retrieve()
-                .body(OdiiSearchResponse.class);
+                .body(OdiiSearchEnvelope.class);
 
+            OdiiSearchResponse response = envelope == null ? null : envelope.response();
             validateResponse(response);
             if (response.body() == null
                 || response.body().items() == null
@@ -113,6 +114,9 @@ public class OdiiApiClient {
         String audioUrl,
         String langCode
     ) {
+    }
+
+    private record OdiiSearchEnvelope(OdiiSearchResponse response) {
     }
 
     private record OdiiSearchResponse(OdiiHeader header, OdiiBody body) {

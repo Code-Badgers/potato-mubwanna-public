@@ -6,46 +6,36 @@ import '../../../core/network/api_response.dart';
 import '../../../core/storage/token_storage.dart';
 
 class AuthRepository {
-  const AuthRepository({
-    required Dio dio,
-    required TokenStorage tokenStorage,
-  })  : _dio = dio,
-        _tokenStorage = tokenStorage;
+  const AuthRepository({required Dio dio, required TokenStorage tokenStorage})
+    : _dio = dio,
+      _tokenStorage = tokenStorage;
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
 
   Future<void> loginWithKakaoToken(String kakaoAccessToken) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      ApiPaths.authKakao,
-      data: {'accessToken': kakaoAccessToken},
+    await _login(ApiPaths.authKakao, {'accessToken': kakaoAccessToken});
+  }
+
+  Future<void> loginWithKakaoAuthorizationCode({
+    required String authorizationCode,
+    required String redirectUri,
+  }) async {
+    await _login(ApiPaths.authKakaoCode, {
+      'authorizationCode': authorizationCode,
+      'redirectUri': redirectUri,
+    });
+  }
+
+  Future<void> _login(String path, Map<String, String> data) async {
+    final tokens = await _requestTokens(
+      path,
+      data,
+      fallbackMessage: '카카오 로그인에 실패했습니다.',
     );
-    final apiResponse = ApiResponse<AuthTokens>.fromJson(
-      response.data ?? const <String, dynamic>{},
-      AuthTokens.fromJson,
-    );
-
-    if (!apiResponse.success || apiResponse.data == null) {
-      throw ApiException(
-        message: apiResponse.message.isEmpty
-            ? '카카오 로그인에 실패했습니다.'
-            : apiResponse.message,
-        code: apiResponse.code,
-        statusCode: response.statusCode,
-      );
-    }
-
-    if (apiResponse.data!.accessToken.isEmpty ||
-        apiResponse.data!.refreshToken.isEmpty) {
-      throw ApiException(
-        message: '인증 토큰 응답이 올바르지 않습니다.',
-        statusCode: response.statusCode,
-      );
-    }
-
     await _tokenStorage.saveTokens(
-      accessToken: apiResponse.data!.accessToken,
-      refreshToken: apiResponse.data!.refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     );
   }
 
@@ -55,11 +45,9 @@ class AuthRepository {
       throw const ApiException(message: '저장된 refresh token이 없습니다.');
     }
 
-    final tokens = await _requestTokens(
-      ApiPaths.authRefresh,
-      {'refreshToken': refreshToken},
-      fallbackMessage: '로그인 세션 갱신에 실패했습니다.',
-    );
+    final tokens = await _requestTokens(ApiPaths.authRefresh, {
+      'refreshToken': refreshToken,
+    }, fallbackMessage: '로그인 세션 갱신에 실패했습니다.');
     await _tokenStorage.saveTokens(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -85,10 +73,7 @@ class AuthRepository {
     Map<String, String> data, {
     required String fallbackMessage,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      path,
-      data: data,
-    );
+    final response = await _dio.post<Map<String, dynamic>>(path, data: data);
     final apiResponse = ApiResponse<AuthTokens>.fromJson(
       response.data ?? const <String, dynamic>{},
       AuthTokens.fromJson,
@@ -117,10 +102,7 @@ class AuthRepository {
 }
 
 class AuthTokens {
-  const AuthTokens({
-    required this.accessToken,
-    required this.refreshToken,
-  });
+  const AuthTokens({required this.accessToken, required this.refreshToken});
 
   final String accessToken;
   final String refreshToken;

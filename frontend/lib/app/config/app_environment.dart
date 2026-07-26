@@ -14,5 +14,20 @@ class AppEnvironment {
     'KAKAO_JAVASCRIPT_KEY',
   );
 
+  static const kakaoLoginRedirectUri = String.fromEnvironment(
+    'KAKAO_LOGIN_REDIRECT_URI',
+  );
+
   static bool get hasKakaoLoginKey => kakaoNativeAppKey.isNotEmpty;
+
+  static bool get hasKakaoAuthorizationCallback =>
+      Uri.base.queryParameters.containsKey('code') ||
+      Uri.base.queryParameters.containsKey('error');
+
+  static String get effectiveKakaoLoginRedirectUri {
+    if (kakaoLoginRedirectUri.isNotEmpty) {
+      return kakaoLoginRedirectUri;
+    }
+    return Uri.base.replace(query: '', fragment: '').toString();
+  }
 }

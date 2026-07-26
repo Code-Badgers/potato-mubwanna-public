@@ -24,8 +24,9 @@ void main() {
     expect(find.text('나중에 로그인하기'), findsOneWidget);
   });
 
-  testWidgets('uses the button material for the kakao ink response',
-      (tester) async {
+  testWidgets('uses the button material for the kakao ink response', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: LoginScreen())),
     );
@@ -50,8 +51,9 @@ void main() {
           const ProviderScope(child: MaterialApp(home: LoginScreen())),
         );
 
-        final buttonContent =
-            find.byKey(const Key('kakao-login-button-content'));
+        final buttonContent = find.byKey(
+          const Key('kakao-login-button-content'),
+        );
         final buttonSize = tester.getSize(buttonContent);
         expect(buttonSize.width, 300);
         expect(buttonSize.height, 45);
@@ -90,7 +92,7 @@ void main() {
 
 class _UnsupportedKakaoLoginService extends KakaoLoginService {
   @override
-  Future<String> loginAndReadAccessToken() {
+  Future<KakaoLoginResult> login() {
     throw const KakaoLoginUnsupportedException(
       '테스트 환경에서는 카카오 로그인을 시작할 수 없습니다.',
     );
@@ -99,10 +101,10 @@ class _UnsupportedKakaoLoginService extends KakaoLoginService {
 
 class _NoopAuthRepository extends AuthRepository {
   _NoopAuthRepository()
-      : super(
-          dio: Dio(),
-          tokenStorage: const TokenStorage(FlutterSecureStorage()),
-        );
+    : super(
+        dio: Dio(),
+        tokenStorage: const TokenStorage(FlutterSecureStorage()),
+      );
 
   @override
   Future<void> loginWithKakaoToken(String kakaoAccessToken) async {}

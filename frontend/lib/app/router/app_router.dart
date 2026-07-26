@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_environment.dart';
 import '../../features/auth/presentation/screen/login_screen.dart';
 import '../../features/coupon/presentation/screen/coupon_screen.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
@@ -16,7 +17,9 @@ import '../../features/travel_record/presentation/screen/travel_record_screen.da
 import '../../shared/widgets/navigation/main_shell.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/onboarding',
+  initialLocation: AppEnvironment.hasKakaoAuthorizationCallback
+      ? '/login'
+      : '/onboarding',
   routes: [
     GoRoute(
       path: '/onboarding',

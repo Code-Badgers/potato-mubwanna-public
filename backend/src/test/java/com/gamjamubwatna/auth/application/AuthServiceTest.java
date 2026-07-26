@@ -13,6 +13,7 @@ import com.gamjamubwatna.auth.domain.RefreshTokenRepository;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.auth.infrastructure.KakaoAuthorizationCodeClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserInfo;
 import java.time.Clock;
@@ -55,6 +56,7 @@ class AuthServiceTest {
 
         AuthLoginResponse response = new AuthService(
             kakaoUserClient,
+            (authorizationCode, redirectUri) -> "unused",
             jwtTokenProvider(now),
             userRepository,
             refreshTokenRepository,
@@ -68,6 +70,44 @@ class AuthServiceTest {
         assertThat(response.user().email()).isEqualTo("user@email.com");
         assertThat(response.user().nickname()).isEqualTo("감자러버");
         assertThat(response.user().profileImage()).isEqualTo("https://example.com/profile.png");
+    }
+
+    @Test
+    void loginWithKakaoAuthorizationCodeExchangesCodeBeforeFetchingUser() {
+        Instant now = Instant.parse("2026-06-19T00:00:00Z");
+        KakaoAuthorizationCodeClient codeClient = (authorizationCode, redirectUri) -> {
+            assertThat(authorizationCode).isEqualTo("authorization-code");
+            assertThat(redirectUri).isEqualTo("http://localhost:54631/");
+            return "kakao-access-token";
+        };
+        KakaoUserClient userClient = accessToken -> {
+            assertThat(accessToken).isEqualTo("kakao-access-token");
+            return new KakaoUserInfo(123L, null, null, null);
+        };
+        UserRepository userRepository = mock(UserRepository.class);
+        RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
+        when(userRepository.findByProviderAndProviderUserId(AuthProvider.KAKAO, "123"))
+            .thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            ReflectionTestUtils.setField(user, "id", 1L);
+            return user;
+        });
+
+        AuthLoginResponse response = new AuthService(
+            userClient,
+            codeClient,
+            jwtTokenProvider(now),
+            userRepository,
+            refreshTokenRepository,
+            Clock.fixed(now, ZoneOffset.UTC)
+        ).loginWithKakaoAuthorizationCode(
+            "authorization-code",
+            "http://localhost:54631/"
+        );
+
+        assertThat(response.accessToken()).isNotBlank();
+        assertThat(response.user().nickname()).isEqualTo("감자러버");
     }
 
     @Test
@@ -97,6 +137,7 @@ class AuthServiceTest {
 
         AuthLoginResponse response = new AuthService(
             accessToken -> null,
+            (authorizationCode, redirectUri) -> "unused",
             jwtTokenProvider,
             mock(UserRepository.class),
             refreshTokenRepository,
