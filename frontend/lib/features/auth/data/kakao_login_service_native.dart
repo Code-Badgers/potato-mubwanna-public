@@ -2,18 +2,16 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 import '../../../app/config/app_environment.dart';
 import 'kakao_login_exception.dart';
+import 'kakao_login_result.dart';
 
 class KakaoLoginService {
   const KakaoLoginService();
 
-  static const _profileConsentScopes = [
-    'profile_nickname',
-    'account_email',
-  ];
+  static const _profileConsentScopes = ['profile_nickname', 'account_email'];
 
   Future<void> preload() async {}
 
-  Future<String> loginAndReadAccessToken() async {
+  Future<KakaoLoginResult> login() async {
     if (!AppEnvironment.hasKakaoLoginKey) {
       throw const KakaoLoginUnsupportedException(
         'KAKAO_NATIVE_APP_KEY가 설정되지 않았습니다.',
@@ -23,8 +21,12 @@ class KakaoLoginService {
     final token = await _requestProfileScopesIfNeeded(
       await _loginWithAvailableMethod(),
     );
-    return token.accessToken;
+    return KakaoAccessTokenLoginResult(token.accessToken);
   }
+
+  KakaoAuthorizationCallback? readAuthorizationCallback() => null;
+
+  void clearAuthorizationCallback() {}
 
   Future<OAuthToken> _loginWithAvailableMethod() async {
     if (await isKakaoTalkInstalled()) {

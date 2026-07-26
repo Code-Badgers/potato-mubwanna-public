@@ -16,9 +16,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref.read(kakaoLoginServiceProvider).preload().catchError((_) {}),
-    );
+    Future.microtask(_prepareKakaoLogin);
+  }
+
+  Future<void> _prepareKakaoLogin() async {
+    await ref.read(kakaoLoginServiceProvider).preload().catchError((_) {});
+    if (!mounted) {
+      return;
+    }
+    final loggedIn = await ref
+        .read(authControllerProvider.notifier)
+        .completePendingKakaoLogin();
+    if (loggedIn && mounted) {
+      context.go('/permissions');
+    }
   }
 
   @override
@@ -39,10 +50,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Text(
                 '감자 여행을 시작해볼까요?',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -87,8 +98,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: isLoading
                           ? const SizedBox.square(
                               dimension: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2.5),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                              ),
                             )
                           : const SizedBox.expand(
                               key: Key('kakao-login-button-content'),

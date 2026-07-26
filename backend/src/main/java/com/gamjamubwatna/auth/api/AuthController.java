@@ -25,6 +25,17 @@ public class AuthController {
         return AuthApiResponse.success(authService.loginWithKakao(request.accessToken()));
     }
 
+    // 웹 리다이렉트로 받은 인가 코드를 서버에서 카카오 토큰으로 교환한다.
+    @PostMapping("/kakao/code")
+    public AuthApiResponse<AuthLoginResponse> loginWithKakaoAuthorizationCode(
+        @Valid @RequestBody KakaoAuthorizationCodeRequest request
+    ) {
+        return AuthApiResponse.success(authService.loginWithKakaoAuthorizationCode(
+            request.authorizationCode(),
+            request.redirectUri()
+        ));
+    }
+
     // 만료된 access token을 refresh token 회전으로 새 서비스 JWT 세션으로 교환한다.
     @PostMapping("/refresh")
     public AuthApiResponse<AuthLoginResponse> refresh(

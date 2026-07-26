@@ -2,6 +2,7 @@ class ApiPaths {
   const ApiPaths._();
 
   static const authKakao = '/auth/kakao';
+  static const authKakaoCode = '/auth/kakao/code';
   static const authRefresh = '/auth/refresh';
   static const authLogout = '/auth/logout';
   static const myProfile = '/users/me';

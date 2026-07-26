@@ -75,6 +75,40 @@ class AuthControllerTest {
     }
 
     @Test
+    void loginWithKakaoAuthorizationCodeReturnsJwtTokens() throws Exception {
+        when(authService.loginWithKakaoAuthorizationCode(
+            eq("authorization-code"),
+            eq("http://localhost:54631/")
+        )).thenReturn(new AuthLoginResponse(
+            "jwt-access-token",
+            "jwt-refresh-token",
+            new AuthUserResponse(1L, null, "감자러버", null)
+        ));
+
+        mockMvc.perform(post("/auth/kakao/code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                    new KakaoAuthorizationCodeRequest(
+                        "authorization-code",
+                        "http://localhost:54631/"
+                    )
+                )))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.accessToken").value("jwt-access-token"))
+            .andExpect(jsonPath("$.data.refreshToken").value("jwt-refresh-token"));
+    }
+
+    @Test
+    void loginWithKakaoAuthorizationCodeRejectsBlankCode() throws Exception {
+        mockMvc.perform(post("/auth/kakao/code")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                    new KakaoAuthorizationCodeRequest("", "http://localhost:54631/")
+                )))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void refreshReturnsRotatedJwtTokens() throws Exception {
         when(authService.refresh(eq("old-refresh-token")))
             .thenReturn(new AuthLoginResponse(

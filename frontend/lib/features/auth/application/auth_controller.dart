@@ -40,9 +40,9 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController({
     required KakaoLoginService kakaoLoginService,
     required AuthRepository authRepository,
-  })  : _kakaoLoginService = kakaoLoginService,
-        _authRepository = authRepository,
-        super(const AuthState.idle());
+  }) : _kakaoLoginService = kakaoLoginService,
+       _authRepository = authRepository,
+       super(const AuthState.idle());
 
   final KakaoLoginService _kakaoLoginService;
   final AuthRepository _authRepository;
@@ -50,8 +50,13 @@ class AuthController extends StateNotifier<AuthState> {
   Future<bool> loginWithKakao() async {
     state = const AuthState.loading();
     try {
+      final result = await _kakaoLoginService.login();
+      if (result is KakaoAuthorizationRedirectResult) {
+        state = const AuthState.idle();
+        return false;
+      }
       final kakaoAccessToken =
-          await _kakaoLoginService.loginAndReadAccessToken();
+          (result as KakaoAccessTokenLoginResult).accessToken;
       await _authRepository.loginWithKakaoToken(kakaoAccessToken);
       state = const AuthState.authenticated();
       return true;
@@ -59,10 +64,36 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.failure(error.message);
       return false;
     } catch (_) {
-      state = const AuthState.failure(
-        '카카오 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.',
-      );
+      state = const AuthState.failure('카카오 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
       return false;
+    }
+  }
+
+  Future<bool> completePendingKakaoLogin() async {
+    KakaoAuthorizationCallback? callback;
+    try {
+      callback = _kakaoLoginService.readAuthorizationCallback();
+      if (callback == null) {
+        return false;
+      }
+
+      state = const AuthState.loading();
+      await _authRepository.loginWithKakaoAuthorizationCode(
+        authorizationCode: callback.authorizationCode,
+        redirectUri: callback.redirectUri,
+      );
+      state = const AuthState.authenticated();
+      return true;
+    } on KakaoLoginUnsupportedException catch (error) {
+      state = AuthState.failure(error.message);
+      return false;
+    } catch (_) {
+      state = const AuthState.failure('카카오 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      return false;
+    } finally {
+      if (callback != null || AppEnvironment.hasKakaoAuthorizationCallback) {
+        _kakaoLoginService.clearAuthorizationCallback();
+      }
     }
   }
 
@@ -91,10 +122,7 @@ class AuthController extends StateNotifier<AuthState> {
 }
 
 class AuthState {
-  const AuthState._({
-    required this.status,
-    this.message,
-  });
+  const AuthState._({required this.status, this.message});
 
   const AuthState.idle() : this._(status: AuthStatus.idle);
 
@@ -103,18 +131,10 @@ class AuthState {
   const AuthState.authenticated() : this._(status: AuthStatus.authenticated);
 
   const AuthState.failure(String message)
-      : this._(
-          status: AuthStatus.failure,
-          message: message,
-        );
+    : this._(status: AuthStatus.failure, message: message);
 
   final AuthStatus status;
   final String? message;
 }
 
-enum AuthStatus {
-  idle,
-  loading,
-  authenticated,
-  failure,
-}
+enum AuthStatus { idle, loading, authenticated, failure }
