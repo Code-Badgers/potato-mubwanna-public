@@ -1,0 +1,7 @@
+allprojects { project ->
+    project.afterEvaluate {
+        if (project.name == "app" && project.extensions.findByName("android") != null) {
+            project.android.defaultConfig.minSdk = 26
+        }
+    }
+}
