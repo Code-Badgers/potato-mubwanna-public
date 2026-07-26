@@ -141,7 +141,32 @@ Response:
 }
 ```
 
-### 2.2 내 여행 기록 조회
+### 2.2 내 활동 요약 조회
+
+```http
+GET /api/users/me/activity-summary
+Authorization: Bearer {accessToken}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "totalSteps": 256842,
+    "stampCount": 12,
+    "ownedPotatoCount": 7
+  }
+}
+```
+
+- `totalSteps`는 서버의 `user_daily_activities`에 동기화된 걸음 수 합계다.
+- 활동, 스탬프 또는 감자 데이터가 없으면 해당 값은 `0`이다.
+- 인증 사용자와 연결된 계정이 없으면 `401 Unauthorized`를 반환한다.
+
+### 2.3 내 여행 기록 조회
 
 ```http
 GET /api/users/me/visits
