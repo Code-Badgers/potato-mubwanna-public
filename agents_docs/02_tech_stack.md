@@ -26,7 +26,7 @@ Build Toolchain Notes:
 - Flutter 3.44.1 stable로 업그레이드해 Web/iOS 빌드 호환성을 확보한다.
 - Flutter 3.44.1의 Android 템플릿은 declarative Gradle plugin 적용 방식이 필요하므로 Android Gradle Plugin 9.0.1, Gradle 9.1.0, Kotlin Gradle Plugin 2.3.20으로 갱신한다.
 - Android 빌드는 현재 Java 17로 실행한다. 백엔드의 Java 21 기준과 다르며, 백엔드는 Spring Boot 3.5.x 실행 런타임이고 프론트 Android 빌드 JDK는 Flutter/Android Gradle Plugin 호환성 기준으로 관리한다.
-- Android minSdkVersion은 Kakao Maps Android SDK v2 요구사항 때문에 23으로 설정한다.
+- Android minSdkVersion은 `health` 13.3.1 요구사항에 맞춰 26(Android 8.0)으로 설정한다. Kakao Maps Android SDK v2 요구사항도 함께 충족한다.
 - Android는 Firebase 계열 의존성으로 64K method limit을 넘기므로 multidex를 사용한다.
 - iOS minimum deployment target은 Firebase 최신 패키지 요구사항 때문에 15.0으로 설정한다.
 - Kakao Maps Android SDK 최신 문서 버전은 2.13.2이지만, 현재 Android 에뮬레이터 검증 환경에서는 Kakao Maps 네이티브 라이브러리의 ARM64 의존성 때문에 실제 Android 기기에서 최종 확인한다.
