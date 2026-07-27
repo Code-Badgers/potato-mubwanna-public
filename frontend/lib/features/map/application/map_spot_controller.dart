@@ -6,6 +6,7 @@ import '../../auth/application/auth_controller.dart';
 import '../data/map_spot_repository.dart';
 import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
+import '../domain/spot_recommendation.dart';
 
 final mapSpotRepositoryProvider = Provider<MapSpotRepository>(
   (ref) => MapSpotRepository(dio: ref.watch(dioClientProvider).dio),
@@ -13,6 +14,12 @@ final mapSpotRepositoryProvider = Provider<MapSpotRepository>(
 
 final mapSpotsProvider = FutureProvider<List<MapSpot>>(
   (ref) => ref.watch(mapSpotRepositoryProvider).fetchSpots(),
+);
+
+final spotRecommendationsProvider =
+    FutureProvider.autoDispose.family<List<SpotRecommendation>, String>(
+  (ref, spotId) =>
+      ref.watch(mapSpotRepositoryProvider).fetchSpotRecommendations(spotId),
 );
 
 final favoriteSpotRouteProvider = FutureProvider<FavoriteSpotRoute>(

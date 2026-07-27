@@ -6,6 +6,7 @@ import 'package:potato_mubwanna/features/map/application/map_spot_controller.dar
 import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
 import 'package:potato_mubwanna/features/map/domain/favorite_spot_route.dart';
 import 'package:potato_mubwanna/features/map/domain/map_spot.dart';
+import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
 
 void main() {
@@ -156,6 +157,131 @@ void main() {
     expect(find.text('감자 체험장'), findsOneWidget);
     expect(find.text('감자 카페'), findsOneWidget);
   });
+
+  testWidgets('highlights visit recommendations and selects their markers', (
+    tester,
+  ) async {
+    var renderedSpots = <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          spotRecommendationsProvider(
+            '1',
+          ).overrideWith((ref) async => _recommendations),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            recommendationSourceSpotId: '1',
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return Stack(
+                children: [
+                  for (var index = 0; index < spots.length; index++)
+                    Positioned(
+                      left: 12 + (index * 52),
+                      top: 190,
+                      child: TextButton(
+                        key: ValueKey(
+                          'recommendation-marker-${spots[index].id}',
+                        ),
+                        onPressed: () => onSpotSelected(spots[index].id),
+                        child: Text('마커 ${spots[index].id}'),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('다음 추천 2곳 · 보라색 핀'), findsOneWidget);
+    expect(find.text('방문 후 추천 장소'), findsOneWidget);
+    expect(find.text('감자 카페'), findsOneWidget);
+    expect(
+      renderedSpots
+          .where((spot) => spot.isRecommended)
+          .map((spot) => spot.id)
+          .toSet(),
+      {'2', '5'},
+    );
+
+    await tester.tap(find.byKey(const ValueKey('recommendation-marker-5')));
+    await tester.pump();
+
+    expect(find.text('감자 박물관'), findsOneWidget);
+    expect(find.text('감자 카페'), findsNothing);
+  });
+
+  testWidgets('keeps the map usable when recommendations are empty', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          spotRecommendationsProvider(
+            '1',
+          ).overrideWith((ref) async => const <SpotRecommendation>[]),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            recommendationSourceSpotId: '1',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('추천 장소를 찾지 못했어요'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsOneWidget);
+    expect(find.text('상세보기'), findsOneWidget);
+  });
+
+  testWidgets('keeps the map usable when recommendations fail', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          spotRecommendationsProvider('1').overrideWith(
+            (ref) => Future<List<SpotRecommendation>>.error(
+              Exception('recommendation error'),
+            ),
+          ),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            recommendationSourceSpotId: '1',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('추천 장소를 불러오지 못했어요'), findsOneWidget);
+    expect(find.text('다시 시도'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsOneWidget);
+  });
 }
 
 FavoriteSpotController _favoriteController([Set<String> spotIds = const {}]) {
@@ -212,6 +338,31 @@ const _route = FavoriteSpotRoute(
     FavoriteSpotRoutePoint(latitude: 37.39, longitude: 128.67),
   ],
 );
+
+const _recommendations = [
+  SpotRecommendation(
+    spotId: '2',
+    name: '감자 카페',
+    category: 'POTATO_CAFE',
+    latitude: 37.39,
+    longitude: 128.67,
+    address: '강원 정선군',
+    cityName: '정선',
+    imageUrl: null,
+    externalRank: 1,
+  ),
+  SpotRecommendation(
+    spotId: '5',
+    name: '감자 박물관',
+    category: 'POTATO_TOUR',
+    latitude: 37.42,
+    longitude: 128.70,
+    address: '강원 정선군',
+    cityName: '정선',
+    imageUrl: null,
+    externalRank: 2,
+  ),
+];
 
 const _spots = [
   MapSpot(

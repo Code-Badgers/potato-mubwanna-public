@@ -4,6 +4,7 @@ import '../../../core/constants/api_paths.dart';
 import '../domain/favorite_spot.dart';
 import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
+import '../domain/spot_recommendation.dart';
 
 class MapSpotRepository {
   const MapSpotRepository({required Dio dio}) : _dio = dio;
@@ -25,9 +26,34 @@ class MapSpotRepository {
         .toList();
   }
 
+  Future<List<SpotRecommendation>> fetchSpotRecommendations(
+    String spotId,
+  ) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiPaths.spotRecommendations(spotId),
+    );
+    final data = response.data?['data'];
+    if (data is! List) {
+      return const [];
+    }
+
+    final recommendations = data
+        .whereType<Map<String, dynamic>>()
+        .map(SpotRecommendation.fromJson)
+        .where(
+          (recommendation) =>
+              recommendation.spotId.isNotEmpty &&
+              recommendation.hasValidCoordinates,
+        )
+        .toList();
+    recommendations.sort((a, b) => a.externalRank.compareTo(b.externalRank));
+    return recommendations;
+  }
+
   Future<List<FavoriteSpot>> fetchFavoriteSpots() async {
-    final response =
-        await _dio.get<Map<String, dynamic>>(ApiPaths.favoriteSpots);
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiPaths.favoriteSpots,
+    );
     final body = response.data;
     final data = body?['data'];
     if (data is! List) {

@@ -351,7 +351,12 @@ class _VisitResultSheet extends StatelessWidget {
               key: const ValueKey('visit-result-next-route'),
               onPressed: () {
                 Navigator.of(context).pop();
-                context.go('/main/map');
+                context.go(
+                  Uri(
+                    path: '/main/map',
+                    queryParameters: {'recommendFrom': result.spotId},
+                  ).toString(),
+                );
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF367A50),
