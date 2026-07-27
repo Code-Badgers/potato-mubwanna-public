@@ -30,8 +30,8 @@ final spotDetailProvider =
 );
 
 final visitVerificationControllerProvider = StateNotifierProvider.autoDispose
-    .family<VisitVerificationController,
-        AsyncValue<VisitVerificationResult?>, SpotDetail>(
+    .family<VisitVerificationController, AsyncValue<VisitVerificationResult?>,
+        SpotDetail>(
   (ref, spot) => VisitVerificationController(
     spot: spot,
     repository: ref.watch(visitVerificationRepositoryProvider),
@@ -80,6 +80,9 @@ class VisitVerificationController
       _onSuccess();
       return result;
     } on ApiException catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      return null;
+    } on LocationFailure catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       return null;
     } catch (error, stackTrace) {

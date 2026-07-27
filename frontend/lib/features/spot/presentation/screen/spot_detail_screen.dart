@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../audio/application/audio_guide_controller.dart';
 import '../../../audio/application/audio_playback_controller.dart';
@@ -232,9 +233,37 @@ class _VisitVerificationBar extends ConsumerWidget {
     }
 
     final error = ref.read(visitVerificationControllerProvider(spot)).error;
+    if (error is LocationFailure) {
+      _showLocationFailureSnackBar(context, ref, error);
+      return;
+    }
+
     final message = error is ApiException ? error.message : '방문 인증에 실패했습니다.';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showLocationFailureSnackBar(
+    BuildContext context,
+    WidgetRef ref,
+    LocationFailure error,
+  ) {
+    final settingsTarget = error.settingsTarget;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.message),
+        action: settingsTarget == null
+            ? null
+            : SnackBarAction(
+                label: error.actionLabel ?? '설정',
+                onPressed: () {
+                  ref.read(locationServiceProvider).openSettings(
+                        settingsTarget,
+                      );
+                },
+              ),
+      ),
     );
   }
 }
