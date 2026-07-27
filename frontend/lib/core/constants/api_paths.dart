@@ -13,6 +13,7 @@ class ApiPaths {
   static const favoriteSpots = '/me/favorite-spots';
   static const favoriteSpotRoute = '/me/favorite-spots/route';
   static const nearbySpots = '/spots/nearby';
+  static const visitVerify = '/visits/verify';
   static const stampVerify = '/stamps/verify';
   static const myStamps = '/stamps/me';
   static const stampRewardCheck = '/stamps/rewards/check';
