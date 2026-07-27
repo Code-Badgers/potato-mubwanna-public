@@ -7,6 +7,7 @@ class ApiPaths {
   static const authLogout = '/auth/logout';
   static const myProfile = '/users/me';
   static const myActivitySummary = '/users/me/activity-summary';
+  static const myVisits = '/users/me/visits';
   static const spots = '/spots';
   static String spotDetail(String spotId) => '/spots/$spotId';
   static String spotRecommendations(String spotId) =>
