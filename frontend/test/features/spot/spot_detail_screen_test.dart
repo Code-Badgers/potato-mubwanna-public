@@ -192,6 +192,82 @@ void main() {
     expect(find.text('이미 방문 인증한 감자 스팟입니다.'), findsOneWidget);
     expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
   });
+
+  testWidgets('shows app settings action when location permission is blocked',
+      (tester) async {
+    await _setMobileViewport(tester);
+    final locationService = _FakeLocationService(
+      error: const LocationFailure(
+        type: LocationFailureType.permissionDeniedForever,
+        message: '위치 권한이 차단되어 있습니다. 앱 설정에서 위치 권한을 허용해주세요.',
+        settingsTarget: LocationSettingsTarget.app,
+        actionLabel: '앱 설정',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: _FakeVisitVerificationRepository(
+          result: _visitResult,
+        ),
+        locationService: locationService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('위치 권한이 차단되어 있습니다. 앱 설정에서 위치 권한을 허용해주세요.'),
+      findsOneWidget,
+    );
+    expect(find.text('앱 설정'), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
+
+    await tester.tap(find.text('앱 설정'));
+    await tester.pump();
+
+    expect(locationService.openedTarget, LocationSettingsTarget.app);
+  });
+
+  testWidgets('shows location settings action when device location is off',
+      (tester) async {
+    await _setMobileViewport(tester);
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: _FakeVisitVerificationRepository(
+          result: _visitResult,
+        ),
+        locationService: _FakeLocationService(
+          error: const LocationFailure(
+            type: LocationFailureType.serviceDisabled,
+            message: '휴대폰 위치 서비스가 꺼져 있습니다. 위치 서비스를 켠 뒤 다시 인증해주세요.',
+            settingsTarget: LocationSettingsTarget.location,
+            actionLabel: '위치 설정',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('휴대폰 위치 서비스가 꺼져 있습니다. 위치 서비스를 켠 뒤 다시 인증해주세요.'),
+      findsOneWidget,
+    );
+    expect(find.text('위치 설정'), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
+  });
 }
 
 Widget _app({
@@ -296,8 +372,17 @@ class _FakeVisitVerificationRepository extends VisitVerificationRepository {
 }
 
 class _FakeLocationService extends LocationService {
+  _FakeLocationService({this.error});
+
+  final Object? error;
+  LocationSettingsTarget? openedTarget;
+
   @override
   Future<Position> getCurrentPosition() async {
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
     return Position(
       longitude: 128.6609,
       latitude: 37.3801,
@@ -310,6 +395,12 @@ class _FakeLocationService extends LocationService {
       speed: 0,
       speedAccuracy: 0,
     );
+  }
+
+  @override
+  Future<bool> openSettings(LocationSettingsTarget target) async {
+    openedTarget = target;
+    return true;
   }
 }
 
