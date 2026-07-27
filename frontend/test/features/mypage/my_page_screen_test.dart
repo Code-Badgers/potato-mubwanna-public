@@ -20,6 +20,8 @@ import 'package:potato_mubwanna/features/mypage/domain/user_activity_summary.dar
 import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
+import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
+import 'package:potato_mubwanna/features/travel_record/domain/travel_record.dart';
 import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
 
 void main() {
@@ -390,7 +392,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _myPageProviderOverrides(),
+        overrides: [
+          ..._myPageProviderOverrides(),
+          travelRecordsProvider.overrideWith(
+            (ref) async => const <TravelRecord>[],
+          ),
+        ],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
@@ -399,7 +406,7 @@ void main() {
     await tester.tap(find.text('여행 기록'));
     await tester.pumpAndSettle();
 
-    expect(find.text('여행 기록 연동을 준비하고 있어요.'), findsOneWidget);
+    expect(find.text('아직 여행 기록이 없어요'), findsOneWidget);
     expect(router.canPop(), isTrue);
 
     await tester.tap(find.byTooltip('뒤로 가기'));
