@@ -10,6 +10,10 @@ import static org.mockito.Mockito.when;
 import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.potato.api.PotatoAcquisitionResponse;
+import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService;
+import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
+import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
@@ -33,6 +37,7 @@ class VisitVerificationServiceTest {
     private TouristSpotRepository touristSpotRepository;
     private UserVisitRepository userVisitRepository;
     private VisitStampIssuanceService visitStampIssuanceService;
+    private VisitPotatoAcquisitionService visitPotatoAcquisitionService;
     private VisitVerificationService visitVerificationService;
 
     @BeforeEach
@@ -41,12 +46,14 @@ class VisitVerificationServiceTest {
         touristSpotRepository = mock(TouristSpotRepository.class);
         userVisitRepository = mock(UserVisitRepository.class);
         visitStampIssuanceService = mock(VisitStampIssuanceService.class);
+        visitPotatoAcquisitionService = mock(VisitPotatoAcquisitionService.class);
         visitVerificationService = new VisitVerificationService(
             userRepository,
             touristSpotRepository,
             userVisitRepository,
             new VisitDistancePolicy(),
             visitStampIssuanceService,
+            visitPotatoAcquisitionService,
             Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -59,6 +66,18 @@ class VisitVerificationServiceTest {
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
         when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
         when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
+        when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
+            .thenReturn(new PotatoAcquisitionResult(
+                true,
+                new PotatoAcquisitionResponse(
+                    3L,
+                    "POTATO_GOLDEN_GANGWON",
+                    "황금감자",
+                    "강원특별자치도",
+                    PotatoRarity.EPIC,
+                    false
+                )
+            ));
 
         VisitVerifyResponse result = visitVerificationService.verifyVisit(
             1L,
@@ -74,10 +93,13 @@ class VisitVerificationServiceTest {
         assertThat(result.distanceMeters()).isEqualByComparingTo("0.00");
         assertThat(result.verificationRadiusMeter()).isEqualTo(100);
         assertThat(result.stampIssued()).isTrue();
-        assertThat(result.potatoAcquired()).isFalse();
+        assertThat(result.potatoAcquired()).isTrue();
+        assertThat(result.acquiredPotato().name()).isEqualTo("황금감자");
+        assertThat(result.acquiredPotato().alreadyOwned()).isFalse();
         assertThat(result.missionAvailable()).isFalse();
         verify(userVisitRepository).save(any(UserVisit.class));
         verify(visitStampIssuanceService).issueStamp(any(), any(), any());
+        verify(visitPotatoAcquisitionService).acquireForVisit(any(), any(), any());
     }
 
     @Test

@@ -433,8 +433,16 @@ Response:
     "verified": true,
     "distanceMeters": 23.5,
     "verificationRadiusMeter": 100,
-    "stampIssued": false,
-    "potatoAcquired": false,
+    "stampIssued": true,
+    "potatoAcquired": true,
+    "acquiredPotato": {
+      "potatoId": 3,
+      "code": "POTATO_GOLDEN_GANGWON",
+      "name": "황금감자",
+      "region": "강원특별자치도",
+      "rarity": "EPIC",
+      "alreadyOwned": false
+    },
     "missionAvailable": false
   }
 }

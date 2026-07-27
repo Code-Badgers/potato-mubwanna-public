@@ -2,6 +2,8 @@ package com.gamjamubwatna.visit.application;
 
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService;
+import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.stamp.application.VisitStampIssuanceService;
@@ -24,6 +26,7 @@ public class VisitVerificationService {
     private final UserVisitRepository userVisitRepository;
     private final VisitDistancePolicy visitDistancePolicy;
     private final VisitStampIssuanceService visitStampIssuanceService;
+    private final VisitPotatoAcquisitionService visitPotatoAcquisitionService;
     private final Clock clock;
 
     @Autowired
@@ -32,7 +35,8 @@ public class VisitVerificationService {
         TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
-        VisitStampIssuanceService visitStampIssuanceService
+        VisitStampIssuanceService visitStampIssuanceService,
+        VisitPotatoAcquisitionService visitPotatoAcquisitionService
     ) {
         this(
             userRepository,
@@ -40,6 +44,7 @@ public class VisitVerificationService {
             userVisitRepository,
             visitDistancePolicy,
             visitStampIssuanceService,
+            visitPotatoAcquisitionService,
             Clock.systemUTC()
         );
     }
@@ -50,6 +55,7 @@ public class VisitVerificationService {
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
         VisitStampIssuanceService visitStampIssuanceService,
+        VisitPotatoAcquisitionService visitPotatoAcquisitionService,
         Clock clock
     ) {
         this.userRepository = userRepository;
@@ -57,6 +63,7 @@ public class VisitVerificationService {
         this.userVisitRepository = userVisitRepository;
         this.visitDistancePolicy = visitDistancePolicy;
         this.visitStampIssuanceService = visitStampIssuanceService;
+        this.visitPotatoAcquisitionService = visitPotatoAcquisitionService;
         this.clock = clock;
     }
 
@@ -84,6 +91,8 @@ public class VisitVerificationService {
         Instant verifiedAt = Instant.now(clock);
         userVisitRepository.save(new UserVisit(user, spot, distanceMeters, verifiedAt));
         boolean stampIssued = visitStampIssuanceService.issueStamp(user, spot, verifiedAt);
+        PotatoAcquisitionResult potatoAcquisition =
+            visitPotatoAcquisitionService.acquireForVisit(user, spot, verifiedAt);
 
         return new VisitVerifyResponse(
             spot.getId(),
@@ -91,7 +100,8 @@ public class VisitVerificationService {
             distanceMeters,
             spot.getVerificationRadiusMeter(),
             stampIssued,
-            false,
+            potatoAcquisition.newlyAcquired(),
+            potatoAcquisition.potato(),
             false
         );
     }
