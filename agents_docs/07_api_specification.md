@@ -172,6 +172,31 @@ Response:
 GET /api/users/me/visits
 ```
 
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": [
+    {
+      "visitId": 1,
+      "spotId": 10,
+      "spotName": "정선 5일장",
+      "category": "POTATO_MARKET",
+      "cityName": "정선군",
+      "address": "강원특별자치도 정선군...",
+      "imageUrl": "https://...",
+      "visitedAt": "2026-07-27T12:00:00Z"
+    }
+  ]
+}
+```
+
+- `data`는 `visitedAt` 내림차순으로 정렬한다.
+- 방문 기록이 없으면 빈 배열을 반환한다.
+- 방문 기록은 방문 인증 시 저장된 `user_visits`를 기준으로 한다.
+
 ---
 
 ## 3. Tourist Spot / Map API
