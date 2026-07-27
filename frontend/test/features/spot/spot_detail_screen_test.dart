@@ -1,15 +1,21 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:potato_mubwanna/app/theme/app_theme.dart';
+import 'package:potato_mubwanna/core/location/location_service.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_guide_controller.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_playback_controller.dart';
 import 'package:potato_mubwanna/features/audio/data/audio_guide_repository.dart';
 import 'package:potato_mubwanna/features/audio/domain/audio_guide.dart';
 import 'package:potato_mubwanna/features/spot/application/spot_detail_controller.dart';
+import 'package:potato_mubwanna/features/spot/data/visit_verification_repository.dart';
 import 'package:potato_mubwanna/features/spot/domain/spot_detail.dart';
+import 'package:potato_mubwanna/features/spot/domain/visit_verification.dart';
 import 'package:potato_mubwanna/features/spot/presentation/screen/spot_detail_screen.dart';
 
 void main() {
@@ -33,6 +39,7 @@ void main() {
     expect(find.text('#감자전'), findsOneWidget);
     expect(find.text('정선 5일장 이야기'), findsOneWidget);
     expect(find.byKey(const ValueKey('audio-player-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-verify-button')), findsOneWidget);
 
     final playButton = find.byKey(const ValueKey('audio-play-toggle'));
     await tester.ensureVisible(playButton);
@@ -129,12 +136,70 @@ void main() {
     expect(playerCard, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('shows visit success sheet with acquired potato', (tester) async {
+    await _setMobileViewport(tester);
+    final repository = _FakeVisitVerificationRepository(result: _visitResult);
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: repository,
+        locationService: _FakeLocationService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastRequest?.spotId, '1');
+    expect(repository.lastRequest?.latitude, 37.3801);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsOneWidget);
+    expect(find.text('인증 성공'), findsOneWidget);
+    expect(find.text('지역 스탬프 획득'), findsOneWidget);
+    expect(find.text('황금감자'), findsOneWidget);
+    expect(find.text('강원특별자치도 · 희귀도 영웅'), findsOneWidget);
+    expect(find.text('도감 보기'), findsOneWidget);
+    expect(find.text('다음 장소 추천'), findsOneWidget);
+  });
+
+  testWidgets('shows backend failure message when visit verification fails',
+      (tester) async {
+    await _setMobileViewport(tester);
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: _FakeVisitVerificationRepository(
+          error: const ApiException(
+            message: '이미 방문 인증한 감자 스팟입니다.',
+            statusCode: 409,
+          ),
+        ),
+        locationService: _FakeLocationService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이미 방문 인증한 감자 스팟입니다.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
+  });
 }
 
 Widget _app({
   required _FakeAudioPlaybackEngine engine,
   required Future<SpotDetail> Function(Ref ref) spotOverride,
   required Future<AudioGuide> Function(Ref ref) audioOverride,
+  VisitVerificationRepository? visitRepository,
+  LocationService? locationService,
   TextScaler textScaler = TextScaler.noScaling,
 }) {
   return ProviderScope(
@@ -142,6 +207,10 @@ Widget _app({
       spotDetailProvider('1').overrideWith(spotOverride),
       audioGuideProvider('1').overrideWith(audioOverride),
       audioPlaybackEngineFactoryProvider.overrideWithValue(() => engine),
+      if (visitRepository != null)
+        visitVerificationRepositoryProvider.overrideWithValue(visitRepository),
+      if (locationService != null)
+        locationServiceProvider.overrideWithValue(locationService),
     ],
     child: MaterialApp(
       theme: AppTheme.light,
@@ -184,6 +253,65 @@ const _guide = AudioGuide(
   script: '정선 5일장은 오랜 역사를 지닌 전통시장입니다.',
   characterScript: '점순이: 정선 5일장 이야기를 들어봐요!',
 );
+
+const _visitResult = VisitVerificationResult(
+  spotId: '1',
+  verified: true,
+  distanceMeters: 23.5,
+  verificationRadiusMeter: 100,
+  stampIssued: true,
+  potatoAcquired: true,
+  acquiredPotato: VisitAcquiredPotato(
+    id: '3',
+    code: 'POTATO_GOLDEN_GANGWON',
+    name: '황금감자',
+    region: '강원특별자치도',
+    rarity: 'EPIC',
+    alreadyOwned: false,
+  ),
+  missionAvailable: false,
+);
+
+class _FakeVisitVerificationRepository extends VisitVerificationRepository {
+  _FakeVisitVerificationRepository({
+    this.result,
+    this.error,
+  }) : super(dio: Dio());
+
+  final VisitVerificationResult? result;
+  final Object? error;
+  VisitVerificationRequest? lastRequest;
+
+  @override
+  Future<VisitVerificationResult> verifyVisit(
+    VisitVerificationRequest request,
+  ) async {
+    lastRequest = request;
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return result!;
+  }
+}
+
+class _FakeLocationService extends LocationService {
+  @override
+  Future<Position> getCurrentPosition() async {
+    return Position(
+      longitude: 128.6609,
+      latitude: 37.3801,
+      timestamp: DateTime.parse('2026-07-27T00:00:00Z'),
+      accuracy: 4,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
+  }
+}
 
 class _FakeAudioPlaybackEngine implements AudioPlaybackEngine {
   final _positionController = StreamController<Duration>.broadcast();
