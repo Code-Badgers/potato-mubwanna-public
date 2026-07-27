@@ -50,7 +50,9 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: '/main/map',
-          builder: (context, state) => const MapScreen(),
+          builder: (context, state) => MapScreen(
+            recommendationSourceSpotId: state.queryParameters['recommendFrom'],
+          ),
         ),
         GoRoute(
           path: '/main/stamps',

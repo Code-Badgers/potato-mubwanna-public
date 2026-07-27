@@ -9,6 +9,8 @@ class ApiPaths {
   static const myActivitySummary = '/users/me/activity-summary';
   static const spots = '/spots';
   static String spotDetail(String spotId) => '/spots/$spotId';
+  static String spotRecommendations(String spotId) =>
+      '/spots/$spotId/recommendations';
   static String spotAudioGuide(String spotId) => '/audio-guides/spots/$spotId';
   static const favoriteSpots = '/me/favorite-spots';
   static const favoriteSpotRoute = '/me/favorite-spots/route';

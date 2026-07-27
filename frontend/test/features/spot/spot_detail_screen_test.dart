@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:potato_mubwanna/app/theme/app_theme.dart';
 import 'package:potato_mubwanna/core/location/location_service.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
@@ -164,6 +165,55 @@ void main() {
     expect(find.text('강원특별자치도 · 희귀도 영웅'), findsOneWidget);
     expect(find.text('도감 보기'), findsOneWidget);
     expect(find.text('다음 장소 추천'), findsOneWidget);
+  });
+
+  testWidgets('passes the verified spot to the recommendation map', (
+    tester,
+  ) async {
+    await _setMobileViewport(tester);
+    final router = GoRouter(
+      initialLocation: '/spots/1',
+      routes: [
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (context, state) => const SpotDetailScreen(spotId: '1'),
+        ),
+        GoRoute(
+          path: '/main/map',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              '추천 기준 ${state.queryParameters['recommendFrom']}',
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider('1').overrideWith((ref) async => _spot),
+          audioGuideProvider('1').overrideWith((ref) async => _guide),
+          audioPlaybackEngineFactoryProvider.overrideWithValue(
+            () => _FakeAudioPlaybackEngine(),
+          ),
+          visitVerificationRepositoryProvider.overrideWithValue(
+            _FakeVisitVerificationRepository(result: _visitResult),
+          ),
+          locationServiceProvider.overrideWithValue(_FakeLocationService()),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-result-next-route')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('추천 기준 1'), findsOneWidget);
   });
 
   testWidgets('shows backend failure message when visit verification fails',

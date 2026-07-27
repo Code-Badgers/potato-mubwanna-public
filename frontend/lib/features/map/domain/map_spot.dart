@@ -9,6 +9,7 @@ class MapSpot {
     required this.cityName,
     required this.congestionLevel,
     required this.stampEnabled,
+    this.isRecommended = false,
   });
 
   factory MapSpot.fromJson(Map<String, dynamic> json) {
@@ -34,6 +35,22 @@ class MapSpot {
   final String cityName;
   final String congestionLevel;
   final bool stampEnabled;
+  final bool isRecommended;
+
+  MapSpot asRecommended() {
+    return MapSpot(
+      id: id,
+      name: name,
+      category: category,
+      latitude: latitude,
+      longitude: longitude,
+      address: address,
+      cityName: cityName,
+      congestionLevel: congestionLevel,
+      stampEnabled: stampEnabled,
+      isRecommended: true,
+    );
+  }
 
   String get categoryLabel {
     return switch (category) {
@@ -71,6 +88,9 @@ class MapSpot {
   }
 
   String get markerColorHex {
+    if (isRecommended) {
+      return '#7A5AF8';
+    }
     return switch (category) {
       'POTATO_RESTAURANT' => '#FFB84D',
       'POTATO_CAFE' => '#D98CFF',

@@ -38,7 +38,11 @@ class _KakaoMapViewState extends State<KakaoMapView> {
             'latitude': spot.latitude,
             'longitude': spot.longitude,
             'rare': spot.isRare,
-            'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
+            'markerColor': spot.isRecommended
+                ? spot.markerColorHex
+                : spot.isRare
+                    ? '#F6C23E'
+                    : spot.markerColorHex,
           })
       .toList();
 
