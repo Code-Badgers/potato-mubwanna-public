@@ -37,6 +37,25 @@ class StampRepository {
     return StampBook(progress: progress, nextReward: reward);
   }
 
+  Future<List<StampNextTarget>> fetchNextTargets() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiPaths.stampNextTargets,
+    );
+    final apiResponse = ApiResponse<List<StampNextTarget>>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      (json) {
+        final values = json as List<dynamic>? ?? const [];
+        return values
+            .whereType<Map<String, dynamic>>()
+            .map(StampNextTarget.fromJson)
+            .where((target) => target.spotId > 0)
+            .toList(growable: false);
+      },
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
   Future<StampRewardClaimResult> claimReward(
     StampRewardClaimRequest request,
   ) async {
@@ -57,8 +76,9 @@ class StampRepository {
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(
-        message:
-            response.message.isEmpty ? '랠리북을 불러오지 못했습니다.' : response.message,
+        message: response.message.isEmpty
+            ? '랠리북을 불러오지 못했습니다.'
+            : response.message,
         code: response.code,
         statusCode: statusCode,
       );

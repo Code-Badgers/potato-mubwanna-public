@@ -9,28 +9,41 @@ final stampRepositoryProvider = Provider<StampRepository>(
   (ref) => StampRepository(dio: ref.watch(dioClientProvider).dio),
 );
 
-final stampBookProvider = FutureProvider.autoDispose<StampBook?>(
-  (ref) async {
-    final authStatus = ref.watch(
-      authControllerProvider.select((state) => state.status),
+final stampBookProvider = FutureProvider.autoDispose<StampBook?>((ref) async {
+  final authStatus = ref.watch(
+    authControllerProvider.select((state) => state.status),
+  );
+  if (authStatus != AuthStatus.authenticated) {
+    return null;
+  }
+
+  return ref.watch(stampRepositoryProvider).fetchStampBook();
+});
+
+final stampNextTargetsProvider =
+    FutureProvider.autoDispose<List<StampNextTarget>?>((ref) async {
+      final authStatus = ref.watch(
+        authControllerProvider.select((state) => state.status),
+      );
+      if (authStatus != AuthStatus.authenticated) {
+        return null;
+      }
+
+      return ref.watch(stampRepositoryProvider).fetchNextTargets();
+    });
+
+final stampRewardClaimProvider =
+    StateNotifierProvider.autoDispose<
+      StampRewardClaimController,
+      AsyncValue<StampRewardClaimResult?>
+    >(
+      (ref) => StampRewardClaimController(
+        ref.watch(stampRepositoryProvider),
+        onStampBookRefresh: () => ref.invalidate(stampBookProvider),
+        onCouponListRefresh: () => ref.invalidate(couponListProvider),
+        acquireKeepAlive: ref.keepAlive,
+      ),
     );
-    if (authStatus != AuthStatus.authenticated) {
-      return null;
-    }
-
-    return ref.watch(stampRepositoryProvider).fetchStampBook();
-  },
-);
-
-final stampRewardClaimProvider = StateNotifierProvider.autoDispose<
-    StampRewardClaimController, AsyncValue<StampRewardClaimResult?>>(
-  (ref) => StampRewardClaimController(
-    ref.watch(stampRepositoryProvider),
-    onStampBookRefresh: () => ref.invalidate(stampBookProvider),
-    onCouponListRefresh: () => ref.invalidate(couponListProvider),
-    acquireKeepAlive: ref.keepAlive,
-  ),
-);
 
 class StampRewardClaimController
     extends StateNotifier<AsyncValue<StampRewardClaimResult?>> {
@@ -39,10 +52,10 @@ class StampRewardClaimController
     required void Function() onStampBookRefresh,
     required void Function() onCouponListRefresh,
     KeepAliveLink Function()? acquireKeepAlive,
-  })  : _onStampBookRefresh = onStampBookRefresh,
-        _onCouponListRefresh = onCouponListRefresh,
-        _acquireKeepAlive = acquireKeepAlive,
-        super(const AsyncValue.data(null));
+  }) : _onStampBookRefresh = onStampBookRefresh,
+       _onCouponListRefresh = onCouponListRefresh,
+       _acquireKeepAlive = acquireKeepAlive,
+       super(const AsyncValue.data(null));
 
   final StampRepository _repository;
   final void Function() _onStampBookRefresh;

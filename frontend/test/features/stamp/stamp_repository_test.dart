@@ -41,7 +41,9 @@ void main() {
     final result = await StampRepository(dio: dio).fetchStampBook();
 
     expect(
-        requestedPaths, containsAll(['/stamps/me', '/stamps/rewards/check']));
+      requestedPaths,
+      containsAll(['/stamps/me', '/stamps/rewards/check']),
+    );
     expect(result.progress.totalCount, 18);
     expect(result.progress.acquiredCount, 8);
     expect(result.progress.stamps.first.cityName, '강릉시');
@@ -57,39 +59,69 @@ void main() {
     expect(result.nextReward.claimableTargetCount, 6);
   });
 
-  test('claims the lowest available reward and maps the issued coupon',
-      () async {
+  test('fetches and maps the next stamp targets', () async {
     String? requestedPath;
-    Object? requestData;
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
       ..interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
             requestedPath = options.path;
-            requestData = options.data;
             handler.resolve(
               Response<Map<String, Object?>>(
                 requestOptions: options,
                 statusCode: 200,
-                data: _claimResponse,
+                data: _nextTargetsResponse,
               ),
             );
           },
         ),
       );
 
-    final result = await StampRepository(dio: dio).claimReward(
-      const StampRewardClaimRequest(targetCount: 6),
-    );
+    final result = await StampRepository(dio: dio).fetchNextTargets();
 
-    expect(requestedPath, '/stamps/rewards/claim');
-    expect(requestData, {'targetCount': 6});
-    expect(result.targetCount, 6);
-    expect(result.rewardHistoryId, 10);
-    expect(result.userCouponId, 21);
-    expect(result.couponName, '강원 감자 제휴점 3,000원 할인권');
-    expect(result.expiresAt, DateTime.parse('2026-08-16T00:00:00Z'));
+    expect(requestedPath, '/stamps/me/next-targets');
+    expect(result, hasLength(2));
+    expect(result.first.spotId, 101);
+    expect(result.first.spotName, '정선 5일장');
+    expect(result.first.cityName, '정선군');
+    expect(result.first.categoryLabel, '시장');
   });
+
+  test(
+    'claims the lowest available reward and maps the issued coupon',
+    () async {
+      String? requestedPath;
+      Object? requestData;
+      final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              requestedPath = options.path;
+              requestData = options.data;
+              handler.resolve(
+                Response<Map<String, Object?>>(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: _claimResponse,
+                ),
+              );
+            },
+          ),
+        );
+
+      final result = await StampRepository(
+        dio: dio,
+      ).claimReward(const StampRewardClaimRequest(targetCount: 6));
+
+      expect(requestedPath, '/stamps/rewards/claim');
+      expect(requestData, {'targetCount': 6});
+      expect(result.targetCount, 6);
+      expect(result.rewardHistoryId, 10);
+      expect(result.userCouponId, 21);
+      expect(result.couponName, '강원 감자 제휴점 3,000원 할인권');
+      expect(result.expiresAt, DateTime.parse('2026-08-16T00:00:00Z'));
+    },
+  );
 
   test('maps reward claim API errors to ApiException', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
@@ -116,17 +148,13 @@ void main() {
       );
 
     expect(
-      () => StampRepository(dio: dio).claimReward(
-        const StampRewardClaimRequest(targetCount: 6),
-      ),
+      () => StampRepository(
+        dio: dio,
+      ).claimReward(const StampRewardClaimRequest(targetCount: 6)),
       throwsA(
         isA<ApiException>()
             .having((error) => error.statusCode, 'statusCode', 409)
-            .having(
-              (error) => error.message,
-              'message',
-              '이미 수령한 스탬프 보상입니다.',
-            ),
+            .having((error) => error.message, 'message', '이미 수령한 스탬프 보상입니다.'),
       ),
     );
   });
@@ -202,6 +230,29 @@ const _rewardResponse = <String, Object?>{
     'claimable': true,
     'claimableTargetCount': 6,
   },
+};
+
+const _nextTargetsResponse = <String, Object?>{
+  'success': true,
+  'message': '요청이 성공했습니다.',
+  'data': [
+    {
+      'spotId': 101,
+      'spotName': '정선 5일장',
+      'cityName': '정선군',
+      'category': 'POTATO_MARKET',
+      'address': '강원특별자치도 정선군',
+      'imageUrl': null,
+    },
+    {
+      'spotId': 102,
+      'spotName': '평창 감자 체험장',
+      'cityName': '평창군',
+      'category': 'POTATO_EXPERIENCE',
+      'address': '강원특별자치도 평창군',
+      'imageUrl': null,
+    },
+  ],
 };
 
 const _claimResponse = <String, Object?>{

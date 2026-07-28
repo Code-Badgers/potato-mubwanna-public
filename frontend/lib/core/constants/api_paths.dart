@@ -19,6 +19,7 @@ class ApiPaths {
   static const visitVerify = '/visits/verify';
   static const stampVerify = '/stamps/verify';
   static const myStamps = '/stamps/me';
+  static const stampNextTargets = '/stamps/me/next-targets';
   static const stampRewardCheck = '/stamps/rewards/check';
   static const stampRewardClaim = '/stamps/rewards/claim';
   static const missions = '/missions';

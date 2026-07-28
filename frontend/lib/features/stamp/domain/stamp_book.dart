@@ -1,8 +1,5 @@
 class StampBook {
-  const StampBook({
-    required this.progress,
-    required this.nextReward,
-  });
+  const StampBook({required this.progress, required this.nextReward});
 
   final StampProgress progress;
   final NextStampReward nextReward;
@@ -63,6 +60,47 @@ class RallybookStamp {
       acquiredAt: acquiredAtValue == null || acquiredAtValue.isEmpty
           ? null
           : DateTime.parse(acquiredAtValue),
+    );
+  }
+}
+
+class StampNextTarget {
+  const StampNextTarget({
+    required this.spotId,
+    required this.spotName,
+    required this.cityName,
+    required this.category,
+    required this.address,
+    required this.imageUrl,
+  });
+
+  final int spotId;
+  final String spotName;
+  final String cityName;
+  final String category;
+  final String address;
+  final String? imageUrl;
+
+  String get categoryLabel => switch (category) {
+    'POTATO_TOUR' => '관광',
+    'POTATO_EXPERIENCE' => '체험',
+    'POTATO_RESTAURANT' => '맛집',
+    'POTATO_CAFE' => '카페',
+    'POTATO_SNACK' => '간식',
+    'POTATO_MARKET' => '시장',
+    'POTATO_BREWERY' => '바 & 페어링',
+    'POTATO_SHOP' => '쇼핑',
+    _ => '감자 스팟',
+  };
+
+  static StampNextTarget fromJson(Map<String, dynamic> json) {
+    return StampNextTarget(
+      spotId: (json['spotId'] as num?)?.toInt() ?? 0,
+      spotName: json['spotName'] as String? ?? '',
+      cityName: json['cityName'] as String? ?? '',
+      category: json['category'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String?,
     );
   }
 }
