@@ -7,12 +7,17 @@ import static org.mockito.Mockito.when;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
+import com.gamjamubwatna.spot.domain.SpotCategory;
+import com.gamjamubwatna.spot.domain.TouristSpot;
+import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
+import com.gamjamubwatna.stamp.api.StampNextTargetResponse;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
 import com.gamjamubwatna.stamp.domain.Stamp;
 import com.gamjamubwatna.stamp.domain.StampRepository;
 import com.gamjamubwatna.stamp.domain.UserStamp;
 import com.gamjamubwatna.stamp.domain.UserStampRepository;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -41,6 +46,9 @@ class StampQueryServiceTest {
     @Mock
     private RewardHistoryRepository rewardHistoryRepository;
 
+    @Mock
+    private TouristSpotRepository touristSpotRepository;
+
     private StampQueryService stampQueryService;
 
     @BeforeEach
@@ -49,7 +57,8 @@ class StampQueryServiceTest {
             stampRepository,
             userStampRepository,
             userRepository,
-            rewardHistoryRepository
+            rewardHistoryRepository,
+            touristSpotRepository
         );
     }
 
@@ -87,6 +96,36 @@ class StampQueryServiceTest {
         assertThat(result.totalCount()).isEqualTo(1);
         assertThat(result.acquiredCount()).isZero();
         assertThat(result.stamps().getFirst().acquired()).isFalse();
+    }
+
+    @Test
+    void returnsThreeOrderedTargetsFromUnacquiredCities() {
+        List<Stamp> stamps = IntStream.rangeClosed(1, 5)
+            .mapToObj(index -> stamp((long) index, "시군 " + index, "감자 " + index, index))
+            .toList();
+        UserStamp acquired = new UserStamp(null, stamps.getFirst(), null, Instant.now());
+        TouristSpot cityTwoLater = touristSpot(22L, "시군 2", "나 관광지");
+        TouristSpot cityTwoFirst = touristSpot(21L, "시군 2", "가 관광지");
+        TouristSpot cityFour = touristSpot(41L, "시군 4", "라 관광지");
+        TouristSpot cityFive = touristSpot(51L, "시군 5", "마 관광지");
+
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userStampRepository.findByUserIdWithStamp(1L)).thenReturn(List.of(acquired));
+        when(stampRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(stamps);
+        when(touristSpotRepository.findActiveStampSpots()).thenReturn(List.of(
+            cityTwoFirst,
+            cityTwoLater,
+            cityFour,
+            cityFive
+        ));
+
+        List<StampNextTargetResponse> result = stampQueryService.getNextTargets(1L);
+
+        assertThat(result).hasSize(3);
+        assertThat(result)
+            .extracting(StampNextTargetResponse::cityName)
+            .containsExactly("시군 2", "시군 4", "시군 5");
+        assertThat(result.getFirst().spotName()).isEqualTo("가 관광지");
     }
 
     @ParameterizedTest
@@ -191,5 +230,23 @@ class StampQueryServiceTest {
         );
         ReflectionTestUtils.setField(stamp, "id", id);
         return stamp;
+    }
+
+    private TouristSpot touristSpot(Long id, String cityName, String name) {
+        TouristSpot spot = new TouristSpot(
+            "content-" + id,
+            12,
+            name,
+            SpotCategory.POTATO_TOUR,
+            BigDecimal.valueOf(37.0),
+            BigDecimal.valueOf(128.0),
+            cityName + " 주소",
+            cityName,
+            "https://example.com/" + id + ".jpg",
+            null,
+            Instant.parse("2026-06-30T00:00:00Z")
+        );
+        ReflectionTestUtils.setField(spot, "id", id);
+        return spot;
     }
 }

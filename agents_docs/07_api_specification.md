@@ -497,7 +497,40 @@ Error:
 | 404 | 존재하지 않거나 비활성화된 감자 스팟 |
 | 409 | 이미 방문 인증한 감자 스팟 |
 
-### 4.3 보상 가능 여부 확인
+### 4.3 내 다음 목표 관광지 조회
+
+```http
+GET /api/stamps/me/next-targets
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": [
+    {
+      "spotId": 101,
+      "spotName": "정선 5일장",
+      "cityName": "정선군",
+      "category": "POTATO_MARKET",
+      "address": "강원특별자치도 정선군...",
+      "imageUrl": "https://..."
+    }
+  ]
+}
+```
+
+처리 규칙:
+
+- 사용자가 이미 스탬프를 획득한 시군은 제외한다.
+- 미획득 시군을 스탬프 `displayOrder` 순으로 확인한다.
+- 각 시군에서 `active=true`, `stampEnabled=true`인 관광지를 이름순으로 1곳 선택한다.
+- 최대 3곳을 반환하며, 후보가 없거나 18개 시군 랠리를 완주한 경우 빈 배열을 반환한다.
+- 인증 정보가 없거나 JWT 사용자를 찾을 수 없으면 `401 Unauthorized`를 반환한다.
+
+### 4.4 보상 가능 여부 확인
 
 ```http
 GET /api/stamps/rewards/check
@@ -526,7 +559,7 @@ Response:
 - `claimable`은 `claimableTargetCount`가 있을 때 `true`다.
 - 18개를 모두 획득해 `completed=true`여도 미수령 보상이 있으면 `claimable=true`일 수 있다.
 
-### 4.4 스탬프 보상 수령
+### 4.5 스탬프 보상 수령
 
 ```http
 POST /api/stamps/rewards/claim
