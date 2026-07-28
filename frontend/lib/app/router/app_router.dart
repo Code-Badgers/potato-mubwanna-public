@@ -17,9 +17,8 @@ import '../../features/travel_record/presentation/screen/travel_record_screen.da
 import '../../shared/widgets/navigation/main_shell.dart';
 
 final appRouter = GoRouter(
-  initialLocation: AppEnvironment.hasKakaoAuthorizationCallback
-      ? '/login'
-      : '/onboarding',
+  initialLocation:
+      AppEnvironment.hasKakaoAuthorizationCallback ? '/login' : '/onboarding',
   routes: [
     GoRoute(
       path: '/onboarding',
@@ -64,7 +63,11 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/main/missions',
-          builder: (context, state) => const MissionScreen(),
+          builder: (context, state) => MissionScreen(
+            visitEntrySpotName: state.queryParameters['entry'] == 'visit'
+                ? state.queryParameters['spotName']
+                : null,
+          ),
         ),
         GoRoute(
           path: '/main/mypage',
