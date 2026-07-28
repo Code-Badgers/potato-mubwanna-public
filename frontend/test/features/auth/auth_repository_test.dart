@@ -146,6 +146,72 @@ void main() {
     expect(await tokenStorage.readAccessToken(), isNull);
     expect(await tokenStorage.readRefreshToken(), isNull);
   });
+
+  test('withdraws account and clears local tokens after success', () async {
+    final requestedMethods = <String>[];
+    final requestedPaths = <String>[];
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestedMethods.add(options.method);
+            requestedPaths.add(options.path);
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: {
+                  'success': true,
+                  'message': '요청이 성공했습니다.',
+                  'data': null,
+                },
+              ),
+            );
+          },
+        ),
+      );
+    const tokenStorage = TokenStorage(FlutterSecureStorage());
+    await tokenStorage.saveTokens(
+      accessToken: 'jwt-access-token',
+      refreshToken: 'jwt-refresh-token',
+    );
+
+    await AuthRepository(
+      dio: dio,
+      tokenStorage: tokenStorage,
+    ).withdrawAccount();
+
+    expect(requestedMethods, ['DELETE']);
+    expect(requestedPaths, ['/users/me']);
+    expect(await tokenStorage.readAccessToken(), isNull);
+    expect(await tokenStorage.readRefreshToken(), isNull);
+  });
+
+  test('keeps local tokens when account withdrawal fails', () async {
+    final dio = _dioWithResponse(
+      data: {
+        'success': false,
+        'message': '회원 탈퇴에 실패했습니다.',
+        'data': null,
+      },
+    );
+    const tokenStorage = TokenStorage(FlutterSecureStorage());
+    await tokenStorage.saveTokens(
+      accessToken: 'jwt-access-token',
+      refreshToken: 'jwt-refresh-token',
+    );
+
+    await expectLater(
+      AuthRepository(
+        dio: dio,
+        tokenStorage: tokenStorage,
+      ).withdrawAccount(),
+      throwsA(isA<Exception>()),
+    );
+
+    expect(await tokenStorage.readAccessToken(), 'jwt-access-token');
+    expect(await tokenStorage.readRefreshToken(), 'jwt-refresh-token');
+  });
 }
 
 Dio _dioWithResponse({required Map<String, Object?> data}) {

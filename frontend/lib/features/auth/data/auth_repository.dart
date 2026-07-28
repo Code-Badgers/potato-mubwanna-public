@@ -7,8 +7,8 @@ import '../../../core/storage/token_storage.dart';
 
 class AuthRepository {
   const AuthRepository({required Dio dio, required TokenStorage tokenStorage})
-    : _dio = dio,
-      _tokenStorage = tokenStorage;
+      : _dio = dio,
+        _tokenStorage = tokenStorage;
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
@@ -45,9 +45,12 @@ class AuthRepository {
       throw const ApiException(message: '저장된 refresh token이 없습니다.');
     }
 
-    final tokens = await _requestTokens(ApiPaths.authRefresh, {
-      'refreshToken': refreshToken,
-    }, fallbackMessage: '로그인 세션 갱신에 실패했습니다.');
+    final tokens = await _requestTokens(
+        ApiPaths.authRefresh,
+        {
+          'refreshToken': refreshToken,
+        },
+        fallbackMessage: '로그인 세션 갱신에 실패했습니다.');
     await _tokenStorage.saveTokens(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -68,6 +71,22 @@ class AuthRepository {
     }
   }
 
+  Future<void> withdrawAccount() async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      ApiPaths.myProfile,
+    );
+    final data = response.data ?? const <String, dynamic>{};
+    if (data['success'] != true) {
+      throw ApiException(
+        message: data['message'] as String? ?? '회원 탈퇴에 실패했습니다.',
+        code: data['code'] as String?,
+        statusCode: response.statusCode,
+      );
+    }
+
+    await _tokenStorage.clearTokens();
+  }
+
   Future<AuthTokens> _requestTokens(
     String path,
     Map<String, String> data, {
@@ -81,9 +100,8 @@ class AuthRepository {
 
     if (!apiResponse.success || apiResponse.data == null) {
       throw ApiException(
-        message: apiResponse.message.isEmpty
-            ? fallbackMessage
-            : apiResponse.message,
+        message:
+            apiResponse.message.isEmpty ? fallbackMessage : apiResponse.message,
         code: apiResponse.code,
         statusCode: response.statusCode,
       );
