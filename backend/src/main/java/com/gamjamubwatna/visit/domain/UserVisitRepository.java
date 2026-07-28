@@ -10,4 +10,6 @@ public interface UserVisitRepository extends JpaRepository<UserVisit, Long> {
 
     @EntityGraph(attributePaths = "touristSpot")
     List<UserVisit> findByUserIdOrderByVisitedAtDesc(Long userId);
+
+    void deleteAllByUserId(Long userId);
 }

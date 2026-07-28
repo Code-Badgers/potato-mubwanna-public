@@ -1,6 +1,7 @@
 package com.gamjamubwatna.user.api;
 
 import com.gamjamubwatna.auth.api.AuthApiResponse;
+import com.gamjamubwatna.user.application.UserAccountService;
 import com.gamjamubwatna.user.application.UserActivitySummaryService;
 import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
 import com.gamjamubwatna.user.application.UserProfileService;
@@ -9,6 +10,7 @@ import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,13 +23,16 @@ public class UserController {
 
     private final UserProfileService userProfileService;
     private final UserActivitySummaryService userActivitySummaryService;
+    private final UserAccountService userAccountService;
 
     public UserController(
         UserProfileService userProfileService,
-        UserActivitySummaryService userActivitySummaryService
+        UserActivitySummaryService userActivitySummaryService,
+        UserAccountService userAccountService
     ) {
         this.userProfileService = userProfileService;
         this.userActivitySummaryService = userActivitySummaryService;
+        this.userAccountService = userAccountService;
     }
 
     // 로그인 세션을 복원한 사용자가 마이페이지에서 자신의 저장된 계정 정보를 조회한다.
@@ -52,6 +57,18 @@ public class UserController {
             return ResponseEntity.ok(AuthApiResponse.success(
                 userActivitySummaryService.getActivitySummary(userId(authentication))
             ));
+        } catch (UserProfileAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        }
+    }
+
+    // 로그인 사용자가 서비스 계정과 연결된 개인정보 및 활동 데이터를 모두 삭제한다.
+    @DeleteMapping("/me")
+    public ResponseEntity<AuthApiResponse<Void>> withdraw(Authentication authentication) {
+        try {
+            userAccountService.withdraw(userId(authentication));
+            return ResponseEntity.ok(AuthApiResponse.success(null));
         } catch (UserProfileAuthenticationException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
