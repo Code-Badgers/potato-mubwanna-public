@@ -200,11 +200,36 @@ void main() {
     final completedTop = tester.getTopLeft(find.text('스탬프 1개 획득하기')).dy;
     expect(stepTop, lessThan(completedTop));
   });
+
+  testWidgets('shows visit mission entry banner from spot verification',
+      (tester) async {
+    await _pumpMissionScreen(
+      tester,
+      visitEntrySpotName: '정선 5일장',
+    );
+
+    expect(
+      find.byKey(const ValueKey('visit-mission-entry-banner')),
+      findsOneWidget,
+    );
+    expect(find.text('방문 인증 미션이 열렸어요'), findsOneWidget);
+    expect(
+      find.text('정선 5일장에서 이어지는 미션을 확인하고 바로 도전해보세요.'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.text('정선 5일장 곤드레 퀴즈'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpMissionScreen(
   WidgetTester tester, {
   MissionRepository? repository,
+  String? visitEntrySpotName,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -213,7 +238,9 @@ Future<void> _pumpMissionScreen(
           repository ?? _FakeMissionRepository(),
         ),
       ],
-      child: const MaterialApp(home: MissionScreen()),
+      child: MaterialApp(
+        home: MissionScreen(visitEntrySpotName: visitEntrySpotName),
+      ),
     ),
   );
   await tester.pumpAndSettle();

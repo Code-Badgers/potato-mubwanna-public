@@ -228,7 +228,7 @@ class _VisitVerificationBar extends ConsumerWidget {
     }
 
     if (result != null) {
-      _showVisitResultSheet(context, result);
+      _showVisitResultSheet(context, result, spot);
       return;
     }
 
@@ -271,19 +271,27 @@ class _VisitVerificationBar extends ConsumerWidget {
 void _showVisitResultSheet(
   BuildContext context,
   VisitVerificationResult result,
+  SpotDetail spot,
 ) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => _VisitResultSheet(result: result),
+    builder: (sheetContext) => _VisitResultSheet(
+      result: result,
+      spot: spot,
+    ),
   );
 }
 
 class _VisitResultSheet extends StatelessWidget {
-  const _VisitResultSheet({required this.result});
+  const _VisitResultSheet({
+    required this.result,
+    required this.spot,
+  });
 
   final VisitVerificationResult result;
+  final SpotDetail spot;
 
   @override
   Widget build(BuildContext context) {
@@ -328,6 +336,14 @@ class _VisitResultSheet extends StatelessWidget {
               const SizedBox(height: 10),
               _PotatoAcquisitionCard(potato: potato),
             ],
+            if (result.missionAvailable) ...[
+              const SizedBox(height: 10),
+              const _VisitResultLine(
+                icon: Icons.flag_rounded,
+                label: '점순이 미션 등장',
+                color: Color(0xFF56C787),
+              ),
+            ],
             const SizedBox(height: 20),
             FilledButton.icon(
               key: const ValueKey('visit-result-potato-book'),
@@ -347,6 +363,34 @@ class _VisitResultSheet extends StatelessWidget {
               label: const Text('도감 보기'),
             ),
             const SizedBox(height: 8),
+            if (result.missionAvailable) ...[
+              FilledButton.icon(
+                key: const ValueKey('visit-result-mission-entry'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.go(
+                    Uri(
+                      path: '/main/missions',
+                      queryParameters: {
+                        'entry': 'visit',
+                        'spotName': spot.name,
+                      },
+                    ).toString(),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF6A4A2A),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: const Icon(Icons.flag_rounded),
+                label: const Text('점순이 미션 보기'),
+              ),
+              const SizedBox(height: 8),
+            ],
             OutlinedButton.icon(
               key: const ValueKey('visit-result-next-route'),
               onPressed: () {

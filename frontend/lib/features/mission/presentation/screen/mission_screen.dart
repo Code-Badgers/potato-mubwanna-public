@@ -15,7 +15,12 @@ const _missionCream = Color(0xFFFFF8EA);
 const _missionLine = Color(0xFFE8E2D8);
 
 class MissionScreen extends ConsumerStatefulWidget {
-  const MissionScreen({super.key});
+  const MissionScreen({
+    this.visitEntrySpotName,
+    super.key,
+  });
+
+  final String? visitEntrySpotName;
 
   @override
   ConsumerState<MissionScreen> createState() => _MissionScreenState();
@@ -236,6 +241,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                 totalCount: missions.length,
               ),
             ),
+            if (widget.visitEntrySpotName != null)
+              SliverToBoxAdapter(
+                child: _VisitMissionEntryBanner(
+                  spotName: widget.visitEntrySpotName!,
+                ),
+              ),
             SliverToBoxAdapter(
               child: _MissionFilterBar(
                 selectedGroup: _selectedGroup,
@@ -257,6 +268,75 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                       },
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                     ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VisitMissionEntryBanner extends StatelessWidget {
+  const _VisitMissionEntryBanner({required this.spotName});
+
+  final String spotName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Container(
+        key: const ValueKey('visit-mission-entry-banner'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF6DE),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFFFE1A3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.flag_rounded,
+                color: _missionGold,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '방문 인증 미션이 열렸어요',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$spotName에서 이어지는 미션을 확인하고 바로 도전해보세요.',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

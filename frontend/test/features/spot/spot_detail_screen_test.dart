@@ -216,6 +216,61 @@ void main() {
     expect(find.text('추천 기준 1'), findsOneWidget);
   });
 
+  testWidgets('opens mission tab from a visit result with available mission', (
+    tester,
+  ) async {
+    await _setMobileViewport(tester);
+    final router = GoRouter(
+      initialLocation: '/spots/1',
+      routes: [
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (context, state) => const SpotDetailScreen(spotId: '1'),
+        ),
+        GoRoute(
+          path: '/main/missions',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              '미션 진입 ${state.queryParameters['entry']} ${state.queryParameters['spotName']}',
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider('1').overrideWith((ref) async => _spot),
+          audioGuideProvider('1').overrideWith((ref) async => _guide),
+          audioPlaybackEngineFactoryProvider.overrideWithValue(
+            () => _FakeAudioPlaybackEngine(),
+          ),
+          visitVerificationRepositoryProvider.overrideWithValue(
+            _FakeVisitVerificationRepository(
+              result: _visitResultWithMission,
+            ),
+          ),
+          locationServiceProvider.overrideWithValue(_FakeLocationService()),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('점순이 미션 등장'), findsOneWidget);
+    expect(find.text('점순이 미션 보기'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('visit-result-mission-entry')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 진입 visit 정선 5일장'), findsOneWidget);
+  });
+
   testWidgets('shows backend failure message when visit verification fails',
       (tester) async {
     await _setMobileViewport(tester);
@@ -396,6 +451,24 @@ const _visitResult = VisitVerificationResult(
     alreadyOwned: false,
   ),
   missionAvailable: false,
+);
+
+const _visitResultWithMission = VisitVerificationResult(
+  spotId: '1',
+  verified: true,
+  distanceMeters: 23.5,
+  verificationRadiusMeter: 100,
+  stampIssued: true,
+  potatoAcquired: true,
+  acquiredPotato: VisitAcquiredPotato(
+    id: '3',
+    code: 'POTATO_GOLDEN_GANGWON',
+    name: '황금감자',
+    region: '강원특별자치도',
+    rarity: 'EPIC',
+    alreadyOwned: false,
+  ),
+  missionAvailable: true,
 );
 
 class _FakeVisitVerificationRepository extends VisitVerificationRepository {
