@@ -7,6 +7,7 @@ import com.gamjamubwatna.stamp.application.StampRewardConfigurationException;
 import com.gamjamubwatna.stamp.application.StampRewardConflictException;
 import com.gamjamubwatna.stamp.application.StampRewardInvalidTargetException;
 import com.gamjamubwatna.stamp.application.StampRewardService;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,20 @@ public class StampController {
         try {
             return ResponseEntity.ok(AuthApiResponse.success(
                 stampQueryService.getStampBook(userId(authentication))
+            ));
+        } catch (StampAuthenticationException exception) {
+            return unauthorized();
+        }
+    }
+
+    // 랠리북에서 아직 획득하지 않은 시군의 대표 스탬프 관광지를 다음 목표로 안내한다.
+    @GetMapping("/me/next-targets")
+    public ResponseEntity<AuthApiResponse<List<StampNextTargetResponse>>> getNextTargets(
+        Authentication authentication
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                stampQueryService.getNextTargets(userId(authentication))
             ));
         } catch (StampAuthenticationException exception) {
             return unauthorized();

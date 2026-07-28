@@ -82,6 +82,28 @@ class StampControllerTest {
     }
 
     @Test
+    void returnsAuthenticatedUsersNextTargets() throws Exception {
+        when(stampQueryService.getNextTargets(eq(1L))).thenReturn(List.of(
+            new StampNextTargetResponse(
+                101L,
+                "정선 5일장",
+                "정선군",
+                com.gamjamubwatna.spot.domain.SpotCategory.POTATO_MARKET,
+                "강원특별자치도 정선군",
+                "https://example.com/101.jpg"
+            )
+        ));
+
+        mockMvc.perform(get("/stamps/me/next-targets").with(user("user:1")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data[0].spotId").value(101))
+            .andExpect(jsonPath("$.data[0].spotName").value("정선 5일장"))
+            .andExpect(jsonPath("$.data[0].cityName").value("정선군"))
+            .andExpect(jsonPath("$.data[0].category").value("POTATO_MARKET"));
+    }
+
+    @Test
     void claimsAchievedStampReward() throws Exception {
         when(stampRewardService.claimReward(eq(1L), eq(6)))
             .thenReturn(new StampRewardClaimResponse(
