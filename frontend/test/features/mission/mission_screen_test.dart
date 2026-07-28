@@ -224,12 +224,26 @@ void main() {
     );
     expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
   });
+
+  testWidgets('opens visit unlocked mission detail from mission id',
+      (tester) async {
+    await _pumpMissionScreen(
+      tester,
+      visitEntrySpotName: '정선 5일장',
+      visitEntryMissionId: '1004',
+    );
+
+    expect(find.text('점순이의 미션'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('퀴즈 풀기'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpMissionScreen(
   WidgetTester tester, {
   MissionRepository? repository,
   String? visitEntrySpotName,
+  String? visitEntryMissionId,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -239,7 +253,10 @@ Future<void> _pumpMissionScreen(
         ),
       ],
       child: MaterialApp(
-        home: MissionScreen(visitEntrySpotName: visitEntrySpotName),
+        home: MissionScreen(
+          visitEntrySpotName: visitEntrySpotName,
+          visitEntryMissionId: visitEntryMissionId,
+        ),
       ),
     ),
   );

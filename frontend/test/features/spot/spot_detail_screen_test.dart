@@ -231,7 +231,9 @@ void main() {
           path: '/main/missions',
           builder: (context, state) => Scaffold(
             body: Text(
-              '미션 진입 ${state.queryParameters['entry']} ${state.queryParameters['spotName']}',
+              '미션 진입 ${state.queryParameters['entry']} '
+              '${state.queryParameters['spotName']} '
+              '${state.queryParameters['missionId']}',
             ),
           ),
         ),
@@ -262,13 +264,14 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('점순이 미션 등장'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('정선군 · 황금감자 성장 아이템'), findsOneWidget);
     expect(find.text('점순이 미션 보기'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('visit-result-mission-entry')));
     await tester.pumpAndSettle();
 
-    expect(find.text('미션 진입 visit 정선 5일장'), findsOneWidget);
+    expect(find.text('미션 진입 visit 정선 5일장 1004'), findsOneWidget);
   });
 
   testWidgets('shows backend failure message when visit verification fails',
@@ -469,6 +472,15 @@ const _visitResultWithMission = VisitVerificationResult(
     alreadyOwned: false,
   ),
   missionAvailable: true,
+  unlockedMission: VisitUnlockedMission(
+    id: '1004',
+    title: '정선 5일장 곤드레 퀴즈',
+    type: 'QUIZ',
+    spotName: '정선 5일장',
+    cityName: '정선군',
+    rewardType: 'ITEM',
+    rewardLabel: '황금감자 성장 아이템',
+  ),
 );
 
 class _FakeVisitVerificationRepository extends VisitVerificationRepository {

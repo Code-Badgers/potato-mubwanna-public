@@ -67,6 +67,9 @@ final appRouter = GoRouter(
             visitEntrySpotName: state.queryParameters['entry'] == 'visit'
                 ? state.queryParameters['spotName']
                 : null,
+            visitEntryMissionId: state.queryParameters['entry'] == 'visit'
+                ? state.queryParameters['missionId']
+                : null,
           ),
         ),
         GoRoute(

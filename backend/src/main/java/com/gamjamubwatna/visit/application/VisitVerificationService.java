@@ -2,11 +2,15 @@ package com.gamjamubwatna.visit.application;
 
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.mission.domain.Mission;
+import com.gamjamubwatna.mission.domain.MissionRepository;
+import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.stamp.application.VisitStampIssuanceService;
+import com.gamjamubwatna.visit.api.UnlockedMissionResponse;
 import com.gamjamubwatna.visit.api.VisitVerifyRequest;
 import com.gamjamubwatna.visit.api.VisitVerifyResponse;
 import com.gamjamubwatna.visit.domain.UserVisit;
@@ -14,6 +18,7 @@ import com.gamjamubwatna.visit.domain.UserVisitRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +32,8 @@ public class VisitVerificationService {
     private final VisitDistancePolicy visitDistancePolicy;
     private final VisitStampIssuanceService visitStampIssuanceService;
     private final VisitPotatoAcquisitionService visitPotatoAcquisitionService;
+    private final MissionRepository missionRepository;
+    private final UserMissionRepository userMissionRepository;
     private final Clock clock;
 
     @Autowired
@@ -36,7 +43,9 @@ public class VisitVerificationService {
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
         VisitStampIssuanceService visitStampIssuanceService,
-        VisitPotatoAcquisitionService visitPotatoAcquisitionService
+        VisitPotatoAcquisitionService visitPotatoAcquisitionService,
+        MissionRepository missionRepository,
+        UserMissionRepository userMissionRepository
     ) {
         this(
             userRepository,
@@ -45,6 +54,8 @@ public class VisitVerificationService {
             visitDistancePolicy,
             visitStampIssuanceService,
             visitPotatoAcquisitionService,
+            missionRepository,
+            userMissionRepository,
             Clock.systemUTC()
         );
     }
@@ -56,6 +67,8 @@ public class VisitVerificationService {
         VisitDistancePolicy visitDistancePolicy,
         VisitStampIssuanceService visitStampIssuanceService,
         VisitPotatoAcquisitionService visitPotatoAcquisitionService,
+        MissionRepository missionRepository,
+        UserMissionRepository userMissionRepository,
         Clock clock
     ) {
         this.userRepository = userRepository;
@@ -64,6 +77,8 @@ public class VisitVerificationService {
         this.visitDistancePolicy = visitDistancePolicy;
         this.visitStampIssuanceService = visitStampIssuanceService;
         this.visitPotatoAcquisitionService = visitPotatoAcquisitionService;
+        this.missionRepository = missionRepository;
+        this.userMissionRepository = userMissionRepository;
         this.clock = clock;
     }
 
@@ -93,6 +108,9 @@ public class VisitVerificationService {
         boolean stampIssued = visitStampIssuanceService.issueStamp(user, spot, verifiedAt);
         PotatoAcquisitionResult potatoAcquisition =
             visitPotatoAcquisitionService.acquireForVisit(user, spot, verifiedAt);
+        UnlockedMissionResponse unlockedMission = unlockedMission(userId, spot)
+            .map(UnlockedMissionResponse::from)
+            .orElse(null);
 
         return new VisitVerifyResponse(
             spot.getId(),
@@ -102,8 +120,39 @@ public class VisitVerificationService {
             stampIssued,
             potatoAcquisition.newlyAcquired(),
             potatoAcquisition.potato(),
-            false
+            unlockedMission != null,
+            unlockedMission
         );
+    }
+
+    private Optional<Mission> unlockedMission(Long userId, TouristSpot spot) {
+        Optional<Mission> mission = missionBySpot(spot);
+        if (mission.isEmpty()) {
+            return Optional.empty();
+        }
+        Mission unlocked = mission.get();
+        if (userMissionRepository.existsByUserIdAndMissionId(userId, unlocked.getId())) {
+            return Optional.empty();
+        }
+        return mission;
+    }
+
+    private Optional<Mission> missionBySpot(TouristSpot spot) {
+        if (hasText(spot.getCityName())) {
+            Optional<Mission> mission = missionRepository
+                .findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(
+                    spot.getName(),
+                    spot.getCityName()
+                );
+            if (mission.isPresent()) {
+                return mission;
+            }
+        }
+        return missionRepository.findFirstBySpotNameAndActiveTrueOrderByDisplayOrderAsc(spot.getName());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private void validateRequest(VisitVerifyRequest request) {

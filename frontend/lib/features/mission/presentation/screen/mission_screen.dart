@@ -17,10 +17,12 @@ const _missionLine = Color(0xFFE8E2D8);
 class MissionScreen extends ConsumerStatefulWidget {
   const MissionScreen({
     this.visitEntrySpotName,
+    this.visitEntryMissionId,
     super.key,
   });
 
   final String? visitEntrySpotName;
+  final String? visitEntryMissionId;
 
   @override
   ConsumerState<MissionScreen> createState() => _MissionScreenState();
@@ -32,6 +34,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   MissionGroup? _selectedGroup;
   String? _selectedMissionId;
   bool _isCompleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMissionId = widget.visitEntryMissionId;
+  }
 
   List<MissionChallenge> _filteredMissions(List<MissionChallenge> missions) {
     final selectedGroup = _selectedGroup;

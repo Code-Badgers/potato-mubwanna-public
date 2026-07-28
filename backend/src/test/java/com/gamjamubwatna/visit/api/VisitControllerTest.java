@@ -59,7 +59,8 @@ class VisitControllerTest {
                     PotatoRarity.EPIC,
                     false
                 ),
-                false
+                false,
+                null
             ));
 
         mockMvc.perform(post("/visits/verify")

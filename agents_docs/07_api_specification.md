@@ -468,10 +468,25 @@ Response:
       "rarity": "EPIC",
       "alreadyOwned": false
     },
-    "missionAvailable": false
+    "missionAvailable": true,
+    "unlockedMission": {
+      "missionId": 1004,
+      "title": "정선 5일장 곤드레 퀴즈",
+      "type": "QUIZ",
+      "spotName": "정선 5일장",
+      "cityName": "정선군",
+      "rewardType": "ITEM",
+      "rewardLabel": "황금감자 성장 아이템"
+    }
   }
 }
 ```
+
+Notes:
+
+- `missionAvailable`은 기존 클라이언트 호환을 위해 유지한다.
+- `unlockedMission`은 방문 인증한 관광지와 연결된 활성 미션이 있고 사용자가 아직 완료하지 않은 경우에만 내려준다.
+- `unlockedMission`이 `null`이면 프론트는 기존처럼 미션 CTA를 숨기거나 일반 미션 목록 진입으로 처리한다.
 
 Error:
 
