@@ -11,6 +11,7 @@ public record VisitVerifyResponse(
     boolean stampIssued,
     boolean potatoAcquired,
     PotatoAcquisitionResponse acquiredPotato,
-    boolean missionAvailable
+    boolean missionAvailable,
+    UnlockedMissionResponse unlockedMission
 ) {
 }
