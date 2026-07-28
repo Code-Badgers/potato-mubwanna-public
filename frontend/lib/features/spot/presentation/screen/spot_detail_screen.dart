@@ -296,6 +296,7 @@ class _VisitResultSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final potato = result.acquiredPotato;
+    final unlockedMission = result.unlockedMission;
     return SafeArea(
       child: Container(
         key: const ValueKey('visit-result-sheet'),
@@ -338,11 +339,14 @@ class _VisitResultSheet extends StatelessWidget {
             ],
             if (result.missionAvailable) ...[
               const SizedBox(height: 10),
-              const _VisitResultLine(
-                icon: Icons.flag_rounded,
-                label: '점순이 미션 등장',
-                color: Color(0xFF56C787),
-              ),
+              if (unlockedMission == null)
+                const _VisitResultLine(
+                  icon: Icons.flag_rounded,
+                  label: '점순이 미션 등장',
+                  color: Color(0xFF56C787),
+                )
+              else
+                _UnlockedMissionCard(mission: unlockedMission),
             ],
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -374,6 +378,8 @@ class _VisitResultSheet extends StatelessWidget {
                       queryParameters: {
                         'entry': 'visit',
                         'spotName': spot.name,
+                        if (unlockedMission?.id.isNotEmpty == true)
+                          'missionId': unlockedMission!.id,
                       },
                     ).toString(),
                   );
@@ -415,6 +421,70 @@ class _VisitResultSheet extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _UnlockedMissionCard extends StatelessWidget {
+  const _UnlockedMissionCard({required this.mission});
+
+  final VisitUnlockedMission mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF9F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFC7EED9)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFF56C787),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.flag_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mission.title,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${mission.cityName} · ${mission.rewardLabel}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

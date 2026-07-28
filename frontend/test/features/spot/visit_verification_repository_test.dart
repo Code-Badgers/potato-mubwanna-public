@@ -28,6 +28,10 @@ void main() {
     expect(result.acquiredPotato?.name, '황금감자');
     expect(result.acquiredPotato?.rarityLabel, '영웅');
     expect(result.acquiredPotato?.alreadyOwned, isFalse);
+    expect(result.missionAvailable, isTrue);
+    expect(result.unlockedMission?.id, '1004');
+    expect(result.unlockedMission?.title, '정선 5일장 곤드레 퀴즈');
+    expect(result.unlockedMission?.rewardLabel, '황금감자 성장 아이템');
   });
 
   test('throws ApiException with backend message when verification fails',
@@ -127,6 +131,15 @@ const _successResponse = <String, Object?>{
       'rarity': 'EPIC',
       'alreadyOwned': false,
     },
-    'missionAvailable': false,
+    'missionAvailable': true,
+    'unlockedMission': {
+      'missionId': 1004,
+      'title': '정선 5일장 곤드레 퀴즈',
+      'type': 'QUIZ',
+      'spotName': '정선 5일장',
+      'cityName': '정선군',
+      'rewardType': 'ITEM',
+      'rewardLabel': '황금감자 성장 아이템',
+    },
   },
 };
