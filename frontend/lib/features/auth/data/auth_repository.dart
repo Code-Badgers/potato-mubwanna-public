@@ -7,8 +7,8 @@ import '../../../core/storage/token_storage.dart';
 
 class AuthRepository {
   const AuthRepository({required Dio dio, required TokenStorage tokenStorage})
-      : _dio = dio,
-        _tokenStorage = tokenStorage;
+    : _dio = dio,
+      _tokenStorage = tokenStorage;
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
@@ -45,12 +45,9 @@ class AuthRepository {
       throw const ApiException(message: '저장된 refresh token이 없습니다.');
     }
 
-    final tokens = await _requestTokens(
-        ApiPaths.authRefresh,
-        {
-          'refreshToken': refreshToken,
-        },
-        fallbackMessage: '로그인 세션 갱신에 실패했습니다.');
+    final tokens = await _requestTokens(ApiPaths.authRefresh, {
+      'refreshToken': refreshToken,
+    }, fallbackMessage: '로그인 세션 갱신에 실패했습니다.');
     await _tokenStorage.saveTokens(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -100,8 +97,9 @@ class AuthRepository {
 
     if (!apiResponse.success || apiResponse.data == null) {
       throw ApiException(
-        message:
-            apiResponse.message.isEmpty ? fallbackMessage : apiResponse.message,
+        message: apiResponse.message.isEmpty
+            ? fallbackMessage
+            : apiResponse.message,
         code: apiResponse.code,
         statusCode: response.statusCode,
       );

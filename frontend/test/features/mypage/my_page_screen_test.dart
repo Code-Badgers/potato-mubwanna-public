@@ -66,7 +66,8 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('renders real profile and activity summary data', (tester) async {
+  testWidgets('renders real profile and activity summary data',
+      (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);

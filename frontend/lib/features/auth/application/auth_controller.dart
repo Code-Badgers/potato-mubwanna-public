@@ -40,9 +40,9 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController({
     required KakaoLoginService kakaoLoginService,
     required AuthRepository authRepository,
-  })  : _kakaoLoginService = kakaoLoginService,
-        _authRepository = authRepository,
-        super(const AuthState.idle());
+  }) : _kakaoLoginService = kakaoLoginService,
+       _authRepository = authRepository,
+       super(const AuthState.idle());
 
   final KakaoLoginService _kakaoLoginService;
   final AuthRepository _authRepository;
@@ -143,10 +143,10 @@ class AuthState {
   const AuthState.loading() : this._(status: AuthStatus.loading);
 
   const AuthState.authenticated({String? message})
-      : this._(status: AuthStatus.authenticated, message: message);
+    : this._(status: AuthStatus.authenticated, message: message);
 
   const AuthState.failure(String message)
-      : this._(status: AuthStatus.failure, message: message);
+    : this._(status: AuthStatus.failure, message: message);
 
   final AuthStatus status;
   final String? message;
