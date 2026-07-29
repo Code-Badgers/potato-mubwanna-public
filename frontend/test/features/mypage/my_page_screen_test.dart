@@ -335,6 +335,98 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
+  testWidgets('confirms account withdrawal before deleting and opens login',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final authRepository = _ControlledWithdrawalAuthRepository();
+    final authController = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: authRepository,
+    );
+    await authController.refreshSession();
+    final router = GoRouter(
+      initialLocation: '/main/mypage',
+      routes: [
+        GoRoute(
+          path: '/main/mypage',
+          builder: (_, __) => const MyPageScreen(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (_, __) => const Scaffold(
+            body: Center(child: Text('login destination')),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(authController: authController),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final withdrawal = find.text('회원 탈퇴');
+    await tester.scrollUntilVisible(withdrawal, 200);
+    await tester.tap(withdrawal);
+    await tester.pumpAndSettle();
+
+    expect(find.text('정말 탈퇴하시겠어요?'), findsOneWidget);
+    expect(find.textContaining('복구할 수 없습니다'), findsOneWidget);
+    expect(authRepository.withdrawalCalls, 0);
+
+    await tester.tap(find.widgetWithText(FilledButton, '회원 탈퇴'));
+    await tester.pump();
+
+    expect(authRepository.withdrawalCalls, 1);
+    expect(find.byType(ModalBarrier), findsAtLeastNWidgets(1));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    authRepository.completeWithdrawal();
+    await tester.pumpAndSettle();
+
+    expect(find.text('login destination'), findsOneWidget);
+  });
+
+  testWidgets('keeps My Page and explains account withdrawal failure',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final authController = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: _FailingWithdrawalAuthRepository(),
+    );
+    await authController.refreshSession();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(authController: authController),
+        child: const MaterialApp(home: MyPageScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final withdrawal = find.text('회원 탈퇴');
+    await tester.scrollUntilVisible(withdrawal, 200);
+    await tester.tap(withdrawal);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '회원 탈퇴'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('회원 탈퇴에 실패했습니다'), findsOneWidget);
+    expect(authController.state.status, AuthStatus.authenticated);
+  });
+
   testWidgets('opens the coupon inbox from the My Page reward action',
       (tester) async {
     final router = GoRouter(
@@ -570,6 +662,46 @@ class _ControlledLogoutAuthRepository extends AuthRepository {
 
   void completeLogout() {
     _logoutCompleter.complete();
+  }
+}
+
+class _ControlledWithdrawalAuthRepository extends AuthRepository {
+  _ControlledWithdrawalAuthRepository()
+      : super(
+          dio: Dio(),
+          tokenStorage: const TokenStorage(FlutterSecureStorage()),
+        );
+
+  final _withdrawalCompleter = Completer<void>();
+  int withdrawalCalls = 0;
+
+  @override
+  Future<void> refreshSession() async {}
+
+  @override
+  Future<void> withdrawAccount() {
+    withdrawalCalls++;
+    return _withdrawalCompleter.future;
+  }
+
+  void completeWithdrawal() {
+    _withdrawalCompleter.complete();
+  }
+}
+
+class _FailingWithdrawalAuthRepository extends AuthRepository {
+  _FailingWithdrawalAuthRepository()
+      : super(
+          dio: Dio(),
+          tokenStorage: const TokenStorage(FlutterSecureStorage()),
+        );
+
+  @override
+  Future<void> refreshSession() async {}
+
+  @override
+  Future<void> withdrawAccount() {
+    throw StateError('account withdrawal failed');
   }
 }
 

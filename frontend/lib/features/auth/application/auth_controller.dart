@@ -119,6 +119,20 @@ class AuthController extends StateNotifier<AuthState> {
       state = const AuthState.idle();
     }
   }
+
+  Future<bool> withdrawAccount() async {
+    state = const AuthState.loading();
+    try {
+      await _authRepository.withdrawAccount();
+      state = const AuthState.idle();
+      return true;
+    } catch (_) {
+      state = const AuthState.authenticated(
+        message: '회원 탈퇴에 실패했습니다. 잠시 후 다시 시도해주세요.',
+      );
+      return false;
+    }
+  }
 }
 
 class AuthState {
@@ -128,7 +142,8 @@ class AuthState {
 
   const AuthState.loading() : this._(status: AuthStatus.loading);
 
-  const AuthState.authenticated() : this._(status: AuthStatus.authenticated);
+  const AuthState.authenticated({String? message})
+    : this._(status: AuthStatus.authenticated, message: message);
 
   const AuthState.failure(String message)
     : this._(status: AuthStatus.failure, message: message);

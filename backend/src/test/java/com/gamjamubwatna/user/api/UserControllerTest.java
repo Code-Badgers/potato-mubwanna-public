@@ -3,13 +3,17 @@ package com.gamjamubwatna.user.api;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.user.application.UserAccountService;
 import com.gamjamubwatna.user.application.UserActivitySummaryService;
 import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
 import com.gamjamubwatna.user.application.UserProfileService;
@@ -31,6 +35,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserActivitySummaryService userActivitySummaryService;
+
+    @MockitoBean
+    private UserAccountService userAccountService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -107,5 +114,33 @@ class UserControllerTest {
 
         assertThatThrownBy(() -> mockMvc.perform(get("/users/me").with(user("user:1"))))
             .hasCauseInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void withdrawDeletesAuthenticatedUserAccount() throws Exception {
+        mockMvc.perform(delete("/users/me").with(user("user:1")).with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
+            .andExpect(jsonPath("$.data").doesNotExist());
+
+        verify(userAccountService).withdraw(1L);
+    }
+
+    @Test
+    void withdrawRejectsUnauthenticatedRequest() throws Exception {
+        mockMvc.perform(delete("/users/me").with(csrf()))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void withdrawRejectsDeletedUser() throws Exception {
+        doThrow(new UserProfileAuthenticationException("사용자를 찾을 수 없습니다."))
+            .when(userAccountService).withdraw(1L);
+
+        mockMvc.perform(delete("/users/me").with(user("user:1")).with(csrf()))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("인증 정보를 확인할 수 없습니다."));
     }
 }
