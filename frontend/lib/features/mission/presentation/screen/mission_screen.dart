@@ -6,6 +6,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../application/mission_controller.dart';
 import '../../data/mission_native_input_service.dart';
 import '../../data/mission_repository.dart';
+import '../../data/mission_upload_repository.dart';
 import '../../domain/mission_challenge.dart';
 import '../../domain/mission_verification.dart';
 
@@ -147,13 +148,13 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   Future<MissionVerificationPayload?> _showPhotoChallenge(
     MissionChallenge mission,
   ) async {
-    final input = await _showPhotoInputSheet(mission);
-    if (input == null) {
+    final uploadKey = await _showPhotoInputSheet(mission);
+    if (uploadKey == null) {
       return null;
     }
     final result = _verificationService.verifyPhotoUpload(
       mission: mission,
-      uploaded: input.uploadKey.isNotEmpty,
+      uploaded: uploadKey.isNotEmpty,
     );
     if (!result.canComplete) {
       _showSnackBar(result.message);
@@ -161,7 +162,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     }
     return MissionVerificationPayload(
       type: mission.type,
-      uploadKey: input.uploadKey,
+      uploadKey: uploadKey,
     );
   }
 
@@ -194,16 +195,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     return ref.read(missionNativeInputServiceProvider);
   }
 
-  Future<MissionPhotoInput?> _showPhotoInputSheet(
+  Future<String?> _showPhotoInputSheet(
     MissionChallenge mission,
   ) {
-    return showModalBottomSheet<MissionPhotoInput>(
+    return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _MissionPhotoSheet(
         mission: mission,
         inputService: _nativeInputService,
+        uploadRepository: ref.read(missionUploadRepositoryProvider),
       ),
     );
   }
@@ -1223,10 +1225,12 @@ class _MissionPhotoSheet extends StatefulWidget {
   const _MissionPhotoSheet({
     required this.mission,
     required this.inputService,
+    required this.uploadRepository,
   });
 
   final MissionChallenge mission;
   final MissionNativeInputService inputService;
+  final MissionUploadRepository uploadRepository;
 
   @override
   State<_MissionPhotoSheet> createState() => _MissionPhotoSheetState();
@@ -1236,6 +1240,7 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
   MissionPhotoInput? _selectedInput;
   String? _errorMessage;
   bool _isPicking = false;
+  bool _isUploading = false;
 
   Future<void> _pick(MissionPhotoSource source) async {
     setState(() {
@@ -1272,6 +1277,43 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
     }
   }
 
+  Future<void> _uploadSelectedPhoto() async {
+    final input = _selectedInput;
+    if (input == null || _isUploading) {
+      return;
+    }
+    setState(() {
+      _isUploading = true;
+      _errorMessage = null;
+    });
+    try {
+      final result = await widget.uploadRepository.uploadPhoto(
+        missionId: widget.mission.id,
+        file: input.file,
+      );
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(result.uploadKey);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isUploading = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isUploading = false;
+        _errorMessage = '인증샷 업로드에 실패했습니다. 다시 시도해주세요.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return _MissionActionSheet(
@@ -1293,13 +1335,17 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
           _MissionSheetButton(
             icon: Icons.photo_camera_rounded,
             label: '카메라로 촬영하기',
-            onTap: _isPicking ? null : () => _pick(MissionPhotoSource.camera),
+            onTap: _isPicking || _isUploading
+                ? null
+                : () => _pick(MissionPhotoSource.camera),
           ),
           const SizedBox(height: 8),
           _MissionSheetButton(
             icon: Icons.photo_library_rounded,
             label: '갤러리에서 선택하기',
-            onTap: _isPicking ? null : () => _pick(MissionPhotoSource.gallery),
+            onTap: _isPicking || _isUploading
+                ? null
+                : () => _pick(MissionPhotoSource.gallery),
           ),
           if (_isPicking) ...[
             const SizedBox(height: 14),
@@ -1313,11 +1359,15 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
             const SizedBox(height: 14),
             _MissionUploadPreview(label: _selectedInput!.previewLabel),
           ],
+          if (_isUploading) ...[
+            const SizedBox(height: 14),
+            const _MissionInputProgress(label: '인증샷을 업로드하는 중이에요.'),
+          ],
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: _selectedInput == null || _isPicking
+            onPressed: _selectedInput == null || _isPicking || _isUploading
                 ? null
-                : () => Navigator.of(context).pop(_selectedInput),
+                : _uploadSelectedPhoto,
             icon: const Icon(Icons.cloud_done_rounded),
             label: const Text('인증 완료하기'),
             style: FilledButton.styleFrom(

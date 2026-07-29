@@ -1,11 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/mission/application/mission_controller.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_native_input_service.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_repository.dart';
+import 'package:potato_mubwanna/features/mission/data/mission_upload_repository.dart';
 import 'package:potato_mubwanna/features/mission/domain/mission_challenge.dart';
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
 
@@ -112,9 +116,22 @@ void main() {
   testWidgets('completes photo mission after selecting upload source',
       (tester) async {
     final repository = _FakeMissionRepository();
+    final uploadRepository = _FakeMissionUploadRepository(
+      result: MissionUploadResult(
+        uploadKey: 'mission-uploads/1/1002/receipt.jpg',
+        fileName: 'receipt.jpg',
+        contentType: 'image/jpeg',
+        size: 4,
+        expiresAt: DateTime.parse('2026-07-29T08:30:00Z'),
+      ),
+    );
     final inputService = _FakeMissionNativeInputService(
-      photoInput: const MissionPhotoInput(
-        uploadKey: 'local:1002:gallery:receipt.jpg',
+      photoInput: MissionPhotoInput(
+        file: XFile.fromData(
+          Uint8List.fromList([1, 2, 3, 4]),
+          name: 'receipt.jpg',
+          mimeType: 'image/jpeg',
+        ),
         previewLabel: '갤러리 선택 이미지',
       ),
     );
@@ -122,6 +139,7 @@ void main() {
       tester,
       repository: repository,
       inputService: inputService,
+      uploadRepository: uploadRepository,
     );
 
     await _openMission(tester, '안목 해변에서 하지감자 찾기');
@@ -141,8 +159,46 @@ void main() {
 
     expect(find.text('미션 완료!'), findsOneWidget);
     expect(repository.completeCallCount, 1);
-    expect(repository.lastPayload?.uploadKey, 'local:1002:gallery:receipt.jpg');
+    expect(repository.lastPayload?.uploadKey,
+        'mission-uploads/1/1002/receipt.jpg');
     expect(inputService.lastPhotoSource, MissionPhotoSource.gallery);
+    expect(uploadRepository.lastMissionId, '1002');
+  });
+
+  testWidgets('shows upload error when photo upload key request fails',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    final uploadRepository = _FakeMissionUploadRepository(
+      error: const ApiException(message: '지원하지 않는 이미지 형식입니다.'),
+    );
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      inputService: _FakeMissionNativeInputService(
+        photoInput: MissionPhotoInput(
+          file: XFile.fromData(
+            Uint8List.fromList([1]),
+            name: 'receipt.gif',
+            mimeType: 'image/gif',
+          ),
+          previewLabel: '갤러리 선택 이미지',
+        ),
+      ),
+      uploadRepository: uploadRepository,
+    );
+
+    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+
+    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('갤러리에서 선택하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '인증 완료하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지원하지 않는 이미지 형식입니다.'), findsOneWidget);
+    expect(find.text('미션 완료!'), findsNothing);
+    expect(repository.completeCallCount, 0);
   });
 
   testWidgets('shows photo input error when native picker fails',
@@ -300,6 +356,7 @@ Future<void> _pumpMissionScreen(
   WidgetTester tester, {
   MissionRepository? repository,
   MissionNativeInputService? inputService,
+  MissionUploadRepository? uploadRepository,
   String? visitEntrySpotName,
   String? visitEntryMissionId,
 }) async {
@@ -311,6 +368,9 @@ Future<void> _pumpMissionScreen(
         ),
         missionNativeInputServiceProvider.overrideWithValue(
           inputService ?? _FakeMissionNativeInputService(),
+        ),
+        missionUploadRepositoryProvider.overrideWithValue(
+          uploadRepository ?? _FakeMissionUploadRepository(),
         ),
       ],
       child: MaterialApp(
@@ -389,13 +449,18 @@ class _FakeMissionRepository extends MissionRepository {
 
 class _FakeMissionNativeInputService extends MissionNativeInputService {
   _FakeMissionNativeInputService({
-    this.photoInput = const MissionPhotoInput(
-      uploadKey: 'local:test:gallery:image.jpg',
-      previewLabel: '갤러리 선택 이미지',
-    ),
+    MissionPhotoInput? photoInput,
     this.photoError,
     this.qrCode,
-  });
+  }) : photoInput = photoInput ??
+            MissionPhotoInput(
+              file: XFile.fromData(
+                Uint8List.fromList([1, 2, 3]),
+                name: 'image.jpg',
+                mimeType: 'image/jpeg',
+              ),
+              previewLabel: '갤러리 선택 이미지',
+            );
 
   final MissionPhotoInput? photoInput;
   final MissionInputException? photoError;
@@ -417,6 +482,38 @@ class _FakeMissionNativeInputService extends MissionNativeInputService {
 
   @override
   Future<String?> scanQrCode(BuildContext context) async => qrCode;
+}
+
+class _FakeMissionUploadRepository extends MissionUploadRepository {
+  _FakeMissionUploadRepository({
+    MissionUploadResult? result,
+    this.error,
+  })  : result = result ??
+            MissionUploadResult(
+              uploadKey: 'mission-uploads/1/test/image.jpg',
+              fileName: 'image.jpg',
+              contentType: 'image/jpeg',
+              size: 3,
+              expiresAt: DateTime.parse('2026-07-29T08:30:00Z'),
+            ),
+        super(dio: Dio());
+
+  final MissionUploadResult result;
+  final Object? error;
+  String? lastMissionId;
+
+  @override
+  Future<MissionUploadResult> uploadPhoto({
+    required String missionId,
+    required XFile file,
+  }) async {
+    lastMissionId = missionId;
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return result;
+  }
 }
 
 const _missions = [

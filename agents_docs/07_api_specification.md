@@ -888,6 +888,50 @@ Notes:
 - `QR_SCAN`: `qrCode` 존재 여부를 검증한다. 실제 QR 코드 매칭은 후속 연동에서 강화한다.
 - 인증 성공 시 서버가 중복 완료 여부를 확인하고 미션 완료와 보상 응답을 함께 처리한다.
 
+### 6.4 미션 사진 업로드 키 발급
+
+```http
+POST /api/mission-uploads
+Content-Type: multipart/form-data
+```
+
+Request:
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| missionId | Long | Y | 사진/OCR 인증을 수행할 미션 ID |
+| file | MultipartFile | Y | 카메라 촬영 또는 갤러리 선택 이미지 |
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "uploadKey": "mission-uploads/1/1002/20260729T073000Z-9f1c2a3b.jpg",
+    "fileName": "receipt.jpg",
+    "contentType": "image/jpeg",
+    "size": 245120,
+    "expiresAt": "2026-07-29T08:30:00Z"
+  }
+}
+```
+
+Error:
+
+| HTTP Status | 조건 |
+| --- | --- |
+| 400 | 파일 누락, 빈 파일, 이미지가 아닌 Content-Type, 최대 크기 초과 |
+| 401 | 인증 정보 없음 또는 잘못된 사용자 principal |
+| 404 | 존재하지 않는 미션 |
+
+Notes:
+
+- MVP 단계에서는 운영 스토리지 대신 서버가 검증 가능한 `uploadKey`를 발급한다.
+- `uploadKey`는 이후 `POST /api/missions/{missionId}/verify`의 `uploadKey`로 전달한다.
+- 실제 S3 또는 OCR 엔진 저장/분석은 후속 이슈에서 연결한다.
+
 ---
 
 ## 7. Coupon API
