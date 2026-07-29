@@ -19,15 +19,19 @@ class MissionUploadServiceTest {
 
     private UserRepository userRepository;
     private MissionRepository missionRepository;
+    private MissionPhotoStorage missionPhotoStorage;
     private MissionUploadService missionUploadService;
 
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
         missionRepository = mock(MissionRepository.class);
+        missionPhotoStorage = (uploadKey, fileName, contentType, file) ->
+            new StoredMissionPhoto(uploadKey, fileName, contentType, file.getSize());
         missionUploadService = new MissionUploadService(
             userRepository,
             missionRepository,
+            missionPhotoStorage,
             Clock.fixed(Instant.parse("2026-07-29T07:30:00Z"), ZoneOffset.UTC)
         );
     }
@@ -49,7 +53,7 @@ class MissionUploadServiceTest {
         assertThat(response.fileName()).isEqualTo("receipt.jpg");
         assertThat(response.contentType()).isEqualTo("image/jpeg");
         assertThat(response.size()).isEqualTo(1024);
-        assertThat(response.expiresAt()).isEqualTo("2026-07-29T08:30:00Z");
+        assertThat(response.expiresAt()).isEqualTo(Instant.parse("2026-07-29T08:30:00Z"));
     }
 
     @Test

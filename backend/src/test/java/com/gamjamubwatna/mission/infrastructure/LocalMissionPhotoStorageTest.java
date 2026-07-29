@@ -1,0 +1,63 @@
+package com.gamjamubwatna.mission.infrastructure;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.gamjamubwatna.mission.application.MissionUploadException;
+import com.gamjamubwatna.mission.application.StoredMissionPhoto;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.mock.web.MockMultipartFile;
+
+class LocalMissionPhotoStorageTest {
+
+    @TempDir
+    private Path tempDirectory;
+
+    @Test
+    void storesMissionPhotoInLocalDirectory() throws Exception {
+        LocalMissionPhotoStorage storage = new LocalMissionPhotoStorage(tempDirectory.toString());
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "receipt.jpg",
+            "image/jpeg",
+            new byte[] {1, 2, 3}
+        );
+
+        StoredMissionPhoto storedPhoto = storage.store(
+            "mission-uploads/1/1002/test-receipt.jpg",
+            "receipt.jpg",
+            "image/jpeg",
+            file
+        );
+
+        Path savedFile = tempDirectory.resolve(storedPhoto.uploadKey());
+        assertThat(Files.exists(savedFile)).isTrue();
+        assertThat(Files.readAllBytes(savedFile)).containsExactly(1, 2, 3);
+        assertThat(storedPhoto.fileName()).isEqualTo("receipt.jpg");
+        assertThat(storedPhoto.contentType()).isEqualTo("image/jpeg");
+        assertThat(storedPhoto.size()).isEqualTo(3);
+    }
+
+    @Test
+    void rejectsEscapedStoragePath() {
+        LocalMissionPhotoStorage storage = new LocalMissionPhotoStorage(tempDirectory.toString());
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "receipt.jpg",
+            "image/jpeg",
+            new byte[] {1}
+        );
+
+        assertThatThrownBy(() -> storage.store(
+            "../escaped.jpg",
+            "receipt.jpg",
+            "image/jpeg",
+            file
+        ))
+            .isInstanceOf(MissionUploadException.class)
+            .hasMessage("이미지 저장 경로를 확인할 수 없습니다.");
+    }
+}

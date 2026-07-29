@@ -32,23 +32,27 @@ public class MissionUploadService {
 
     private final UserRepository userRepository;
     private final MissionRepository missionRepository;
+    private final MissionPhotoStorage missionPhotoStorage;
     private final Clock clock;
 
     @Autowired
     public MissionUploadService(
         UserRepository userRepository,
-        MissionRepository missionRepository
+        MissionRepository missionRepository,
+        MissionPhotoStorage missionPhotoStorage
     ) {
-        this(userRepository, missionRepository, Clock.systemUTC());
+        this(userRepository, missionRepository, missionPhotoStorage, Clock.systemUTC());
     }
 
     MissionUploadService(
         UserRepository userRepository,
         MissionRepository missionRepository,
+        MissionPhotoStorage missionPhotoStorage,
         Clock clock
     ) {
         this.userRepository = userRepository;
         this.missionRepository = missionRepository;
+        this.missionPhotoStorage = missionPhotoStorage;
         this.clock = clock;
     }
 
@@ -65,11 +69,12 @@ public class MissionUploadService {
         String fileName = sanitizeFileName(file.getOriginalFilename());
         String contentType = file.getContentType();
         String uploadKey = uploadKey(userId, missionId, fileName, now);
+        StoredMissionPhoto storedPhoto = missionPhotoStorage.store(uploadKey, fileName, contentType, file);
         return new MissionUploadResponse(
-            uploadKey,
-            fileName,
-            contentType,
-            file.getSize(),
+            storedPhoto.uploadKey(),
+            storedPhoto.fileName(),
+            storedPhoto.contentType(),
+            storedPhoto.size(),
             now.plus(UPLOAD_KEY_TTL)
         );
     }
