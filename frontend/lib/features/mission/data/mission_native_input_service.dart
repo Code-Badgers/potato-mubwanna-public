@@ -10,11 +10,11 @@ enum MissionPhotoSource {
 
 class MissionPhotoInput {
   const MissionPhotoInput({
-    required this.uploadKey,
+    required this.file,
     required this.previewLabel,
   });
 
-  final String uploadKey;
+  final XFile file;
   final String previewLabel;
 }
 
@@ -49,12 +49,10 @@ class MissionNativeInputService {
       if (image == null) {
         return null;
       }
-      final sourceName =
-          source == MissionPhotoSource.camera ? 'camera' : 'gallery';
       final previewLabel =
           source == MissionPhotoSource.camera ? '카메라 촬영 이미지' : '갤러리 선택 이미지';
       return MissionPhotoInput(
-        uploadKey: 'local:$missionId:$sourceName:${image.name}',
+        file: image,
         previewLabel: previewLabel,
       );
     } catch (_) {

@@ -23,6 +23,7 @@ class ApiPaths {
   static const stampRewardCheck = '/stamps/rewards/check';
   static const stampRewardClaim = '/stamps/rewards/claim';
   static const missions = '/missions';
+  static const missionUploads = '/mission-uploads';
   static const potatoes = '/potatoes';
   static const myPotatoes = '/potatoes/me';
   static const potatoGrowthSummary = '/potatoes/me/growth-summary';
