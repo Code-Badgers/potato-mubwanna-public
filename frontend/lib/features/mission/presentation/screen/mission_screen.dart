@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/mission_controller.dart';
+import '../../data/mission_native_input_service.dart';
 import '../../data/mission_repository.dart';
 import '../../domain/mission_challenge.dart';
 import '../../domain/mission_verification.dart';
@@ -102,9 +103,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       MissionType.quiz => _showQuizChallenge(mission),
       MissionType.visitAndStep => _verifyStepMission(mission),
       MissionType.photo || MissionType.photoOcr => _showPhotoChallenge(mission),
-      MissionType.qrScan => Future<MissionVerificationPayload?>.value(
-          MissionVerificationPayload(type: mission.type, qrCode: 'mock-qr'),
-        ),
+      MissionType.qrScan => _scanQrMission(mission),
       _ => Future<MissionVerificationPayload?>.value(
           MissionVerificationPayload(type: mission.type),
         ),
@@ -148,18 +147,13 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   Future<MissionVerificationPayload?> _showPhotoChallenge(
     MissionChallenge mission,
   ) async {
-    final uploaded = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _MissionPhotoSheet(mission: mission),
-    );
-    if (uploaded == null) {
+    final input = await _showPhotoInputSheet(mission);
+    if (input == null) {
       return null;
     }
     final result = _verificationService.verifyPhotoUpload(
       mission: mission,
-      uploaded: uploaded,
+      uploaded: input.uploadKey.isNotEmpty,
     );
     if (!result.canComplete) {
       _showSnackBar(result.message);
@@ -167,7 +161,50 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     }
     return MissionVerificationPayload(
       type: mission.type,
-      uploadKey: 'mock-${mission.id}',
+      uploadKey: input.uploadKey,
+    );
+  }
+
+  Future<MissionVerificationPayload?> _scanQrMission(
+    MissionChallenge mission,
+  ) async {
+    try {
+      final qrCode =
+          await ref.read(missionNativeInputServiceProvider).scanQrCode(context);
+      if (!mounted || qrCode == null) {
+        return null;
+      }
+      if (qrCode.trim().isEmpty) {
+        _showSnackBar('QR 코드를 스캔한 뒤 다시 시도해주세요.');
+        return null;
+      }
+      return MissionVerificationPayload(
+        type: mission.type,
+        qrCode: qrCode,
+      );
+    } on MissionInputException catch (error) {
+      if (mounted) {
+        _showSnackBar(error.message);
+      }
+      return null;
+    }
+  }
+
+  MissionNativeInputService get _nativeInputService {
+    return ref.read(missionNativeInputServiceProvider);
+  }
+
+  Future<MissionPhotoInput?> _showPhotoInputSheet(
+    MissionChallenge mission,
+  ) {
+    return showModalBottomSheet<MissionPhotoInput>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MissionPhotoSheet(
+        mission: mission,
+        inputService: _nativeInputService,
+      ),
     );
   }
 
@@ -1183,16 +1220,57 @@ class _MissionQuizSheetState extends State<_MissionQuizSheet> {
 }
 
 class _MissionPhotoSheet extends StatefulWidget {
-  const _MissionPhotoSheet({required this.mission});
+  const _MissionPhotoSheet({
+    required this.mission,
+    required this.inputService,
+  });
 
   final MissionChallenge mission;
+  final MissionNativeInputService inputService;
 
   @override
   State<_MissionPhotoSheet> createState() => _MissionPhotoSheetState();
 }
 
 class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
-  String? _selectedSourceLabel;
+  MissionPhotoInput? _selectedInput;
+  String? _errorMessage;
+  bool _isPicking = false;
+
+  Future<void> _pick(MissionPhotoSource source) async {
+    setState(() {
+      _isPicking = true;
+      _errorMessage = null;
+    });
+    try {
+      final input = await widget.inputService.pickPhoto(
+        missionId: widget.mission.id,
+        source: source,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (input == null) {
+        setState(() {
+          _isPicking = false;
+          _errorMessage = '이미지 선택이 취소되었습니다.';
+        });
+        return;
+      }
+      setState(() {
+        _selectedInput = input;
+        _isPicking = false;
+      });
+    } on MissionInputException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isPicking = false;
+        _errorMessage = error.message;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1215,23 +1293,31 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
           _MissionSheetButton(
             icon: Icons.photo_camera_rounded,
             label: '카메라로 촬영하기',
-            onTap: () => setState(() => _selectedSourceLabel = '카메라 촬영 이미지'),
+            onTap: _isPicking ? null : () => _pick(MissionPhotoSource.camera),
           ),
           const SizedBox(height: 8),
           _MissionSheetButton(
             icon: Icons.photo_library_rounded,
             label: '갤러리에서 선택하기',
-            onTap: () => setState(() => _selectedSourceLabel = '갤러리 선택 이미지'),
+            onTap: _isPicking ? null : () => _pick(MissionPhotoSource.gallery),
           ),
-          if (_selectedSourceLabel != null) ...[
+          if (_isPicking) ...[
             const SizedBox(height: 14),
-            _MissionUploadPreview(label: _selectedSourceLabel!),
+            const _MissionInputProgress(label: '이미지를 불러오는 중이에요.'),
+          ],
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 14),
+            _MissionInputError(message: _errorMessage!),
+          ],
+          if (_selectedInput != null) ...[
+            const SizedBox(height: 14),
+            _MissionUploadPreview(label: _selectedInput!.previewLabel),
           ],
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: _selectedSourceLabel == null
+            onPressed: _selectedInput == null || _isPicking
                 ? null
-                : () => Navigator.of(context).pop(true),
+                : () => Navigator.of(context).pop(_selectedInput),
             icon: const Icon(Icons.cloud_done_rounded),
             label: const Text('인증 완료하기'),
             style: FilledButton.styleFrom(
@@ -1452,6 +1538,82 @@ class _MissionUploadPreview extends StatelessWidget {
   }
 }
 
+class _MissionInputProgress extends StatelessWidget {
+  const _MissionInputProgress({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EA),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFF1DBA9)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionInputError extends StatelessWidget {
+  const _MissionInputError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF0F0),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFF4C7C7)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_rounded, color: Color(0xFFD9534F)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MissionSheetButton extends StatelessWidget {
   const _MissionSheetButton({
     required this.icon,
@@ -1461,12 +1623,12 @@ class _MissionSheetButton extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFEAF8EF),
+      color: onTap == null ? const Color(0xFFF2F0EC) : const Color(0xFFEAF8EF),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -1476,7 +1638,11 @@ class _MissionSheetButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
             children: [
-              Icon(icon, color: _missionPrimary),
+              Icon(
+                icon,
+                color:
+                    onTap == null ? AppColors.textSecondary : _missionPrimary,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
