@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/mission/application/mission_controller.dart';
+import 'package:potato_mubwanna/features/mission/data/mission_native_input_service.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_repository.dart';
 import 'package:potato_mubwanna/features/mission/domain/mission_challenge.dart';
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
@@ -14,7 +15,6 @@ void main() {
 
     expect(find.text('미션'), findsOneWidget);
     expect(find.text('점순이와 함께 도전해요'), findsOneWidget);
-    expect(find.text('안목 해변에서 하지감자 찾기'), findsOneWidget);
     expect(find.text('점순이'), findsNothing);
     expect(find.text('일일'), findsOneWidget);
     expect(find.text('주간'), findsOneWidget);
@@ -28,6 +28,13 @@ void main() {
 
     await tester.tap(find.text('전체').first);
     await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('안목 해변에서 하지감자 찾기'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('안목 해변에서 하지감자 찾기'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('10,000걸음 걷기'),
@@ -105,7 +112,17 @@ void main() {
   testWidgets('completes photo mission after selecting upload source',
       (tester) async {
     final repository = _FakeMissionRepository();
-    await _pumpMissionScreen(tester, repository: repository);
+    final inputService = _FakeMissionNativeInputService(
+      photoInput: const MissionPhotoInput(
+        uploadKey: 'local:1002:gallery:receipt.jpg',
+        previewLabel: '갤러리 선택 이미지',
+      ),
+    );
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      inputService: inputService,
+    );
 
     await _openMission(tester, '안목 해변에서 하지감자 찾기');
 
@@ -124,6 +141,46 @@ void main() {
 
     expect(find.text('미션 완료!'), findsOneWidget);
     expect(repository.completeCallCount, 1);
+    expect(repository.lastPayload?.uploadKey, 'local:1002:gallery:receipt.jpg');
+    expect(inputService.lastPhotoSource, MissionPhotoSource.gallery);
+  });
+
+  testWidgets('shows photo input error when native picker fails',
+      (tester) async {
+    await _pumpMissionScreen(
+      tester,
+      inputService: _FakeMissionNativeInputService(
+        photoError: const MissionInputException('카메라 권한이 필요합니다.'),
+      ),
+    );
+
+    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+
+    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('카메라로 촬영하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('카메라 권한이 필요합니다.'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '인증 완료하기'), findsOneWidget);
+  });
+
+  testWidgets('completes qr mission with scanned code', (tester) async {
+    final repository = _FakeMissionRepository();
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      inputService: _FakeMissionNativeInputService(qrCode: 'mock-qr'),
+    );
+
+    await _openMission(tester, '속초 시장 QR 찾기');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'QR 스캔하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 완료!'), findsOneWidget);
+    expect(repository.completeCallCount, 1);
+    expect(repository.lastPayload?.qrCode, 'mock-qr');
   });
 
   testWidgets('shows failure message when completion API rejects',
@@ -242,6 +299,7 @@ void main() {
 Future<void> _pumpMissionScreen(
   WidgetTester tester, {
   MissionRepository? repository,
+  MissionNativeInputService? inputService,
   String? visitEntrySpotName,
   String? visitEntryMissionId,
 }) async {
@@ -250,6 +308,9 @@ Future<void> _pumpMissionScreen(
       overrides: [
         missionRepositoryProvider.overrideWithValue(
           repository ?? _FakeMissionRepository(),
+        ),
+        missionNativeInputServiceProvider.overrideWithValue(
+          inputService ?? _FakeMissionNativeInputService(),
         ),
       ],
       child: MaterialApp(
@@ -284,6 +345,7 @@ class _FakeMissionRepository extends MissionRepository {
   final Object? completeError;
   final Duration completeDelay;
   int completeCallCount = 0;
+  MissionVerificationPayload? lastPayload;
 
   @override
   Future<List<MissionChallenge>> fetchMissions() async => _missions;
@@ -294,6 +356,7 @@ class _FakeMissionRepository extends MissionRepository {
     MissionVerificationPayload payload,
   ) async {
     completeCallCount += 1;
+    lastPayload = payload;
     if (completeDelay > Duration.zero) {
       await Future<void>.delayed(completeDelay);
     }
@@ -309,12 +372,51 @@ class _FakeMissionRepository extends MissionRepository {
         (payload.stepCount ?? 0) < mission.target) {
       throw const ApiException(message: '걸음을 다 채우고 재시도해주세요.');
     }
+    if (mission.type == MissionType.photoOcr &&
+        (payload.uploadKey == null || payload.uploadKey!.isEmpty)) {
+      throw const ApiException(message: '이미지를 업로드한 뒤 다시 시도해주세요.');
+    }
+    if (mission.type == MissionType.qrScan && payload.qrCode != 'mock-qr') {
+      throw const ApiException(message: '올바른 QR 코드가 아닙니다.');
+    }
     return MissionCompletionResult(
       id: mission.id,
       rewardType: mission.rewardType,
       rewardLabel: mission.rewardLabel,
     );
   }
+}
+
+class _FakeMissionNativeInputService extends MissionNativeInputService {
+  _FakeMissionNativeInputService({
+    this.photoInput = const MissionPhotoInput(
+      uploadKey: 'local:test:gallery:image.jpg',
+      previewLabel: '갤러리 선택 이미지',
+    ),
+    this.photoError,
+    this.qrCode,
+  });
+
+  final MissionPhotoInput? photoInput;
+  final MissionInputException? photoError;
+  final String? qrCode;
+  MissionPhotoSource? lastPhotoSource;
+
+  @override
+  Future<MissionPhotoInput?> pickPhoto({
+    required String missionId,
+    required MissionPhotoSource source,
+  }) async {
+    lastPhotoSource = source;
+    final error = photoError;
+    if (error != null) {
+      throw error;
+    }
+    return photoInput;
+  }
+
+  @override
+  Future<String?> scanQrCode(BuildContext context) async => qrCode;
 }
 
 const _missions = [
@@ -348,6 +450,22 @@ const _missions = [
     conditionLabel: '영수증 또는 간판 사진 인증',
     rewardType: MissionRewardType.potato,
     rewardLabel: '하지감자 씨앗',
+    progress: 0,
+    target: 1,
+  ),
+  MissionChallenge(
+    id: '1003',
+    group: MissionGroup.jumsooni,
+    type: MissionType.qrScan,
+    status: MissionStatus.ready,
+    title: '속초 시장 QR 찾기',
+    spotName: '속초 중앙시장',
+    cityName: '속초시',
+    description: '시장 안내판에 있는 QR을 찾아 스캔하세요.',
+    dialogue: '시장 안쪽에 내가 숨겨둔 QR 안내판이 있을 기다.',
+    conditionLabel: 'QR 코드 1회 스캔',
+    rewardType: MissionRewardType.coupon,
+    rewardLabel: '온누리 상품권 쿠폰',
     progress: 0,
     target: 1,
   ),
