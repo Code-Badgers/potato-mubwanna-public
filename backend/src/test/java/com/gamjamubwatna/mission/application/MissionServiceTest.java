@@ -267,6 +267,24 @@ class MissionServiceTest {
     }
 
     @Test
+    void rejectsPhotoMissionWithLocalUploadKey() {
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO, null, null, "local:1:camera:image.jpg", null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("서버에서 발급한 업로드 키를 확인해주세요.");
+    }
+
+    @Test
     void rejectsDuplicateCompletion() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(

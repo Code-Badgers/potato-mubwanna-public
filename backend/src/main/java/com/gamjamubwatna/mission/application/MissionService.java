@@ -37,6 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MissionService {
 
+    private static final String MISSION_UPLOAD_KEY_PREFIX = "mission-uploads/";
+
     private final MissionRepository missionRepository;
     private final MissionVerificationPolicyRepository missionVerificationPolicyRepository;
     private final UserMissionRepository userMissionRepository;
@@ -273,6 +275,9 @@ public class MissionService {
     private void validatePhoto(MissionVerificationPolicy policy, String uploadKey) {
         if (policy.isRequiredUpload()) {
             validateRequiredText(uploadKey, "이미지를 업로드한 뒤 다시 시도해주세요.");
+            if (!uploadKey.startsWith(MISSION_UPLOAD_KEY_PREFIX)) {
+                throw new MissionVerificationException("서버에서 발급한 업로드 키를 확인해주세요.");
+            }
         }
     }
 
