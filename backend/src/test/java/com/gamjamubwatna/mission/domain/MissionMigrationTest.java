@@ -56,6 +56,36 @@ class MissionMigrationTest {
     }
 
     @Test
+    void seedsPhotoOcrKeywords() throws Exception {
+        try (
+            Connection connection = dataSource.getConnection();
+            ResultSet rows = connection.createStatement().executeQuery("""
+                SELECT m.code, p.expected_answer
+                FROM mission_verification_policies p
+                JOIN missions m ON m.mission_id = p.mission_id
+                WHERE m.code IN (
+                    'MISSION_GANGNEUNG_ANMOK_PHOTO_OCR',
+                    'MISSION_WONJU_MUSEUM_SAN_PHOTO_OCR',
+                    'MISSION_GOSEONG_DMZ_PHOTO_OCR'
+                )
+                ORDER BY m.code
+                """)
+        ) {
+            Set<String> policyPairs = new HashSet<>();
+            while (rows.next()) {
+                policyPairs.add(rows.getString("CODE") + "=" + rows.getString("EXPECTED_ANSWER"));
+            }
+
+            assertThat(policyPairs)
+                .containsExactlyInAnyOrder(
+                    "MISSION_GANGNEUNG_ANMOK_PHOTO_OCR=하지감자",
+                    "MISSION_WONJU_MUSEUM_SAN_PHOTO_OCR=물의 정원",
+                    "MISSION_GOSEONG_DMZ_PHOTO_OCR=평화의 종"
+                );
+        }
+    }
+
+    @Test
     void mapsEveryCouponRewardMissionToCouponCatalog() {
         List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
 
