@@ -105,7 +105,7 @@ public class TourApiSpotImportService {
             )
             .map(classification -> {
                 Instant now = Instant.now(clock);
-                touristSpotRepository.findByContentId(item.contentId())
+                findExistingSpot(item.contentId(), item.title(), item.address())
                     .ifPresentOrElse(
                         spot -> spot.updateFromTourApi(
                             item.title(),

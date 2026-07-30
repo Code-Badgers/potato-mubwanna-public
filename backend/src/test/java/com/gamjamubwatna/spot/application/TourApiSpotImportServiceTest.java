@@ -128,6 +128,55 @@ class TourApiSpotImportServiceTest {
     }
 
     @Test
+    void updatesExistingSpotByNameAndAddressWhenTourApiContentIdDiffers() {
+        TourApiClient tourApiClient = mock(TourApiClient.class);
+        KakaoLocalClient kakaoLocalClient = mock(KakaoLocalClient.class);
+        TouristSpotRepository repository = mock(TouristSpotRepository.class);
+        TouristSpot existing = new TouristSpot(
+            "KAKAO_LOCAL:kakao-100",
+            39,
+            "강릉 감자빵 카페",
+            SpotCategory.POTATO_CAFE,
+            new BigDecimal("37.7519000"),
+            new BigDecimal("128.8961000"),
+            "강원특별자치도 강릉시 감자길 1",
+            "강릉시",
+            null,
+            "KAKAO_LOCAL",
+            "감자,감자빵",
+            Instant.parse("2026-06-19T00:00:00Z")
+        );
+        when(tourApiClient.searchPotatoSpots(1, 20))
+            .thenReturn(List.of(new TourApiSpotItem(
+                "TOUR-200",
+                39,
+                "강릉 감자빵 카페",
+                "강원특별자치도 강릉시 감자길 1",
+                new BigDecimal("37.7519100"),
+                new BigDecimal("128.8961100"),
+                "https://example.com/potato.jpg"
+            )));
+        when(kakaoLocalClient.searchPotatoSpots(1, 20)).thenReturn(List.of());
+        when(repository.findByContentId("TOUR-200")).thenReturn(Optional.empty());
+        when(repository.findByNameAndAddress("강릉 감자빵 카페", "강원특별자치도 강릉시 감자길 1"))
+            .thenReturn(Optional.of(existing));
+
+        TourApiSpotImportService importService = new TourApiSpotImportService(
+            tourApiClient,
+            kakaoLocalClient,
+            new PotatoSpotClassifier(),
+            repository,
+            Clock.fixed(Instant.parse("2026-06-20T00:00:00Z"), ZoneOffset.UTC)
+        );
+
+        int savedCount = importService.importPotatoSpots(1, 20);
+
+        assertThat(savedCount).isEqualTo(1);
+        assertThat(existing.getImageUrl()).isEqualTo("https://example.com/potato.jpg");
+        verify(repository, never()).save(any(TouristSpot.class));
+    }
+
+    @Test
     void importsPotatoSpotFromKakaoLocalSearchResult() {
         TourApiClient tourApiClient = mock(TourApiClient.class);
         KakaoLocalClient kakaoLocalClient = mock(KakaoLocalClient.class);
