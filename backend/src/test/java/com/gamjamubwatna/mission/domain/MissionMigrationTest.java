@@ -86,6 +86,34 @@ class MissionMigrationTest {
     }
 
     @Test
+    void seedsMissionQrCodes() throws Exception {
+        try (
+            Connection connection = dataSource.getConnection();
+            ResultSet rows = connection.createStatement().executeQuery("""
+                SELECT m.code, p.expected_qr_code
+                FROM mission_verification_policies p
+                JOIN missions m ON m.mission_id = p.mission_id
+                WHERE m.mission_type = 'QR_SCAN'
+                ORDER BY m.code
+                """)
+        ) {
+            Set<String> policyPairs = new HashSet<>();
+            while (rows.next()) {
+                policyPairs.add(rows.getString("CODE") + "=" + rows.getString("EXPECTED_QR_CODE"));
+            }
+
+            assertThat(policyPairs)
+                .containsExactlyInAnyOrder(
+                    "MISSION_CHEORWON_GOSEOKJEONG_QR=gamjamubwatna://mission/qr/MISSION_CHEORWON_GOSEOKJEONG_QR",
+                    "MISSION_HOENGSEONG_HANWOO_QR=gamjamubwatna://mission/qr/MISSION_HOENGSEONG_HANWOO_QR",
+                    "MISSION_HWACHEON_SANCHEONEO_QR=gamjamubwatna://mission/qr/MISSION_HWACHEON_SANCHEONEO_QR",
+                    "MISSION_PYEONGCHANG_QR=gamjamubwatna://mission/qr/MISSION_PYEONGCHANG_QR",
+                    "MISSION_SOKCHO_ONNURI_QR=gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR"
+                );
+        }
+    }
+
+    @Test
     void mapsEveryCouponRewardMissionToCouponCatalog() {
         List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
 
