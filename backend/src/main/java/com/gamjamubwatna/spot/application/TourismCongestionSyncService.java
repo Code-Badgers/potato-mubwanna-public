@@ -136,7 +136,8 @@ public class TourismCongestionSyncService {
         TouristSpot spot,
         List<TourismCongestionPrediction> predictions
     ) {
-        LocalDate today = LocalDate.now(clock.getZone());
+        // 실행 환경의 시스템 날짜가 아니라 주입된 Clock을 기준으로 예측 시점을 선택한다.
+        LocalDate today = LocalDate.now(clock);
         predictions.stream()
             .filter(prediction -> !prediction.predictionDate().isBefore(today))
             .min(Comparator.comparing(TourismCongestionPrediction::predictionDate))
