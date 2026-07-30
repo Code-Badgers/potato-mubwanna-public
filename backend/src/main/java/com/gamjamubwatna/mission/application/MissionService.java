@@ -317,7 +317,7 @@ public class MissionService {
         if (expectedQrCode == null || expectedQrCode.isBlank()) {
             throw new MissionVerificationException("미션 QR 정책을 확인할 수 없습니다.");
         }
-        if (!expectedQrCode.equals(qrCode)) {
+        if (!expectedQrCode.trim().equals(qrCode.trim())) {
             throw new MissionVerificationException("올바르지 않은 QR 코드입니다.");
         }
     }
