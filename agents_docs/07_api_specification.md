@@ -884,7 +884,8 @@ Notes:
 
 - `QUIZ`: `answer`를 검증한다.
 - `VISIT_AND_STEP`: `stepCount`가 미션 목표 걸음 수 이상인지 검증한다.
-- `PHOTO`, `PHOTO_OCR`: `uploadKey` 존재 여부를 검증한다. 실제 OCR 검증은 후속 연동에서 강화한다.
+- `PHOTO`: `uploadKey` 존재 여부와 서버 발급 key 형식을 검증한다.
+- `PHOTO_OCR`: `uploadKey`로 저장된 이미지를 읽고 OCR 판독 결과에 미션 정책 키워드가 포함되는지 검증한다.
 - `QR_SCAN`: `qrCode` 존재 여부를 검증한다. 실제 QR 코드 매칭은 후속 연동에서 강화한다.
 - 인증 성공 시 서버가 중복 완료 여부를 확인하고 미션 완료와 보상 응답을 함께 처리한다.
 
@@ -931,7 +932,8 @@ Notes:
 - 로컬 개발 기본값은 서버 로컬 디스크(`local-runtime/mission-uploads`)에 파일을 저장하고 저장된 object key를 `uploadKey`로 반환한다.
 - `uploadKey`는 이후 `POST /api/missions/{missionId}/verify`의 `uploadKey`로 전달한다.
 - 운영 환경에서 S3 또는 호환 오브젝트 스토리지로 전환할 경우 storage 구현체와 환경변수를 별도 이슈에서 확장한다.
-- 실제 OCR 엔진 분석은 후속 이슈에서 연결한다.
+- 현재 로컬 OCR adapter는 운영 OCR 엔진 연결 전까지 파일 bytes에 포함된 텍스트를 판독 결과로 사용한다.
+- 실제 OCR SaaS 또는 온디바이스 OCR 엔진 연결은 후속 이슈에서 진행한다.
 
 Environment:
 
