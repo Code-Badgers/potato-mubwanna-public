@@ -239,6 +239,70 @@ class MissionServiceTest {
     }
 
     @Test
+    void verifiesQrMissionWithExpectedCode() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, "gamjamubwatna://mission/qr/MISSION_QR")));
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionVerifyResponse result = missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(
+                MissionType.QR_SCAN,
+                null,
+                null,
+                null,
+                " gamjamubwatna://mission/qr/MISSION_QR "
+            )
+        );
+
+        assertThat(result.verified()).isTrue();
+        assertThat(result.completed()).isTrue();
+        verify(userMissionRepository).save(any(UserMission.class));
+    }
+
+    @Test
+    void rejectsMissingQrCode() {
+        Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, "gamjamubwatna://mission/qr/MISSION_QR")));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QR_SCAN, null, null, null, " ")
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("QR 코드를 스캔한 뒤 다시 시도해주세요.");
+    }
+
+    @Test
+    void rejectsMissingQrPolicy() {
+        Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, null)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QR_SCAN, null, null, null, "gamjamubwatna://mission/qr/MISSION_QR")
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("미션 QR 정책을 확인할 수 없습니다.");
+    }
+
+    @Test
     void rejectsWrongQrCodeFromPolicy() {
         Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));

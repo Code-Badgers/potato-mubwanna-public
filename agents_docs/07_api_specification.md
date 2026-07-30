@@ -845,11 +845,11 @@ Request:
 
 ```json
 {
-  "type": "QUIZ",
-  "answer": "곤드레감자",
+  "type": "QR_SCAN",
+  "answer": null,
   "stepCount": null,
   "uploadKey": null,
-  "qrCode": null
+  "qrCode": "gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR"
 }
 ```
 
@@ -886,8 +886,18 @@ Notes:
 - `VISIT_AND_STEP`: `stepCount`가 미션 목표 걸음 수 이상인지 검증한다.
 - `PHOTO`: `uploadKey` 존재 여부와 서버 발급 key 형식을 검증한다.
 - `PHOTO_OCR`: `uploadKey`로 저장된 이미지를 읽고 OCR 판독 결과에 미션 정책 키워드가 포함되는지 검증한다.
-- `QR_SCAN`: `qrCode` 존재 여부를 검증한다. 실제 QR 코드 매칭은 후속 연동에서 강화한다.
+- `QR_SCAN`: `qrCode` 존재 여부와 미션별 정책 QR payload의 정확한 일치 여부를 검증한다. 스캔값의 앞뒤 공백은 서버에서 제거한 뒤 비교한다.
 - 인증 성공 시 서버가 중복 완료 여부를 확인하고 미션 완료와 보상 응답을 함께 처리한다.
+
+QR 미션 payload 예시:
+
+| 미션 코드 | QR payload |
+| --- | --- |
+| `MISSION_PYEONGCHANG_QR` | `gamjamubwatna://mission/qr/MISSION_PYEONGCHANG_QR` |
+| `MISSION_SOKCHO_ONNURI_QR` | `gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR` |
+| `MISSION_CHEORWON_GOSEOKJEONG_QR` | `gamjamubwatna://mission/qr/MISSION_CHEORWON_GOSEOKJEONG_QR` |
+| `MISSION_HOENGSEONG_HANWOO_QR` | `gamjamubwatna://mission/qr/MISSION_HOENGSEONG_HANWOO_QR` |
+| `MISSION_HWACHEON_SANCHEONEO_QR` | `gamjamubwatna://mission/qr/MISSION_HWACHEON_SANCHEONEO_QR` |
 
 ### 6.4 미션 사진 업로드 키 발급
 
