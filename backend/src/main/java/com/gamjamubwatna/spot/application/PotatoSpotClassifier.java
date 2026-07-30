@@ -33,10 +33,18 @@ public class PotatoSpotClassifier {
         if (!trustKeywordSearch && !containsPotatoKeyword(text)) {
             return Optional.empty();
         }
+        if (trustKeywordSearch && isGenericTourContent(contentTypeId) && !containsPotatoKeyword(text)) {
+            return Optional.empty();
+        }
 
         SpotCategory category = classifyCategory(contentTypeId, text);
 
         return Optional.of(new PotatoSpotClassification(category, extractTags(text)));
+    }
+
+    private boolean isGenericTourContent(Integer contentTypeId) {
+        return contentTypeId != null
+            && (contentTypeId == 12 || contentTypeId == 14 || contentTypeId == 15 || contentTypeId == 25);
     }
 
     private SpotCategory classifyCategory(Integer contentTypeId, String text) {
