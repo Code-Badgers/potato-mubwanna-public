@@ -30,6 +30,9 @@ public class PotatoSpotClassifier {
         boolean trustKeywordSearch
     ) {
         String text = "%s %s".formatted(nullToBlank(title), nullToBlank(address));
+        if (isLowRelevancePotatoSoup(text)) {
+            return Optional.empty();
+        }
         if (!trustKeywordSearch && !containsPotatoKeyword(text)) {
             return Optional.empty();
         }
@@ -40,6 +43,25 @@ public class PotatoSpotClassifier {
         SpotCategory category = classifyCategory(contentTypeId, text);
 
         return Optional.of(new PotatoSpotClassification(category, extractTags(text)));
+    }
+
+    private boolean isLowRelevancePotatoSoup(String text) {
+        return containsAny(text, "감자탕")
+            && !containsAny(
+                text,
+                "옹심이",
+                "감자전",
+                "감자떡",
+                "감자빵",
+                "알감자",
+                "회오리감자",
+                "고랭지",
+                "로컬푸드",
+                "감자꽃",
+                "감자밭",
+                "감자 맥주",
+                "감자맥주"
+            );
     }
 
     private boolean isGenericTourContent(Integer contentTypeId) {

@@ -126,6 +126,22 @@ class PotatoSpotClassifierTest {
     }
 
     @Test
+    void ignoresGenericPotatoSoupRestaurant() {
+        assertThat(classifier.classifyKeywordSearchResult(39, "강릉 감자탕", "강원특별자치도 강릉시"))
+            .isEmpty();
+    }
+
+    @Test
+    void keepsRestaurantWhenPotatoSoupNameHasLocalPotatoSignal() {
+        PotatoSpotClassification classification = classifier
+            .classifyKeywordSearchResult(39, "강릉 감자탕 감자전", "강원특별자치도 강릉시")
+            .orElseThrow();
+
+        assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_RESTAURANT);
+        assertThat(classification.tags()).isEqualTo("감자,감자전");
+    }
+
+    @Test
     void skipsGenericTourKeywordSearchResultWithoutPotatoSignal() {
         assertThat(classifier.classifyKeywordSearchResult(12, "대관령 여행지", "강원특별자치도 평창군"))
             .isEmpty();
