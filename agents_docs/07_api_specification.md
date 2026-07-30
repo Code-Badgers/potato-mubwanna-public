@@ -928,9 +928,17 @@ Error:
 
 Notes:
 
-- MVP 단계에서는 운영 스토리지 대신 서버가 검증 가능한 `uploadKey`를 발급한다.
+- 로컬 개발 기본값은 서버 로컬 디스크(`local-runtime/mission-uploads`)에 파일을 저장하고 저장된 object key를 `uploadKey`로 반환한다.
 - `uploadKey`는 이후 `POST /api/missions/{missionId}/verify`의 `uploadKey`로 전달한다.
-- 실제 S3 또는 OCR 엔진 저장/분석은 후속 이슈에서 연결한다.
+- 운영 환경에서 S3 또는 호환 오브젝트 스토리지로 전환할 경우 storage 구현체와 환경변수를 별도 이슈에서 확장한다.
+- 실제 OCR 엔진 분석은 후속 이슈에서 연결한다.
+
+Environment:
+
+| 이름 | 기본값 | 설명 |
+| --- | --- | --- |
+| `MISSION_UPLOAD_STORAGE_TYPE` | `local` | 업로드 저장소 타입. 현재 구현 기준은 `local` |
+| `MISSION_UPLOAD_LOCAL_DIR` | `local-runtime/mission-uploads` | 로컬 개발용 이미지 저장 루트 디렉터리 |
 
 ---
 
