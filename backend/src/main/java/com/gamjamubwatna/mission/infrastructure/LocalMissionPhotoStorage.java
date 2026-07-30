@@ -3,6 +3,7 @@ package com.gamjamubwatna.mission.infrastructure;
 import com.gamjamubwatna.mission.application.MissionPhotoStorage;
 import com.gamjamubwatna.mission.application.MissionUploadException;
 import com.gamjamubwatna.mission.application.StoredMissionPhoto;
+import com.gamjamubwatna.mission.application.StoredMissionPhotoFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -30,10 +31,7 @@ public class LocalMissionPhotoStorage implements MissionPhotoStorage {
         String contentType,
         MultipartFile file
     ) {
-        Path target = rootDirectory.resolve(uploadKey).normalize();
-        if (!target.startsWith(rootDirectory)) {
-            throw new MissionUploadException("이미지 저장 경로를 확인할 수 없습니다.");
-        }
+        Path target = targetPath(uploadKey);
 
         try {
             Files.createDirectories(target.getParent());
@@ -50,5 +48,26 @@ public class LocalMissionPhotoStorage implements MissionPhotoStorage {
             contentType,
             file.getSize()
         );
+    }
+
+    @Override
+    public StoredMissionPhotoFile read(String uploadKey) {
+        Path target = targetPath(uploadKey);
+        if (!Files.exists(target) || !Files.isRegularFile(target)) {
+            throw new MissionUploadException("업로드된 이미지를 찾을 수 없습니다.");
+        }
+        try {
+            return new StoredMissionPhotoFile(uploadKey, Files.readAllBytes(target));
+        } catch (IOException exception) {
+            throw new MissionUploadException("이미지 파일을 읽지 못했습니다.");
+        }
+    }
+
+    private Path targetPath(String uploadKey) {
+        Path target = rootDirectory.resolve(uploadKey).normalize();
+        if (!target.startsWith(rootDirectory)) {
+            throw new MissionUploadException("이미지 저장 경로를 확인할 수 없습니다.");
+        }
+        return target;
     }
 }

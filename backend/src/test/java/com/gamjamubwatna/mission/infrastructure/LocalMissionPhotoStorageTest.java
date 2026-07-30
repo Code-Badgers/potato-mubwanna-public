@@ -39,6 +39,8 @@ class LocalMissionPhotoStorageTest {
         assertThat(storedPhoto.fileName()).isEqualTo("receipt.jpg");
         assertThat(storedPhoto.contentType()).isEqualTo("image/jpeg");
         assertThat(storedPhoto.size()).isEqualTo(3);
+
+        assertThat(storage.read(storedPhoto.uploadKey()).bytes()).containsExactly(1, 2, 3);
     }
 
     @Test

@@ -46,6 +46,8 @@ public class MissionService {
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
     private final UserRepository userRepository;
+    private final MissionPhotoStorage missionPhotoStorage;
+    private final MissionPhotoTextReader missionPhotoTextReader;
     private final Clock clock;
 
     @Autowired
@@ -56,7 +58,9 @@ public class MissionService {
         RewardHistoryRepository rewardHistoryRepository,
         CouponRepository couponRepository,
         UserCouponRepository userCouponRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        MissionPhotoStorage missionPhotoStorage,
+        MissionPhotoTextReader missionPhotoTextReader
     ) {
         this(
             missionRepository,
@@ -66,6 +70,8 @@ public class MissionService {
             couponRepository,
             userCouponRepository,
             userRepository,
+            missionPhotoStorage,
+            missionPhotoTextReader,
             Clock.systemUTC()
         );
     }
@@ -78,6 +84,8 @@ public class MissionService {
         CouponRepository couponRepository,
         UserCouponRepository userCouponRepository,
         UserRepository userRepository,
+        MissionPhotoStorage missionPhotoStorage,
+        MissionPhotoTextReader missionPhotoTextReader,
         Clock clock
     ) {
         this.missionRepository = missionRepository;
@@ -87,6 +95,8 @@ public class MissionService {
         this.couponRepository = couponRepository;
         this.userCouponRepository = userCouponRepository;
         this.userRepository = userRepository;
+        this.missionPhotoStorage = missionPhotoStorage;
+        this.missionPhotoTextReader = missionPhotoTextReader;
         this.clock = clock;
     }
 
@@ -235,7 +245,8 @@ public class MissionService {
         switch (mission.getType()) {
             case QUIZ -> validateQuiz(verificationPolicy(mission), request.answer());
             case VISIT_AND_STEP -> validateStep(verificationPolicy(mission), request.stepCount());
-            case PHOTO, PHOTO_OCR -> validatePhoto(verificationPolicy(mission), request.uploadKey());
+            case PHOTO -> validatePhoto(verificationPolicy(mission), request.uploadKey());
+            case PHOTO_OCR -> validatePhotoOcr(verificationPolicy(mission), request.uploadKey());
             case QR_SCAN -> validateQrCode(verificationPolicy(mission), request.qrCode());
             default -> {
                 // 위치/스탬프/수집형은 외부 센서 연동 전까지 활성 상태와 중복 완료 여부만 서버에서 확인한다.
@@ -278,6 +289,25 @@ public class MissionService {
             if (!uploadKey.startsWith(MISSION_UPLOAD_KEY_PREFIX)) {
                 throw new MissionVerificationException("서버에서 발급한 업로드 키를 확인해주세요.");
             }
+        }
+    }
+
+    private void validatePhotoOcr(MissionVerificationPolicy policy, String uploadKey) {
+        validatePhoto(policy, uploadKey);
+        String expectedKeyword = policy.getExpectedAnswer();
+        if (expectedKeyword == null || expectedKeyword.isBlank()) {
+            throw new MissionVerificationException("미션 OCR 정책을 확인할 수 없습니다.");
+        }
+
+        StoredMissionPhotoFile photoFile;
+        try {
+            photoFile = missionPhotoStorage.read(uploadKey);
+        } catch (MissionUploadException exception) {
+            throw new MissionVerificationException(exception.getMessage());
+        }
+        String recognizedText = missionPhotoTextReader.readText(photoFile);
+        if (recognizedText == null || !recognizedText.contains(expectedKeyword)) {
+            throw new MissionVerificationException("인증 이미지에서 미션 키워드를 찾지 못했습니다.");
         }
     }
 
