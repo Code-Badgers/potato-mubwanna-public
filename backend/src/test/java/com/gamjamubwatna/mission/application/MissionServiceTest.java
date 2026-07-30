@@ -36,7 +36,9 @@ import com.gamjamubwatna.reward.domain.RewardSourceType;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,10 +72,14 @@ class MissionServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    private FakeMissionPhotoStorage missionPhotoStorage;
+    private MissionPhotoTextReader missionPhotoTextReader;
     private MissionService missionService;
 
     @BeforeEach
     void setUp() {
+        missionPhotoStorage = new FakeMissionPhotoStorage();
+        missionPhotoTextReader = photoFile -> new String(photoFile.bytes());
         missionService = new MissionService(
             missionRepository,
             missionVerificationPolicyRepository,
@@ -82,6 +88,8 @@ class MissionServiceTest {
             couponRepository,
             userCouponRepository,
             userRepository,
+            missionPhotoStorage,
+            missionPhotoTextReader,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -285,6 +293,67 @@ class MissionServiceTest {
     }
 
     @Test
+    void verifiesPhotoOcrMissionWhenRecognizedTextContainsExpectedKeyword() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
+        String uploadKey = "mission-uploads/1/1/test-receipt.jpg";
+        missionPhotoStorage.put(uploadKey, "안목 커피거리 영수증 하지감자".getBytes());
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionVerifyResponse result = missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, uploadKey, null)
+        );
+
+        assertThat(result.verified()).isTrue();
+        assertThat(result.completed()).isTrue();
+    }
+
+    @Test
+    void rejectsPhotoOcrMissionWhenKeywordIsMissing() {
+        Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
+        String uploadKey = "mission-uploads/1/1/test-receipt.jpg";
+        missionPhotoStorage.put(uploadKey, "안목 커피거리 영수증".getBytes());
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, uploadKey, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("인증 이미지에서 미션 키워드를 찾지 못했습니다.");
+    }
+
+    @Test
+    void rejectsPhotoOcrMissionWhenUploadKeyDoesNotExist() {
+        Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, "mission-uploads/1/1/missing.jpg", null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("업로드된 이미지를 찾을 수 없습니다.");
+    }
+
+    @Test
     void rejectsDuplicateCompletion() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(
@@ -458,14 +527,41 @@ class MissionServiceTest {
     }
 
     private MissionVerificationPolicy uploadPolicy(Mission mission) {
+        return uploadPolicy(mission, null);
+    }
+
+    private MissionVerificationPolicy uploadPolicy(Mission mission, String expectedKeyword) {
         return new MissionVerificationPolicy(
             mission,
             mission.getType(),
-            null,
+            expectedKeyword,
             null,
             true,
             null,
             Instant.parse("2026-07-01T00:00:00Z")
         );
+    }
+
+    private static class FakeMissionPhotoStorage implements MissionPhotoStorage {
+
+        private final Map<String, byte[]> files = new HashMap<>();
+
+        void put(String uploadKey, byte[] bytes) {
+            files.put(uploadKey, bytes);
+        }
+
+        @Override
+        public StoredMissionPhoto store(String uploadKey, String fileName, String contentType, org.springframework.web.multipart.MultipartFile file) {
+            throw new UnsupportedOperationException("MissionServiceTest does not store files");
+        }
+
+        @Override
+        public StoredMissionPhotoFile read(String uploadKey) {
+            byte[] bytes = files.get(uploadKey);
+            if (bytes == null) {
+                throw new MissionUploadException("업로드된 이미지를 찾을 수 없습니다.");
+            }
+            return new StoredMissionPhotoFile(uploadKey, bytes);
+        }
     }
 }

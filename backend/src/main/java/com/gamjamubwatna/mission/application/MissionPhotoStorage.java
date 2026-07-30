@@ -5,4 +5,6 @@ import org.springframework.web.multipart.MultipartFile;
 public interface MissionPhotoStorage {
 
     StoredMissionPhoto store(String uploadKey, String fileName, String contentType, MultipartFile file);
+
+    StoredMissionPhotoFile read(String uploadKey);
 }

@@ -26,8 +26,7 @@ class MissionUploadServiceTest {
     void setUp() {
         userRepository = mock(UserRepository.class);
         missionRepository = mock(MissionRepository.class);
-        missionPhotoStorage = (uploadKey, fileName, contentType, file) ->
-            new StoredMissionPhoto(uploadKey, fileName, contentType, file.getSize());
+        missionPhotoStorage = new FakeMissionPhotoStorage();
         missionUploadService = new MissionUploadService(
             userRepository,
             missionRepository,
@@ -105,5 +104,23 @@ class MissionUploadServiceTest {
             contentType,
             new byte[size]
         );
+    }
+
+    private static class FakeMissionPhotoStorage implements MissionPhotoStorage {
+
+        @Override
+        public StoredMissionPhoto store(
+            String uploadKey,
+            String fileName,
+            String contentType,
+            org.springframework.web.multipart.MultipartFile file
+        ) {
+            return new StoredMissionPhoto(uploadKey, fileName, contentType, file.getSize());
+        }
+
+        @Override
+        public StoredMissionPhotoFile read(String uploadKey) {
+            throw new UnsupportedOperationException("MissionUploadServiceTest does not read files");
+        }
     }
 }
