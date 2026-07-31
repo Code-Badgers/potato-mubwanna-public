@@ -197,6 +197,90 @@ Response:
 - 방문 기록이 없으면 빈 배열을 반환한다.
 - 방문 기록은 방문 인증 시 저장된 `user_visits`를 기준으로 한다.
 
+### 2.4 내 푸시 토큰 등록/갱신
+
+```http
+POST /api/users/me/push-tokens
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "token": "fcm-registration-token",
+  "platform": "ANDROID",
+  "previousToken": "previous-fcm-registration-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "registered": true,
+    "platform": "ANDROID",
+    "registeredAt": "2026-07-31T03:30:00Z"
+  }
+}
+```
+
+- `platform`은 `ANDROID`, `IOS`, `WEB` 중 하나다.
+- `previousToken`은 FCM token refresh 때만 보내는 선택값이다. 현재 사용자가 소유한 이전 토큰만 삭제한다.
+- 같은 `token`을 다시 등록하면 사용자, platform, 갱신 시각을 최신 값으로 idempotent upsert한다.
+- registration token 원문은 서버 로그에 남기지 않는다.
+
+### 2.5 내 푸시 토큰 삭제
+
+```http
+DELETE /api/users/me/push-tokens
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "token": "fcm-registration-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": null
+}
+```
+
+- 로그아웃과 알림 동의 철회는 인증 토큰을 지우기 전에 이 endpoint를 호출한다.
+- 이미 삭제됐거나 현재 사용자 소유가 아닌 token 삭제 요청도 idempotent success로 처리한다.
+- 회원 탈퇴 시 사용자 token은 FK cascade로 삭제한다.
+- 서버 발송에서 FCM이 registration token을 무효로 판정하면 해당 token을 즉시 삭제하고, 장기간 갱신되지 않은 token은 다음 등록 시 정리한다.
+
+### 2.6 푸시 알림 라우팅 payload
+
+FCM data payload는 다음 목적지만 허용한다.
+
+| `destination` | 앱 이동 경로 | `destinationId` |
+| --- | --- | --- |
+| `MISSIONS` | `/main/missions` | 사용하지 않음 |
+| `COUPONS` | `/coupons` | 사용하지 않음 |
+| `STAMPS` | `/main/stamps` | 사용하지 않음 |
+| `MAP` | `/main/map` | 사용하지 않음 |
+| `SPOT` | `/spots/{spotId}` | 양의 정수 `spotId` 필수 |
+
+- 앱은 foreground message를 인앱 알림으로 표시하고, 알림 탭과 종료 상태의 initial message를 동일한 whitelist resolver로 처리한다.
+- 알 수 없는 `destination` 또는 유효하지 않은 `destinationId`는 화면 이동 없이 무시한다.
+- Firebase client 설정이 없거나 서버의 `FIREBASE_ADMIN_ENABLED=false`인 환경은 push 기능만 비활성화하며 앱/서버 시작은 계속한다.
+
 ---
 
 ## 3. Tourist Spot / Map API

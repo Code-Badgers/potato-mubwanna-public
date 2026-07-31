@@ -52,6 +52,13 @@ mission:
     storage-type: ${MISSION_UPLOAD_STORAGE_TYPE:local}
     local-dir: ${MISSION_UPLOAD_LOCAL_DIR:local-runtime/mission-uploads}
 
+push:
+  firebase:
+    enabled: ${FIREBASE_ADMIN_ENABLED:false}
+    project-id: ${FIREBASE_PROJECT_ID:}
+  token:
+    stale-days: ${PUSH_TOKEN_STALE_DAYS:60}
+
 external:
   related-tourism-api:
     base-url: ${RELATED_TOURISM_API_BASE_URL:https://apis.data.go.kr/B551011/TarRlteTarService1}
