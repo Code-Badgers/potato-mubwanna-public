@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:potato_mubwanna/core/permissions/permission_service.dart';
+import 'package:potato_mubwanna/features/onboarding/data/onboarding_status_store.dart';
 import 'package:potato_mubwanna/features/onboarding/presentation/screen/onboarding_screen.dart';
 import 'package:potato_mubwanna/features/onboarding/presentation/screen/permission_guide_screen.dart';
 
@@ -56,6 +57,39 @@ void main() {
     expect(find.text('닉네임 [필수]'), findsNothing);
     expect(find.text('이메일 [선택]'), findsNothing);
     expect(find.text('확인'), findsOneWidget);
+  });
+
+  testWidgets('records onboarding completion before opening login',
+      (tester) async {
+    final statusStore = _RecordingOnboardingStatusStore();
+    final router = GoRouter(
+      initialLocation: '/onboarding',
+      routes: [
+        GoRoute(
+          path: '/onboarding',
+          builder: (_, __) => OnboardingScreen(
+            onboardingStatusStore: statusStore,
+          ),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (_, __) => const Scaffold(
+            body: Center(child: Text('login destination')),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.drag(find.byType(PageView), const Offset(-800, 0));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.drag(find.byType(PageView), const Offset(-800, 0));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.text('카카오 로그인하러 가기'));
+    await tester.pumpAndSettle();
+
+    expect(statusStore.markCalls, 1);
+    expect(find.text('login destination'), findsOneWidget);
   });
 
   testWidgets('requests location and enters the map when granted',
@@ -166,5 +200,17 @@ class _FakePermissionService extends PermissionService {
   Future<PermissionStatus> requestNotification() async {
     notificationRequestCalls++;
     return requestResult;
+  }
+}
+
+class _RecordingOnboardingStatusStore implements OnboardingStatusStore {
+  int markCalls = 0;
+
+  @override
+  Future<bool> hasCompletedOnboarding() async => false;
+
+  @override
+  Future<void> markOnboardingCompleted() async {
+    markCalls++;
   }
 }

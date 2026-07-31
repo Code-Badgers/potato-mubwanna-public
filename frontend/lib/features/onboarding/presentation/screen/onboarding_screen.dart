@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../data/onboarding_status_store.dart';
 
 const _primaryButtonColor = Color(0xFF56C787);
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({
+    this.onboardingStatusStore = const SharedPreferencesOnboardingStatusStore(),
+    super.key,
+  });
+
+  final OnboardingStatusStore onboardingStatusStore;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -40,7 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  void _handlePrimaryAction() {
+  Future<void> _handlePrimaryAction() async {
     if (_currentPage < _steps.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 280),
@@ -49,7 +55,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
 
-    context.go('/login');
+    try {
+      await widget.onboardingStatusStore.markOnboardingCompleted();
+    } catch (_) {
+      // 설정 저장 실패가 사용자의 로그인 진행을 막지 않게 한다.
+    }
+    if (mounted) {
+      context.go('/login');
+    }
   }
 
   @override

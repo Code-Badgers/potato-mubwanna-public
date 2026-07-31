@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../config/app_environment.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/screen/login_screen.dart';
+import '../../features/auth/presentation/screen/session_startup_screen.dart';
 import '../../features/coupon/presentation/screen/coupon_screen.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
 import '../../features/mission/presentation/screen/mission_screen.dart';
@@ -18,11 +18,17 @@ import '../../features/stamp/presentation/screen/stamp_book_screen.dart';
 import '../../features/settings/presentation/screen/settings_screen.dart';
 import '../../features/travel_record/presentation/screen/travel_record_screen.dart';
 import '../../shared/widgets/navigation/main_shell.dart';
+import 'session_startup_route_gate.dart';
 
 final appRouter = GoRouter(
-  initialLocation:
-      AppEnvironment.hasKakaoAuthorizationCallback ? '/login' : '/onboarding',
+  initialLocation: '/startup',
+  redirect: (context, state) =>
+      sessionStartupRouteGate.redirectBeforeSessionStartup(state.location),
   routes: [
+    GoRoute(
+      path: '/startup',
+      builder: (context, state) => const SessionStartupScreen(),
+    ),
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
@@ -107,7 +113,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/',
-      redirect: (context, state) => '/onboarding',
+      redirect: (context, state) => '/startup',
     ),
   ],
   errorBuilder: (context, state) => Scaffold(

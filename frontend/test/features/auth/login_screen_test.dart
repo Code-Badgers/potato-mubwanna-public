@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/auth/presentation/screen/login_screen.dart';
+import 'package:potato_mubwanna/features/onboarding/data/onboarding_status_store.dart';
 
 void main() {
   setUp(() {
@@ -88,6 +90,41 @@ void main() {
 
     expect(find.text('테스트 환경에서는 카카오 로그인을 시작할 수 없습니다.'), findsOneWidget);
   });
+
+  testWidgets('records onboarding completion when continuing as a guest', (
+    tester,
+  ) async {
+    final statusStore = _RecordingOnboardingStatusStore();
+    final router = GoRouter(
+      initialLocation: '/login',
+      routes: [
+        GoRoute(
+          path: '/login',
+          builder: (_, __) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: '/permissions',
+          builder: (_, __) => const Scaffold(
+            body: Center(child: Text('permissions destination')),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingStatusStoreProvider.overrideWithValue(statusStore),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.tap(find.text('나중에 로그인하기'));
+    await tester.pumpAndSettle();
+
+    expect(statusStore.markCalls, 1);
+    expect(find.text('permissions destination'), findsOneWidget);
+  });
 }
 
 class _UnsupportedKakaoLoginService extends KakaoLoginService {
@@ -108,4 +145,16 @@ class _NoopAuthRepository extends AuthRepository {
 
   @override
   Future<void> loginWithKakaoToken(String kakaoAccessToken) async {}
+}
+
+class _RecordingOnboardingStatusStore implements OnboardingStatusStore {
+  int markCalls = 0;
+
+  @override
+  Future<bool> hasCompletedOnboarding() async => false;
+
+  @override
+  Future<void> markOnboardingCompleted() async {
+    markCalls++;
+  }
 }

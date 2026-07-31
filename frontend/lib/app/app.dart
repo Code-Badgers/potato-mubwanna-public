@@ -31,7 +31,6 @@ class _PotatoMubwannaAppState extends ConsumerState<PotatoMubwannaApp>
         pushNotifications.foregroundMessages.listen(_showForegroundMessage);
     _openedMessageSubscription =
         pushNotifications.openedMessages.listen(_openPushMessage);
-    unawaited(_openInitialPushMessage());
   }
 
   @override
@@ -60,19 +59,6 @@ class _PotatoMubwannaAppState extends ConsumerState<PotatoMubwannaApp>
       theme: AppTheme.light,
       routerConfig: appRouter,
     );
-  }
-
-  Future<void> _openInitialPushMessage() async {
-    final message =
-        await ref.read(pushNotificationServiceProvider).getInitialMessage();
-    if (message == null || !mounted) {
-      return;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _openPushMessage(message);
-      }
-    });
   }
 
   Future<void> _synchronizePushToken() async {
@@ -108,6 +94,9 @@ class _PotatoMubwannaAppState extends ConsumerState<PotatoMubwannaApp>
   }
 
   void _openPushMessage(PushMessage message) {
+    if (ref.read(authControllerProvider).status != AuthStatus.authenticated) {
+      return;
+    }
     final route = PushRouteResolver.resolve(message.data);
     if (route != null) {
       appRouter.go(route);

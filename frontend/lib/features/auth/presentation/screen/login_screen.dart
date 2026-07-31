@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../onboarding/data/onboarding_status_store.dart';
 import '../../application/auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .read(authControllerProvider.notifier)
         .completePendingKakaoLogin();
     if (loggedIn && mounted) {
+      await _continueToPermissions();
+    }
+  }
+
+  Future<void> _continueToPermissions() async {
+    try {
+      await ref.read(onboardingStatusStoreProvider).markOnboardingCompleted();
+    } catch (_) {
+      // 설정 저장 실패가 로그인 완료 흐름을 막지 않게 한다.
+    }
+    if (mounted) {
       context.go('/permissions');
     }
   }
@@ -83,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   .read(authControllerProvider.notifier)
                                   .loginWithKakao();
                               if (loggedIn && context.mounted) {
-                                context.go('/permissions');
+                                await _continueToPermissions();
                               }
                             },
                       style: ElevatedButton.styleFrom(
@@ -133,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: () => context.go('/permissions'),
+                onPressed: _continueToPermissions,
                 child: const Text('나중에 로그인하기'),
               ),
               const Spacer(),
