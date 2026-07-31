@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../shared/widgets/auth_required_view.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../application/mission_controller.dart';
 import '../../data/mission_native_input_service.dart';
 import '../../data/mission_repository.dart';
@@ -218,6 +221,21 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authStatus = ref.watch(authControllerProvider).status;
+    if (authStatus == AuthStatus.loading) {
+      return const _MissionScaffold(
+        child: _MissionLoadingState(),
+      );
+    }
+    if (authStatus != AuthStatus.authenticated) {
+      return _MissionScaffold(
+        child: AuthRequiredView(
+          description: '점순이 미션에 도전하려면 로그인해주세요.',
+          onLogin: () => context.go('/login'),
+        ),
+      );
+    }
+
     final missionsState = ref.watch(missionsProvider);
     final selectedMissionId = _selectedMissionId;
     final selectedMission = selectedMissionId == null
