@@ -5,6 +5,7 @@ import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
+import 'package:potato_mubwanna/features/push/application/push_notification_service.dart';
 
 void main() {
   test('keeps auth idle while web login redirects to Kakao', () async {
@@ -22,9 +23,11 @@ void main() {
   test('completes web login from a verified authorization callback', () async {
     final service = _CallbackKakaoLoginService();
     final repository = _RecordingAuthRepository();
+    final pushLifecycle = _RecordingPushTokenLifecycle();
     final controller = AuthController(
       kakaoLoginService: service,
       authRepository: repository,
+      pushTokenLifecycle: pushLifecycle,
     );
 
     final loggedIn = await controller.completePendingKakaoLogin();
@@ -34,17 +37,21 @@ void main() {
     expect(repository.authorizationCode, 'authorization-code');
     expect(repository.redirectUri, 'http://localhost:54631/');
     expect(service.cleared, isTrue);
+    expect(pushLifecycle.synchronizeCalls, 1);
   });
 
   test('resets auth state after the remote logout request fails', () async {
+    final pushLifecycle = _RecordingPushTokenLifecycle();
     final controller = AuthController(
       kakaoLoginService: const KakaoLoginService(),
       authRepository: _FailingLogoutAuthRepository(),
+      pushTokenLifecycle: pushLifecycle,
     );
 
     await controller.logout();
 
     expect(controller.state.status, AuthStatus.idle);
+    expect(pushLifecycle.unregisterCalls, 1);
   });
 
   test('returns to idle after account withdrawal succeeds', () async {
@@ -150,5 +157,20 @@ class _FailingWithdrawalAuthRepository extends AuthRepository {
   @override
   Future<void> withdrawAccount() {
     throw StateError('account withdrawal failed');
+  }
+}
+
+class _RecordingPushTokenLifecycle implements PushTokenLifecycle {
+  int synchronizeCalls = 0;
+  int unregisterCalls = 0;
+
+  @override
+  Future<void> synchronize() async {
+    synchronizeCalls++;
+  }
+
+  @override
+  Future<void> unregister() async {
+    unregisterCalls++;
   }
 }

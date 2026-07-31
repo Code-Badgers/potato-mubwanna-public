@@ -70,6 +70,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(permissionService.locationRequestCalls, 1);
+    expect(permissionService.notificationRequestCalls, 1);
     expect(find.text('map destination'), findsOneWidget);
   });
 
@@ -85,6 +86,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(permissionService.locationRequestCalls, 1);
+    expect(permissionService.notificationRequestCalls, 1);
     expect(
       find.text('위치 권한 없이 둘러볼 수 있지만 주변 탐색과 방문 인증은 제한됩니다.'),
       findsOneWidget,
@@ -116,6 +118,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(permissionService.locationRequestCalls, 0);
+    expect(permissionService.notificationRequestCalls, 0);
     expect(find.text('map destination'), findsOneWidget);
   });
 }
@@ -151,10 +154,17 @@ class _FakePermissionService extends PermissionService {
 
   final PermissionStatus requestResult;
   int locationRequestCalls = 0;
+  int notificationRequestCalls = 0;
 
   @override
   Future<PermissionStatus> requestLocation() async {
     locationRequestCalls++;
+    return requestResult;
+  }
+
+  @override
+  Future<PermissionStatus> requestNotification() async {
+    notificationRequestCalls++;
     return requestResult;
   }
 }

@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/permissions/permission_service.dart';
+import '../../../push/application/push_notification_service.dart';
 
 const _settingsPrimary = Color(0xFF509B64);
 const _settingsLine = Color(0xFFE8E2D8);
@@ -12,10 +13,12 @@ const _settingsCream = Color(0xFFFFF8EA);
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     PermissionService? permissionService,
+    this.pushTokenLifecycle = const NoopPushTokenLifecycle(),
     super.key,
   }) : permissionService = permissionService ?? const PermissionService();
 
   final PermissionService permissionService;
+  final PushTokenLifecycle pushTokenLifecycle;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -65,6 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       final locationStatus = await widget.permissionService.locationStatus();
       final notificationStatus =
           await widget.permissionService.notificationStatus();
+      await _updatePushRegistration(notificationStatus);
 
       if (!mounted) {
         return;
@@ -80,6 +84,18 @@ class _SettingsScreenState extends State<SettingsScreen>
       }
 
       setState(() => _errorMessage = '권한 상태를 불러오지 못했습니다.');
+    }
+  }
+
+  Future<void> _updatePushRegistration(PermissionStatus status) async {
+    try {
+      if (status.isGranted || status.isProvisional) {
+        await widget.pushTokenLifecycle.synchronize();
+      } else {
+        await widget.pushTokenLifecycle.unregister();
+      }
+    } catch (_) {
+      // 시스템 권한 상태 표시는 유지하고 서버 동기화는 다음 진입에서 재시도한다.
     }
   }
 
