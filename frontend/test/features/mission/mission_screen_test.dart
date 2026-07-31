@@ -272,7 +272,9 @@ void main() {
     await _pumpMissionScreen(
       tester,
       repository: repository,
-      inputService: _FakeMissionNativeInputService(qrCode: 'mock-qr'),
+      inputService: _FakeMissionNativeInputService(
+        qrCode: _sokchoMissionQrPayload,
+      ),
     );
 
     await _openMission(tester, '속초 시장 QR 찾기');
@@ -282,7 +284,7 @@ void main() {
 
     expect(find.text('미션 완료!'), findsOneWidget);
     expect(repository.completeCallCount, 1);
-    expect(repository.lastPayload?.qrCode, 'mock-qr');
+    expect(repository.lastPayload?.qrCode, _sokchoMissionQrPayload);
   });
 
   testWidgets('shows failure message when completion API rejects',
@@ -489,7 +491,8 @@ class _FakeMissionRepository extends MissionRepository {
         (payload.uploadKey == null || payload.uploadKey!.isEmpty)) {
       throw const ApiException(message: '이미지를 업로드한 뒤 다시 시도해주세요.');
     }
-    if (mission.type == MissionType.qrScan && payload.qrCode != 'mock-qr') {
+    if (mission.type == MissionType.qrScan &&
+        payload.qrCode != _sokchoMissionQrPayload) {
       throw const ApiException(message: '올바른 QR 코드가 아닙니다.');
     }
     return MissionCompletionResult(
@@ -499,6 +502,9 @@ class _FakeMissionRepository extends MissionRepository {
     );
   }
 }
+
+const _sokchoMissionQrPayload =
+    'gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR';
 
 class _IdleAuthController extends AuthController {
   _IdleAuthController()
