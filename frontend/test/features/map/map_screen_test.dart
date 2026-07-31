@@ -140,6 +140,114 @@ void main() {
     expect(find.text('상세 2'), findsOneWidget);
   });
 
+  testWidgets('opens Kakao Map directions for the selected spot', (
+    tester,
+  ) async {
+    Uri? launchedUri;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapUriLauncher: (uri) async {
+              launchedUri = uri;
+              return true;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('길찾기'));
+    await tester.pump();
+
+    expect(
+      launchedUri.toString(),
+      'https://map.kakao.com/link/to/'
+      '%EC%A0%95%EC%84%A0%205%EC%9D%BC%EC%9E%A5,37.38,128.66',
+    );
+  });
+
+  testWidgets('opens the complete recommended route in Kakao Map', (
+    tester,
+  ) async {
+    Uri? launchedUri;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _route),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapUriLauncher: (uri) async {
+              launchedUri = uri;
+              return true;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final routeButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '이 동선 따라가기'),
+    );
+    routeButton.onPressed!();
+    await tester.pump();
+
+    expect(launchedUri?.pathSegments.take(3), ['link', 'by', 'car']);
+    expect(
+      launchedUri?.pathSegments
+          .skip(3)
+          .map((segment) => segment.split(',').first),
+      ['정선 5일장', '감자 체험장', '감자 카페'],
+    );
+  });
+
+  testWidgets('shows an error when Kakao Map cannot be opened', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapUriLauncher: (_) async => false,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('길찾기'));
+    await tester.pump();
+
+    expect(
+      find.text('카카오맵 길찾기를 열지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('shows one actionable area when the spot API fails', (
     tester,
   ) async {
