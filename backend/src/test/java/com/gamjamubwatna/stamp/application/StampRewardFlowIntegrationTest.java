@@ -9,6 +9,11 @@ import static org.mockito.Mockito.verify;
 import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.coupon.api.CouponDetailResponse;
+import com.gamjamubwatna.coupon.api.CouponQrResponse;
+import com.gamjamubwatna.coupon.application.CouponCommandService;
+import com.gamjamubwatna.coupon.application.CouponConflictException;
+import com.gamjamubwatna.coupon.domain.CouponDisplayStatus;
 import com.gamjamubwatna.coupon.domain.UserCoupon;
 import com.gamjamubwatna.coupon.domain.UserCouponRepository;
 import com.gamjamubwatna.reward.domain.RewardHistory;
@@ -43,7 +48,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
     "spring.datasource.username=sa",
     "spring.datasource.password=",
     "spring.jpa.hibernate.ddl-auto=validate",
-    "auth.jwt.secret=test-jwt-secret-must-be-long-enough"
+    "auth.jwt.secret=test-jwt-secret-must-be-long-enough",
+    "coupon.qr.secret=test-coupon-qr-secret-must-be-long-enough"
 })
 class StampRewardFlowIntegrationTest {
 
@@ -70,6 +76,9 @@ class StampRewardFlowIntegrationTest {
 
     @Autowired
     private StampQueryService stampQueryService;
+
+    @Autowired
+    private CouponCommandService couponCommandService;
 
     @Test
     void claimsMultipleAchievedRewardsInOrderAndIssuesCoupons() {
@@ -141,6 +150,51 @@ class StampRewardFlowIntegrationTest {
         assertThat(rewardHistoryRepository.findByUserIdOrderByCreatedAtDesc(user.getId()))
             .hasSize(1);
         assertThat(userCouponRepository.findByUserIdOrderByIssuedAtDesc(user.getId()))
+            .hasSize(1);
+    }
+
+    @Test
+    void concurrentDuplicateCouponUsesAfterStampClaimSucceedOnlyOnce() throws Exception {
+        User user = saveUserWithStamps("coupon-use-concurrent", 6);
+        stampRewardService.claimReward(user.getId(), 6);
+        UserCoupon issuedCoupon = userCouponRepository
+            .findByUserIdOrderByIssuedAtDesc(user.getId())
+            .getFirst();
+        CouponQrResponse qr = couponCommandService.getQr(user.getId(), issuedCoupon.getId());
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        Callable<String> useCoupon = () -> {
+            ready.countDown();
+            start.await();
+            try {
+                CouponDetailResponse used = couponCommandService.useCoupon(
+                    user.getId(),
+                    issuedCoupon.getId(),
+                    qr.payload()
+                );
+                return used.status().name();
+            } catch (CouponConflictException exception) {
+                return "CONFLICT";
+            }
+        };
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<String> first = executor.submit(useCoupon);
+            Future<String> second = executor.submit(useCoupon);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(List.of(
+                first.get(10, TimeUnit.SECONDS),
+                second.get(10, TimeUnit.SECONDS)
+            )).containsExactlyInAnyOrder(CouponDisplayStatus.USED.name(), "CONFLICT");
+        }
+
+        List<UserCoupon> coupons = userCouponRepository
+            .findByUserIdOrderByIssuedAtDesc(user.getId());
+        assertThat(coupons).hasSize(1);
+        assertThat(coupons.getFirst().getUsedAt()).isNotNull();
+        assertThat(rewardHistoryRepository.findByUserIdOrderByCreatedAtDesc(user.getId()))
             .hasSize(1);
     }
 
