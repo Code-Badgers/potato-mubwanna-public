@@ -41,4 +41,19 @@ public interface UserDailyActivityRepository extends JpaRepository<UserDailyActi
         @Param("activityDate") LocalDate activityDate,
         @Param("sources") Collection<ActivitySource> sources
     );
+
+    @Query("""
+        SELECT COALESCE(SUM(activity.steps), 0)
+        FROM UserDailyActivity activity
+        WHERE activity.user.id = :userId
+          AND activity.activityDate >= :startDate
+          AND activity.activityDate < :endDate
+          AND activity.source IN :sources
+        """)
+    long sumStepsByUserIdAndActivityDateRangeAndSources(
+        @Param("userId") Long userId,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("sources") Collection<ActivitySource> sources
+    );
 }

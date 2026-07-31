@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -23,6 +24,7 @@ import com.gamjamubwatna.mission.api.MissionVerifyRequest;
 import com.gamjamubwatna.mission.api.MissionVerifyResponse;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionGroup;
+import com.gamjamubwatna.mission.domain.MissionPeriod;
 import com.gamjamubwatna.mission.domain.MissionRepository;
 import com.gamjamubwatna.mission.domain.MissionRewardType;
 import com.gamjamubwatna.mission.domain.MissionStatus;
@@ -41,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,7 +113,10 @@ class MissionServiceTest {
         );
         when(userRepository.existsById(1L)).thenReturn(true);
         when(missionRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of(first, second));
-        when(userMissionRepository.findByUserId(1L)).thenReturn(List.of(completed));
+        when(userMissionRepository.findByUserIdAndCompletionPeriodIn(
+            1L,
+            Set.of(MissionPeriod.ONE_TIME_KEY)
+        )).thenReturn(List.of(completed));
 
         MissionListResponse result = missionService.getMissions(1L);
 
@@ -137,6 +143,41 @@ class MissionServiceTest {
     }
 
     @Test
+    void returnsOnlyCurrentDailyPeriodCompletionAndProgress() {
+        Mission mission = mission(
+            1L,
+            "MISSION_DAILY",
+            MissionStatus.READY,
+            true,
+            MissionGroup.DAILY,
+            MissionType.STAMP
+        );
+        UserMission previousCompletion = new UserMission(
+            user(1L),
+            mission,
+            Instant.parse("2026-06-30T00:00:00Z"),
+            "DAY:2026-06-30"
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(missionRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of(mission));
+        when(userMissionRepository.findByUserIdAndCompletionPeriodIn(
+            1L,
+            Set.of("DAY:2026-07-01")
+        )).thenReturn(List.of(previousCompletion));
+        when(missionEvidenceValidator.progress(eq(1L), eq(mission), any(MissionPeriod.class)))
+            .thenReturn(1);
+
+        MissionListResponse result = missionService.getMissions(1L);
+
+        MissionItemResponse item = result.missions().getFirst();
+        assertThat(result.completedCount()).isZero();
+        assertThat(item.completed()).isFalse();
+        assertThat(item.progress()).isEqualTo(1);
+        assertThat(item.periodStartsAt()).isEqualTo(Instant.parse("2026-06-30T15:00:00Z"));
+        assertThat(item.periodEndsAt()).isEqualTo(Instant.parse("2026-07-01T15:00:00Z"));
+    }
+
+    @Test
     void verifiesQuizMissionBeforeCompletion() {
         User user = user(1L);
         Mission mission = mission(1L, "MISSION_FIRST", MissionStatus.READY, true);
@@ -159,6 +200,87 @@ class MissionServiceTest {
         ArgumentCaptor<RewardHistory> rewardCaptor = ArgumentCaptor.forClass(RewardHistory.class);
         verify(rewardHistoryRepository).save(rewardCaptor.capture());
         assertMissionRewardHistory(rewardCaptor.getValue(), mission);
+    }
+
+    @Test
+    void completesSameDailyMissionAgainInNextPeriod() {
+        User user = user(1L);
+        Mission mission = mission(
+            1L,
+            "MISSION_DAILY_QUIZ",
+            MissionStatus.READY,
+            true,
+            MissionGroup.DAILY,
+            MissionType.QUIZ
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionIdAndCompletionPeriod(
+            1L,
+            1L,
+            "DAY:2026-07-01"
+        )).thenReturn(false);
+        when(userMissionRepository.existsByUserIdAndMissionIdAndCompletionPeriod(
+            1L,
+            1L,
+            "DAY:2026-07-02"
+        )).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(quizPolicy(mission, "곤드레감자")));
+        when(userMissionRepository.save(any(UserMission.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionService dayOneService = missionService(Instant.parse("2026-07-01T00:00:00Z"));
+        MissionService dayTwoService = missionService(Instant.parse("2026-07-02T00:00:00Z"));
+        MissionVerifyRequest request = new MissionVerifyRequest(
+            MissionType.QUIZ,
+            "곤드레감자",
+            null,
+            null,
+            null
+        );
+
+        dayOneService.verifyMission(1L, 1L, request);
+        dayTwoService.verifyMission(1L, 1L, request);
+
+        ArgumentCaptor<UserMission> completionCaptor = ArgumentCaptor.forClass(UserMission.class);
+        verify(userMissionRepository, times(2)).save(completionCaptor.capture());
+        assertThat(completionCaptor.getAllValues())
+            .extracting(UserMission::getCompletionPeriod)
+            .containsExactly("DAY:2026-07-01", "DAY:2026-07-02");
+
+        ArgumentCaptor<RewardHistory> rewardCaptor = ArgumentCaptor.forClass(RewardHistory.class);
+        verify(rewardHistoryRepository, times(2)).save(rewardCaptor.capture());
+        assertThat(rewardCaptor.getAllValues())
+            .extracting(RewardHistory::getSourcePeriod)
+            .containsExactly("DAY:2026-07-01", "DAY:2026-07-02");
+    }
+
+    @Test
+    void rejectsDuplicateCompletionInCurrentDailyPeriod() {
+        Mission mission = mission(
+            1L,
+            "MISSION_DAILY_QUIZ",
+            MissionStatus.READY,
+            true,
+            MissionGroup.DAILY,
+            MissionType.QUIZ
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionIdAndCompletionPeriod(
+            1L,
+            1L,
+            "DAY:2026-07-01"
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QUIZ, "곤드레감자", null, null, null)
+        ))
+            .isInstanceOf(MissionAlreadyCompletedException.class);
+        verifyNoInteractions(rewardHistoryRepository);
     }
 
     @Test
@@ -202,7 +324,8 @@ class MissionServiceTest {
         )).when(missionEvidenceValidator).validate(
             eq(1L),
             eq(mission),
-            any(MissionVerificationPolicy.class)
+            any(MissionVerificationPolicy.class),
+            any(MissionPeriod.class)
         );
 
         assertThatThrownBy(() -> missionService.verifyMission(
@@ -547,6 +670,38 @@ class MissionServiceTest {
     }
 
     @Test
+    void locksUnscheduledEventAndRejectsCompletion() {
+        Mission mission = mission(
+            1L,
+            "MISSION_EVENT",
+            MissionStatus.READY,
+            true,
+            MissionGroup.EVENT,
+            MissionType.VISIT
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+
+        MissionItemResponse item = missionService.getMission(1L, 1L);
+
+        assertThat(item.active()).isFalse();
+        assertThat(item.status()).isEqualTo(MissionStatus.LOCKED);
+        assertThat(item.progress()).isZero();
+        assertThat(item.periodStartsAt()).isNull();
+        assertThat(item.periodEndsAt()).isNull();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.VISIT, null, null, null, null)
+        ))
+            .isInstanceOf(MissionCompletionException.class)
+            .hasMessage("아직 완료할 수 없는 미션입니다.");
+        verifyNoInteractions(rewardHistoryRepository);
+    }
+
+    @Test
     void rejectsDeletedUser() {
         when(userRepository.existsById(99L)).thenReturn(false);
 
@@ -565,9 +720,20 @@ class MissionServiceTest {
         boolean active,
         MissionType type
     ) {
+        return mission(id, code, status, active, MissionGroup.JUMSOONI, type);
+    }
+
+    private Mission mission(
+        Long id,
+        String code,
+        MissionStatus status,
+        boolean active,
+        MissionGroup group,
+        MissionType type
+    ) {
         Mission mission = new Mission(
             code,
-            MissionGroup.JUMSOONI,
+            group,
             type,
             status,
             "정선 5일장 곤드레 퀴즈",
@@ -607,7 +773,24 @@ class MissionServiceTest {
         assertThat(rewardHistory.getRewardName()).isEqualTo(mission.getRewardLabel());
         assertThat(rewardHistory.getSourceType()).isEqualTo(RewardSourceType.MISSION);
         assertThat(rewardHistory.getSourceId()).isEqualTo(mission.getId());
+        assertThat(rewardHistory.getSourcePeriod()).isEqualTo(MissionPeriod.ONE_TIME_KEY);
         assertThat(rewardHistory.getCreatedAt()).isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));
+    }
+
+    private MissionService missionService(Instant now) {
+        return new MissionService(
+            missionRepository,
+            missionVerificationPolicyRepository,
+            userMissionRepository,
+            rewardHistoryRepository,
+            couponRepository,
+            userCouponRepository,
+            userRepository,
+            missionEvidenceValidator,
+            missionPhotoStorage,
+            missionPhotoTextReader,
+            Clock.fixed(now, ZoneOffset.UTC)
+        );
     }
 
     private MissionVerificationPolicy quizPolicy(Mission mission, String expectedAnswer) {
