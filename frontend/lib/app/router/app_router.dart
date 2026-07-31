@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/app_environment.dart';
+import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/screen/login_screen.dart';
 import '../../features/coupon/presentation/screen/coupon_screen.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
@@ -10,6 +12,7 @@ import '../../features/mypage/presentation/screen/my_page_screen.dart';
 import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screen/permission_guide_screen.dart';
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
+import '../../features/push/application/push_notification_service.dart';
 import '../../features/spot/presentation/screen/spot_detail_screen.dart';
 import '../../features/stamp/presentation/screen/stamp_book_screen.dart';
 import '../../features/settings/presentation/screen/settings_screen.dart';
@@ -42,7 +45,20 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/settings',
-      builder: (context, state) => const SettingsScreen(),
+      builder: (context, state) => Consumer(
+        builder: (context, ref, child) {
+          final isAuthenticated = ref.watch(
+            authControllerProvider.select(
+              (state) => state.status == AuthStatus.authenticated,
+            ),
+          );
+          return SettingsScreen(
+            pushTokenLifecycle: isAuthenticated
+                ? ref.read(pushNotificationServiceProvider)
+                : const NoopPushTokenLifecycle(),
+          );
+        },
+      ),
     ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),

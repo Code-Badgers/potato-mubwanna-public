@@ -283,7 +283,21 @@ mypageProvider
 
 ---
 
-## 11. 앱 배포 구조
+## 11. 푸시 알림 규칙
+
+- Firebase client 설정이 모두 있는 Android/iOS에서만 FCM을 초기화한다.
+- Web과 설정이 없는 로컬 환경에서는 push client를 비활성화하고 앱 시작은 계속한다.
+- FCM 자동 초기화는 기본적으로 끈다. 알림 권한이 `authorized` 또는 `provisional`일 때만 활성화한다.
+- 로그인과 세션 갱신 후 현재 token을 서버에 등록하고, `onTokenRefresh`를 통해 변경된 token과 이전 token을 함께 동기화한다.
+- 로그아웃, 회원 탈퇴, 알림 권한 철회 시 서버 token 삭제, Firebase token 삭제, 자동 초기화 해제를 수행한다.
+- foreground 알림은 앱 내 알림으로 표시한다.
+- background/terminated 알림 탭은 `MISSIONS`, `COUPONS`, `STAMPS`, `MAP`, `SPOT` whitelist만 라우팅한다.
+- 전체 registration token은 로그나 오류 메시지에 남기지 않는다.
+- Firebase 콘솔, APNs, 서버 자격 증명과 실제 기기 검증 절차는 `FCM_SETUP_GUIDE.md`를 따른다.
+
+---
+
+## 12. 앱 배포 구조
 
 ## Android
 
@@ -315,7 +329,7 @@ Xcode 또는 Transporter를 통해 App Store Connect에 업로드한다.
 
 ---
 
-## 12. 최소 배포 전략
+## 13. 최소 배포 전략
 
 가장 빠른 출시 순서:
 
