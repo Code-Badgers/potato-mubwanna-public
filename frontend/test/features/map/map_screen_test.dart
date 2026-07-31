@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:potato_mubwanna/features/map/application/map_spot_controller.dart';
 import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
 import 'package:potato_mubwanna/features/map/domain/favorite_spot_route.dart';
@@ -79,6 +80,64 @@ void main() {
 
     expect(find.text('감자 카페'), findsOneWidget);
     expect(find.text('정선 5일장'), findsNothing);
+  });
+
+  testWidgets('opens detail for the currently selected map marker', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/main/map',
+      routes: [
+        GoRoute(
+          path: '/main/map',
+          builder: (context, state) => MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) => Stack(
+              children: [
+                for (var index = 0; index < spots.length; index++)
+                  Positioned(
+                    left: 24 + (index * 64),
+                    top: 180,
+                    child: TextButton(
+                      key: ValueKey('marker-${spots[index].id}'),
+                      onPressed: () => onSpotSelected(spots[index].id),
+                      child: Text('마커 ${spots[index].id}'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (context, state) => Scaffold(
+            body: Text('상세 ${state.pathParameters['spotId']}'),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('marker-2')));
+    await tester.pump();
+    await tester.tap(find.text('상세보기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('상세 2'), findsOneWidget);
   });
 
   testWidgets('shows one actionable area when the spot API fails', (
