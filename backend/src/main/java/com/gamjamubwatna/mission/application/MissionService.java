@@ -7,7 +7,6 @@ import com.gamjamubwatna.coupon.domain.CouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCoupon;
 import com.gamjamubwatna.coupon.domain.UserCouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCouponStatus;
-import com.gamjamubwatna.mission.api.MissionCompleteResponse;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
 import com.gamjamubwatna.mission.api.MissionVerifyRequest;
@@ -46,6 +45,7 @@ public class MissionService {
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
     private final UserRepository userRepository;
+    private final MissionEvidenceValidator missionEvidenceValidator;
     private final MissionPhotoStorage missionPhotoStorage;
     private final MissionPhotoTextReader missionPhotoTextReader;
     private final Clock clock;
@@ -59,6 +59,7 @@ public class MissionService {
         CouponRepository couponRepository,
         UserCouponRepository userCouponRepository,
         UserRepository userRepository,
+        MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
         MissionPhotoTextReader missionPhotoTextReader
     ) {
@@ -70,6 +71,7 @@ public class MissionService {
             couponRepository,
             userCouponRepository,
             userRepository,
+            missionEvidenceValidator,
             missionPhotoStorage,
             missionPhotoTextReader,
             Clock.systemUTC()
@@ -84,6 +86,7 @@ public class MissionService {
         CouponRepository couponRepository,
         UserCouponRepository userCouponRepository,
         UserRepository userRepository,
+        MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
         MissionPhotoTextReader missionPhotoTextReader,
         Clock clock
@@ -95,6 +98,7 @@ public class MissionService {
         this.couponRepository = couponRepository;
         this.userCouponRepository = userCouponRepository;
         this.userRepository = userRepository;
+        this.missionEvidenceValidator = missionEvidenceValidator;
         this.missionPhotoStorage = missionPhotoStorage;
         this.missionPhotoTextReader = missionPhotoTextReader;
         this.clock = clock;
@@ -135,34 +139,6 @@ public class MissionService {
     }
 
     @Transactional
-    public MissionCompleteResponse completeMission(Long userId, Long missionId) {
-        User user = user(userId);
-        Mission mission = mission(missionId);
-        if (!mission.isActive() || mission.getDefaultStatus() == MissionStatus.LOCKED) {
-            throw new MissionCompletionException("아직 완료할 수 없는 미션입니다.");
-        }
-        if (userMissionRepository.existsByUserIdAndMissionId(userId, missionId)) {
-            throw new MissionAlreadyCompletedException("이미 완료한 미션입니다.");
-        }
-
-        Instant completedAt = Instant.now(clock);
-        UserMission userMission = userMissionRepository.save(new UserMission(
-            user,
-            mission,
-            completedAt
-        ));
-        saveMissionRewardHistory(user, mission, completedAt);
-
-        return new MissionCompleteResponse(
-            mission.getId(),
-            true,
-            userMission.getCompletedAt(),
-            mission.getRewardType(),
-            mission.getRewardLabel()
-        );
-    }
-
-    @Transactional
     public MissionVerifyResponse verifyMission(
         Long userId,
         Long missionId,
@@ -171,7 +147,7 @@ public class MissionService {
         User user = user(userId);
         Mission mission = mission(missionId);
         validateCompletionTarget(userId, mission);
-        validateMissionInput(mission, request);
+        validateMissionInput(userId, mission, request);
 
         Instant completedAt = Instant.now(clock);
         UserMission userMission = userMissionRepository.save(new UserMission(
@@ -234,7 +210,11 @@ public class MissionService {
         }
     }
 
-    private void validateMissionInput(Mission mission, MissionVerifyRequest request) {
+    private void validateMissionInput(
+        Long userId,
+        Mission mission,
+        MissionVerifyRequest request
+    ) {
         if (request == null || request.type() == null) {
             throw new MissionVerificationException("미션 인증 정보를 확인해주세요.");
         }
@@ -244,13 +224,26 @@ public class MissionService {
 
         switch (mission.getType()) {
             case QUIZ -> validateQuiz(verificationPolicy(mission), request.answer());
-            case VISIT_AND_STEP -> validateStep(verificationPolicy(mission), request.stepCount());
-            case PHOTO -> validatePhoto(verificationPolicy(mission), request.uploadKey());
-            case PHOTO_OCR -> validatePhotoOcr(verificationPolicy(mission), request.uploadKey());
+            case VISIT_AND_STEP -> missionEvidenceValidator.validate(
+                userId,
+                mission,
+                verificationPolicy(mission)
+            );
+            case PHOTO -> validatePhoto(
+                userId,
+                mission,
+                verificationPolicy(mission),
+                request.uploadKey()
+            );
+            case PHOTO_OCR -> validatePhotoOcr(
+                userId,
+                mission,
+                verificationPolicy(mission),
+                request.uploadKey()
+            );
             case QR_SCAN -> validateQrCode(verificationPolicy(mission), request.qrCode());
-            default -> {
-                // 위치/스탬프/수집형은 외부 센서 연동 전까지 활성 상태와 중복 완료 여부만 서버에서 확인한다.
-            }
+            case VISIT, STAMP, COLLECTION ->
+                missionEvidenceValidator.validate(userId, mission, null);
         }
     }
 
@@ -273,37 +266,44 @@ public class MissionService {
         }
     }
 
-    private void validateStep(MissionVerificationPolicy policy, Integer stepCount) {
-        Integer minStepCount = policy.getMinStepCount();
-        if (minStepCount == null) {
-            throw new MissionVerificationException("미션 걸음 수 정책을 확인할 수 없습니다.");
-        }
-        if (stepCount == null || stepCount < minStepCount) {
-            throw new MissionVerificationException("걸음을 다 채우고 재시도해주세요.");
-        }
-    }
-
-    private void validatePhoto(MissionVerificationPolicy policy, String uploadKey) {
+    private StoredMissionPhotoFile validatePhoto(
+        Long userId,
+        Mission mission,
+        MissionVerificationPolicy policy,
+        String uploadKey
+    ) {
         if (policy.isRequiredUpload()) {
             validateRequiredText(uploadKey, "이미지를 업로드한 뒤 다시 시도해주세요.");
-            if (!uploadKey.startsWith(MISSION_UPLOAD_KEY_PREFIX)) {
+            String ownedUploadPrefix = MISSION_UPLOAD_KEY_PREFIX
+                + userId
+                + "/"
+                + mission.getId()
+                + "/";
+            if (!uploadKey.startsWith(ownedUploadPrefix)) {
                 throw new MissionVerificationException("서버에서 발급한 업로드 키를 확인해주세요.");
             }
+            try {
+                return missionPhotoStorage.read(uploadKey);
+            } catch (MissionUploadException exception) {
+                throw new MissionVerificationException(exception.getMessage());
+            }
         }
+        return null;
     }
 
-    private void validatePhotoOcr(MissionVerificationPolicy policy, String uploadKey) {
-        validatePhoto(policy, uploadKey);
+    private void validatePhotoOcr(
+        Long userId,
+        Mission mission,
+        MissionVerificationPolicy policy,
+        String uploadKey
+    ) {
+        StoredMissionPhotoFile photoFile = validatePhoto(userId, mission, policy, uploadKey);
         String expectedKeyword = policy.getExpectedAnswer();
         if (expectedKeyword == null || expectedKeyword.isBlank()) {
             throw new MissionVerificationException("미션 OCR 정책을 확인할 수 없습니다.");
         }
-
-        StoredMissionPhotoFile photoFile;
-        try {
-            photoFile = missionPhotoStorage.read(uploadKey);
-        } catch (MissionUploadException exception) {
-            throw new MissionVerificationException(exception.getMessage());
+        if (photoFile == null) {
+            throw new MissionVerificationException("업로드된 이미지를 찾을 수 없습니다.");
         }
         String recognizedText = missionPhotoTextReader.readText(photoFile);
         if (recognizedText == null || !recognizedText.contains(expectedKeyword)) {

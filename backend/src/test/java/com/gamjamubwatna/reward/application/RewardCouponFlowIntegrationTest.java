@@ -14,8 +14,10 @@ import com.gamjamubwatna.coupon.domain.UserCoupon;
 import com.gamjamubwatna.coupon.domain.UserCouponRepository;
 import com.gamjamubwatna.mission.application.MissionAlreadyCompletedException;
 import com.gamjamubwatna.mission.application.MissionService;
+import com.gamjamubwatna.mission.api.MissionVerifyRequest;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionRepository;
+import com.gamjamubwatna.mission.domain.MissionType;
 import com.gamjamubwatna.reward.domain.RewardHistory;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import java.time.Instant;
@@ -64,11 +66,18 @@ class RewardCouponFlowIntegrationTest {
             Instant.parse("2026-07-01T00:00:00Z")
         ));
         Mission mission = missionRepository.findAllByOrderByDisplayOrderAsc().stream()
-            .filter(candidate -> candidate.getCode().equals("MISSION_EVENT_HWACHEON"))
+            .filter(candidate -> candidate.getCode().equals("MISSION_SOKCHO_ONNURI_QR"))
             .findFirst()
             .orElseThrow();
 
-        missionService.completeMission(user.getId(), mission.getId());
+        MissionVerifyRequest verificationRequest = new MissionVerifyRequest(
+            MissionType.QR_SCAN,
+            null,
+            null,
+            null,
+            "gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR"
+        );
+        missionService.verifyMission(user.getId(), mission.getId(), verificationRequest);
 
         List<RewardHistory> rewardHistories = rewardHistoryRepository
             .findByUserIdOrderByCreatedAtDesc(user.getId());
@@ -77,7 +86,7 @@ class RewardCouponFlowIntegrationTest {
         assertThat(rewardHistories).hasSize(1);
         assertThat(issuedCoupons).hasSize(1);
         UserCoupon issuedCoupon = issuedCoupons.getFirst();
-        assertThat(issuedCoupon.getCoupon().getCode()).isEqualTo("CP_HWACHEON_LOCAL");
+        assertThat(issuedCoupon.getCoupon().getCode()).isEqualTo("CP_ONNURI_5000");
         assertThat(issuedCoupon.getExpiresAt()).isAfter(issuedCoupon.getIssuedAt());
 
         CouponQrResponse qr = couponCommandService.getQr(user.getId(), issuedCoupon.getId());
@@ -89,7 +98,9 @@ class RewardCouponFlowIntegrationTest {
 
         assertThat(used.status()).isEqualTo(CouponDisplayStatus.USED);
         assertThat(used.usedAt()).isNotNull();
-        assertThatThrownBy(() -> missionService.completeMission(user.getId(), mission.getId()))
+        assertThatThrownBy(() ->
+            missionService.verifyMission(user.getId(), mission.getId(), verificationRequest)
+        )
             .isInstanceOf(MissionAlreadyCompletedException.class);
         assertThat(rewardHistoryRepository.findByUserIdOrderByCreatedAtDesc(user.getId()))
             .hasSize(1);

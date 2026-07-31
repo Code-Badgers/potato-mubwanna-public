@@ -42,8 +42,8 @@ class MissionControllerSecurityTest {
     }
 
     @Test
-    void rejectsMissionCompletionRequestWithoutBearerToken() throws Exception {
-        mockMvc.perform(post("/missions/1/complete"))
+    void rejectsMissionVerificationRequestWithoutBearerToken() throws Exception {
+        mockMvc.perform(post("/missions/1/verify"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("인증이 필요합니다."));

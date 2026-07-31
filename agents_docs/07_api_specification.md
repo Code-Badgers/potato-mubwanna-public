@@ -883,11 +883,15 @@ Validation failure:
 Notes:
 
 - `QUIZ`: `answer`를 검증한다.
-- `VISIT_AND_STEP`: `stepCount`가 미션 목표 걸음 수 이상인지 검증한다.
-- `PHOTO`: `uploadKey` 존재 여부와 서버 발급 key 형식을 검증한다.
+- `VISIT`: 사용자의 저장된 방문 인증 기록이 미션 장소와 일치하는지 검증한다.
+- `VISIT_AND_STEP`: 요청의 `stepCount`를 신뢰하지 않고 서버에 동기화된 당일 HealthKit/Health Connect 걸음 수를 검증한다. 장소형 미션은 해당 장소의 방문 인증 기록도 함께 확인한다.
+- `STAMP`: 미션 기간에 서버가 발급한 스탬프 수가 목표 이상인지 검증한다.
+- `COLLECTION`: 미션 기간에 서버에 저장된 서로 다른 방문 시군 수가 목표 이상인지 검증한다.
+- `PHOTO`: `uploadKey`가 로그인 사용자와 해당 미션에 발급된 key인지, 실제 저장 파일이 존재하는지 검증한다.
 - `PHOTO_OCR`: `uploadKey`로 저장된 이미지를 읽고 OCR 판독 결과에 미션 정책 키워드가 포함되는지 검증한다.
 - `QR_SCAN`: `qrCode` 존재 여부와 미션별 정책 QR payload의 정확한 일치 여부를 검증한다. 스캔값의 앞뒤 공백은 서버에서 제거한 뒤 비교한다.
 - 인증 성공 시 서버가 중복 완료 여부를 확인하고 미션 완료와 보상 응답을 함께 처리한다.
+- 검증 입력 없이 완료하는 `POST /api/missions/{missionId}/complete` endpoint는 제공하지 않는다.
 
 QR 미션 payload 예시:
 
