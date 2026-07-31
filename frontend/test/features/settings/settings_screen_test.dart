@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:potato_mubwanna/core/permissions/permission_service.dart';
+import 'package:potato_mubwanna/features/push/application/push_notification_service.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 
 void main() {
@@ -53,9 +54,15 @@ void main() {
       location: PermissionStatus.granted,
       notification: PermissionStatus.denied,
     );
+    final pushLifecycle = _RecordingPushTokenLifecycle();
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsScreen(permissionService: service)),
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          pushTokenLifecycle: pushLifecycle,
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -63,6 +70,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.notificationRequestCalls, 1);
+    expect(pushLifecycle.unregisterCalls, 1);
+    expect(pushLifecycle.synchronizeCalls, 1);
     expect(find.text('허용됨'), findsNWidgets(2));
   });
 
@@ -147,5 +156,20 @@ class _FakePermissionService extends PermissionService {
   Future<bool> openSettings() async {
     openSettingsCalls++;
     return true;
+  }
+}
+
+class _RecordingPushTokenLifecycle implements PushTokenLifecycle {
+  int synchronizeCalls = 0;
+  int unregisterCalls = 0;
+
+  @override
+  Future<void> synchronize() async {
+    synchronizeCalls++;
+  }
+
+  @override
+  Future<void> unregister() async {
+    unregisterCalls++;
   }
 }

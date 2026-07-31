@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.potato.api.PotatoAcquisitionResponse;
+import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.visit.application.VisitDuplicateException;
 import com.gamjamubwatna.visit.application.VisitVerificationException;
 import com.gamjamubwatna.visit.application.VisitVerificationService;
@@ -48,8 +50,17 @@ class VisitControllerTest {
                 new BigDecimal("23.50"),
                 100,
                 true,
+                true,
+                new PotatoAcquisitionResponse(
+                    3L,
+                    "POTATO_GOLDEN_GANGWON",
+                    "황금감자",
+                    "강원특별자치도",
+                    PotatoRarity.EPIC,
+                    false
+                ),
                 false,
-                false
+                null
             ));
 
         mockMvc.perform(post("/visits/verify")
@@ -67,7 +78,10 @@ class VisitControllerTest {
             .andExpect(jsonPath("$.data.distanceMeters").value(23.50))
             .andExpect(jsonPath("$.data.verificationRadiusMeter").value(100))
             .andExpect(jsonPath("$.data.stampIssued").value(true))
-            .andExpect(jsonPath("$.data.potatoAcquired").value(false))
+            .andExpect(jsonPath("$.data.potatoAcquired").value(true))
+            .andExpect(jsonPath("$.data.acquiredPotato.name").value("황금감자"))
+            .andExpect(jsonPath("$.data.acquiredPotato.rarity").value("EPIC"))
+            .andExpect(jsonPath("$.data.acquiredPotato.alreadyOwned").value(false))
             .andExpect(jsonPath("$.data.missionAvailable").value(false));
     }
 

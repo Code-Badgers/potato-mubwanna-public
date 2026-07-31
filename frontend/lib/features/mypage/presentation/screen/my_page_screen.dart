@@ -75,6 +75,7 @@ class MyPageScreen extends ConsumerWidget {
                         context.go('/login');
                       }
                     },
+                    onWithdraw: () => _confirmAccountWithdrawal(context, ref),
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -87,6 +88,58 @@ class MyPageScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _confirmAccountWithdrawal(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: AppColors.error,
+          size: 36,
+        ),
+        title: const Text('정말 탈퇴하시겠어요?'),
+        content: const Text(
+          '스탬프, 감자, 쿠폰과 여행 기록이 모두 삭제되며 복구할 수 없습니다.\n\n'
+          '카카오 계정 자체는 삭제되지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('회원 탈퇴'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    final withdrawn =
+        await ref.read(authControllerProvider.notifier).withdrawAccount();
+    if (!context.mounted) {
+      return;
+    }
+    if (withdrawn) {
+      context.go('/login');
+      return;
+    }
+
+    final message =
+        ref.read(authControllerProvider).message ?? '회원 탈퇴에 실패했습니다.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 }
@@ -630,11 +683,13 @@ class _AccountMenu extends StatelessWidget {
     required this.isLoggingOut,
     required this.onSettings,
     required this.onLogout,
+    required this.onWithdraw,
   });
 
   final bool isLoggingOut;
   final VoidCallback onSettings;
   final VoidCallback onLogout;
+  final VoidCallback onWithdraw;
 
   static const _items = [
     _MenuItem(
@@ -648,6 +703,11 @@ class _AccountMenu extends StatelessWidget {
       icon: Icons.logout_rounded,
       label: '로그아웃',
       isLogout: true,
+    ),
+    _MenuItem(
+      icon: Icons.person_off_outlined,
+      label: '회원 탈퇴',
+      isWithdrawal: true,
     ),
   ];
 
@@ -669,9 +729,11 @@ class _AccountMenu extends StatelessWidget {
                 item: _items[index],
                 onTap: _items[index].isLogout
                     ? (isLoggingOut ? null : onLogout)
-                    : _items[index].isSettings
-                        ? onSettings
-                        : () {},
+                    : _items[index].isWithdrawal
+                        ? (isLoggingOut ? null : onWithdraw)
+                        : _items[index].isSettings
+                            ? onSettings
+                            : () {},
               ),
               if (index < _items.length - 1)
                 const Divider(height: 1, color: _mypageLine, indent: 58),
@@ -701,13 +763,19 @@ class _MenuRow extends StatelessWidget {
         child: Row(
           children: [
             const SizedBox(width: 20),
-            Icon(item.icon, color: _mypageBrown, size: 25),
+            Icon(
+              item.icon,
+              color: item.isWithdrawal ? AppColors.error : _mypageBrown,
+              size: 25,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 item.label,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: item.isWithdrawal
+                      ? AppColors.error
+                      : AppColors.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
@@ -745,10 +813,12 @@ class _MenuItem {
     required this.label,
     this.isLogout = false,
     this.isSettings = false,
+    this.isWithdrawal = false,
   });
 
   final IconData icon;
   final String label;
   final bool isLogout;
   final bool isSettings;
+  final bool isWithdrawal;
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../config/app_environment.dart';
+import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/screen/login_screen.dart';
+import '../../features/auth/presentation/screen/session_startup_screen.dart';
 import '../../features/coupon/presentation/screen/coupon_screen.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
 import '../../features/mission/presentation/screen/mission_screen.dart';
@@ -10,17 +12,23 @@ import '../../features/mypage/presentation/screen/my_page_screen.dart';
 import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screen/permission_guide_screen.dart';
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
+import '../../features/push/application/push_notification_service.dart';
 import '../../features/spot/presentation/screen/spot_detail_screen.dart';
 import '../../features/stamp/presentation/screen/stamp_book_screen.dart';
 import '../../features/settings/presentation/screen/settings_screen.dart';
 import '../../features/travel_record/presentation/screen/travel_record_screen.dart';
 import '../../shared/widgets/navigation/main_shell.dart';
+import 'session_startup_route_gate.dart';
 
 final appRouter = GoRouter(
-  initialLocation: AppEnvironment.hasKakaoAuthorizationCallback
-      ? '/login'
-      : '/onboarding',
+  initialLocation: '/startup',
+  redirect: (context, state) =>
+      sessionStartupRouteGate.redirectBeforeSessionStartup(state.location),
   routes: [
+    GoRoute(
+      path: '/startup',
+      builder: (context, state) => const SessionStartupScreen(),
+    ),
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
@@ -43,14 +51,29 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/settings',
-      builder: (context, state) => const SettingsScreen(),
+      builder: (context, state) => Consumer(
+        builder: (context, ref, child) {
+          final isAuthenticated = ref.watch(
+            authControllerProvider.select(
+              (state) => state.status == AuthStatus.authenticated,
+            ),
+          );
+          return SettingsScreen(
+            pushTokenLifecycle: isAuthenticated
+                ? ref.read(pushNotificationServiceProvider)
+                : const NoopPushTokenLifecycle(),
+          );
+        },
+      ),
     ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),
       routes: [
         GoRoute(
           path: '/main/map',
-          builder: (context, state) => const MapScreen(),
+          builder: (context, state) => MapScreen(
+            recommendationSourceSpotId: state.queryParameters['recommendFrom'],
+          ),
         ),
         GoRoute(
           path: '/main/stamps',
@@ -62,7 +85,14 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/main/missions',
-          builder: (context, state) => const MissionScreen(),
+          builder: (context, state) => MissionScreen(
+            visitEntrySpotName: state.queryParameters['entry'] == 'visit'
+                ? state.queryParameters['spotName']
+                : null,
+            visitEntryMissionId: state.queryParameters['entry'] == 'visit'
+                ? state.queryParameters['missionId']
+                : null,
+          ),
         ),
         GoRoute(
           path: '/main/mypage',
@@ -83,7 +113,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/',
-      redirect: (context, state) => '/onboarding',
+      redirect: (context, state) => '/startup',
     ),
   ],
   errorBuilder: (context, state) => Scaffold(

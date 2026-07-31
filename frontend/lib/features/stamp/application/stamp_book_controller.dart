@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
 import '../../coupon/application/coupon_controller.dart';
+import '../../reward/application/reward_history_controller.dart';
 import '../data/stamp_repository.dart';
 import '../domain/stamp_book.dart';
 
@@ -9,18 +10,28 @@ final stampRepositoryProvider = Provider<StampRepository>(
   (ref) => StampRepository(dio: ref.watch(dioClientProvider).dio),
 );
 
-final stampBookProvider = FutureProvider.autoDispose<StampBook?>(
-  (ref) async {
-    final authStatus = ref.watch(
-      authControllerProvider.select((state) => state.status),
-    );
-    if (authStatus != AuthStatus.authenticated) {
-      return null;
-    }
+final stampBookProvider = FutureProvider.autoDispose<StampBook?>((ref) async {
+  final authStatus = ref.watch(
+    authControllerProvider.select((state) => state.status),
+  );
+  if (authStatus != AuthStatus.authenticated) {
+    return null;
+  }
 
-    return ref.watch(stampRepositoryProvider).fetchStampBook();
-  },
-);
+  return ref.watch(stampRepositoryProvider).fetchStampBook();
+});
+
+final stampNextTargetsProvider =
+    FutureProvider.autoDispose<List<StampNextTarget>?>((ref) async {
+  final authStatus = ref.watch(
+    authControllerProvider.select((state) => state.status),
+  );
+  if (authStatus != AuthStatus.authenticated) {
+    return null;
+  }
+
+  return ref.watch(stampRepositoryProvider).fetchNextTargets();
+});
 
 final stampRewardClaimProvider = StateNotifierProvider.autoDispose<
     StampRewardClaimController, AsyncValue<StampRewardClaimResult?>>(
@@ -28,6 +39,7 @@ final stampRewardClaimProvider = StateNotifierProvider.autoDispose<
     ref.watch(stampRepositoryProvider),
     onStampBookRefresh: () => ref.invalidate(stampBookProvider),
     onCouponListRefresh: () => ref.invalidate(couponListProvider),
+    onRewardHistoryRefresh: () => ref.invalidate(rewardHistoryProvider),
     acquireKeepAlive: ref.keepAlive,
   ),
 );
@@ -38,15 +50,18 @@ class StampRewardClaimController
     this._repository, {
     required void Function() onStampBookRefresh,
     required void Function() onCouponListRefresh,
+    required void Function() onRewardHistoryRefresh,
     KeepAliveLink Function()? acquireKeepAlive,
   })  : _onStampBookRefresh = onStampBookRefresh,
         _onCouponListRefresh = onCouponListRefresh,
+        _onRewardHistoryRefresh = onRewardHistoryRefresh,
         _acquireKeepAlive = acquireKeepAlive,
         super(const AsyncValue.data(null));
 
   final StampRepository _repository;
   final void Function() _onStampBookRefresh;
   final void Function() _onCouponListRefresh;
+  final void Function() _onRewardHistoryRefresh;
   final KeepAliveLink Function()? _acquireKeepAlive;
 
   Future<StampRewardClaimResult?> claim(int targetCount) async {
@@ -55,7 +70,7 @@ class StampRewardClaimController
       return null;
     }
 
-    // 화면 이탈 뒤 응답이 도착해도 상태 갱신과 두 캐시 무효화를 끝낼 때까지 유지한다.
+    // 화면 이탈 뒤 응답이 도착해도 상태 갱신과 세 캐시 무효화를 끝낼 때까지 유지한다.
     final keepAliveLink = _acquireKeepAlive?.call();
     try {
       state = const AsyncValue.loading();
@@ -65,6 +80,7 @@ class StampRewardClaimController
       state = AsyncValue.data(result);
       _onStampBookRefresh();
       _onCouponListRefresh();
+      _onRewardHistoryRefresh();
       return result;
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

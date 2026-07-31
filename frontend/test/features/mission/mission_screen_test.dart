@@ -1,20 +1,70 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
+import 'package:potato_mubwanna/core/storage/token_storage.dart';
+import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
+import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
+import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/mission/application/mission_controller.dart';
+import 'package:potato_mubwanna/features/mission/data/mission_native_input_service.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_repository.dart';
+import 'package:potato_mubwanna/features/mission/data/mission_upload_repository.dart';
 import 'package:potato_mubwanna/features/mission/domain/mission_challenge.dart';
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
 
 void main() {
+  testWidgets('shows login prompt without loading missions for guests',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    final router = GoRouter(
+      initialLocation: '/missions',
+      routes: [
+        GoRoute(
+          path: '/missions',
+          builder: (_, __) => const MissionScreen(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (_, __) =>
+              const Scaffold(body: Center(child: Text('login destination'))),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith((ref) => _IdleAuthController()),
+          missionRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('로그인이 필요한 서비스예요'), findsOneWidget);
+    expect(find.text('점순이 미션에 도전하려면 로그인해주세요.'), findsOneWidget);
+    expect(find.text('다시 시도'), findsNothing);
+    expect(repository.fetchCallCount, 0);
+
+    await tester.tap(find.text('로그인하러 가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('login destination'), findsOneWidget);
+  });
+
   testWidgets('renders mission list and category filters', (tester) async {
     await _pumpMissionScreen(tester);
 
     expect(find.text('미션'), findsOneWidget);
     expect(find.text('점순이와 함께 도전해요'), findsOneWidget);
-    expect(find.text('안목 해변에서 하지감자 찾기'), findsOneWidget);
     expect(find.text('점순이'), findsNothing);
     expect(find.text('일일'), findsOneWidget);
     expect(find.text('주간'), findsOneWidget);
@@ -28,6 +78,13 @@ void main() {
 
     await tester.tap(find.text('전체').first);
     await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('안목 해변에서 하지감자 찾기'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('안목 해변에서 하지감자 찾기'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('10,000걸음 걷기'),
@@ -105,7 +162,31 @@ void main() {
   testWidgets('completes photo mission after selecting upload source',
       (tester) async {
     final repository = _FakeMissionRepository();
-    await _pumpMissionScreen(tester, repository: repository);
+    final uploadRepository = _FakeMissionUploadRepository(
+      result: MissionUploadResult(
+        uploadKey: 'mission-uploads/1/1002/receipt.jpg',
+        fileName: 'receipt.jpg',
+        contentType: 'image/jpeg',
+        size: 4,
+        expiresAt: DateTime.parse('2026-07-29T08:30:00Z'),
+      ),
+    );
+    final inputService = _FakeMissionNativeInputService(
+      photoInput: MissionPhotoInput(
+        file: XFile.fromData(
+          Uint8List.fromList([1, 2, 3, 4]),
+          name: 'receipt.jpg',
+          mimeType: 'image/jpeg',
+        ),
+        previewLabel: '갤러리 선택 이미지',
+      ),
+    );
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      inputService: inputService,
+      uploadRepository: uploadRepository,
+    );
 
     await _openMission(tester, '안목 해변에서 하지감자 찾기');
 
@@ -124,6 +205,86 @@ void main() {
 
     expect(find.text('미션 완료!'), findsOneWidget);
     expect(repository.completeCallCount, 1);
+    expect(repository.lastPayload?.uploadKey,
+        'mission-uploads/1/1002/receipt.jpg');
+    expect(inputService.lastPhotoSource, MissionPhotoSource.gallery);
+    expect(uploadRepository.lastMissionId, '1002');
+  });
+
+  testWidgets('shows upload error when photo upload key request fails',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    final uploadRepository = _FakeMissionUploadRepository(
+      error: const ApiException(message: '지원하지 않는 이미지 형식입니다.'),
+    );
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      inputService: _FakeMissionNativeInputService(
+        photoInput: MissionPhotoInput(
+          file: XFile.fromData(
+            Uint8List.fromList([1]),
+            name: 'receipt.gif',
+            mimeType: 'image/gif',
+          ),
+          previewLabel: '갤러리 선택 이미지',
+        ),
+      ),
+      uploadRepository: uploadRepository,
+    );
+
+    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+
+    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('갤러리에서 선택하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '인증 완료하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지원하지 않는 이미지 형식입니다.'), findsOneWidget);
+    expect(find.text('미션 완료!'), findsNothing);
+    expect(repository.completeCallCount, 0);
+  });
+
+  testWidgets('shows photo input error when native picker fails',
+      (tester) async {
+    await _pumpMissionScreen(
+      tester,
+      inputService: _FakeMissionNativeInputService(
+        photoError: const MissionInputException('카메라 권한이 필요합니다.'),
+      ),
+    );
+
+    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+
+    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('카메라로 촬영하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('카메라 권한이 필요합니다.'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '인증 완료하기'), findsOneWidget);
+  });
+
+  testWidgets('completes qr mission with scanned code', (tester) async {
+    final repository = _FakeMissionRepository();
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      inputService: _FakeMissionNativeInputService(
+        qrCode: _sokchoMissionQrPayload,
+      ),
+    );
+
+    await _openMission(tester, '속초 시장 QR 찾기');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'QR 스캔하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 완료!'), findsOneWidget);
+    expect(repository.completeCallCount, 1);
+    expect(repository.lastPayload?.qrCode, _sokchoMissionQrPayload);
   });
 
   testWidgets('shows failure message when completion API rejects',
@@ -200,20 +361,75 @@ void main() {
     final completedTop = tester.getTopLeft(find.text('스탬프 1개 획득하기')).dy;
     expect(stepTop, lessThan(completedTop));
   });
+
+  testWidgets('shows visit mission entry banner from spot verification',
+      (tester) async {
+    await _pumpMissionScreen(
+      tester,
+      visitEntrySpotName: '정선 5일장',
+    );
+
+    expect(
+      find.byKey(const ValueKey('visit-mission-entry-banner')),
+      findsOneWidget,
+    );
+    expect(find.text('방문 인증 미션이 열렸어요'), findsOneWidget);
+    expect(
+      find.text('정선 5일장에서 이어지는 미션을 확인하고 바로 도전해보세요.'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.text('정선 5일장 곤드레 퀴즈'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+  });
+
+  testWidgets('opens visit unlocked mission detail from mission id',
+      (tester) async {
+    await _pumpMissionScreen(
+      tester,
+      visitEntrySpotName: '정선 5일장',
+      visitEntryMissionId: '1004',
+    );
+
+    expect(find.text('점순이의 미션'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('퀴즈 풀기'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpMissionScreen(
   WidgetTester tester, {
   MissionRepository? repository,
+  MissionNativeInputService? inputService,
+  MissionUploadRepository? uploadRepository,
+  String? visitEntrySpotName,
+  String? visitEntryMissionId,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authControllerProvider.overrideWith(
+          (ref) => _AuthenticatedAuthController(),
+        ),
         missionRepositoryProvider.overrideWithValue(
           repository ?? _FakeMissionRepository(),
         ),
+        missionNativeInputServiceProvider.overrideWithValue(
+          inputService ?? _FakeMissionNativeInputService(),
+        ),
+        missionUploadRepositoryProvider.overrideWithValue(
+          uploadRepository ?? _FakeMissionUploadRepository(),
+        ),
       ],
-      child: const MaterialApp(home: MissionScreen()),
+      child: MaterialApp(
+        home: MissionScreen(
+          visitEntrySpotName: visitEntrySpotName,
+          visitEntryMissionId: visitEntryMissionId,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -239,10 +455,15 @@ class _FakeMissionRepository extends MissionRepository {
 
   final Object? completeError;
   final Duration completeDelay;
+  int fetchCallCount = 0;
   int completeCallCount = 0;
+  MissionVerificationPayload? lastPayload;
 
   @override
-  Future<List<MissionChallenge>> fetchMissions() async => _missions;
+  Future<List<MissionChallenge>> fetchMissions() async {
+    fetchCallCount += 1;
+    return _missions;
+  }
 
   @override
   Future<MissionCompletionResult> verifyMission(
@@ -250,6 +471,7 @@ class _FakeMissionRepository extends MissionRepository {
     MissionVerificationPayload payload,
   ) async {
     completeCallCount += 1;
+    lastPayload = payload;
     if (completeDelay > Duration.zero) {
       await Future<void>.delayed(completeDelay);
     }
@@ -265,11 +487,117 @@ class _FakeMissionRepository extends MissionRepository {
         (payload.stepCount ?? 0) < mission.target) {
       throw const ApiException(message: '걸음을 다 채우고 재시도해주세요.');
     }
+    if (mission.type == MissionType.photoOcr &&
+        (payload.uploadKey == null || payload.uploadKey!.isEmpty)) {
+      throw const ApiException(message: '이미지를 업로드한 뒤 다시 시도해주세요.');
+    }
+    if (mission.type == MissionType.qrScan &&
+        payload.qrCode != _sokchoMissionQrPayload) {
+      throw const ApiException(message: '올바른 QR 코드가 아닙니다.');
+    }
     return MissionCompletionResult(
       id: mission.id,
       rewardType: mission.rewardType,
       rewardLabel: mission.rewardLabel,
     );
+  }
+}
+
+const _sokchoMissionQrPayload =
+    'gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR';
+
+class _IdleAuthController extends AuthController {
+  _IdleAuthController()
+      : super(
+          kakaoLoginService: const KakaoLoginService(),
+          authRepository: _AuthRepository(),
+        );
+}
+
+class _AuthenticatedAuthController extends AuthController {
+  _AuthenticatedAuthController()
+      : super(
+          kakaoLoginService: const KakaoLoginService(),
+          authRepository: _AuthRepository(),
+        ) {
+    state = const AuthState.authenticated();
+  }
+}
+
+class _AuthRepository extends AuthRepository {
+  _AuthRepository()
+      : super(
+          dio: Dio(),
+          tokenStorage: const TokenStorage(FlutterSecureStorage()),
+        );
+}
+
+class _FakeMissionNativeInputService extends MissionNativeInputService {
+  _FakeMissionNativeInputService({
+    MissionPhotoInput? photoInput,
+    this.photoError,
+    this.qrCode,
+  }) : photoInput = photoInput ??
+            MissionPhotoInput(
+              file: XFile.fromData(
+                Uint8List.fromList([1, 2, 3]),
+                name: 'image.jpg',
+                mimeType: 'image/jpeg',
+              ),
+              previewLabel: '갤러리 선택 이미지',
+            );
+
+  final MissionPhotoInput? photoInput;
+  final MissionInputException? photoError;
+  final String? qrCode;
+  MissionPhotoSource? lastPhotoSource;
+
+  @override
+  Future<MissionPhotoInput?> pickPhoto({
+    required String missionId,
+    required MissionPhotoSource source,
+  }) async {
+    lastPhotoSource = source;
+    final error = photoError;
+    if (error != null) {
+      throw error;
+    }
+    return photoInput;
+  }
+
+  @override
+  Future<String?> scanQrCode(BuildContext context) async => qrCode;
+}
+
+class _FakeMissionUploadRepository extends MissionUploadRepository {
+  _FakeMissionUploadRepository({
+    MissionUploadResult? result,
+    this.error,
+  })  : result = result ??
+            MissionUploadResult(
+              uploadKey: 'mission-uploads/1/test/image.jpg',
+              fileName: 'image.jpg',
+              contentType: 'image/jpeg',
+              size: 3,
+              expiresAt: DateTime.parse('2026-07-29T08:30:00Z'),
+            ),
+        super(dio: Dio());
+
+  final MissionUploadResult result;
+  final Object? error;
+  String? lastMissionId;
+
+  @override
+  Future<MissionUploadResult> uploadPhoto({
+    required String missionId,
+    required XFile file,
+  }) async {
+    lastMissionId = missionId;
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return result;
   }
 }
 
@@ -304,6 +632,22 @@ const _missions = [
     conditionLabel: '영수증 또는 간판 사진 인증',
     rewardType: MissionRewardType.potato,
     rewardLabel: '하지감자 씨앗',
+    progress: 0,
+    target: 1,
+  ),
+  MissionChallenge(
+    id: '1003',
+    group: MissionGroup.jumsooni,
+    type: MissionType.qrScan,
+    status: MissionStatus.ready,
+    title: '속초 시장 QR 찾기',
+    spotName: '속초 중앙시장',
+    cityName: '속초시',
+    description: '시장 안내판에 있는 QR을 찾아 스캔하세요.',
+    dialogue: '시장 안쪽에 내가 숨겨둔 QR 안내판이 있을 기다.',
+    conditionLabel: 'QR 코드 1회 스캔',
+    rewardType: MissionRewardType.coupon,
+    rewardLabel: '온누리 상품권 쿠폰',
     progress: 0,
     target: 1,
   ),

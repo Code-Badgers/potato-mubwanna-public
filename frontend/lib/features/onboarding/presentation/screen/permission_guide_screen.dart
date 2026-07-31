@@ -50,19 +50,20 @@ class _PermissionGuideScreenState extends State<PermissionGuideScreen> {
     });
 
     try {
-      final status = await widget.permissionService.requestLocation();
+      final locationStatus = await widget.permissionService.requestLocation();
+      await widget.permissionService.requestNotification();
       if (!mounted) {
         return;
       }
 
-      if (status.isGranted || status.isLimited) {
+      if (locationStatus.isGranted || locationStatus.isLimited) {
         context.go('/main/map');
         return;
       }
 
       setState(() {
         _isRequesting = false;
-        _permissionMessage = status.isPermanentlyDenied
+        _permissionMessage = locationStatus.isPermanentlyDenied
             ? '위치 권한이 차단되어 있습니다. 설정의 권한 관리에서 허용해주세요.'
             : '위치 권한 없이 둘러볼 수 있지만 주변 탐색과 방문 인증은 제한됩니다.';
         _canContinueWithoutPermission = true;

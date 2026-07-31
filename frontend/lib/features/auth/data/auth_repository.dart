@@ -68,6 +68,22 @@ class AuthRepository {
     }
   }
 
+  Future<void> withdrawAccount() async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      ApiPaths.myProfile,
+    );
+    final data = response.data ?? const <String, dynamic>{};
+    if (data['success'] != true) {
+      throw ApiException(
+        message: data['message'] as String? ?? '회원 탈퇴에 실패했습니다.',
+        code: data['code'] as String?,
+        statusCode: response.statusCode,
+      );
+    }
+
+    await _tokenStorage.clearTokens();
+  }
+
   Future<AuthTokens> _requestTokens(
     String path,
     Map<String, String> data, {

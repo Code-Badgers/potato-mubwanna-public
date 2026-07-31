@@ -126,12 +126,34 @@ class PotatoSpotClassifierTest {
     }
 
     @Test
-    void trustsTourApiKeywordSearchResultForInitialImport() {
+    void ignoresGenericPotatoSoupRestaurant() {
+        assertThat(classifier.classifyKeywordSearchResult(39, "강릉 감자탕", "강원특별자치도 강릉시"))
+            .isEmpty();
+    }
+
+    @Test
+    void keepsRestaurantWhenPotatoSoupNameHasLocalPotatoSignal() {
         PotatoSpotClassification classification = classifier
-            .classifyKeywordSearchResult(12, "대관령 여행지", "강원특별자치도 평창군")
+            .classifyKeywordSearchResult(39, "강릉 감자탕 감자전", "강원특별자치도 강릉시")
             .orElseThrow();
 
-        assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_TOUR);
-        assertThat(classification.tags()).isEqualTo("감자");
+        assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_RESTAURANT);
+        assertThat(classification.tags()).isEqualTo("감자,감자전");
+    }
+
+    @Test
+    void skipsGenericTourKeywordSearchResultWithoutPotatoSignal() {
+        assertThat(classifier.classifyKeywordSearchResult(12, "대관령 여행지", "강원특별자치도 평창군"))
+            .isEmpty();
+    }
+
+    @Test
+    void trustsKeywordSearchResultWhenItHasPotatoSignal() {
+        PotatoSpotClassification classification = classifier
+            .classifyKeywordSearchResult(12, "대관령 감자 체험 여행지", "강원특별자치도 평창군")
+            .orElseThrow();
+
+        assertThat(classification.category()).isEqualTo(SpotCategory.POTATO_EXPERIENCE);
+        assertThat(classification.tags()).isEqualTo("감자,체험");
     }
 }

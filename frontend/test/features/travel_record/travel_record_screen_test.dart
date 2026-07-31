@@ -8,6 +8,8 @@ import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
+import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
+import 'package:potato_mubwanna/features/travel_record/domain/travel_record.dart';
 import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
 
 void main() {
@@ -28,6 +30,7 @@ void main() {
         ),
       ],
     );
+    addTearDown(router.dispose);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -41,8 +44,7 @@ void main() {
     );
 
     expect(find.text('로그인이 필요한 서비스예요'), findsOneWidget);
-    expect(find.text('정선 5일장'), findsNothing);
-    expect(find.text('스탬프 획득'), findsNothing);
+    expect(find.byKey(const ValueKey('travel-record-list')), findsNothing);
 
     await tester.tap(find.text('로그인하러 가기'));
     await tester.pumpAndSettle();
@@ -50,7 +52,51 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('shows a preparation state without placeholder records',
+  testWidgets('shows visit records and opens the selected spot',
+      (tester) async {
+    await _setMobileViewport(tester);
+    final router = GoRouter(
+      initialLocation: '/travel-records',
+      routes: [
+        GoRoute(
+          path: '/travel-records',
+          builder: (_, __) => const TravelRecordScreen(),
+        ),
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (_, state) => Scaffold(
+            body: Text('spot ${state.pathParameters['spotId']}'),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            (ref) => _AuthenticatedAuthController(),
+          ),
+          travelRecordsProvider.overrideWith((ref) async => _records),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('총 2곳을 방문했어요'), findsOneWidget);
+    expect(find.text('감자 카페'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsOneWidget);
+    expect(find.text('정선군 · 카페'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('travel-record-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('spot 20'), findsOneWidget);
+  });
+
+  testWidgets('shows a helpful empty state without visit records',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -58,16 +104,40 @@ void main() {
           authControllerProvider.overrideWith(
             (ref) => _AuthenticatedAuthController(),
           ),
+          travelRecordsProvider.overrideWith(
+            (ref) async => const <TravelRecord>[],
+          ),
         ],
         child: const MaterialApp(home: TravelRecordScreen()),
       ),
     );
+    await tester.pumpAndSettle();
 
-    expect(find.text('여행 기록'), findsOneWidget);
-    expect(find.text('여행 기록 연동을 준비하고 있어요.'), findsOneWidget);
-    expect(find.text('정선 5일장'), findsNothing);
-    expect(find.text('강릉 커피거리'), findsNothing);
-    expect(find.text('스탬프 획득'), findsNothing);
+    expect(find.text('아직 여행 기록이 없어요'), findsOneWidget);
+    expect(find.textContaining('방문 인증하면'), findsOneWidget);
+  });
+
+  testWidgets('shows retry action when visit history fails', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            (ref) => _AuthenticatedAuthController(),
+          ),
+          travelRecordsProvider.overrideWith(
+            (ref) => Future<List<TravelRecord>>.error(
+              const _TravelRecordTestException(),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: TravelRecordScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('여행 기록을 불러오지 못했습니다.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('travel-record-retry')), findsOneWidget);
   });
 
   testWidgets('returns to My Page when opened without a back stack',
@@ -87,6 +157,7 @@ void main() {
         ),
       ],
     );
+    addTearDown(router.dispose);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -94,16 +165,27 @@ void main() {
           authControllerProvider.overrideWith(
             (ref) => _AuthenticatedAuthController(),
           ),
+          travelRecordsProvider.overrideWith(
+            (ref) async => const <TravelRecord>[],
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('뒤로 가기'));
     await tester.pumpAndSettle();
 
     expect(find.text('My Page destination'), findsOneWidget);
   });
+}
+
+Future<void> _setMobileViewport(WidgetTester tester) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(430, 900);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetPhysicalSize);
 }
 
 class _IdleAuthController extends AuthController {
@@ -131,3 +213,30 @@ class _AuthRepository extends AuthRepository {
           tokenStorage: const TokenStorage(FlutterSecureStorage()),
         );
 }
+
+class _TravelRecordTestException implements Exception {
+  const _TravelRecordTestException();
+}
+
+final _records = [
+  TravelRecord(
+    visitId: 2,
+    spotId: 20,
+    spotName: '감자 카페',
+    category: 'POTATO_CAFE',
+    cityName: '정선군',
+    address: '강원특별자치도 정선군',
+    imageUrl: null,
+    visitedAt: DateTime.utc(2026, 7, 27, 12),
+  ),
+  TravelRecord(
+    visitId: 1,
+    spotId: 10,
+    spotName: '정선 5일장',
+    category: 'POTATO_MARKET',
+    cityName: '정선군',
+    address: '강원특별자치도 정선군',
+    imageUrl: null,
+    visitedAt: DateTime.utc(2026, 7, 26, 9),
+  ),
+];

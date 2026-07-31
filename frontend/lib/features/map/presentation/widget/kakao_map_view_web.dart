@@ -242,7 +242,11 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'lat': spot.latitude,
               'lng': spot.longitude,
               'rare': spot.isRare,
-              'markerColor': spot.isRare ? '#F6C23E' : spot.markerColorHex,
+              'markerColor': spot.isRecommended
+                  ? spot.markerColorHex
+                  : spot.isRare
+                      ? '#F6C23E'
+                      : spot.markerColorHex,
             })
         .toList());
     final routePolyline = jsonEncode(widget.routePolyline

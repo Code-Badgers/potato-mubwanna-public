@@ -15,6 +15,7 @@ import com.gamjamubwatna.stamp.domain.UserStampRepository;
 import com.gamjamubwatna.visit.api.VisitVerifyRequest;
 import com.gamjamubwatna.visit.api.VisitVerifyResponse;
 import com.gamjamubwatna.visit.domain.UserVisitRepository;
+import com.gamjamubwatna.potato.domain.UserPotatoRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,9 @@ class VisitStampFlowIntegrationTest {
     private UserStampRepository userStampRepository;
 
     @Autowired
+    private UserPotatoRepository userPotatoRepository;
+
+    @Autowired
     private VisitVerificationService visitVerificationService;
 
     @Autowired
@@ -69,11 +73,16 @@ class VisitStampFlowIntegrationTest {
         VisitVerifyResponse second = verify(user, secondSpot);
 
         assertThat(first.stampIssued()).isTrue();
+        assertThat(first.potatoAcquired()).isTrue();
+        assertThat(first.acquiredPotato()).isNotNull();
         assertThat(stampBook.acquiredCount()).isEqualTo(1);
         assertThat(rewardStatus.acquiredCount()).isEqualTo(1);
         assertThat(second.stampIssued()).isFalse();
+        assertThat(second.potatoAcquired()).isFalse();
+        assertThat(second.acquiredPotato().alreadyOwned()).isTrue();
         assertThat(userVisitRepository.count()).isEqualTo(2);
         assertThat(userStampRepository.countByUserId(user.getId())).isEqualTo(1);
+        assertThat(userPotatoRepository.countByUserId(user.getId())).isEqualTo(1);
     }
 
     private VisitVerifyResponse verify(User user, TouristSpot spot) {

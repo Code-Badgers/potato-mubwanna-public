@@ -1,15 +1,22 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:potato_mubwanna/app/theme/app_theme.dart';
+import 'package:potato_mubwanna/core/location/location_service.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_guide_controller.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_playback_controller.dart';
 import 'package:potato_mubwanna/features/audio/data/audio_guide_repository.dart';
 import 'package:potato_mubwanna/features/audio/domain/audio_guide.dart';
 import 'package:potato_mubwanna/features/spot/application/spot_detail_controller.dart';
+import 'package:potato_mubwanna/features/spot/data/visit_verification_repository.dart';
 import 'package:potato_mubwanna/features/spot/domain/spot_detail.dart';
+import 'package:potato_mubwanna/features/spot/domain/visit_verification.dart';
 import 'package:potato_mubwanna/features/spot/presentation/screen/spot_detail_screen.dart';
 
 void main() {
@@ -33,6 +40,7 @@ void main() {
     expect(find.text('#감자전'), findsOneWidget);
     expect(find.text('정선 5일장 이야기'), findsOneWidget);
     expect(find.byKey(const ValueKey('audio-player-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-verify-button')), findsOneWidget);
 
     final playButton = find.byKey(const ValueKey('audio-play-toggle'));
     await tester.ensureVisible(playButton);
@@ -129,12 +137,253 @@ void main() {
     expect(playerCard, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('shows visit success sheet with acquired potato', (tester) async {
+    await _setMobileViewport(tester);
+    final repository = _FakeVisitVerificationRepository(result: _visitResult);
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: repository,
+        locationService: _FakeLocationService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastRequest?.spotId, '1');
+    expect(repository.lastRequest?.latitude, 37.3801);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsOneWidget);
+    expect(find.text('인증 성공'), findsOneWidget);
+    expect(find.text('지역 스탬프 획득'), findsOneWidget);
+    expect(find.text('황금감자'), findsOneWidget);
+    expect(find.text('강원특별자치도 · 희귀도 영웅'), findsOneWidget);
+    expect(find.text('도감 보기'), findsOneWidget);
+    expect(find.text('다음 장소 추천'), findsOneWidget);
+  });
+
+  testWidgets('passes the verified spot to the recommendation map', (
+    tester,
+  ) async {
+    await _setMobileViewport(tester);
+    final router = GoRouter(
+      initialLocation: '/spots/1',
+      routes: [
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (context, state) => const SpotDetailScreen(spotId: '1'),
+        ),
+        GoRoute(
+          path: '/main/map',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              '추천 기준 ${state.queryParameters['recommendFrom']}',
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider('1').overrideWith((ref) async => _spot),
+          audioGuideProvider('1').overrideWith((ref) async => _guide),
+          audioPlaybackEngineFactoryProvider.overrideWithValue(
+            () => _FakeAudioPlaybackEngine(),
+          ),
+          visitVerificationRepositoryProvider.overrideWithValue(
+            _FakeVisitVerificationRepository(result: _visitResult),
+          ),
+          locationServiceProvider.overrideWithValue(_FakeLocationService()),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-result-next-route')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('추천 기준 1'), findsOneWidget);
+  });
+
+  testWidgets('opens mission tab from a visit result with available mission', (
+    tester,
+  ) async {
+    await _setMobileViewport(tester);
+    final router = GoRouter(
+      initialLocation: '/spots/1',
+      routes: [
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (context, state) => const SpotDetailScreen(spotId: '1'),
+        ),
+        GoRoute(
+          path: '/main/missions',
+          builder: (context, state) => Scaffold(
+            body: Text(
+              '미션 진입 ${state.queryParameters['entry']} '
+              '${state.queryParameters['spotName']} '
+              '${state.queryParameters['missionId']}',
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider('1').overrideWith((ref) async => _spot),
+          audioGuideProvider('1').overrideWith((ref) async => _guide),
+          audioPlaybackEngineFactoryProvider.overrideWithValue(
+            () => _FakeAudioPlaybackEngine(),
+          ),
+          visitVerificationRepositoryProvider.overrideWithValue(
+            _FakeVisitVerificationRepository(
+              result: _visitResultWithMission,
+            ),
+          ),
+          locationServiceProvider.overrideWithValue(_FakeLocationService()),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('정선군 · 황금감자 성장 아이템'), findsOneWidget);
+    expect(find.text('점순이 미션 보기'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('visit-result-mission-entry')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 진입 visit 정선 5일장 1004'), findsOneWidget);
+  });
+
+  testWidgets('shows backend failure message when visit verification fails',
+      (tester) async {
+    await _setMobileViewport(tester);
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: _FakeVisitVerificationRepository(
+          error: const ApiException(
+            message: '이미 방문 인증한 감자 스팟입니다.',
+            statusCode: 409,
+          ),
+        ),
+        locationService: _FakeLocationService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이미 방문 인증한 감자 스팟입니다.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
+  });
+
+  testWidgets('shows app settings action when location permission is blocked',
+      (tester) async {
+    await _setMobileViewport(tester);
+    final locationService = _FakeLocationService(
+      error: const LocationFailure(
+        type: LocationFailureType.permissionDeniedForever,
+        message: '위치 권한이 차단되어 있습니다. 앱 설정에서 위치 권한을 허용해주세요.',
+        settingsTarget: LocationSettingsTarget.app,
+        actionLabel: '앱 설정',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: _FakeVisitVerificationRepository(
+          result: _visitResult,
+        ),
+        locationService: locationService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('위치 권한이 차단되어 있습니다. 앱 설정에서 위치 권한을 허용해주세요.'),
+      findsOneWidget,
+    );
+    expect(find.text('앱 설정'), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
+
+    await tester.tap(find.text('앱 설정'));
+    await tester.pump();
+
+    expect(locationService.openedTarget, LocationSettingsTarget.app);
+  });
+
+  testWidgets('shows location settings action when device location is off',
+      (tester) async {
+    await _setMobileViewport(tester);
+
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: _FakeVisitVerificationRepository(
+          result: _visitResult,
+        ),
+        locationService: _FakeLocationService(
+          error: const LocationFailure(
+            type: LocationFailureType.serviceDisabled,
+            message: '휴대폰 위치 서비스가 꺼져 있습니다. 위치 서비스를 켠 뒤 다시 인증해주세요.',
+            settingsTarget: LocationSettingsTarget.location,
+            actionLabel: '위치 설정',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('휴대폰 위치 서비스가 꺼져 있습니다. 위치 서비스를 켠 뒤 다시 인증해주세요.'),
+      findsOneWidget,
+    );
+    expect(find.text('위치 설정'), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
+  });
 }
 
 Widget _app({
   required _FakeAudioPlaybackEngine engine,
   required Future<SpotDetail> Function(Ref ref) spotOverride,
   required Future<AudioGuide> Function(Ref ref) audioOverride,
+  VisitVerificationRepository? visitRepository,
+  LocationService? locationService,
   TextScaler textScaler = TextScaler.noScaling,
 }) {
   return ProviderScope(
@@ -142,6 +391,10 @@ Widget _app({
       spotDetailProvider('1').overrideWith(spotOverride),
       audioGuideProvider('1').overrideWith(audioOverride),
       audioPlaybackEngineFactoryProvider.overrideWithValue(() => engine),
+      if (visitRepository != null)
+        visitVerificationRepositoryProvider.overrideWithValue(visitRepository),
+      if (locationService != null)
+        locationServiceProvider.overrideWithValue(locationService),
     ],
     child: MaterialApp(
       theme: AppTheme.light,
@@ -184,6 +437,107 @@ const _guide = AudioGuide(
   script: '정선 5일장은 오랜 역사를 지닌 전통시장입니다.',
   characterScript: '점순이: 정선 5일장 이야기를 들어봐요!',
 );
+
+const _visitResult = VisitVerificationResult(
+  spotId: '1',
+  verified: true,
+  distanceMeters: 23.5,
+  verificationRadiusMeter: 100,
+  stampIssued: true,
+  potatoAcquired: true,
+  acquiredPotato: VisitAcquiredPotato(
+    id: '3',
+    code: 'POTATO_GOLDEN_GANGWON',
+    name: '황금감자',
+    region: '강원특별자치도',
+    rarity: 'EPIC',
+    alreadyOwned: false,
+  ),
+  missionAvailable: false,
+);
+
+const _visitResultWithMission = VisitVerificationResult(
+  spotId: '1',
+  verified: true,
+  distanceMeters: 23.5,
+  verificationRadiusMeter: 100,
+  stampIssued: true,
+  potatoAcquired: true,
+  acquiredPotato: VisitAcquiredPotato(
+    id: '3',
+    code: 'POTATO_GOLDEN_GANGWON',
+    name: '황금감자',
+    region: '강원특별자치도',
+    rarity: 'EPIC',
+    alreadyOwned: false,
+  ),
+  missionAvailable: true,
+  unlockedMission: VisitUnlockedMission(
+    id: '1004',
+    title: '정선 5일장 곤드레 퀴즈',
+    type: 'QUIZ',
+    spotName: '정선 5일장',
+    cityName: '정선군',
+    rewardType: 'ITEM',
+    rewardLabel: '황금감자 성장 아이템',
+  ),
+);
+
+class _FakeVisitVerificationRepository extends VisitVerificationRepository {
+  _FakeVisitVerificationRepository({
+    this.result,
+    this.error,
+  }) : super(dio: Dio());
+
+  final VisitVerificationResult? result;
+  final Object? error;
+  VisitVerificationRequest? lastRequest;
+
+  @override
+  Future<VisitVerificationResult> verifyVisit(
+    VisitVerificationRequest request,
+  ) async {
+    lastRequest = request;
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return result!;
+  }
+}
+
+class _FakeLocationService extends LocationService {
+  _FakeLocationService({this.error});
+
+  final Object? error;
+  LocationSettingsTarget? openedTarget;
+
+  @override
+  Future<Position> getCurrentPosition() async {
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return Position(
+      longitude: 128.6609,
+      latitude: 37.3801,
+      timestamp: DateTime.parse('2026-07-27T00:00:00Z'),
+      accuracy: 4,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
+  }
+
+  @override
+  Future<bool> openSettings(LocationSettingsTarget target) async {
+    openedTarget = target;
+    return true;
+  }
+}
 
 class _FakeAudioPlaybackEngine implements AudioPlaybackEngine {
   final _positionController = StreamController<Duration>.broadcast();

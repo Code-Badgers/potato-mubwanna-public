@@ -67,20 +67,9 @@ class MissionControllerTest {
     }
 
     @Test
-    void completesMission() throws Exception {
-        when(missionService.completeMission(eq(1L), eq(1L))).thenReturn(new MissionCompleteResponse(
-            1L,
-            true,
-            Instant.parse("2026-07-01T00:00:00Z"),
-            MissionRewardType.ITEM,
-            "황금감자 성장 아이템"
-        ));
-
+    void removedLegacyCompletionEndpointReturnsNotFound() throws Exception {
         mockMvc.perform(post("/missions/1/complete").with(user("user:1")).with(csrf()))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.completed").value(true))
-            .andExpect(jsonPath("$.data.rewardLabel").value("황금감자 성장 아이템"));
+            .andExpect(status().isNotFound());
     }
 
     @Test
@@ -134,10 +123,19 @@ class MissionControllerTest {
 
     @Test
     void rejectsDuplicateCompletion() throws Exception {
-        when(missionService.completeMission(eq(1L), eq(1L)))
+        when(missionService.verifyMission(eq(1L), eq(1L), anyVerifyRequest()))
             .thenThrow(new MissionAlreadyCompletedException("이미 완료한 미션입니다."));
 
-        mockMvc.perform(post("/missions/1/complete").with(user("user:1")).with(csrf()))
+        mockMvc.perform(post("/missions/1/verify")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {
+                      "type": "QUIZ",
+                      "answer": "곤드레감자"
+                    }
+                    """))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("이미 완료한 미션입니다."));
@@ -145,12 +143,21 @@ class MissionControllerTest {
 
     @Test
     void mapsUniqueConstraintRaceToConflict() throws Exception {
-        when(missionService.completeMission(eq(1L), eq(1L)))
+        when(missionService.verifyMission(eq(1L), eq(1L), anyVerifyRequest()))
             .thenThrow(new org.springframework.dao.DataIntegrityViolationException(
                 "uk_user_missions_user_mission"
             ));
 
-        mockMvc.perform(post("/missions/1/complete").with(user("user:1")).with(csrf()))
+        mockMvc.perform(post("/missions/1/verify")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {
+                      "type": "QUIZ",
+                      "answer": "곤드레감자"
+                    }
+                    """))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("이미 완료한 미션입니다."));
@@ -184,7 +191,9 @@ class MissionControllerTest {
             true,
             true,
             completed,
-            completed ? Instant.parse("2026-07-01T00:00:00Z") : null
+            completed ? Instant.parse("2026-07-01T00:00:00Z") : null,
+            null,
+            null
         );
     }
 

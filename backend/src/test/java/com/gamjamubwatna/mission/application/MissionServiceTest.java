@@ -3,6 +3,9 @@ package com.gamjamubwatna.mission.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -15,13 +18,13 @@ import com.gamjamubwatna.coupon.domain.CouponDisplayStatus;
 import com.gamjamubwatna.coupon.domain.CouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCoupon;
 import com.gamjamubwatna.coupon.domain.UserCouponRepository;
-import com.gamjamubwatna.mission.api.MissionCompleteResponse;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
 import com.gamjamubwatna.mission.api.MissionVerifyRequest;
 import com.gamjamubwatna.mission.api.MissionVerifyResponse;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionGroup;
+import com.gamjamubwatna.mission.domain.MissionPeriod;
 import com.gamjamubwatna.mission.domain.MissionRepository;
 import com.gamjamubwatna.mission.domain.MissionRewardType;
 import com.gamjamubwatna.mission.domain.MissionStatus;
@@ -36,8 +39,11 @@ import com.gamjamubwatna.reward.domain.RewardSourceType;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,10 +76,17 @@ class MissionServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private MissionEvidenceValidator missionEvidenceValidator;
+
+    private FakeMissionPhotoStorage missionPhotoStorage;
+    private MissionPhotoTextReader missionPhotoTextReader;
     private MissionService missionService;
 
     @BeforeEach
     void setUp() {
+        missionPhotoStorage = new FakeMissionPhotoStorage();
+        missionPhotoTextReader = photoFile -> new String(photoFile.bytes());
         missionService = new MissionService(
             missionRepository,
             missionVerificationPolicyRepository,
@@ -82,6 +95,9 @@ class MissionServiceTest {
             couponRepository,
             userCouponRepository,
             userRepository,
+            missionEvidenceValidator,
+            missionPhotoStorage,
+            missionPhotoTextReader,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -97,7 +113,10 @@ class MissionServiceTest {
         );
         when(userRepository.existsById(1L)).thenReturn(true);
         when(missionRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of(first, second));
-        when(userMissionRepository.findByUserId(1L)).thenReturn(List.of(completed));
+        when(userMissionRepository.findByUserIdAndCompletionPeriodIn(
+            1L,
+            Set.of(MissionPeriod.ONE_TIME_KEY)
+        )).thenReturn(List.of(completed));
 
         MissionListResponse result = missionService.getMissions(1L);
 
@@ -124,23 +143,38 @@ class MissionServiceTest {
     }
 
     @Test
-    void completesActiveMission() {
-        User user = user(1L);
-        Mission mission = mission(1L, "MISSION_FIRST", MissionStatus.READY, true);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
-        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
-        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    void returnsOnlyCurrentDailyPeriodCompletionAndProgress() {
+        Mission mission = mission(
+            1L,
+            "MISSION_DAILY",
+            MissionStatus.READY,
+            true,
+            MissionGroup.DAILY,
+            MissionType.STAMP
+        );
+        UserMission previousCompletion = new UserMission(
+            user(1L),
+            mission,
+            Instant.parse("2026-06-30T00:00:00Z"),
+            "DAY:2026-06-30"
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(missionRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of(mission));
+        when(userMissionRepository.findByUserIdAndCompletionPeriodIn(
+            1L,
+            Set.of("DAY:2026-07-01")
+        )).thenReturn(List.of(previousCompletion));
+        when(missionEvidenceValidator.progress(eq(1L), eq(mission), any(MissionPeriod.class)))
+            .thenReturn(1);
 
-        MissionCompleteResponse result = missionService.completeMission(1L, 1L);
+        MissionListResponse result = missionService.getMissions(1L);
 
-        assertThat(result.completed()).isTrue();
-        assertThat(result.completedAt()).isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));
-        assertThat(result.rewardType()).isEqualTo(MissionRewardType.ITEM);
-        verify(userMissionRepository).save(any(UserMission.class));
-        ArgumentCaptor<RewardHistory> rewardCaptor = ArgumentCaptor.forClass(RewardHistory.class);
-        verify(rewardHistoryRepository).save(rewardCaptor.capture());
-        assertMissionRewardHistory(rewardCaptor.getValue(), mission);
+        MissionItemResponse item = result.missions().getFirst();
+        assertThat(result.completedCount()).isZero();
+        assertThat(item.completed()).isFalse();
+        assertThat(item.progress()).isEqualTo(1);
+        assertThat(item.periodStartsAt()).isEqualTo(Instant.parse("2026-06-30T15:00:00Z"));
+        assertThat(item.periodEndsAt()).isEqualTo(Instant.parse("2026-07-01T15:00:00Z"));
     }
 
     @Test
@@ -169,6 +203,87 @@ class MissionServiceTest {
     }
 
     @Test
+    void completesSameDailyMissionAgainInNextPeriod() {
+        User user = user(1L);
+        Mission mission = mission(
+            1L,
+            "MISSION_DAILY_QUIZ",
+            MissionStatus.READY,
+            true,
+            MissionGroup.DAILY,
+            MissionType.QUIZ
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionIdAndCompletionPeriod(
+            1L,
+            1L,
+            "DAY:2026-07-01"
+        )).thenReturn(false);
+        when(userMissionRepository.existsByUserIdAndMissionIdAndCompletionPeriod(
+            1L,
+            1L,
+            "DAY:2026-07-02"
+        )).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(quizPolicy(mission, "곤드레감자")));
+        when(userMissionRepository.save(any(UserMission.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionService dayOneService = missionService(Instant.parse("2026-07-01T00:00:00Z"));
+        MissionService dayTwoService = missionService(Instant.parse("2026-07-02T00:00:00Z"));
+        MissionVerifyRequest request = new MissionVerifyRequest(
+            MissionType.QUIZ,
+            "곤드레감자",
+            null,
+            null,
+            null
+        );
+
+        dayOneService.verifyMission(1L, 1L, request);
+        dayTwoService.verifyMission(1L, 1L, request);
+
+        ArgumentCaptor<UserMission> completionCaptor = ArgumentCaptor.forClass(UserMission.class);
+        verify(userMissionRepository, times(2)).save(completionCaptor.capture());
+        assertThat(completionCaptor.getAllValues())
+            .extracting(UserMission::getCompletionPeriod)
+            .containsExactly("DAY:2026-07-01", "DAY:2026-07-02");
+
+        ArgumentCaptor<RewardHistory> rewardCaptor = ArgumentCaptor.forClass(RewardHistory.class);
+        verify(rewardHistoryRepository, times(2)).save(rewardCaptor.capture());
+        assertThat(rewardCaptor.getAllValues())
+            .extracting(RewardHistory::getSourcePeriod)
+            .containsExactly("DAY:2026-07-01", "DAY:2026-07-02");
+    }
+
+    @Test
+    void rejectsDuplicateCompletionInCurrentDailyPeriod() {
+        Mission mission = mission(
+            1L,
+            "MISSION_DAILY_QUIZ",
+            MissionStatus.READY,
+            true,
+            MissionGroup.DAILY,
+            MissionType.QUIZ
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionIdAndCompletionPeriod(
+            1L,
+            1L,
+            "DAY:2026-07-01"
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QUIZ, "곤드레감자", null, null, null)
+        ))
+            .isInstanceOf(MissionAlreadyCompletedException.class);
+        verifyNoInteractions(rewardHistoryRepository);
+    }
+
+    @Test
     void rejectsWrongQuizAnswer() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(
@@ -192,42 +307,98 @@ class MissionServiceTest {
 
     @Test
     void rejectsInsufficientStepCount() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
-        when(missionRepository.findById(1L)).thenReturn(Optional.of(
-            mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP)
-        ));
-        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
-        when(missionVerificationPolicyRepository.findByMissionId(1L))
-            .thenReturn(Optional.of(stepPolicy(
-                mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP),
-                1000
-            )));
-
-        assertThatThrownBy(() -> missionService.verifyMission(
+        Mission mission = mission(
             1L,
-            1L,
-            new MissionVerifyRequest(MissionType.VISIT_AND_STEP, null, 0, null, null)
-        ))
-            .isInstanceOf(MissionVerificationException.class)
-            .hasMessage("걸음을 다 채우고 재시도해주세요.");
-    }
-
-    @Test
-    void rejectsMissingStepPolicy() {
-        Mission mission = mission(1L, "MISSION_STEP", MissionStatus.READY, true, MissionType.VISIT_AND_STEP);
+            "MISSION_STEP",
+            MissionStatus.READY,
+            true,
+            MissionType.VISIT_AND_STEP
+        );
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(missionVerificationPolicyRepository.findByMissionId(1L))
-            .thenReturn(Optional.of(stepPolicy(mission, null)));
+            .thenReturn(Optional.of(stepPolicy(mission, 1000)));
+        doThrow(new MissionVerificationException(
+            "동기화된 걸음 수가 미션 목표에 도달하지 않았습니다."
+        )).when(missionEvidenceValidator).validate(
+            eq(1L),
+            eq(mission),
+            any(MissionVerificationPolicy.class),
+            any(MissionPeriod.class)
+        );
 
         assertThatThrownBy(() -> missionService.verifyMission(
             1L,
             1L,
-            new MissionVerifyRequest(MissionType.VISIT_AND_STEP, null, 1000, null, null)
+            new MissionVerifyRequest(MissionType.VISIT_AND_STEP, null, 100_000, null, null)
         ))
             .isInstanceOf(MissionVerificationException.class)
-            .hasMessage("미션 걸음 수 정책을 확인할 수 없습니다.");
+            .hasMessage("동기화된 걸음 수가 미션 목표에 도달하지 않았습니다.");
+    }
+
+    @Test
+    void verifiesQrMissionWithExpectedCode() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, "gamjamubwatna://mission/qr/MISSION_QR")));
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionVerifyResponse result = missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(
+                MissionType.QR_SCAN,
+                null,
+                null,
+                null,
+                " gamjamubwatna://mission/qr/MISSION_QR "
+            )
+        );
+
+        assertThat(result.verified()).isTrue();
+        assertThat(result.completed()).isTrue();
+        verify(userMissionRepository).save(any(UserMission.class));
+    }
+
+    @Test
+    void rejectsMissingQrCode() {
+        Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, "gamjamubwatna://mission/qr/MISSION_QR")));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QR_SCAN, null, null, null, " ")
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("QR 코드를 스캔한 뒤 다시 시도해주세요.");
+    }
+
+    @Test
+    void rejectsMissingQrPolicy() {
+        Mission mission = mission(1L, "MISSION_QR", MissionStatus.READY, true, MissionType.QR_SCAN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, null)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QR_SCAN, null, null, null, "gamjamubwatna://mission/qr/MISSION_QR")
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("미션 QR 정책을 확인할 수 없습니다.");
     }
 
     @Test
@@ -267,6 +438,133 @@ class MissionServiceTest {
     }
 
     @Test
+    void rejectsPhotoMissionWithLocalUploadKey() {
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO, null, null, "local:1:camera:image.jpg", null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("서버에서 발급한 업로드 키를 확인해주세요.");
+    }
+
+    @Test
+    void rejectsPhotoMissionWithAnotherUsersUploadKey() {
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(
+                MissionType.PHOTO,
+                null,
+                null,
+                "mission-uploads/2/1/other-users-photo.jpg",
+                null
+            )
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("서버에서 발급한 업로드 키를 확인해주세요.");
+    }
+
+    @Test
+    void rejectsPhotoMissionWithFabricatedOwnedUploadKey() {
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(
+                MissionType.PHOTO,
+                null,
+                null,
+                "mission-uploads/1/1/missing.jpg",
+                null
+            )
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("업로드된 이미지를 찾을 수 없습니다.");
+    }
+
+    @Test
+    void verifiesPhotoOcrMissionWhenRecognizedTextContainsExpectedKeyword() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
+        String uploadKey = "mission-uploads/1/1/test-receipt.jpg";
+        missionPhotoStorage.put(uploadKey, "안목 커피거리 영수증 하지감자".getBytes());
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionVerifyResponse result = missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, uploadKey, null)
+        );
+
+        assertThat(result.verified()).isTrue();
+        assertThat(result.completed()).isTrue();
+    }
+
+    @Test
+    void rejectsPhotoOcrMissionWhenKeywordIsMissing() {
+        Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
+        String uploadKey = "mission-uploads/1/1/test-receipt.jpg";
+        missionPhotoStorage.put(uploadKey, "안목 커피거리 영수증".getBytes());
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, uploadKey, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("인증 이미지에서 미션 키워드를 찾지 못했습니다.");
+    }
+
+    @Test
+    void rejectsPhotoOcrMissionWhenUploadKeyDoesNotExist() {
+        Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, "mission-uploads/1/1/missing.jpg", null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("업로드된 이미지를 찾을 수 없습니다.");
+    }
+
+    @Test
     void rejectsDuplicateCompletion() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(
@@ -274,7 +572,11 @@ class MissionServiceTest {
         ));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(true);
 
-        assertThatThrownBy(() -> missionService.completeMission(1L, 1L))
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QUIZ, "곤드레감자", null, null, null)
+        ))
             .isInstanceOf(MissionAlreadyCompletedException.class);
         verifyNoInteractions(rewardHistoryRepository);
         verifyNoInteractions(userCouponRepository);
@@ -283,7 +585,13 @@ class MissionServiceTest {
     @Test
     void issuesCouponForCouponRewardMission() {
         User user = user(1L);
-        Mission mission = mission(1L, "MISSION_COUPON", MissionStatus.READY, true);
+        Mission mission = mission(
+            1L,
+            "MISSION_COUPON",
+            MissionStatus.READY,
+            true,
+            MissionType.QR_SCAN
+        );
         ReflectionTestUtils.setField(mission, "rewardType", MissionRewardType.COUPON);
         ReflectionTestUtils.setField(mission, "rewardCouponId", 7L);
         Coupon coupon = new Coupon(
@@ -299,8 +607,14 @@ class MissionServiceTest {
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(couponRepository.findById(7L)).thenReturn(Optional.of(coupon));
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, "expected-qr")));
 
-        missionService.completeMission(1L, 1L);
+        missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QR_SCAN, null, null, null, "expected-qr")
+        );
 
         ArgumentCaptor<UserCoupon> couponCaptor = ArgumentCaptor.forClass(UserCoupon.class);
         verify(userCouponRepository).save(couponCaptor.capture());
@@ -315,14 +629,26 @@ class MissionServiceTest {
     @Test
     void rejectsCouponRewardWithoutCouponMapping() {
         User user = user(1L);
-        Mission mission = mission(1L, "MISSION_COUPON", MissionStatus.READY, true);
+        Mission mission = mission(
+            1L,
+            "MISSION_COUPON",
+            MissionStatus.READY,
+            true,
+            MissionType.QR_SCAN
+        );
         ReflectionTestUtils.setField(mission, "rewardType", MissionRewardType.COUPON);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(qrPolicy(mission, "expected-qr")));
 
-        assertThatThrownBy(() -> missionService.completeMission(1L, 1L))
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QR_SCAN, null, null, null, "expected-qr")
+        ))
             .isInstanceOf(MissionCompletionException.class)
             .hasMessage("미션 쿠폰 보상 매핑을 찾을 수 없습니다.");
         verifyNoInteractions(couponRepository, userCouponRepository);
@@ -335,8 +661,44 @@ class MissionServiceTest {
             mission(1L, "MISSION_LOCKED", MissionStatus.LOCKED, false)
         ));
 
-        assertThatThrownBy(() -> missionService.completeMission(1L, 1L))
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.QUIZ, "곤드레감자", null, null, null)
+        ))
             .isInstanceOf(MissionCompletionException.class);
+    }
+
+    @Test
+    void locksUnscheduledEventAndRejectsCompletion() {
+        Mission mission = mission(
+            1L,
+            "MISSION_EVENT",
+            MissionStatus.READY,
+            true,
+            MissionGroup.EVENT,
+            MissionType.VISIT
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+
+        MissionItemResponse item = missionService.getMission(1L, 1L);
+
+        assertThat(item.active()).isFalse();
+        assertThat(item.status()).isEqualTo(MissionStatus.LOCKED);
+        assertThat(item.progress()).isZero();
+        assertThat(item.periodStartsAt()).isNull();
+        assertThat(item.periodEndsAt()).isNull();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.VISIT, null, null, null, null)
+        ))
+            .isInstanceOf(MissionCompletionException.class)
+            .hasMessage("아직 완료할 수 없는 미션입니다.");
+        verifyNoInteractions(rewardHistoryRepository);
     }
 
     @Test
@@ -358,9 +720,20 @@ class MissionServiceTest {
         boolean active,
         MissionType type
     ) {
+        return mission(id, code, status, active, MissionGroup.JUMSOONI, type);
+    }
+
+    private Mission mission(
+        Long id,
+        String code,
+        MissionStatus status,
+        boolean active,
+        MissionGroup group,
+        MissionType type
+    ) {
         Mission mission = new Mission(
             code,
-            MissionGroup.JUMSOONI,
+            group,
             type,
             status,
             "정선 5일장 곤드레 퀴즈",
@@ -400,7 +773,24 @@ class MissionServiceTest {
         assertThat(rewardHistory.getRewardName()).isEqualTo(mission.getRewardLabel());
         assertThat(rewardHistory.getSourceType()).isEqualTo(RewardSourceType.MISSION);
         assertThat(rewardHistory.getSourceId()).isEqualTo(mission.getId());
+        assertThat(rewardHistory.getSourcePeriod()).isEqualTo(MissionPeriod.ONE_TIME_KEY);
         assertThat(rewardHistory.getCreatedAt()).isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));
+    }
+
+    private MissionService missionService(Instant now) {
+        return new MissionService(
+            missionRepository,
+            missionVerificationPolicyRepository,
+            userMissionRepository,
+            rewardHistoryRepository,
+            couponRepository,
+            userCouponRepository,
+            userRepository,
+            missionEvidenceValidator,
+            missionPhotoStorage,
+            missionPhotoTextReader,
+            Clock.fixed(now, ZoneOffset.UTC)
+        );
     }
 
     private MissionVerificationPolicy quizPolicy(Mission mission, String expectedAnswer) {
@@ -440,14 +830,41 @@ class MissionServiceTest {
     }
 
     private MissionVerificationPolicy uploadPolicy(Mission mission) {
+        return uploadPolicy(mission, null);
+    }
+
+    private MissionVerificationPolicy uploadPolicy(Mission mission, String expectedKeyword) {
         return new MissionVerificationPolicy(
             mission,
             mission.getType(),
-            null,
+            expectedKeyword,
             null,
             true,
             null,
             Instant.parse("2026-07-01T00:00:00Z")
         );
+    }
+
+    private static class FakeMissionPhotoStorage implements MissionPhotoStorage {
+
+        private final Map<String, byte[]> files = new HashMap<>();
+
+        void put(String uploadKey, byte[] bytes) {
+            files.put(uploadKey, bytes);
+        }
+
+        @Override
+        public StoredMissionPhoto store(String uploadKey, String fileName, String contentType, org.springframework.web.multipart.MultipartFile file) {
+            throw new UnsupportedOperationException("MissionServiceTest does not store files");
+        }
+
+        @Override
+        public StoredMissionPhotoFile read(String uploadKey) {
+            byte[] bytes = files.get(uploadKey);
+            if (bytes == null) {
+                throw new MissionUploadException("업로드된 이미지를 찾을 수 없습니다.");
+            }
+            return new StoredMissionPhotoFile(uploadKey, bytes);
+        }
     }
 }

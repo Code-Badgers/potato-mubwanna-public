@@ -172,6 +172,115 @@ Response:
 GET /api/users/me/visits
 ```
 
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": [
+    {
+      "visitId": 1,
+      "spotId": 10,
+      "spotName": "정선 5일장",
+      "category": "POTATO_MARKET",
+      "cityName": "정선군",
+      "address": "강원특별자치도 정선군...",
+      "imageUrl": "https://...",
+      "visitedAt": "2026-07-27T12:00:00Z"
+    }
+  ]
+}
+```
+
+- `data`는 `visitedAt` 내림차순으로 정렬한다.
+- 방문 기록이 없으면 빈 배열을 반환한다.
+- 방문 기록은 방문 인증 시 저장된 `user_visits`를 기준으로 한다.
+
+### 2.4 내 푸시 토큰 등록/갱신
+
+```http
+POST /api/users/me/push-tokens
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "token": "fcm-registration-token",
+  "platform": "ANDROID",
+  "previousToken": "previous-fcm-registration-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "registered": true,
+    "platform": "ANDROID",
+    "registeredAt": "2026-07-31T03:30:00Z"
+  }
+}
+```
+
+- `platform`은 `ANDROID`, `IOS`, `WEB` 중 하나다.
+- `previousToken`은 FCM token refresh 때만 보내는 선택값이다. 현재 사용자가 소유한 이전 토큰만 삭제한다.
+- 같은 `token`을 다시 등록하면 사용자, platform, 갱신 시각을 최신 값으로 idempotent upsert한다.
+- registration token 원문은 서버 로그에 남기지 않는다.
+
+### 2.5 내 푸시 토큰 삭제
+
+```http
+DELETE /api/users/me/push-tokens
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "token": "fcm-registration-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": null
+}
+```
+
+- 로그아웃과 알림 동의 철회는 인증 토큰을 지우기 전에 이 endpoint를 호출한다.
+- 이미 삭제됐거나 현재 사용자 소유가 아닌 token 삭제 요청도 idempotent success로 처리한다.
+- 회원 탈퇴 시 사용자 token은 FK cascade로 삭제한다.
+- 서버 발송에서 FCM이 registration token을 무효로 판정하면 해당 token을 즉시 삭제하고, 장기간 갱신되지 않은 token은 다음 등록 시 정리한다.
+
+### 2.6 푸시 알림 라우팅 payload
+
+FCM data payload는 다음 목적지만 허용한다.
+
+| `destination` | 앱 이동 경로 | `destinationId` |
+| --- | --- | --- |
+| `MISSIONS` | `/main/missions` | 사용하지 않음 |
+| `COUPONS` | `/coupons` | 사용하지 않음 |
+| `STAMPS` | `/main/stamps` | 사용하지 않음 |
+| `MAP` | `/main/map` | 사용하지 않음 |
+| `SPOT` | `/spots/{spotId}` | 양의 정수 `spotId` 필수 |
+
+- 앱은 foreground message를 인앱 알림으로 표시하고, 알림 탭과 종료 상태의 initial message를 동일한 whitelist resolver로 처리한다.
+- 알 수 없는 `destination` 또는 유효하지 않은 `destinationId`는 화면 이동 없이 무시한다.
+- Firebase client 설정이 없거나 서버의 `FIREBASE_ADMIN_ENABLED=false`인 환경은 push 기능만 비활성화하며 앱/서버 시작은 계속한다.
+
 ---
 
 ## 3. Tourist Spot / Map API
@@ -433,12 +542,35 @@ Response:
     "verified": true,
     "distanceMeters": 23.5,
     "verificationRadiusMeter": 100,
-    "stampIssued": false,
-    "potatoAcquired": false,
-    "missionAvailable": false
+    "stampIssued": true,
+    "potatoAcquired": true,
+    "acquiredPotato": {
+      "potatoId": 3,
+      "code": "POTATO_GOLDEN_GANGWON",
+      "name": "황금감자",
+      "region": "강원특별자치도",
+      "rarity": "EPIC",
+      "alreadyOwned": false
+    },
+    "missionAvailable": true,
+    "unlockedMission": {
+      "missionId": 1004,
+      "title": "정선 5일장 곤드레 퀴즈",
+      "type": "QUIZ",
+      "spotName": "정선 5일장",
+      "cityName": "정선군",
+      "rewardType": "ITEM",
+      "rewardLabel": "황금감자 성장 아이템"
+    }
   }
 }
 ```
+
+Notes:
+
+- `missionAvailable`은 기존 클라이언트 호환을 위해 유지한다.
+- `unlockedMission`은 방문 인증한 관광지와 연결된 활성 미션이 있고 사용자가 아직 완료하지 않은 경우에만 내려준다.
+- `unlockedMission`이 `null`이면 프론트는 기존처럼 미션 CTA를 숨기거나 일반 미션 목록 진입으로 처리한다.
 
 Error:
 
@@ -449,7 +581,40 @@ Error:
 | 404 | 존재하지 않거나 비활성화된 감자 스팟 |
 | 409 | 이미 방문 인증한 감자 스팟 |
 
-### 4.3 보상 가능 여부 확인
+### 4.3 내 다음 목표 관광지 조회
+
+```http
+GET /api/stamps/me/next-targets
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": [
+    {
+      "spotId": 101,
+      "spotName": "정선 5일장",
+      "cityName": "정선군",
+      "category": "POTATO_MARKET",
+      "address": "강원특별자치도 정선군...",
+      "imageUrl": "https://..."
+    }
+  ]
+}
+```
+
+처리 규칙:
+
+- 사용자가 이미 스탬프를 획득한 시군은 제외한다.
+- 미획득 시군을 스탬프 `displayOrder` 순으로 확인한다.
+- 각 시군에서 `active=true`, `stampEnabled=true`인 관광지를 이름순으로 1곳 선택한다.
+- 최대 3곳을 반환하며, 후보가 없거나 18개 시군 랠리를 완주한 경우 빈 배열을 반환한다.
+- 인증 정보가 없거나 JWT 사용자를 찾을 수 없으면 `401 Unauthorized`를 반환한다.
+
+### 4.4 보상 가능 여부 확인
 
 ```http
 GET /api/stamps/rewards/check
@@ -478,7 +643,7 @@ Response:
 - `claimable`은 `claimableTargetCount`가 있을 때 `true`다.
 - 18개를 모두 획득해 `completed=true`여도 미수령 보상이 있으면 `claimable=true`일 수 있다.
 
-### 4.4 스탬프 보상 수령
+### 4.5 스탬프 보상 수령
 
 ```http
 POST /api/stamps/rewards/claim
@@ -764,11 +929,11 @@ Request:
 
 ```json
 {
-  "type": "QUIZ",
-  "answer": "곤드레감자",
+  "type": "QR_SCAN",
+  "answer": null,
   "stepCount": null,
   "uploadKey": null,
-  "qrCode": null
+  "qrCode": "gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR"
 }
 ```
 
@@ -802,10 +967,89 @@ Validation failure:
 Notes:
 
 - `QUIZ`: `answer`를 검증한다.
-- `VISIT_AND_STEP`: `stepCount`가 미션 목표 걸음 수 이상인지 검증한다.
-- `PHOTO`, `PHOTO_OCR`: `uploadKey` 존재 여부를 검증한다. 실제 OCR 검증은 후속 연동에서 강화한다.
-- `QR_SCAN`: `qrCode` 존재 여부를 검증한다. 실제 QR 코드 매칭은 후속 연동에서 강화한다.
+- `VISIT`: 사용자의 저장된 방문 인증 기록이 미션 장소와 일치하는지 검증한다.
+- `VISIT_AND_STEP`: 요청의 `stepCount`를 신뢰하지 않고 서버에 동기화된 당일 HealthKit/Health Connect 걸음 수를 검증한다. 장소형 미션은 해당 장소의 방문 인증 기록도 함께 확인한다.
+- `STAMP`: 미션 기간에 서버가 발급한 스탬프 수가 목표 이상인지 검증한다.
+- `COLLECTION`: 미션 기간에 서버에 저장된 서로 다른 방문 시군 수가 목표 이상인지 검증한다.
+- `PHOTO`: `uploadKey`가 로그인 사용자와 해당 미션에 발급된 key인지, 실제 저장 파일이 존재하는지 검증한다.
+- `PHOTO_OCR`: `uploadKey`로 저장된 이미지를 읽고 OCR 판독 결과에 미션 정책 키워드가 포함되는지 검증한다.
+- `QR_SCAN`: `qrCode` 존재 여부와 미션별 정책 QR payload의 정확한 일치 여부를 검증한다. 스캔값의 앞뒤 공백은 서버에서 제거한 뒤 비교한다.
 - 인증 성공 시 서버가 중복 완료 여부를 확인하고 미션 완료와 보상 응답을 함께 처리한다.
+- 검증 입력 없이 완료하는 `POST /api/missions/{missionId}/complete` endpoint는 제공하지 않는다.
+
+QR 미션 payload 예시:
+
+| 미션 코드 | QR payload |
+| --- | --- |
+| `MISSION_PYEONGCHANG_QR` | `gamjamubwatna://mission/qr/MISSION_PYEONGCHANG_QR` |
+| `MISSION_SOKCHO_ONNURI_QR` | `gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR` |
+| `MISSION_CHEORWON_GOSEOKJEONG_QR` | `gamjamubwatna://mission/qr/MISSION_CHEORWON_GOSEOKJEONG_QR` |
+| `MISSION_HOENGSEONG_HANWOO_QR` | `gamjamubwatna://mission/qr/MISSION_HOENGSEONG_HANWOO_QR` |
+| `MISSION_HWACHEON_SANCHEONEO_QR` | `gamjamubwatna://mission/qr/MISSION_HWACHEON_SANCHEONEO_QR` |
+
+#### 6.3.1 반복/이벤트 미션 기간 계약
+
+- 모든 기간 경계는 `Asia/Seoul`을 기준으로 계산한다.
+- `DAILY` 미션은 당일 00:00 이상 다음 날 00:00 미만의 기록만 진행도와 인증에 사용한다.
+- `WEEKLY` 미션은 월요일 00:00 이상 다음 월요일 00:00 미만의 기록만 진행도와 인증에 사용한다.
+- `EVENT` 미션은 `startsAt` 이상 `endsAt` 미만일 때만 활성화한다. 기간이 설정되지 않았거나 현재 시각이 기간 밖이면 목록/상세 응답의 `active`는 `false`, `status`는 `LOCKED`이며 인증 요청은 거부한다.
+- `JUMSOONI` 미션은 기존처럼 전체 기간에 한 번만 완료할 수 있다.
+- 완료 기록은 `completionPeriod`, 보상 이력은 `sourcePeriod`를 함께 저장한다. 같은 기간에는 각각 한 번만 생성하고, 다음 기간에는 다시 완료와 보상을 받을 수 있다.
+- 목록/상세 응답은 현재 기간의 `periodStartsAt`, `periodEndsAt`을 반환한다. 전체 기간 미션과 기간이 설정되지 않은 이벤트 미션은 두 값이 `null`이다.
+- 반복 미션의 `progress`는 현재 기간 기록만 집계하며, 이전 기간의 완료와 진행 기록은 현재 응답에 포함하지 않는다.
+
+### 6.4 미션 사진 업로드 키 발급
+
+```http
+POST /api/mission-uploads
+Content-Type: multipart/form-data
+```
+
+Request:
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| missionId | Long | Y | 사진/OCR 인증을 수행할 미션 ID |
+| file | MultipartFile | Y | 카메라 촬영 또는 갤러리 선택 이미지 |
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "uploadKey": "mission-uploads/1/1002/20260729T073000Z-9f1c2a3b.jpg",
+    "fileName": "receipt.jpg",
+    "contentType": "image/jpeg",
+    "size": 245120,
+    "expiresAt": "2026-07-29T08:30:00Z"
+  }
+}
+```
+
+Error:
+
+| HTTP Status | 조건 |
+| --- | --- |
+| 400 | 파일 누락, 빈 파일, 이미지가 아닌 Content-Type, 최대 크기 초과 |
+| 401 | 인증 정보 없음 또는 잘못된 사용자 principal |
+| 404 | 존재하지 않는 미션 |
+
+Notes:
+
+- 로컬 개발 기본값은 서버 로컬 디스크(`local-runtime/mission-uploads`)에 파일을 저장하고 저장된 object key를 `uploadKey`로 반환한다.
+- `uploadKey`는 이후 `POST /api/missions/{missionId}/verify`의 `uploadKey`로 전달한다.
+- 운영 환경에서 S3 또는 호환 오브젝트 스토리지로 전환할 경우 storage 구현체와 환경변수를 별도 이슈에서 확장한다.
+- 현재 로컬 OCR adapter는 운영 OCR 엔진 연결 전까지 파일 bytes에 포함된 텍스트를 판독 결과로 사용한다.
+- 실제 OCR SaaS 또는 온디바이스 OCR 엔진 연결은 후속 이슈에서 진행한다.
+
+Environment:
+
+| 이름 | 기본값 | 설명 |
+| --- | --- | --- |
+| `MISSION_UPLOAD_STORAGE_TYPE` | `local` | 업로드 저장소 타입. 현재 구현 기준은 `local` |
+| `MISSION_UPLOAD_LOCAL_DIR` | `local-runtime/mission-uploads` | 로컬 개발용 이미지 저장 루트 디렉터리 |
 
 ---
 

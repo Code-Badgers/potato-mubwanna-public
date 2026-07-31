@@ -7,9 +7,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
+import '../../domain/spot_recommendation.dart';
 import '../widget/kakao_map_view.dart';
 
 typedef MapViewBuilder = Widget Function(
@@ -20,16 +22,21 @@ typedef MapViewBuilder = Widget Function(
 const _mapPrimary = Color(0xFF36D98F);
 const _mapDark = Color(0xFF509B64);
 const _rareGold = Color(0xFFF6C23E);
+const _recommendationPurple = Color(0xFF7A5AF8);
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({
     this.hasMapConfiguration,
     this.mapViewBuilder,
+    this.mapUriLauncher = launchExternalMapUri,
+    this.recommendationSourceSpotId,
     super.key,
   });
 
   final bool? hasMapConfiguration;
   final MapViewBuilder? mapViewBuilder;
+  final MapUriLauncher mapUriLauncher;
+  final String? recommendationSourceSpotId;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -64,11 +71,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }).toList();
   }
 
-  MapSpot? _selectedSpot(List<MapSpot> spots) {
+  MapSpot? _selectedSpot(List<MapSpot> spots, {String? preferredSpotId}) {
     if (spots.isEmpty) {
       return null;
     }
-    final selectedSpotId = _selectedSpotId;
+    final selectedSpotId = _selectedSpotId ?? preferredSpotId;
     if (selectedSpotId == null) {
       return spots.first;
     }
@@ -78,6 +85,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
     return spots.first;
+  }
+
+  List<MapSpot> _mergeRecommendations(
+    List<MapSpot> spots,
+    List<SpotRecommendation> recommendations,
+  ) {
+    if (recommendations.isEmpty) {
+      return spots;
+    }
+
+    final spotsById = {for (final spot in spots) spot.id: spot};
+    for (final recommendation in recommendations) {
+      final existing = spotsById[recommendation.spotId];
+      spotsById[recommendation.spotId] =
+          existing?.asRecommended() ?? recommendation.toMapSpot();
+    }
+    return spotsById.values.toList();
   }
 
   List<MapSpot> _recommendedRouteSpots(
@@ -149,12 +173,60 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
+  Future<void> _openSpotNavigation(MapSpot spot) async {
+    try {
+      await _launchMapUri(KakaoMapNavigation.destinationUri(spot));
+    } catch (_) {
+      _showNavigationError();
+    }
+  }
+
+  Future<void> _openRouteNavigation(List<MapSpot> routeSpots) async {
+    try {
+      final routeUri = KakaoMapNavigation.routeUri(routeSpots);
+      if (routeSpots.length > KakaoMapNavigation.maximumRouteSpots && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('카카오맵에서는 앞에서부터 7개 지점까지 안내합니다.'),
+          ),
+        );
+      }
+      await _launchMapUri(routeUri);
+    } catch (_) {
+      _showNavigationError();
+    }
+  }
+
+  Future<void> _launchMapUri(Uri uri) async {
+    final didLaunch = await widget.mapUriLauncher(uri);
+    if (!didLaunch) {
+      _showNavigationError();
+    }
+  }
+
+  void _showNavigationError() {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('카카오맵 길찾기를 열지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final spotsState = ref.watch(mapSpotsProvider);
     final favoriteSpotsState = ref.watch(favoriteSpotControllerProvider);
     final favoriteSpotRouteState = ref.watch(favoriteSpotRouteProvider);
     final favoriteSpotIds = favoriteSpotsState.valueOrNull ?? <String>{};
+    final recommendationSourceSpotId = widget.recommendationSourceSpotId;
+    final AsyncValue<List<SpotRecommendation>> recommendationState =
+        recommendationSourceSpotId == null
+            ? const AsyncValue.data(<SpotRecommendation>[])
+            : ref
+                .watch(spotRecommendationsProvider(recommendationSourceSpotId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -174,17 +246,31 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       return const _MapConfigurationError();
                     }
 
-                    final visibleSpots = _visibleSpots(spots, favoriteSpotIds);
-                    final selectedSpot = _selectedSpot(visibleSpots);
-                    final routeSpots = _recommendedRouteSpots(
+                    final recommendations = recommendationState.valueOrNull ??
+                        const <SpotRecommendation>[];
+                    final displaySpots = _mergeRecommendations(
                       spots,
+                      recommendations,
+                    );
+                    final visibleSpots = _visibleSpots(
+                      displaySpots,
+                      favoriteSpotIds,
+                    );
+                    final selectedSpot = _selectedSpot(
+                      visibleSpots,
+                      preferredSpotId: recommendations.isEmpty
+                          ? null
+                          : recommendations.first.spotId,
+                    );
+                    final routeSpots = _recommendedRouteSpots(
+                      displaySpots,
                       favoriteSpotIds,
                       selectedSpot,
                     );
                     final backendRoute = favoriteSpotRouteState.valueOrNull;
                     final backendRouteSpots = backendRoute == null
                         ? const <MapSpot>[]
-                        : _routeSpotsFromBackend(spots, backendRoute);
+                        : _routeSpotsFromBackend(displaySpots, backendRoute);
                     final recommendedRouteSpots = backendRouteSpots.length >= 2
                         ? backendRouteSpots
                         : routeSpots;
@@ -232,6 +318,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                 selectedIndex: _selectedCategoryIndex,
                                 onSelected: _selectCategory,
                               ),
+                              if (recommendationSourceSpotId != null) ...[
+                                const SizedBox(height: 10),
+                                _RecommendationStatusChip(
+                                  state: recommendationState,
+                                  onRetry: () => ref.invalidate(
+                                    spotRecommendationsProvider(
+                                      recommendationSourceSpotId,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -247,6 +344,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             favoriteCount: favoriteSpotIds.length,
                             isFavorite:
                                 favoriteSpotIds.contains(selectedSpot.id),
+                            onNavigationPressed: () =>
+                                _openSpotNavigation(selectedSpot),
+                            onRouteNavigationPressed: () =>
+                                _openRouteNavigation(recommendedRouteSpots),
                             onFavoritePressed: () async {
                               try {
                                 await ref
@@ -303,6 +404,8 @@ class _RouteRecommendationSheet extends StatelessWidget {
     required this.routeDistanceKm,
     required this.favoriteCount,
     required this.isFavorite,
+    required this.onNavigationPressed,
+    required this.onRouteNavigationPressed,
     required this.onFavoritePressed,
     required this.onDetailPressed,
   });
@@ -312,6 +415,8 @@ class _RouteRecommendationSheet extends StatelessWidget {
   final double? routeDistanceKm;
   final int favoriteCount;
   final bool isFavorite;
+  final VoidCallback onNavigationPressed;
+  final VoidCallback onRouteNavigationPressed;
   final Future<void> Function() onFavoritePressed;
   final VoidCallback onDetailPressed;
 
@@ -351,6 +456,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
                   spot: selectedSpot,
                   favoriteCount: favoriteCount,
                   isFavorite: isFavorite,
+                  onNavigationPressed: onNavigationPressed,
                   onFavoritePressed: onFavoritePressed,
                   onDetailPressed: onDetailPressed,
                 ),
@@ -374,7 +480,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
                   ],
                   const SizedBox(height: 14),
                   FilledButton.icon(
-                    onPressed: () {},
+                    onPressed: onRouteNavigationPressed,
                     icon: const Icon(Icons.near_me_rounded, size: 19),
                     label: const Text('이 동선 따라가기'),
                     style: FilledButton.styleFrom(
@@ -421,6 +527,7 @@ class _SelectedSpotSummary extends StatelessWidget {
     required this.spot,
     required this.favoriteCount,
     required this.isFavorite,
+    required this.onNavigationPressed,
     required this.onFavoritePressed,
     required this.onDetailPressed,
   });
@@ -428,6 +535,7 @@ class _SelectedSpotSummary extends StatelessWidget {
   final MapSpot spot;
   final int favoriteCount;
   final bool isFavorite;
+  final VoidCallback onNavigationPressed;
   final Future<void> Function() onFavoritePressed;
   final VoidCallback onDetailPressed;
 
@@ -443,6 +551,10 @@ class _SelectedSpotSummary extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (spot.isRecommended) ...[
+                    const _RecommendedSpotBadge(),
+                    const SizedBox(height: 7),
+                  ],
                   Text(
                     spot.name,
                     style: const TextStyle(
@@ -494,7 +606,7 @@ class _SelectedSpotSummary extends StatelessWidget {
             SizedBox(
               width: 118,
               child: OutlinedButton(
-                onPressed: () {},
+                onPressed: onNavigationPressed,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _mapDark,
                   side: const BorderSide(color: Color(0xFFC9E9D3)),
@@ -532,6 +644,99 @@ class _SelectedSpotSummary extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _RecommendedSpotBadge extends StatelessWidget {
+  const _RecommendedSpotBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.auto_awesome_rounded,
+          color: _recommendationPurple,
+          size: 16,
+        ),
+        SizedBox(width: 5),
+        Text(
+          '방문 후 추천 장소',
+          style: TextStyle(
+            color: _recommendationPurple,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecommendationStatusChip extends StatelessWidget {
+  const _RecommendationStatusChip({required this.state, required this.onRetry});
+
+  final AsyncValue<List<SpotRecommendation>> state;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, label, canRetry) = state.when(
+      loading: () => (Icons.travel_explore_rounded, '추천 장소를 찾고 있어요', false),
+      error: (_, __) => (Icons.cloud_off_rounded, '추천 장소를 불러오지 못했어요', true),
+      data: (recommendations) => recommendations.isEmpty
+          ? (Icons.location_off_rounded, '추천 장소를 찾지 못했어요', false)
+          : (
+              Icons.auto_awesome_rounded,
+              '다음 추천 ${recommendations.length}곳 · 보라색 핀',
+              false,
+            ),
+    );
+
+    return Material(
+      color: Colors.white.withValues(alpha: 0.96),
+      borderRadius: BorderRadius.circular(999),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.12),
+      child: InkWell(
+        key: const ValueKey('recommendation-status-chip'),
+        onTap: canRetry ? onRetry : null,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: _recommendationPurple),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              if (canRetry) ...[
+                const SizedBox(width: 7),
+                const Text(
+                  '다시 시도',
+                  style: TextStyle(
+                    color: _recommendationPurple,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

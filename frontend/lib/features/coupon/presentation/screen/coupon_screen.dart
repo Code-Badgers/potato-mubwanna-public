@@ -755,8 +755,11 @@ class _CouponQrDialog extends ConsumerStatefulWidget {
 }
 
 class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
+  bool _isConfirming = false;
   bool _isUsing = false;
   String? _useError;
+
+  bool get _isBusy => _isConfirming || _isUsing;
 
   @override
   Widget build(BuildContext context) {
@@ -768,7 +771,7 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
           const Expanded(child: Text('쿠폰 QR')),
           IconButton(
             tooltip: 'QR 새로고침',
-            onPressed: _isUsing
+            onPressed: _isBusy
                 ? null
                 : () => ref.invalidate(
                       couponQrProvider(widget.userCouponId),
@@ -831,7 +834,7 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _isUsing ? null : () => _confirmAndUse(value),
+                  onPressed: _isBusy ? null : () => _confirmAndUse(value),
                   child: _isUsing
                       ? const SizedBox(
                           width: 20,
@@ -847,7 +850,7 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isUsing ? null : () => Navigator.of(context).pop(),
+          onPressed: _isBusy ? null : () => Navigator.of(context).pop(),
           child: const Text('닫기'),
         ),
       ],
@@ -855,6 +858,14 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
   }
 
   Future<void> _confirmAndUse(CouponQr qr) async {
+    if (_isBusy) {
+      return;
+    }
+    setState(() {
+      _isConfirming = true;
+      _useError = null;
+    });
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -872,16 +883,21 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
         ],
       ),
     );
-    if (confirmed == true) {
-      await _useCoupon(qr);
+    if (!mounted) {
+      return;
     }
+    if (confirmed == true) {
+      setState(() {
+        _isConfirming = false;
+        _isUsing = true;
+      });
+      await _useCoupon(qr);
+      return;
+    }
+    setState(() => _isConfirming = false);
   }
 
   Future<void> _useCoupon(CouponQr qr) async {
-    setState(() {
-      _isUsing = true;
-      _useError = null;
-    });
     try {
       await ref
           .read(couponRepositoryProvider)

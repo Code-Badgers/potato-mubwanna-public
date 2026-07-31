@@ -38,6 +38,15 @@ public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> 
         SELECT spot
         FROM TouristSpot spot
         WHERE spot.active = true
+          AND spot.stampEnabled = true
+        ORDER BY spot.cityName ASC, spot.name ASC, spot.id ASC
+        """)
+    List<TouristSpot> findActiveStampSpots();
+
+    @Query("""
+        SELECT spot
+        FROM TouristSpot spot
+        WHERE spot.active = true
           AND (:category IS NULL OR spot.category = :category)
           AND (:cityName IS NULL OR spot.cityName = :cityName)
           AND (:congestionLevel IS NULL OR spot.congestionLevel = :congestionLevel)

@@ -7,12 +7,13 @@ import com.gamjamubwatna.coupon.domain.CouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCoupon;
 import com.gamjamubwatna.coupon.domain.UserCouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCouponStatus;
-import com.gamjamubwatna.mission.api.MissionCompleteResponse;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
 import com.gamjamubwatna.mission.api.MissionVerifyRequest;
 import com.gamjamubwatna.mission.api.MissionVerifyResponse;
 import com.gamjamubwatna.mission.domain.Mission;
+import com.gamjamubwatna.mission.domain.MissionGroup;
+import com.gamjamubwatna.mission.domain.MissionPeriod;
 import com.gamjamubwatna.mission.domain.MissionRepository;
 import com.gamjamubwatna.mission.domain.MissionRewardType;
 import com.gamjamubwatna.mission.domain.MissionStatus;
@@ -28,7 +29,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MissionService {
 
+    private static final String MISSION_UPLOAD_KEY_PREFIX = "mission-uploads/";
+
     private final MissionRepository missionRepository;
     private final MissionVerificationPolicyRepository missionVerificationPolicyRepository;
     private final UserMissionRepository userMissionRepository;
@@ -44,6 +47,9 @@ public class MissionService {
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
     private final UserRepository userRepository;
+    private final MissionEvidenceValidator missionEvidenceValidator;
+    private final MissionPhotoStorage missionPhotoStorage;
+    private final MissionPhotoTextReader missionPhotoTextReader;
     private final Clock clock;
 
     @Autowired
@@ -54,7 +60,10 @@ public class MissionService {
         RewardHistoryRepository rewardHistoryRepository,
         CouponRepository couponRepository,
         UserCouponRepository userCouponRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        MissionEvidenceValidator missionEvidenceValidator,
+        MissionPhotoStorage missionPhotoStorage,
+        MissionPhotoTextReader missionPhotoTextReader
     ) {
         this(
             missionRepository,
@@ -64,6 +73,9 @@ public class MissionService {
             couponRepository,
             userCouponRepository,
             userRepository,
+            missionEvidenceValidator,
+            missionPhotoStorage,
+            missionPhotoTextReader,
             Clock.systemUTC()
         );
     }
@@ -76,6 +88,9 @@ public class MissionService {
         CouponRepository couponRepository,
         UserCouponRepository userCouponRepository,
         UserRepository userRepository,
+        MissionEvidenceValidator missionEvidenceValidator,
+        MissionPhotoStorage missionPhotoStorage,
+        MissionPhotoTextReader missionPhotoTextReader,
         Clock clock
     ) {
         this.missionRepository = missionRepository;
@@ -85,6 +100,9 @@ public class MissionService {
         this.couponRepository = couponRepository;
         this.userCouponRepository = userCouponRepository;
         this.userRepository = userRepository;
+        this.missionEvidenceValidator = missionEvidenceValidator;
+        this.missionPhotoStorage = missionPhotoStorage;
+        this.missionPhotoTextReader = missionPhotoTextReader;
         this.clock = clock;
     }
 
@@ -92,17 +110,38 @@ public class MissionService {
     public MissionListResponse getMissions(Long userId) {
         validateUser(userId);
 
+        Instant now = Instant.now(clock);
         List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
-        Map<Long, UserMission> completedByMissionId = userMissionRepository.findByUserId(userId)
-            .stream()
+        Map<Long, MissionPeriod> periodsByMissionId = missions.stream()
             .collect(Collectors.toMap(
-                userMission -> userMission.getMission().getId(),
-                Function.identity()
+                Mission::getId,
+                mission -> MissionPeriod.current(mission, now)
+            ));
+        Set<String> currentPeriodKeys = periodsByMissionId.values()
+            .stream()
+            .filter(MissionPeriod::available)
+            .map(MissionPeriod::key)
+            .collect(Collectors.toSet());
+        List<UserMission> currentCompletions = currentPeriodKeys.isEmpty()
+            ? List.of()
+            : userMissionRepository.findByUserIdAndCompletionPeriodIn(
+                userId,
+                currentPeriodKeys
+            );
+        Map<CompletionKey, UserMission> completions = currentCompletions.stream()
+            .collect(Collectors.toMap(
+                userMission -> new CompletionKey(
+                    userMission.getMission().getId(),
+                    userMission.getCompletionPeriod()
+                ),
+                userMission -> userMission
             ));
         List<MissionItemResponse> items = missions.stream()
-            .map(mission -> MissionItemResponse.from(
+            .map(mission -> missionItem(
+                userId,
                 mission,
-                completedByMissionId.get(mission.getId())
+                periodsByMissionId.get(mission.getId()),
+                completions
             ))
             .toList();
 
@@ -117,37 +156,10 @@ public class MissionService {
     public MissionItemResponse getMission(Long userId, Long missionId) {
         validateUser(userId);
         Mission mission = mission(missionId);
-        UserMission userMission = userMissionRepository.findByUserIdAndMissionId(userId, missionId)
-            .orElse(null);
-        return MissionItemResponse.from(mission, userMission);
-    }
-
-    @Transactional
-    public MissionCompleteResponse completeMission(Long userId, Long missionId) {
-        User user = user(userId);
-        Mission mission = mission(missionId);
-        if (!mission.isActive() || mission.getDefaultStatus() == MissionStatus.LOCKED) {
-            throw new MissionCompletionException("아직 완료할 수 없는 미션입니다.");
-        }
-        if (userMissionRepository.existsByUserIdAndMissionId(userId, missionId)) {
-            throw new MissionAlreadyCompletedException("이미 완료한 미션입니다.");
-        }
-
-        Instant completedAt = Instant.now(clock);
-        UserMission userMission = userMissionRepository.save(new UserMission(
-            user,
-            mission,
-            completedAt
-        ));
-        saveMissionRewardHistory(user, mission, completedAt);
-
-        return new MissionCompleteResponse(
-            mission.getId(),
-            true,
-            userMission.getCompletedAt(),
-            mission.getRewardType(),
-            mission.getRewardLabel()
-        );
+        Instant now = Instant.now(clock);
+        MissionPeriod period = MissionPeriod.current(mission, now);
+        UserMission userMission = findCompletion(userId, mission, period);
+        return missionItem(userId, mission, period, userMission);
     }
 
     @Transactional
@@ -158,16 +170,18 @@ public class MissionService {
     ) {
         User user = user(userId);
         Mission mission = mission(missionId);
-        validateCompletionTarget(userId, mission);
-        validateMissionInput(mission, request);
-
         Instant completedAt = Instant.now(clock);
+        MissionPeriod period = MissionPeriod.current(mission, completedAt);
+        validateCompletionTarget(userId, mission, period);
+        validateMissionInput(userId, mission, request, period);
+
         UserMission userMission = userMissionRepository.save(new UserMission(
             user,
             mission,
-            completedAt
+            completedAt,
+            period.key()
         ));
-        saveMissionRewardHistory(user, mission, completedAt);
+        saveMissionRewardHistory(user, mission, period, completedAt);
 
         return new MissionVerifyResponse(
             mission.getId(),
@@ -179,7 +193,12 @@ public class MissionService {
         );
     }
 
-    private void saveMissionRewardHistory(User user, Mission mission, Instant completedAt) {
+    private void saveMissionRewardHistory(
+        User user,
+        Mission mission,
+        MissionPeriod period,
+        Instant completedAt
+    ) {
         // 완료 기록, 보상 이력, 쿠폰 발급을 한 트랜잭션에 묶어 일부만 남는 상태를 막는다.
         rewardHistoryRepository.save(new RewardHistory(
             user,
@@ -187,6 +206,7 @@ public class MissionService {
             mission.getRewardLabel(),
             RewardSourceType.MISSION,
             mission.getId(),
+            period.key(),
             completedAt
         ));
         issueCouponReward(user, mission, completedAt);
@@ -213,16 +233,25 @@ public class MissionService {
         ));
     }
 
-    private void validateCompletionTarget(Long userId, Mission mission) {
-        if (!mission.isActive() || mission.getDefaultStatus() == MissionStatus.LOCKED) {
+    private void validateCompletionTarget(
+        Long userId,
+        Mission mission,
+        MissionPeriod period
+    ) {
+        if (!isAvailable(mission, period)) {
             throw new MissionCompletionException("아직 완료할 수 없는 미션입니다.");
         }
-        if (userMissionRepository.existsByUserIdAndMissionId(userId, mission.getId())) {
+        if (completionExists(userId, mission, period)) {
             throw new MissionAlreadyCompletedException("이미 완료한 미션입니다.");
         }
     }
 
-    private void validateMissionInput(Mission mission, MissionVerifyRequest request) {
+    private void validateMissionInput(
+        Long userId,
+        Mission mission,
+        MissionVerifyRequest request,
+        MissionPeriod period
+    ) {
         if (request == null || request.type() == null) {
             throw new MissionVerificationException("미션 인증 정보를 확인해주세요.");
         }
@@ -232,13 +261,116 @@ public class MissionService {
 
         switch (mission.getType()) {
             case QUIZ -> validateQuiz(verificationPolicy(mission), request.answer());
-            case VISIT_AND_STEP -> validateStep(verificationPolicy(mission), request.stepCount());
-            case PHOTO, PHOTO_OCR -> validatePhoto(verificationPolicy(mission), request.uploadKey());
+            case VISIT_AND_STEP -> missionEvidenceValidator.validate(
+                userId,
+                mission,
+                verificationPolicy(mission),
+                period
+            );
+            case PHOTO -> validatePhoto(
+                userId,
+                mission,
+                verificationPolicy(mission),
+                request.uploadKey()
+            );
+            case PHOTO_OCR -> validatePhotoOcr(
+                userId,
+                mission,
+                verificationPolicy(mission),
+                request.uploadKey()
+            );
             case QR_SCAN -> validateQrCode(verificationPolicy(mission), request.qrCode());
-            default -> {
-                // 위치/스탬프/수집형은 외부 센서 연동 전까지 활성 상태와 중복 완료 여부만 서버에서 확인한다.
-            }
+            case VISIT, STAMP, COLLECTION ->
+                missionEvidenceValidator.validate(userId, mission, null, period);
         }
+    }
+
+    private MissionItemResponse missionItem(
+        Long userId,
+        Mission mission,
+        MissionPeriod period,
+        Map<CompletionKey, UserMission> completions
+    ) {
+        UserMission userMission = period.available()
+            ? completions.get(new CompletionKey(mission.getId(), period.key()))
+            : null;
+        return missionItem(userId, mission, period, userMission);
+    }
+
+    private MissionItemResponse missionItem(
+        Long userId,
+        Mission mission,
+        MissionPeriod period,
+        UserMission userMission
+    ) {
+        boolean available = isAvailable(mission, period);
+        int progress = currentProgress(userId, mission, period, userMission, available);
+        return MissionItemResponse.from(
+            mission,
+            userMission,
+            period,
+            progress,
+            available
+        );
+    }
+
+    private int currentProgress(
+        Long userId,
+        Mission mission,
+        MissionPeriod period,
+        UserMission userMission,
+        boolean available
+    ) {
+        if (userMission != null) {
+            return mission.getTarget();
+        }
+        if (!available) {
+            return 0;
+        }
+        if (mission.getGroup() == MissionGroup.JUMSOONI) {
+            return mission.getProgress();
+        }
+        return missionEvidenceValidator.progress(userId, mission, period);
+    }
+
+    private boolean isAvailable(Mission mission, MissionPeriod period) {
+        return mission.isActive()
+            && mission.getDefaultStatus() != MissionStatus.LOCKED
+            && period.available();
+    }
+
+    private boolean completionExists(
+        Long userId,
+        Mission mission,
+        MissionPeriod period
+    ) {
+        if (period.isOneTime()) {
+            return userMissionRepository.existsByUserIdAndMissionId(userId, mission.getId());
+        }
+        return userMissionRepository.existsByUserIdAndMissionIdAndCompletionPeriod(
+            userId,
+            mission.getId(),
+            period.key()
+        );
+    }
+
+    private UserMission findCompletion(
+        Long userId,
+        Mission mission,
+        MissionPeriod period
+    ) {
+        if (!period.available()) {
+            return null;
+        }
+        if (period.isOneTime()) {
+            return userMissionRepository.findByUserIdAndMissionId(userId, mission.getId())
+                .orElse(null);
+        }
+        return userMissionRepository.findByUserIdAndMissionIdAndCompletionPeriod(
+            userId,
+            mission.getId(),
+            period.key()
+        ).orElse(null);
     }
 
     private MissionVerificationPolicy verificationPolicy(Mission mission) {
@@ -260,19 +392,48 @@ public class MissionService {
         }
     }
 
-    private void validateStep(MissionVerificationPolicy policy, Integer stepCount) {
-        Integer minStepCount = policy.getMinStepCount();
-        if (minStepCount == null) {
-            throw new MissionVerificationException("미션 걸음 수 정책을 확인할 수 없습니다.");
-        }
-        if (stepCount == null || stepCount < minStepCount) {
-            throw new MissionVerificationException("걸음을 다 채우고 재시도해주세요.");
-        }
-    }
-
-    private void validatePhoto(MissionVerificationPolicy policy, String uploadKey) {
+    private StoredMissionPhotoFile validatePhoto(
+        Long userId,
+        Mission mission,
+        MissionVerificationPolicy policy,
+        String uploadKey
+    ) {
         if (policy.isRequiredUpload()) {
             validateRequiredText(uploadKey, "이미지를 업로드한 뒤 다시 시도해주세요.");
+            String ownedUploadPrefix = MISSION_UPLOAD_KEY_PREFIX
+                + userId
+                + "/"
+                + mission.getId()
+                + "/";
+            if (!uploadKey.startsWith(ownedUploadPrefix)) {
+                throw new MissionVerificationException("서버에서 발급한 업로드 키를 확인해주세요.");
+            }
+            try {
+                return missionPhotoStorage.read(uploadKey);
+            } catch (MissionUploadException exception) {
+                throw new MissionVerificationException(exception.getMessage());
+            }
+        }
+        return null;
+    }
+
+    private void validatePhotoOcr(
+        Long userId,
+        Mission mission,
+        MissionVerificationPolicy policy,
+        String uploadKey
+    ) {
+        StoredMissionPhotoFile photoFile = validatePhoto(userId, mission, policy, uploadKey);
+        String expectedKeyword = policy.getExpectedAnswer();
+        if (expectedKeyword == null || expectedKeyword.isBlank()) {
+            throw new MissionVerificationException("미션 OCR 정책을 확인할 수 없습니다.");
+        }
+        if (photoFile == null) {
+            throw new MissionVerificationException("업로드된 이미지를 찾을 수 없습니다.");
+        }
+        String recognizedText = missionPhotoTextReader.readText(photoFile);
+        if (recognizedText == null || !recognizedText.contains(expectedKeyword)) {
+            throw new MissionVerificationException("인증 이미지에서 미션 키워드를 찾지 못했습니다.");
         }
     }
 
@@ -282,7 +443,7 @@ public class MissionService {
         if (expectedQrCode == null || expectedQrCode.isBlank()) {
             throw new MissionVerificationException("미션 QR 정책을 확인할 수 없습니다.");
         }
-        if (!expectedQrCode.equals(qrCode)) {
+        if (!expectedQrCode.trim().equals(qrCode.trim())) {
             throw new MissionVerificationException("올바르지 않은 QR 코드입니다.");
         }
     }
@@ -307,5 +468,8 @@ public class MissionService {
     private Mission mission(Long missionId) {
         return missionRepository.findById(missionId)
             .orElseThrow(() -> new MissionNotFoundException("미션을 찾을 수 없습니다."));
+    }
+
+    private record CompletionKey(Long missionId, String completionPeriod) {
     }
 }

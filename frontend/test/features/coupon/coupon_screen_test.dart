@@ -126,6 +126,35 @@ void main() {
     expect(find.text('QR 코드 보기'), findsNothing);
   });
 
+  testWidgets('ignores repeated use taps while confirmation is opening', (
+    tester,
+  ) async {
+    final repository = _DetailCouponRepository();
+    await _pumpScreen(
+      tester,
+      overrides: [couponRepositoryProvider.overrideWithValue(repository)],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('감자빵 1개 교환권'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('QR 코드 보기'));
+    await tester.pumpAndSettle();
+
+    final useButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '사용 완료 처리'),
+    );
+    useButton.onPressed!.call();
+    useButton.onPressed!.call();
+    await tester.pumpAndSettle();
+
+    expect(find.text('쿠폰을 사용하시겠어요?'), findsOneWidget);
+    await tester.tap(find.text('사용하기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.useCount, 1);
+  });
+
   testWidgets('shows a loading state while coupons are requested', (
     tester,
   ) async {
@@ -405,6 +434,7 @@ class _DetailCouponRepository extends CouponRepository {
   _DetailCouponRepository() : super(dio: Dio());
 
   String? usedPayload;
+  int useCount = 0;
 
   @override
   Future<List<CouponSummary>> fetchCoupons() async => [_coupons.first];
@@ -433,6 +463,7 @@ class _DetailCouponRepository extends CouponRepository {
 
   @override
   Future<CouponDetail> useCoupon(int userCouponId, String payload) async {
+    useCount += 1;
     usedPayload = payload;
     return fetchCoupon(userCouponId);
   }

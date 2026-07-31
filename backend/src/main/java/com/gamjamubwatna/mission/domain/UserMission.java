@@ -19,7 +19,7 @@ import java.time.Instant;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_user_missions_user_mission",
-            columnNames = {"user_id", "mission_id"}
+            columnNames = {"user_id", "mission_id", "completion_period"}
         )
     }
 )
@@ -41,13 +41,26 @@ public class UserMission {
     @Column(name = "completed_at", nullable = false, updatable = false)
     private Instant completedAt;
 
+    @Column(name = "completion_period", nullable = false, length = 40)
+    private String completionPeriod;
+
     protected UserMission() {
     }
 
     public UserMission(User user, Mission mission, Instant completedAt) {
+        this(user, mission, completedAt, MissionPeriod.ONE_TIME_KEY);
+    }
+
+    public UserMission(
+        User user,
+        Mission mission,
+        Instant completedAt,
+        String completionPeriod
+    ) {
         this.user = user;
         this.mission = mission;
         this.completedAt = completedAt;
+        this.completionPeriod = completionPeriod;
     }
 
     public Mission getMission() {
@@ -56,5 +69,9 @@ public class UserMission {
 
     public Instant getCompletedAt() {
         return completedAt;
+    }
+
+    public String getCompletionPeriod() {
+        return completionPeriod;
     }
 }

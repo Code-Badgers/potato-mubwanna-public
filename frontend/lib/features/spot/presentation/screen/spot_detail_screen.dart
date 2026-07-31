@@ -1,14 +1,18 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/location/location_service.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../audio/application/audio_guide_controller.dart';
 import '../../../audio/application/audio_playback_controller.dart';
 import '../../../audio/data/audio_guide_repository.dart';
 import '../../../audio/domain/audio_guide.dart';
 import '../../application/spot_detail_controller.dart';
 import '../../domain/spot_detail.dart';
+import '../../domain/visit_verification.dart';
 
 const _audioGreen = Color(0xFF367A50);
 const _audioMint = Color(0xFFE7F5EB);
@@ -40,6 +44,10 @@ class SpotDetailScreen extends ConsumerWidget {
         ),
         data: (spot) => _SpotDetailBody(spot: spot),
       ),
+      bottomNavigationBar: detail.maybeWhen(
+        data: (spot) => _VisitVerificationBar(spot: spot),
+        orElse: () => null,
+      ),
     );
   }
 }
@@ -55,7 +63,7 @@ class _SpotDetailBody extends ConsumerWidget {
 
     return ListView(
       key: const ValueKey('spot-detail-content'),
-      padding: const EdgeInsets.only(bottom: 36),
+      padding: const EdgeInsets.only(bottom: 132),
       children: [
         _SpotHeroImage(spot: spot),
         Padding(
@@ -142,6 +150,450 @@ class _SpotDetailBody extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _VisitVerificationBar extends ConsumerWidget {
+  const _VisitVerificationBar({required this.spot});
+
+  final SpotDetail spot;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(visitVerificationControllerProvider(spot));
+    final canVerify = spot.stampEnabled && !state.isLoading;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: _audioLine)),
+        ),
+        child: FilledButton.icon(
+          key: const ValueKey('visit-verify-button'),
+          onPressed: canVerify
+              ? () => _handleVisitVerification(context, ref, spot)
+              : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF56C787),
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: const Color(0xFFD7DED6),
+            disabledForegroundColor: AppColors.textSecondary,
+            minimumSize: const Size.fromHeight(54),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          icon: state.isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.verified_rounded),
+          label: Text(
+            state.isLoading
+                ? '방문 인증 중'
+                : spot.stampEnabled
+                    ? '방문 인증하기'
+                    : '방문 인증 준비 중',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleVisitVerification(
+    BuildContext context,
+    WidgetRef ref,
+    SpotDetail spot,
+  ) async {
+    final controller = ref.read(
+      visitVerificationControllerProvider(spot).notifier,
+    );
+    final result = await controller.verify();
+    if (!context.mounted) {
+      return;
+    }
+
+    if (result != null) {
+      _showVisitResultSheet(context, result, spot);
+      return;
+    }
+
+    final error = ref.read(visitVerificationControllerProvider(spot)).error;
+    if (error is LocationFailure) {
+      _showLocationFailureSnackBar(context, ref, error);
+      return;
+    }
+
+    final message = error is ApiException ? error.message : '방문 인증에 실패했습니다.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showLocationFailureSnackBar(
+    BuildContext context,
+    WidgetRef ref,
+    LocationFailure error,
+  ) {
+    final settingsTarget = error.settingsTarget;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.message),
+        action: settingsTarget == null
+            ? null
+            : SnackBarAction(
+                label: error.actionLabel ?? '설정',
+                onPressed: () {
+                  ref.read(locationServiceProvider).openSettings(
+                        settingsTarget,
+                      );
+                },
+              ),
+      ),
+    );
+  }
+}
+
+void _showVisitResultSheet(
+  BuildContext context,
+  VisitVerificationResult result,
+  SpotDetail spot,
+) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => _VisitResultSheet(
+      result: result,
+      spot: spot,
+    ),
+  );
+}
+
+class _VisitResultSheet extends StatelessWidget {
+  const _VisitResultSheet({
+    required this.result,
+    required this.spot,
+  });
+
+  final VisitVerificationResult result;
+  final SpotDetail spot;
+
+  @override
+  Widget build(BuildContext context) {
+    final potato = result.acquiredPotato;
+    final unlockedMission = result.unlockedMission;
+    return SafeArea(
+      child: Container(
+        key: const ValueKey('visit-result-sheet'),
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: _audioLine),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(
+              Icons.celebration_rounded,
+              color: Color(0xFF56C787),
+              size: 44,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '인증 성공',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 18),
+            _VisitResultLine(
+              icon: Icons.workspace_premium_rounded,
+              label: result.stampIssued ? '지역 스탬프 획득' : '이미 획득한 지역 스탬프',
+              color: const Color(0xFFD8A232),
+            ),
+            if (potato != null) ...[
+              const SizedBox(height: 10),
+              _PotatoAcquisitionCard(potato: potato),
+            ],
+            if (result.missionAvailable) ...[
+              const SizedBox(height: 10),
+              if (unlockedMission == null)
+                const _VisitResultLine(
+                  icon: Icons.flag_rounded,
+                  label: '점순이 미션 등장',
+                  color: Color(0xFF56C787),
+                )
+              else
+                _UnlockedMissionCard(mission: unlockedMission),
+            ],
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              key: const ValueKey('visit-result-potato-book'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.go('/main/potatoes');
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF56C787),
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.eco_rounded),
+              label: const Text('도감 보기'),
+            ),
+            const SizedBox(height: 8),
+            if (result.missionAvailable) ...[
+              FilledButton.icon(
+                key: const ValueKey('visit-result-mission-entry'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.go(
+                    Uri(
+                      path: '/main/missions',
+                      queryParameters: {
+                        'entry': 'visit',
+                        'spotName': spot.name,
+                        if (unlockedMission?.id.isNotEmpty == true)
+                          'missionId': unlockedMission!.id,
+                      },
+                    ).toString(),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF6A4A2A),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: const Icon(Icons.flag_rounded),
+                label: const Text('점순이 미션 보기'),
+              ),
+              const SizedBox(height: 8),
+            ],
+            OutlinedButton.icon(
+              key: const ValueKey('visit-result-next-route'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.go(
+                  Uri(
+                    path: '/main/map',
+                    queryParameters: {'recommendFrom': result.spotId},
+                  ).toString(),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF367A50),
+                minimumSize: const Size.fromHeight(50),
+                side: const BorderSide(color: Color(0xFFC9E7D4)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.map_rounded),
+              label: const Text('다음 장소 추천'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UnlockedMissionCard extends StatelessWidget {
+  const _UnlockedMissionCard({required this.mission});
+
+  final VisitUnlockedMission mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF9F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFC7EED9)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFF56C787),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.flag_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mission.title,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${mission.cityName} · ${mission.rewardLabel}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VisitResultLine extends StatelessWidget {
+  const _VisitResultLine({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PotatoAcquisitionCard extends StatelessWidget {
+  const _PotatoAcquisitionCard({required this.potato});
+
+  final VisitAcquiredPotato potato;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EA),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFEEDB9D)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE9A6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.eco_rounded,
+              color: Color(0xFF76561A),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  potato.alreadyOwned ? '이미 보유한 감자예요' : '감자 획득',
+                  style: const TextStyle(
+                    color: Color(0xFF76561A),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  potato.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${potato.region} · 희귀도 ${potato.rarityLabel}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

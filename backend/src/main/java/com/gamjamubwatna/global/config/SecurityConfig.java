@@ -37,6 +37,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/auth/kakao",
+                    "/auth/kakao/code",
                     "/auth/refresh",
                     "/auth/logout",
                     "/spots/**",

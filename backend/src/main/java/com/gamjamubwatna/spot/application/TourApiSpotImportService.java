@@ -6,6 +6,7 @@ import com.gamjamubwatna.spot.infrastructure.KakaoLocalClient;
 import com.gamjamubwatna.spot.infrastructure.KakaoLocalClient.KakaoLocalSpotItem;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient.TourApiSpotItem;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -20,6 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class TourApiSpotImportService {
 
     private static final Logger log = LoggerFactory.getLogger(TourApiSpotImportService.class);
+    private static final double GANGWON_MIN_LATITUDE = 37.0;
+    private static final double GANGWON_MAX_LATITUDE = 38.7;
+    private static final double GANGWON_MIN_LONGITUDE = 127.0;
+    private static final double GANGWON_MAX_LONGITUDE = 129.6;
 
     private final TourApiClient tourApiClient;
     private final KakaoLocalClient kakaoLocalClient;
@@ -100,7 +105,7 @@ public class TourApiSpotImportService {
             )
             .map(classification -> {
                 Instant now = Instant.now(clock);
-                touristSpotRepository.findByContentId(item.contentId())
+                findExistingSpot(item.contentId(), item.title(), item.address())
                     .ifPresentOrElse(
                         spot -> spot.updateFromTourApi(
                             item.title(),
@@ -227,14 +232,25 @@ public class TourApiSpotImportService {
             || item.contentTypeId() == null
             || item.title() == null || item.title().isBlank()
             || item.latitude() == null
-            || item.longitude() == null;
+            || item.longitude() == null
+            || !isGangwonCoordinate(item.latitude(), item.longitude());
     }
 
     private boolean isMissingRequiredCoordinate(KakaoLocalSpotItem item) {
         return item.id() == null || item.id().isBlank()
             || item.placeName() == null || item.placeName().isBlank()
             || item.latitude() == null
-            || item.longitude() == null;
+            || item.longitude() == null
+            || !isGangwonCoordinate(item.latitude(), item.longitude());
+    }
+
+    private boolean isGangwonCoordinate(BigDecimal latitude, BigDecimal longitude) {
+        double lat = latitude.doubleValue();
+        double lng = longitude.doubleValue();
+        return lat >= GANGWON_MIN_LATITUDE
+            && lat <= GANGWON_MAX_LATITUDE
+            && lng >= GANGWON_MIN_LONGITUDE
+            && lng <= GANGWON_MAX_LONGITUDE;
     }
 
     private String extractCityName(String address) {

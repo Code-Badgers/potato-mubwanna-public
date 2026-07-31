@@ -10,6 +10,17 @@ import static org.mockito.Mockito.when;
 import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.mission.domain.Mission;
+import com.gamjamubwatna.mission.domain.MissionGroup;
+import com.gamjamubwatna.mission.domain.MissionRepository;
+import com.gamjamubwatna.mission.domain.MissionRewardType;
+import com.gamjamubwatna.mission.domain.MissionStatus;
+import com.gamjamubwatna.mission.domain.MissionType;
+import com.gamjamubwatna.mission.domain.UserMissionRepository;
+import com.gamjamubwatna.potato.api.PotatoAcquisitionResponse;
+import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService;
+import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
+import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
@@ -33,6 +44,9 @@ class VisitVerificationServiceTest {
     private TouristSpotRepository touristSpotRepository;
     private UserVisitRepository userVisitRepository;
     private VisitStampIssuanceService visitStampIssuanceService;
+    private VisitPotatoAcquisitionService visitPotatoAcquisitionService;
+    private MissionRepository missionRepository;
+    private UserMissionRepository userMissionRepository;
     private VisitVerificationService visitVerificationService;
 
     @BeforeEach
@@ -41,14 +55,24 @@ class VisitVerificationServiceTest {
         touristSpotRepository = mock(TouristSpotRepository.class);
         userVisitRepository = mock(UserVisitRepository.class);
         visitStampIssuanceService = mock(VisitStampIssuanceService.class);
+        visitPotatoAcquisitionService = mock(VisitPotatoAcquisitionService.class);
+        missionRepository = mock(MissionRepository.class);
+        userMissionRepository = mock(UserMissionRepository.class);
         visitVerificationService = new VisitVerificationService(
             userRepository,
             touristSpotRepository,
             userVisitRepository,
             new VisitDistancePolicy(),
             visitStampIssuanceService,
+            visitPotatoAcquisitionService,
+            missionRepository,
+            userMissionRepository,
             Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
         );
+        when(missionRepository.findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(any(), any()))
+            .thenReturn(Optional.empty());
+        when(missionRepository.findFirstBySpotNameAndActiveTrueOrderByDisplayOrderAsc(any()))
+            .thenReturn(Optional.empty());
     }
 
     @Test
@@ -59,6 +83,18 @@ class VisitVerificationServiceTest {
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
         when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
         when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
+        when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
+            .thenReturn(new PotatoAcquisitionResult(
+                true,
+                new PotatoAcquisitionResponse(
+                    3L,
+                    "POTATO_GOLDEN_GANGWON",
+                    "황금감자",
+                    "강원특별자치도",
+                    PotatoRarity.EPIC,
+                    false
+                )
+            ));
 
         VisitVerifyResponse result = visitVerificationService.verifyVisit(
             1L,
@@ -74,10 +110,77 @@ class VisitVerificationServiceTest {
         assertThat(result.distanceMeters()).isEqualByComparingTo("0.00");
         assertThat(result.verificationRadiusMeter()).isEqualTo(100);
         assertThat(result.stampIssued()).isTrue();
-        assertThat(result.potatoAcquired()).isFalse();
+        assertThat(result.potatoAcquired()).isTrue();
+        assertThat(result.acquiredPotato().name()).isEqualTo("황금감자");
+        assertThat(result.acquiredPotato().alreadyOwned()).isFalse();
         assertThat(result.missionAvailable()).isFalse();
+        assertThat(result.unlockedMission()).isNull();
         verify(userVisitRepository).save(any(UserVisit.class));
         verify(visitStampIssuanceService).issueStamp(any(), any(), any());
+        verify(visitPotatoAcquisitionService).acquireForVisit(any(), any(), any());
+    }
+
+    @Test
+    void returnsUnlockedMissionWhenSpotHasActiveIncompleteMission() {
+        User user = user();
+        TouristSpot spot = spot();
+        Mission mission = mission();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
+        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
+        when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
+        when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
+            .thenReturn(new PotatoAcquisitionResult(false, null));
+        when(missionRepository.findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(
+            "정선 5일장",
+            "정선군"
+        )).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1004L)).thenReturn(false);
+
+        VisitVerifyResponse result = visitVerificationService.verifyVisit(
+            1L,
+            new VisitVerifyRequest(
+                10L,
+                new BigDecimal("37.3801000"),
+                new BigDecimal("128.6609000")
+            )
+        );
+
+        assertThat(result.missionAvailable()).isTrue();
+        assertThat(result.unlockedMission()).isNotNull();
+        assertThat(result.unlockedMission().missionId()).isEqualTo(1004L);
+        assertThat(result.unlockedMission().title()).isEqualTo("정선 5일장 곤드레 퀴즈");
+        assertThat(result.unlockedMission().rewardLabel()).isEqualTo("황금감자 성장 아이템");
+    }
+
+    @Test
+    void doesNotReturnUnlockedMissionWhenMissionAlreadyCompleted() {
+        User user = user();
+        TouristSpot spot = spot();
+        Mission mission = mission();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
+        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
+        when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
+        when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
+            .thenReturn(new PotatoAcquisitionResult(false, null));
+        when(missionRepository.findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(
+            "정선 5일장",
+            "정선군"
+        )).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1004L)).thenReturn(true);
+
+        VisitVerifyResponse result = visitVerificationService.verifyVisit(
+            1L,
+            new VisitVerifyRequest(
+                10L,
+                new BigDecimal("37.3801000"),
+                new BigDecimal("128.6609000")
+            )
+        );
+
+        assertThat(result.missionAvailable()).isFalse();
+        assertThat(result.unlockedMission()).isNull();
     }
 
     @Test
@@ -155,5 +258,30 @@ class VisitVerificationServiceTest {
         );
         ReflectionTestUtils.setField(spot, "id", 10L);
         return spot;
+    }
+
+    private Mission mission() {
+        Mission mission = new Mission(
+            "MISSION_JEONGSEON_MARKET_QUIZ",
+            MissionGroup.JUMSOONI,
+            MissionType.QUIZ,
+            MissionStatus.READY,
+            "정선 5일장 곤드레 퀴즈",
+            "정선 5일장",
+            "정선군",
+            "정선 장터에서 점순이가 내는 향토 음식 퀴즈를 풀어보세요.",
+            "여까지 왔네? 장터 냄새만 맡아도 배고프지 않나?",
+            "퀴즈 1개 정답",
+            MissionRewardType.ITEM,
+            "황금감자 성장 아이템",
+            0,
+            1,
+            true,
+            true,
+            1,
+            Instant.parse("2026-07-01T00:00:00Z")
+        );
+        ReflectionTestUtils.setField(mission, "id", 1004L);
+        return mission;
     }
 }

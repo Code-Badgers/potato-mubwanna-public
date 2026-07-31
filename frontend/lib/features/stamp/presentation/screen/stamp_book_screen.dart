@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
@@ -17,6 +18,7 @@ class StampBookScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stampBook = ref.watch(stampBookProvider);
+    final nextTargets = ref.watch(stampNextTargetsProvider);
     final claimState = ref.watch(stampRewardClaimProvider);
     ref.listen(stampRewardClaimProvider, (_, next) {
       next.whenOrNull(
@@ -27,9 +29,7 @@ class StampBookScreen extends ConsumerWidget {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(
-              const SnackBar(
-                content: Text('보상 수령이 완료됐어요. 쿠폰함에서 확인해 주세요.'),
-              ),
+              const SnackBar(content: Text('보상 수령이 완료됐어요. 쿠폰함에서 확인해 주세요.')),
             );
         },
         error: (error, _) {
@@ -51,10 +51,13 @@ class StampBookScreen extends ConsumerWidget {
               ? const _SignedOutState()
               : _StampBookBody(
                   stampBook: value,
+                  nextTargets: nextTargets,
                   isClaiming: claimState.isLoading,
                   onClaim: (targetCount) => ref
                       .read(stampRewardClaimProvider.notifier)
                       .claim(targetCount),
+                  onRetryTargets: () =>
+                      ref.invalidate(stampNextTargetsProvider),
                 ),
           loading: () => const _StampBookStatusBody(
             child: Center(child: CircularProgressIndicator()),
@@ -80,10 +83,7 @@ class _StampBookStatusBody extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         const SliverToBoxAdapter(child: _StampHeader()),
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: child,
-        ),
+        SliverFillRemaining(hasScrollBody: false, child: child),
       ],
     );
   }
@@ -92,13 +92,17 @@ class _StampBookStatusBody extends StatelessWidget {
 class _StampBookBody extends StatelessWidget {
   const _StampBookBody({
     required this.stampBook,
+    required this.nextTargets,
     required this.isClaiming,
     required this.onClaim,
+    required this.onRetryTargets,
   });
 
   final StampBook stampBook;
+  final AsyncValue<List<StampNextTarget>?> nextTargets;
   final bool isClaiming;
   final ValueChanged<int> onClaim;
+  final VoidCallback onRetryTargets;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +117,14 @@ class _StampBookBody extends StatelessWidget {
             acquiredCount: progress.acquiredCount,
             totalCount: progress.totalCount,
             reward: reward,
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: _NextTargetsSection(
+            state: nextTargets,
+            completed: reward.completed,
+            onRetry: onRetryTargets,
+            onTargetTap: (target) => context.push('/spots/${target.spotId}'),
           ),
         ),
         const SliverToBoxAdapter(child: _SectionTitle(title: '시군별 스탬프')),
@@ -188,8 +200,8 @@ class _ProgressSummary extends StatelessWidget {
     final rewardMessage = reward.canClaim
         ? '${reward.claimableTargetCount}개 달성 보상을 받을 수 있어요'
         : reward.completed || targetCount == null
-            ? '모든 보상 기준을 달성했어요'
-            : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
+        ? '모든 보상 기준을 달성했어요'
+        : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -272,6 +284,264 @@ class _ProgressSummary extends StatelessWidget {
   }
 }
 
+class _NextTargetsSection extends StatelessWidget {
+  const _NextTargetsSection({
+    required this.state,
+    required this.completed,
+    required this.onRetry,
+    required this.onTargetTap,
+  });
+
+  final AsyncValue<List<StampNextTarget>?> state;
+  final bool completed;
+  final VoidCallback onRetry;
+  final ValueChanged<StampNextTarget> onTargetTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF8EF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFC9E9D3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.explore_rounded, color: _stampDark, size: 24),
+              SizedBox(width: 8),
+              Text(
+                '다음 목표',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            '아직 스탬프가 없는 지역부터 추천해요.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          state.when(
+            loading: () => const _NextTargetStatus(
+              key: ValueKey('stamp-next-target-loading'),
+              icon: Icons.hourglass_top_rounded,
+              message: '다음 목표를 찾고 있어요.',
+            ),
+            error: (_, __) => _NextTargetError(onRetry: onRetry),
+            data: (targets) {
+              if (targets == null) {
+                return const SizedBox.shrink();
+              }
+              if (targets.isEmpty) {
+                return _NextTargetStatus(
+                  key: const ValueKey('stamp-next-target-empty'),
+                  icon: completed
+                      ? Icons.emoji_events_rounded
+                      : Icons.location_off_rounded,
+                  message: completed
+                      ? '모든 지역 스탬프를 모았어요.'
+                      : '추천 가능한 스탬프 관광지가 없어요.',
+                );
+              }
+              return Column(
+                children: [
+                  for (var index = 0; index < targets.length; index++) ...[
+                    _NextTargetTile(
+                      target: targets[index],
+                      onTap: () => onTargetTap(targets[index]),
+                    ),
+                    if (index < targets.length - 1) const SizedBox(height: 10),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NextTargetTile extends StatelessWidget {
+  const _NextTargetTile({required this.target, required this.onTap});
+
+  final StampNextTarget target;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        key: ValueKey('stamp-next-target-${target.spotId}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _stampLine),
+          ),
+          child: Row(
+            children: [
+              _NextTargetThumbnail(imageUrl: target.imageUrl),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      target.spotName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${target.cityName} · ${target.categoryLabel}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: _stampDark),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NextTargetThumbnail extends StatelessWidget {
+  const _NextTargetThumbnail({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl?.trim();
+    if (url == null || url.isEmpty) {
+      return const _NextTargetPlaceholder();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(9),
+      child: Image.network(
+        url,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const _NextTargetPlaceholder(),
+      ),
+    );
+  }
+}
+
+class _NextTargetPlaceholder extends StatelessWidget {
+  const _NextTargetPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2C4),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: const Icon(Icons.location_on_rounded, color: _stampDark),
+    );
+  }
+}
+
+class _NextTargetStatus extends StatelessWidget {
+  const _NextTargetStatus({
+    super.key,
+    required this.icon,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: _stampDark, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            message,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NextTargetError extends StatelessWidget {
+  const _NextTargetError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      key: const ValueKey('stamp-next-target-error'),
+      children: [
+        const Expanded(
+          child: Text(
+            '다음 목표를 불러오지 못했어요.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        TextButton(
+          key: const ValueKey('stamp-next-target-retry'),
+          onPressed: onRetry,
+          child: const Text('다시 시도'),
+        ),
+      ],
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title});
 
@@ -301,18 +571,16 @@ class _StampTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground =
-        stamp.acquired ? AppColors.textPrimary : AppColors.textSecondary;
+    final foreground = stamp.acquired
+        ? AppColors.textPrimary
+        : AppColors.textSecondary;
     final borderColor = stamp.acquired ? _stampPrimary : _stampLine;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: borderColor,
-          width: stamp.acquired ? 1.6 : 1,
-        ),
+        border: Border.all(color: borderColor, width: stamp.acquired ? 1.6 : 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(10),

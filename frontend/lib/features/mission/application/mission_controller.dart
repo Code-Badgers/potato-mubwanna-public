@@ -2,11 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
 import '../../coupon/application/coupon_controller.dart';
+import '../data/mission_native_input_service.dart';
 import '../data/mission_repository.dart';
+import '../data/mission_upload_repository.dart';
 import '../domain/mission_challenge.dart';
 
 final missionRepositoryProvider = Provider<MissionRepository>(
   (ref) => MissionRepository(dio: ref.watch(dioClientProvider).dio),
+);
+
+final missionNativeInputServiceProvider = Provider<MissionNativeInputService>(
+  (ref) => MissionNativeInputService(),
+);
+
+final missionUploadRepositoryProvider = Provider<MissionUploadRepository>(
+  (ref) => MissionUploadRepository(dio: ref.watch(dioClientProvider).dio),
 );
 
 final missionsProvider = StateNotifierProvider<MissionController,
