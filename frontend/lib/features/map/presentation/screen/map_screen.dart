@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
@@ -27,12 +28,14 @@ class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({
     this.hasMapConfiguration,
     this.mapViewBuilder,
+    this.mapUriLauncher = launchExternalMapUri,
     this.recommendationSourceSpotId,
     super.key,
   });
 
   final bool? hasMapConfiguration;
   final MapViewBuilder? mapViewBuilder;
+  final MapUriLauncher mapUriLauncher;
   final String? recommendationSourceSpotId;
 
   @override
@@ -170,6 +173,48 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
+  Future<void> _openSpotNavigation(MapSpot spot) async {
+    try {
+      await _launchMapUri(KakaoMapNavigation.destinationUri(spot));
+    } catch (_) {
+      _showNavigationError();
+    }
+  }
+
+  Future<void> _openRouteNavigation(List<MapSpot> routeSpots) async {
+    try {
+      final routeUri = KakaoMapNavigation.routeUri(routeSpots);
+      if (routeSpots.length > KakaoMapNavigation.maximumRouteSpots && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('카카오맵에서는 앞에서부터 7개 지점까지 안내합니다.'),
+          ),
+        );
+      }
+      await _launchMapUri(routeUri);
+    } catch (_) {
+      _showNavigationError();
+    }
+  }
+
+  Future<void> _launchMapUri(Uri uri) async {
+    final didLaunch = await widget.mapUriLauncher(uri);
+    if (!didLaunch) {
+      _showNavigationError();
+    }
+  }
+
+  void _showNavigationError() {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('카카오맵 길찾기를 열지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final spotsState = ref.watch(mapSpotsProvider);
@@ -299,6 +344,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             favoriteCount: favoriteSpotIds.length,
                             isFavorite:
                                 favoriteSpotIds.contains(selectedSpot.id),
+                            onNavigationPressed: () =>
+                                _openSpotNavigation(selectedSpot),
+                            onRouteNavigationPressed: () =>
+                                _openRouteNavigation(recommendedRouteSpots),
                             onFavoritePressed: () async {
                               try {
                                 await ref
@@ -355,6 +404,8 @@ class _RouteRecommendationSheet extends StatelessWidget {
     required this.routeDistanceKm,
     required this.favoriteCount,
     required this.isFavorite,
+    required this.onNavigationPressed,
+    required this.onRouteNavigationPressed,
     required this.onFavoritePressed,
     required this.onDetailPressed,
   });
@@ -364,6 +415,8 @@ class _RouteRecommendationSheet extends StatelessWidget {
   final double? routeDistanceKm;
   final int favoriteCount;
   final bool isFavorite;
+  final VoidCallback onNavigationPressed;
+  final VoidCallback onRouteNavigationPressed;
   final Future<void> Function() onFavoritePressed;
   final VoidCallback onDetailPressed;
 
@@ -403,6 +456,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
                   spot: selectedSpot,
                   favoriteCount: favoriteCount,
                   isFavorite: isFavorite,
+                  onNavigationPressed: onNavigationPressed,
                   onFavoritePressed: onFavoritePressed,
                   onDetailPressed: onDetailPressed,
                 ),
@@ -426,7 +480,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
                   ],
                   const SizedBox(height: 14),
                   FilledButton.icon(
-                    onPressed: () {},
+                    onPressed: onRouteNavigationPressed,
                     icon: const Icon(Icons.near_me_rounded, size: 19),
                     label: const Text('이 동선 따라가기'),
                     style: FilledButton.styleFrom(
@@ -473,6 +527,7 @@ class _SelectedSpotSummary extends StatelessWidget {
     required this.spot,
     required this.favoriteCount,
     required this.isFavorite,
+    required this.onNavigationPressed,
     required this.onFavoritePressed,
     required this.onDetailPressed,
   });
@@ -480,6 +535,7 @@ class _SelectedSpotSummary extends StatelessWidget {
   final MapSpot spot;
   final int favoriteCount;
   final bool isFavorite;
+  final VoidCallback onNavigationPressed;
   final Future<void> Function() onFavoritePressed;
   final VoidCallback onDetailPressed;
 
@@ -550,7 +606,7 @@ class _SelectedSpotSummary extends StatelessWidget {
             SizedBox(
               width: 118,
               child: OutlinedButton(
-                onPressed: () {},
+                onPressed: onNavigationPressed,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _mapDark,
                   side: const BorderSide(color: Color(0xFFC9E9D3)),
