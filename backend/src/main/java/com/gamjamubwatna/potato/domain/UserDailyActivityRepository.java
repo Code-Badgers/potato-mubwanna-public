@@ -1,6 +1,7 @@
 package com.gamjamubwatna.potato.domain;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,4 +28,17 @@ public interface UserDailyActivityRepository extends JpaRepository<UserDailyActi
         WHERE activity.user.id = :userId
         """)
     long sumStepsByUserId(@Param("userId") Long userId);
+
+    @Query("""
+        SELECT COALESCE(SUM(activity.steps), 0)
+        FROM UserDailyActivity activity
+        WHERE activity.user.id = :userId
+          AND activity.activityDate = :activityDate
+          AND activity.source IN :sources
+        """)
+    long sumStepsByUserIdAndActivityDateAndSources(
+        @Param("userId") Long userId,
+        @Param("activityDate") LocalDate activityDate,
+        @Param("sources") Collection<ActivitySource> sources
+    );
 }

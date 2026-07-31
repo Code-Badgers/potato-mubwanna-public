@@ -62,32 +62,6 @@ public class MissionController {
         }
     }
 
-    // MVP에서는 센서 검증 전까지 활성 미션의 중복 완료 여부만 서버에서 확정한다.
-    @PostMapping("/{missionId}/complete")
-    public ResponseEntity<AuthApiResponse<MissionCompleteResponse>> completeMission(
-        Authentication authentication,
-        @PathVariable Long missionId
-    ) {
-        try {
-            return ResponseEntity.ok(AuthApiResponse.success(
-                missionService.completeMission(userId(authentication), missionId)
-            ));
-        } catch (MissionAuthenticationException exception) {
-            return unauthorized();
-        } catch (MissionNotFoundException exception) {
-            return notFound(exception.getMessage());
-        } catch (MissionAlreadyCompletedException exception) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(AuthApiResponse.failure(exception.getMessage()));
-        } catch (MissionCompletionException exception) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(AuthApiResponse.failure(exception.getMessage()));
-        } catch (org.springframework.dao.DataIntegrityViolationException exception) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(AuthApiResponse.failure("이미 완료한 미션입니다."));
-        }
-    }
-
     // 타입별 입력값을 서버에서 검증한 뒤 성공한 경우에만 미션 완료와 보상 지급을 확정한다.
     @PostMapping("/{missionId}/verify")
     public ResponseEntity<AuthApiResponse<MissionVerifyResponse>> verifyMission(
