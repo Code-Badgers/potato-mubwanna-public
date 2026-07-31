@@ -1,12 +1,14 @@
 package com.gamjamubwatna.mission.application;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionGroup;
+import com.gamjamubwatna.mission.domain.MissionPeriod;
 import com.gamjamubwatna.mission.domain.MissionRewardType;
 import com.gamjamubwatna.mission.domain.MissionStatus;
 import com.gamjamubwatna.mission.domain.MissionType;
@@ -32,7 +34,10 @@ class MissionEvidenceValidatorTest {
 
     private static final Instant DAILY_START = Instant.parse("2026-06-30T15:00:00Z");
     private static final Instant WEEKLY_START = Instant.parse("2026-06-28T15:00:00Z");
-    private static final Instant END_EXCLUSIVE = Instant.parse("2026-07-01T15:00:00Z");
+    private static final Instant DAILY_END_EXCLUSIVE = Instant.parse("2026-07-01T15:00:00Z");
+    private static final Instant WEEKLY_END_EXCLUSIVE = Instant.parse("2026-07-05T15:00:00Z");
+    private static final Instant EVENT_START = Instant.parse("2026-06-30T00:00:00Z");
+    private static final Instant EVENT_END = Instant.parse("2026-07-02T00:00:00Z");
 
     @Mock
     private UserVisitRepository userVisitRepository;
@@ -58,10 +63,13 @@ class MissionEvidenceValidatorTest {
     @Test
     void verifiesVisitFromStoredVisitEvidence() {
         Mission mission = mission(MissionGroup.EVENT, MissionType.VISIT, 1);
-        when(userVisitRepository.existsByUserIdAndTouristSpotNameAndTouristSpotCityName(
+        when(userVisitRepository
+            .existsByUserIdAndTouristSpotNameAndTouristSpotCityNameAndVisitedAtGreaterThanEqualAndVisitedAtLessThan(
             1L,
             "정선 5일장",
-            "정선군"
+            "정선군",
+            EVENT_START,
+            EVENT_END
         )).thenReturn(true);
 
         assertThatCode(() -> validator.validate(1L, mission, null))
@@ -81,9 +89,10 @@ class MissionEvidenceValidatorTest {
     void verifiesDailyStepsFromStoredHealthActivity() {
         Mission mission = mission(MissionGroup.DAILY, MissionType.VISIT_AND_STEP, 10_000);
         MissionVerificationPolicy policy = stepPolicy(mission, 10_000);
-        when(userDailyActivityRepository.sumStepsByUserIdAndActivityDateAndSources(
+        when(userDailyActivityRepository.sumStepsByUserIdAndActivityDateRangeAndSources(
             1L,
             LocalDate.of(2026, 7, 1),
+            LocalDate.of(2026, 7, 2),
             List.of(ActivitySource.HEALTH_KIT, ActivitySource.HEALTH_CONNECT)
         )).thenReturn(10_200L);
 
@@ -105,9 +114,10 @@ class MissionEvidenceValidatorTest {
     void rejectsInsufficientStoredSteps() {
         Mission mission = mission(MissionGroup.DAILY, MissionType.VISIT_AND_STEP, 10_000);
         MissionVerificationPolicy policy = stepPolicy(mission, 10_000);
-        when(userDailyActivityRepository.sumStepsByUserIdAndActivityDateAndSources(
+        when(userDailyActivityRepository.sumStepsByUserIdAndActivityDateRangeAndSources(
             1L,
             LocalDate.of(2026, 7, 1),
+            LocalDate.of(2026, 7, 2),
             List.of(ActivitySource.HEALTH_KIT, ActivitySource.HEALTH_CONNECT)
         )).thenReturn(9_999L);
 
@@ -126,13 +136,54 @@ class MissionEvidenceValidatorTest {
     }
 
     @Test
+    void returnsCurrentDailyProgressCappedAtTarget() {
+        Mission mission = mission(MissionGroup.DAILY, MissionType.VISIT_AND_STEP, 10_000);
+        when(userDailyActivityRepository.sumStepsByUserIdAndActivityDateRangeAndSources(
+            1L,
+            LocalDate.of(2026, 7, 1),
+            LocalDate.of(2026, 7, 2),
+            List.of(ActivitySource.HEALTH_KIT, ActivitySource.HEALTH_CONNECT)
+        )).thenReturn(10_200L);
+
+        int progress = validator.progress(
+            1L,
+            mission,
+            MissionPeriod.current(
+                mission,
+                Instant.parse("2026-07-01T00:00:00Z")
+            )
+        );
+
+        assertThat(progress).isEqualTo(10_000);
+    }
+
+    @Test
+    void returnsStepsAcrossEntireWeeklyPeriod() {
+        Mission mission = mission(MissionGroup.WEEKLY, MissionType.VISIT_AND_STEP, 20_000);
+        when(userDailyActivityRepository.sumStepsByUserIdAndActivityDateRangeAndSources(
+            1L,
+            LocalDate.of(2026, 6, 29),
+            LocalDate.of(2026, 7, 6),
+            List.of(ActivitySource.HEALTH_KIT, ActivitySource.HEALTH_CONNECT)
+        )).thenReturn(15_000L);
+
+        int progress = validator.progress(
+            1L,
+            mission,
+            MissionPeriod.current(mission, Instant.parse("2026-07-01T00:00:00Z"))
+        );
+
+        assertThat(progress).isEqualTo(15_000);
+    }
+
+    @Test
     void verifiesDailyStampFromAcquisitionTime() {
         Mission mission = mission(MissionGroup.DAILY, MissionType.STAMP, 1);
         when(userStampRepository
             .countByUserIdAndAcquiredAtGreaterThanEqualAndAcquiredAtLessThan(
                 1L,
                 DAILY_START,
-                END_EXCLUSIVE
+                DAILY_END_EXCLUSIVE
             )).thenReturn(1L);
 
         assertThatCode(() -> validator.validate(1L, mission, null))
@@ -145,7 +196,7 @@ class MissionEvidenceValidatorTest {
         when(userVisitRepository.countDistinctVisitedCities(
             1L,
             WEEKLY_START,
-            END_EXCLUSIVE
+            WEEKLY_END_EXCLUSIVE
         )).thenReturn(3L);
 
         assertThatCode(() -> validator.validate(1L, mission, null))
@@ -153,7 +204,7 @@ class MissionEvidenceValidatorTest {
         verify(userVisitRepository).countDistinctVisitedCities(
             1L,
             WEEKLY_START,
-            END_EXCLUSIVE
+            WEEKLY_END_EXCLUSIVE
         );
     }
 
@@ -163,7 +214,7 @@ class MissionEvidenceValidatorTest {
         when(userVisitRepository.countDistinctVisitedCities(
             1L,
             WEEKLY_START,
-            END_EXCLUSIVE
+            WEEKLY_END_EXCLUSIVE
         )).thenReturn(2L);
 
         assertThatThrownBy(() -> validator.validate(1L, mission, null))
@@ -190,6 +241,8 @@ class MissionEvidenceValidatorTest {
             false,
             true,
             1,
+            group == MissionGroup.EVENT ? EVENT_START : null,
+            group == MissionGroup.EVENT ? EVENT_END : null,
             Instant.parse("2026-07-01T00:00:00Z")
         );
         ReflectionTestUtils.setField(mission, "id", 1L);

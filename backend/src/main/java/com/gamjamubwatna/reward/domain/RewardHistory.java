@@ -1,6 +1,7 @@
 package com.gamjamubwatna.reward.domain;
 
 import com.gamjamubwatna.auth.domain.User;
+import com.gamjamubwatna.mission.domain.MissionPeriod;
 import com.gamjamubwatna.mission.domain.MissionRewardType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,7 +23,7 @@ import java.time.Instant;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_reward_histories_user_source",
-            columnNames = {"user_id", "source_type", "source_id"}
+            columnNames = {"user_id", "source_type", "source_id", "source_period"}
         )
     }
 )
@@ -51,6 +52,9 @@ public class RewardHistory {
     @Column(name = "source_id", nullable = false)
     private Long sourceId;
 
+    @Column(name = "source_period", nullable = false, length = 40)
+    private String sourcePeriod;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -65,11 +69,32 @@ public class RewardHistory {
         Long sourceId,
         Instant now
     ) {
+        this(
+            user,
+            rewardType,
+            rewardName,
+            sourceType,
+            sourceId,
+            MissionPeriod.ONE_TIME_KEY,
+            now
+        );
+    }
+
+    public RewardHistory(
+        User user,
+        MissionRewardType rewardType,
+        String rewardName,
+        RewardSourceType sourceType,
+        Long sourceId,
+        String sourcePeriod,
+        Instant now
+    ) {
         this.user = user;
         this.rewardType = rewardType;
         this.rewardName = rewardName;
         this.sourceType = sourceType;
         this.sourceId = sourceId;
+        this.sourcePeriod = sourcePeriod;
         this.createdAt = now;
     }
 
@@ -95,6 +120,10 @@ public class RewardHistory {
 
     public Long getSourceId() {
         return sourceId;
+    }
+
+    public String getSourcePeriod() {
+        return sourcePeriod;
     }
 
     public Instant getCreatedAt() {

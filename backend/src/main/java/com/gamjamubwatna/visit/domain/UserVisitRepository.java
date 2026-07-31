@@ -17,6 +17,14 @@ public interface UserVisitRepository extends JpaRepository<UserVisit, Long> {
         String cityName
     );
 
+    boolean existsByUserIdAndTouristSpotNameAndTouristSpotCityNameAndVisitedAtGreaterThanEqualAndVisitedAtLessThan(
+        Long userId,
+        String spotName,
+        String cityName,
+        Instant startInclusive,
+        Instant endExclusive
+    );
+
     @Query("""
         SELECT COUNT(DISTINCT visit.touristSpot.cityName)
         FROM UserVisit visit

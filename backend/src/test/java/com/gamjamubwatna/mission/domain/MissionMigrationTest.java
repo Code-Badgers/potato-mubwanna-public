@@ -1,9 +1,12 @@
 package com.gamjamubwatna.mission.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -164,5 +167,120 @@ class MissionMigrationTest {
 
         assertThat(indexNames)
             .contains("idx_reward_histories_user_id_created_at");
+    }
+
+    @Test
+    void scopesMissionCompletionsAndRewardsByPeriod() throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
+            long userId = insertPeriodTestUser(connection);
+            long missionId = findMissionId(connection, "MISSION_DAILY_STEPS");
+            try {
+                insertUserMission(connection, userId, missionId, "DAY:2026-07-01");
+                insertUserMission(connection, userId, missionId, "DAY:2026-07-02");
+
+                assertThatThrownBy(() ->
+                    insertUserMission(connection, userId, missionId, "DAY:2026-07-02")
+                ).isInstanceOf(java.sql.SQLException.class);
+                assertThat(countRows(connection, "user_missions", userId)).isEqualTo(2);
+
+                insertRewardHistory(connection, userId, missionId, "DAY:2026-07-01");
+                insertRewardHistory(connection, userId, missionId, "DAY:2026-07-02");
+
+                assertThatThrownBy(() ->
+                    insertRewardHistory(connection, userId, missionId, "DAY:2026-07-02")
+                ).isInstanceOf(java.sql.SQLException.class);
+                assertThat(countRows(connection, "reward_histories", userId)).isEqualTo(2);
+            } finally {
+                try (PreparedStatement delete = connection.prepareStatement(
+                    "DELETE FROM users WHERE user_id = ?"
+                )) {
+                    delete.setLong(1, userId);
+                    delete.executeUpdate();
+                }
+            }
+        }
+    }
+
+    private long insertPeriodTestUser(Connection connection) throws Exception {
+        try (PreparedStatement insert = connection.prepareStatement("""
+            INSERT INTO users (
+                provider,
+                provider_user_id,
+                nickname,
+                created_at,
+                updated_at
+            ) VALUES ('KAKAO', 'period-test-177', 'period-test', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """, Statement.RETURN_GENERATED_KEYS)) {
+            insert.executeUpdate();
+            try (ResultSet keys = insert.getGeneratedKeys()) {
+                assertThat(keys.next()).isTrue();
+                return keys.getLong(1);
+            }
+        }
+    }
+
+    private long findMissionId(Connection connection, String code) throws Exception {
+        try (PreparedStatement select = connection.prepareStatement(
+            "SELECT mission_id FROM missions WHERE code = ?"
+        )) {
+            select.setString(1, code);
+            try (ResultSet row = select.executeQuery()) {
+                assertThat(row.next()).isTrue();
+                return row.getLong(1);
+            }
+        }
+    }
+
+    private void insertUserMission(
+        Connection connection,
+        long userId,
+        long missionId,
+        String period
+    ) throws Exception {
+        try (PreparedStatement insert = connection.prepareStatement("""
+            INSERT INTO user_missions (user_id, mission_id, completed_at, completion_period)
+            VALUES (?, ?, CURRENT_TIMESTAMP, ?)
+            """)) {
+            insert.setLong(1, userId);
+            insert.setLong(2, missionId);
+            insert.setString(3, period);
+            insert.executeUpdate();
+        }
+    }
+
+    private void insertRewardHistory(
+        Connection connection,
+        long userId,
+        long missionId,
+        String period
+    ) throws Exception {
+        try (PreparedStatement insert = connection.prepareStatement("""
+            INSERT INTO reward_histories (
+                user_id,
+                reward_type,
+                reward_name,
+                source_type,
+                source_id,
+                source_period,
+                created_at
+            ) VALUES (?, 'ITEM', 'period-test', 'MISSION', ?, ?, CURRENT_TIMESTAMP)
+            """)) {
+            insert.setLong(1, userId);
+            insert.setLong(2, missionId);
+            insert.setString(3, period);
+            insert.executeUpdate();
+        }
+    }
+
+    private long countRows(Connection connection, String tableName, long userId) throws Exception {
+        try (PreparedStatement select = connection.prepareStatement(
+            "SELECT COUNT(*) FROM " + tableName + " WHERE user_id = ?"
+        )) {
+            select.setLong(1, userId);
+            try (ResultSet row = select.executeQuery()) {
+                assertThat(row.next()).isTrue();
+                return row.getLong(1);
+            }
+        }
     }
 }

@@ -903,6 +903,17 @@ QR 미션 payload 예시:
 | `MISSION_HOENGSEONG_HANWOO_QR` | `gamjamubwatna://mission/qr/MISSION_HOENGSEONG_HANWOO_QR` |
 | `MISSION_HWACHEON_SANCHEONEO_QR` | `gamjamubwatna://mission/qr/MISSION_HWACHEON_SANCHEONEO_QR` |
 
+#### 6.3.1 반복/이벤트 미션 기간 계약
+
+- 모든 기간 경계는 `Asia/Seoul`을 기준으로 계산한다.
+- `DAILY` 미션은 당일 00:00 이상 다음 날 00:00 미만의 기록만 진행도와 인증에 사용한다.
+- `WEEKLY` 미션은 월요일 00:00 이상 다음 월요일 00:00 미만의 기록만 진행도와 인증에 사용한다.
+- `EVENT` 미션은 `startsAt` 이상 `endsAt` 미만일 때만 활성화한다. 기간이 설정되지 않았거나 현재 시각이 기간 밖이면 목록/상세 응답의 `active`는 `false`, `status`는 `LOCKED`이며 인증 요청은 거부한다.
+- `JUMSOONI` 미션은 기존처럼 전체 기간에 한 번만 완료할 수 있다.
+- 완료 기록은 `completionPeriod`, 보상 이력은 `sourcePeriod`를 함께 저장한다. 같은 기간에는 각각 한 번만 생성하고, 다음 기간에는 다시 완료와 보상을 받을 수 있다.
+- 목록/상세 응답은 현재 기간의 `periodStartsAt`, `periodEndsAt`을 반환한다. 전체 기간 미션과 기간이 설정되지 않은 이벤트 미션은 두 값이 `null`이다.
+- 반복 미션의 `progress`는 현재 기간 기록만 집계하며, 이전 기간의 완료와 진행 기록은 현재 응답에 포함하지 않는다.
+
 ### 6.4 미션 사진 업로드 키 발급
 
 ```http

@@ -77,6 +77,12 @@ public class Mission {
     @Column(name = "display_order", nullable = false, unique = true)
     private Integer displayOrder;
 
+    @Column(name = "starts_at")
+    private Instant startsAt;
+
+    @Column(name = "ends_at")
+    private Instant endsAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -106,6 +112,52 @@ public class Mission {
         Integer displayOrder,
         Instant now
     ) {
+        this(
+            code,
+            group,
+            type,
+            defaultStatus,
+            title,
+            spotName,
+            cityName,
+            description,
+            dialogue,
+            conditionLabel,
+            rewardType,
+            rewardLabel,
+            progress,
+            target,
+            newMission,
+            active,
+            displayOrder,
+            null,
+            null,
+            now
+        );
+    }
+
+    public Mission(
+        String code,
+        MissionGroup group,
+        MissionType type,
+        MissionStatus defaultStatus,
+        String title,
+        String spotName,
+        String cityName,
+        String description,
+        String dialogue,
+        String conditionLabel,
+        MissionRewardType rewardType,
+        String rewardLabel,
+        Integer progress,
+        Integer target,
+        Boolean newMission,
+        Boolean active,
+        Integer displayOrder,
+        Instant startsAt,
+        Instant endsAt,
+        Instant now
+    ) {
         this.code = code;
         this.group = group;
         this.type = type;
@@ -123,6 +175,8 @@ public class Mission {
         this.newMission = newMission;
         this.active = active;
         this.displayOrder = displayOrder;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -197,5 +251,13 @@ public class Mission {
 
     public Boolean isActive() {
         return active;
+    }
+
+    public Instant getStartsAt() {
+        return startsAt;
+    }
+
+    public Instant getEndsAt() {
+        return endsAt;
     }
 }
