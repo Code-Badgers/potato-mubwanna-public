@@ -3,9 +3,15 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
+import 'package:potato_mubwanna/core/storage/token_storage.dart';
+import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
+import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
+import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/mission/application/mission_controller.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_native_input_service.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_repository.dart';
@@ -14,6 +20,46 @@ import 'package:potato_mubwanna/features/mission/domain/mission_challenge.dart';
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
 
 void main() {
+  testWidgets('shows login prompt without loading missions for guests',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    final router = GoRouter(
+      initialLocation: '/missions',
+      routes: [
+        GoRoute(
+          path: '/missions',
+          builder: (_, __) => const MissionScreen(),
+        ),
+        GoRoute(
+          path: '/login',
+          builder: (_, __) =>
+              const Scaffold(body: Center(child: Text('login destination'))),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith((ref) => _IdleAuthController()),
+          missionRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('로그인이 필요한 서비스예요'), findsOneWidget);
+    expect(find.text('점순이 미션에 도전하려면 로그인해주세요.'), findsOneWidget);
+    expect(find.text('다시 시도'), findsNothing);
+    expect(repository.fetchCallCount, 0);
+
+    await tester.tap(find.text('로그인하러 가기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('login destination'), findsOneWidget);
+  });
+
   testWidgets('renders mission list and category filters', (tester) async {
     await _pumpMissionScreen(tester);
 
@@ -363,6 +409,9 @@ Future<void> _pumpMissionScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authControllerProvider.overrideWith(
+          (ref) => _AuthenticatedAuthController(),
+        ),
         missionRepositoryProvider.overrideWithValue(
           repository ?? _FakeMissionRepository(),
         ),
@@ -404,11 +453,15 @@ class _FakeMissionRepository extends MissionRepository {
 
   final Object? completeError;
   final Duration completeDelay;
+  int fetchCallCount = 0;
   int completeCallCount = 0;
   MissionVerificationPayload? lastPayload;
 
   @override
-  Future<List<MissionChallenge>> fetchMissions() async => _missions;
+  Future<List<MissionChallenge>> fetchMissions() async {
+    fetchCallCount += 1;
+    return _missions;
+  }
 
   @override
   Future<MissionCompletionResult> verifyMission(
@@ -445,6 +498,32 @@ class _FakeMissionRepository extends MissionRepository {
       rewardLabel: mission.rewardLabel,
     );
   }
+}
+
+class _IdleAuthController extends AuthController {
+  _IdleAuthController()
+      : super(
+          kakaoLoginService: const KakaoLoginService(),
+          authRepository: _AuthRepository(),
+        );
+}
+
+class _AuthenticatedAuthController extends AuthController {
+  _AuthenticatedAuthController()
+      : super(
+          kakaoLoginService: const KakaoLoginService(),
+          authRepository: _AuthRepository(),
+        ) {
+    state = const AuthState.authenticated();
+  }
+}
+
+class _AuthRepository extends AuthRepository {
+  _AuthRepository()
+      : super(
+          dio: Dio(),
+          tokenStorage: const TokenStorage(FlutterSecureStorage()),
+        );
 }
 
 class _FakeMissionNativeInputService extends MissionNativeInputService {
