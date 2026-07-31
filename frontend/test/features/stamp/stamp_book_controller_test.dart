@@ -9,6 +9,7 @@ import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
+import 'package:potato_mubwanna/features/reward/application/reward_history_controller.dart';
 import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller.dart';
 import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
@@ -57,15 +58,16 @@ void main() {
     expect(repository.fetchCount, 2);
   });
 
-  test('reward claim refreshes the rallybook and coupon list after success',
-      () async {
+  test('reward claim refreshes all reward surfaces after success', () async {
     var stampBookRefreshCount = 0;
     var couponListRefreshCount = 0;
+    var rewardHistoryRefreshCount = 0;
     final repository = _ClaimStampRepository();
     final controller = StampRewardClaimController(
       repository,
       onStampBookRefresh: () => stampBookRefreshCount += 1,
       onCouponListRefresh: () => couponListRefreshCount += 1,
+      onRewardHistoryRefresh: () => rewardHistoryRefreshCount += 1,
     );
 
     final result = await controller.claim(6);
@@ -76,6 +78,7 @@ void main() {
     expect(controller.state.valueOrNull?.couponName, '강원 감자 할인권');
     expect(stampBookRefreshCount, 1);
     expect(couponListRefreshCount, 1);
+    expect(rewardHistoryRefreshCount, 1);
   });
 
   test('reward claim ignores a second request while the first is pending',
@@ -86,6 +89,7 @@ void main() {
       repository,
       onStampBookRefresh: () {},
       onCouponListRefresh: () {},
+      onRewardHistoryRefresh: () {},
     );
 
     final firstClaim = controller.claim(6);
@@ -100,12 +104,13 @@ void main() {
     expect(repository.claimCount, 1);
   });
 
-  test('pending reward claim survives auto-dispose and refreshes both caches',
+  test('pending reward claim survives auto-dispose and refreshes all caches',
       () async {
     final completer = Completer<StampRewardClaimResult>();
     final repository = _ClaimStampRepository(completer: completer);
     var stampBookLoadCount = 0;
     var couponListLoadCount = 0;
+    var rewardHistoryLoadCount = 0;
     final container = ProviderContainer(
       overrides: [
         stampRepositoryProvider.overrideWithValue(repository),
@@ -115,6 +120,10 @@ void main() {
         }),
         couponListProvider.overrideWith((ref) async {
           couponListLoadCount += 1;
+          return null;
+        }),
+        rewardHistoryProvider.overrideWith((ref) async {
+          rewardHistoryLoadCount += 1;
           return null;
         }),
       ],
@@ -128,10 +137,16 @@ void main() {
       couponListProvider,
       (_, __) {},
     );
+    final rewardHistorySubscription = container.listen(
+      rewardHistoryProvider,
+      (_, __) {},
+    );
     addTearDown(stampBookSubscription.close);
     addTearDown(couponListSubscription.close);
+    addTearDown(rewardHistorySubscription.close);
     await container.read(stampBookProvider.future);
     await container.read(couponListProvider.future);
+    await container.read(rewardHistoryProvider.future);
 
     final claimSubscription = container.listen(
       stampRewardClaimProvider,
@@ -148,8 +163,10 @@ void main() {
     await container.pump();
     await container.read(stampBookProvider.future);
     await container.read(couponListProvider.future);
+    await container.read(rewardHistoryProvider.future);
     expect(stampBookLoadCount, 2);
     expect(couponListLoadCount, 2);
+    expect(rewardHistoryLoadCount, 2);
   });
 }
 
