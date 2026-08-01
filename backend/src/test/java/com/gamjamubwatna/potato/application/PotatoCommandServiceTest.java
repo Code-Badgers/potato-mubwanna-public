@@ -131,6 +131,13 @@ class PotatoCommandServiceTest {
         assertThat(result.distanceMeters()).isEqualTo(5894.0);
         assertThat(result.source()).isEqualTo(ActivitySource.HEALTH_CONNECT);
         assertThat(result.syncedAt()).isNotNull();
+        assertThat(result.growthResult()).isNotNull();
+        assertThat(result.growthResult().potatoId()).isEqualTo(1L);
+        assertThat(result.growthResult().potatoName()).isEqualTo("하지감자");
+        assertThat(result.growthResult().previousLevel()).isEqualTo(2);
+        assertThat(result.growthResult().currentLevel()).isEqualTo(4);
+        assertThat(result.growthResult().leveledUp()).isTrue();
+        assertThat(result.growthResult().fullyGrown()).isFalse();
         assertThat(representative.getLevel()).isEqualTo(4);
         assertThat(representative.getGrowthDistance()).isEqualTo(1394.0);
     }
@@ -168,6 +175,10 @@ class PotatoCommandServiceTest {
 
         assertThat(result.steps()).isEqualTo(9000);
         assertThat(result.distanceMeters()).isEqualTo(6300.0);
+        assertThat(result.growthResult()).isNotNull();
+        assertThat(result.growthResult().previousLevel()).isEqualTo(2);
+        assertThat(result.growthResult().currentLevel()).isEqualTo(3);
+        assertThat(result.growthResult().leveledUp()).isTrue();
         assertThat(representative.getLevel()).isEqualTo(3);
         assertThat(representative.getGrowthDistance()).isEqualTo(2700.0);
     }
@@ -203,7 +214,112 @@ class PotatoCommandServiceTest {
 
         assertThat(result.steps()).isEqualTo(5000);
         assertThat(result.distanceMeters()).isEqualTo(3500.0);
+        assertThat(result.growthResult()).isNull();
         verify(userPotatoRepository, never()).findByUserId(1L);
+    }
+
+    @Test
+    void reportsWhenRepresentativePotatoBecomesFullyGrown() {
+        User user = mock(User.class);
+        UserPotato representative = userPotato(
+            1L,
+            potato(1L, "하지감자"),
+            4,
+            2900.0,
+            true
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
+        when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
+            1L,
+            LocalDate.parse("2026-07-21"),
+            ActivitySource.HEALTH_CONNECT
+        )).thenReturn(Optional.empty());
+        when(userDailyActivityRepository.save(any(UserDailyActivity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoDailyActivitySyncResponse result = potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                1000,
+                200.0,
+                ActivitySource.HEALTH_CONNECT
+            )
+        );
+
+        assertThat(result.growthResult()).isNotNull();
+        assertThat(result.growthResult().previousLevel()).isEqualTo(4);
+        assertThat(result.growthResult().currentLevel()).isEqualTo(5);
+        assertThat(result.growthResult().leveledUp()).isTrue();
+        assertThat(result.growthResult().fullyGrown()).isTrue();
+    }
+
+    @Test
+    void omitsGrowthResultWhenRepresentativePotatoIsAlreadyFullyGrown() {
+        User user = mock(User.class);
+        UserPotato representative = userPotato(
+            1L,
+            potato(1L, "하지감자"),
+            5,
+            3000.0,
+            true
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
+        when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
+            1L,
+            LocalDate.parse("2026-07-21"),
+            ActivitySource.HEALTH_CONNECT
+        )).thenReturn(Optional.empty());
+        when(userDailyActivityRepository.save(any(UserDailyActivity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoDailyActivitySyncResponse result = potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                1000,
+                200.0,
+                ActivitySource.HEALTH_CONNECT
+            )
+        );
+
+        assertThat(result.growthResult()).isNull();
+        assertThat(representative.getLevel()).isEqualTo(5);
+        assertThat(representative.getGrowthDistance()).isEqualTo(3000.0);
+    }
+
+    @Test
+    void omitsGrowthResultWhenUserHasNoRepresentativePotato() {
+        User user = mock(User.class);
+        UserPotato nonRepresentative = userPotato(
+            1L,
+            potato(1L, "하지감자"),
+            false
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(nonRepresentative));
+        when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
+            1L,
+            LocalDate.parse("2026-07-21"),
+            ActivitySource.HEALTH_CONNECT
+        )).thenReturn(Optional.empty());
+        when(userDailyActivityRepository.save(any(UserDailyActivity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoDailyActivitySyncResponse result = potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                1000,
+                200.0,
+                ActivitySource.HEALTH_CONNECT
+            )
+        );
+
+        assertThat(result.growthResult()).isNull();
+        assertThat(nonRepresentative.getGrowthDistance()).isEqualTo(1500.0);
     }
 
     @Test
@@ -241,12 +357,22 @@ class PotatoCommandServiceTest {
     }
 
     private UserPotato userPotato(Long id, Potato potato, boolean representative) {
+        return userPotato(id, potato, 2, 1500.0, representative);
+    }
+
+    private UserPotato userPotato(
+        Long id,
+        Potato potato,
+        int level,
+        double growthDistance,
+        boolean representative
+    ) {
         UserPotato userPotato = new UserPotato(
             mock(User.class),
             potato,
             Instant.parse("2026-07-01T00:00:00Z"),
-            2,
-            1500.0,
+            level,
+            growthDistance,
             representative
         );
         ReflectionTestUtils.setField(userPotato, "id", id);

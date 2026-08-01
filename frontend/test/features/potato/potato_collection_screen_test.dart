@@ -101,11 +101,82 @@ void main() {
     expect(repository.updatedPotatoId, '1');
     expect(find.text('대표 감자를 하지감자로 변경했어요.'), findsOneWidget);
   });
+
+  testWidgets('shows a level-up dialog after the latest collection loads', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      growthResult: const PotatoGrowthResult(
+        potatoId: '2',
+        potatoName: '곤드레감자',
+        previousLevel: 2,
+        currentLevel: 3,
+        leveledUp: true,
+        fullyGrown: false,
+      ),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('곤드레감자가 성장했어요!'), findsOneWidget);
+    expect(find.text('Lv.2에서 Lv.3으로 성장했어요.'), findsOneWidget);
+    expect(find.text('도감에서 확인'), findsOneWidget);
+  });
+
+  testWidgets('shows a distinct dialog when the potato is fully grown', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      growthResult: const PotatoGrowthResult(
+        potatoId: '2',
+        potatoName: '곤드레감자',
+        previousLevel: 4,
+        currentLevel: 5,
+        leveledUp: true,
+        fullyGrown: true,
+      ),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('곤드레감자가 완전히 자랐어요!'), findsOneWidget);
+    expect(find.text('최종 성장 단계 Lv.5에 도달했어요.'), findsOneWidget);
+  });
+
+  testWidgets('does not show growth feedback without a level-up', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      growthResult: const PotatoGrowthResult(
+        potatoId: '2',
+        potatoName: '곤드레감자',
+        previousLevel: 2,
+        currentLevel: 2,
+        leveledUp: false,
+        fullyGrown: false,
+      ),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('성장했어요!'), findsNothing);
+    expect(find.text('나의 감자 도감'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required List<Override> overrides,
+  PotatoGrowthResult? growthResult,
 }) async {
   tester.view.physicalSize = const Size(430, 932);
   tester.view.devicePixelRatio = 1;
@@ -115,6 +186,9 @@ Future<void> _pumpScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        potatoActivitySyncProvider.overrideWith(
+          (ref) async => growthResult,
+        ),
         potatoGrowthSummaryProvider.overrideWith(
           (ref) async => _growthSummary(),
         ),

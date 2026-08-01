@@ -112,7 +112,8 @@ class PotatoControllerTest {
             8420,
             5894.0,
             ActivitySource.HEALTH_CONNECT,
-            Instant.parse("2026-07-21T00:00:00Z")
+            Instant.parse("2026-07-21T00:00:00Z"),
+            new PotatoGrowthResultResponse(1L, "하지감자", 2, 3, true, false)
         ));
 
         mockMvc.perform(put("/potatoes/me/activity/daily")
@@ -132,7 +133,13 @@ class PotatoControllerTest {
             .andExpect(jsonPath("$.data.activityDate").value("2026-07-21"))
             .andExpect(jsonPath("$.data.steps").value(8420))
             .andExpect(jsonPath("$.data.distanceMeters").value(5894.0))
-            .andExpect(jsonPath("$.data.source").value("HEALTH_CONNECT"));
+            .andExpect(jsonPath("$.data.source").value("HEALTH_CONNECT"))
+            .andExpect(jsonPath("$.data.growthResult.potatoId").value(1))
+            .andExpect(jsonPath("$.data.growthResult.potatoName").value("하지감자"))
+            .andExpect(jsonPath("$.data.growthResult.previousLevel").value(2))
+            .andExpect(jsonPath("$.data.growthResult.currentLevel").value(3))
+            .andExpect(jsonPath("$.data.growthResult.leveledUp").value(true))
+            .andExpect(jsonPath("$.data.growthResult.fullyGrown").value(false));
     }
 
     @Test

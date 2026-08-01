@@ -31,6 +31,8 @@ class _PotatoCollectionScreenState
     extends ConsumerState<PotatoCollectionScreen> {
   PotatoRarity? _selectedRarity;
   bool _isUpdatingRepresentative = false;
+  bool _isGrowthFeedbackScheduled = false;
+  bool _hasShownGrowthFeedback = false;
 
   List<PotatoCollectionItem> _filteredItems(List<PotatoCollectionItem> items) {
     final selectedRarity = _selectedRarity;
@@ -109,8 +111,45 @@ class _PotatoCollectionScreenState
     }
   }
 
+  Future<void> _showGrowthFeedbackAfterCollectionLoads(
+    PotatoGrowthResult growthResult,
+  ) async {
+    if (!growthResult.leveledUp ||
+        _isGrowthFeedbackScheduled ||
+        _hasShownGrowthFeedback) {
+      return;
+    }
+
+    _isGrowthFeedbackScheduled = true;
+    try {
+      // 성장 결과와 도감 수치가 어긋나 보이지 않도록 최신 도감 조회 완료 후 안내한다.
+      await ref.read(potatoCollectionProvider.future);
+      if (!mounted || _hasShownGrowthFeedback) {
+        return;
+      }
+      _hasShownGrowthFeedback = true;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _PotatoGrowthDialog(growthResult: growthResult),
+      );
+    } catch (_) {
+      // 도감 로드 실패는 기존 오류 상태에서 처리하고 성장 안내만 생략한다.
+    } finally {
+      _isGrowthFeedbackScheduled = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<PotatoGrowthResult?>>(potatoActivitySyncProvider, (
+      previous,
+      next,
+    ) {
+      final growthResult = next.valueOrNull;
+      if (growthResult != null) {
+        _showGrowthFeedbackAfterCollectionLoads(growthResult);
+      }
+    });
     final collectionState = ref.watch(potatoCollectionProvider);
 
     return Scaffold(
@@ -144,6 +183,100 @@ class _PotatoCollectionScreenState
               onRetry: () => ref.invalidate(potatoCollectionProvider),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PotatoGrowthDialog extends StatelessWidget {
+  const _PotatoGrowthDialog({required this.growthResult});
+
+  final PotatoGrowthResult growthResult;
+
+  @override
+  Widget build(BuildContext context) {
+    final fullyGrown = growthResult.fullyGrown;
+    final accentColor = fullyGrown ? const Color(0xFFE0A91B) : _potatoDark;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 360),
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 78,
+              height: 78,
+              decoration: BoxDecoration(
+                color: fullyGrown
+                    ? const Color(0xFFFFE9A5)
+                    : const Color(0xFFE6F7EC),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                fullyGrown
+                    ? Icons.workspace_premium_rounded
+                    : Icons.trending_up_rounded,
+                color: accentColor,
+                size: 42,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              fullyGrown
+                  ? '${growthResult.potatoName}가 완전히 자랐어요!'
+                  : '${growthResult.potatoName}가 성장했어요!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              fullyGrown
+                  ? '최종 성장 단계 Lv.${growthResult.currentLevel}에 도달했어요.'
+                  : 'Lv.${growthResult.previousLevel}에서 '
+                      'Lv.${growthResult.currentLevel}으로 성장했어요.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 22),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                backgroundColor: accentColor,
+                foregroundColor: AppColors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                '도감에서 확인',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

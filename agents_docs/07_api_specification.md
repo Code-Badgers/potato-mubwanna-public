@@ -831,7 +831,7 @@ Response:
 
 - 로그인 사용자의 감자 도감 홈 상단 `오늘의 감자걸음` 카드에 필요한 수치를 내려준다.
 - 저장된 일일 활동 집계값을 우선 반환한다.
-- 저장된 활동 집계가 없으면 MVP 기본값 또는 `0`을 반환할 수 있다.
+- 저장된 활동 집계가 없으면 오늘, 주간, 월간 통계를 `0`으로 반환한다.
 - `todaySteps`는 당일 걸음 수, `dailyStepGoal`은 당일 목표 걸음 수다.
 - `weeklyDistanceKm`, `monthlyDistanceKm`는 주간/월간 누적 이동거리다.
 - `remainingDistanceKmForRepresentative`는 대표 감자의 다음 성장 목표까지 남은 거리다.
@@ -866,7 +866,15 @@ Response:
     "steps": 8420,
     "distanceMeters": 5894.0,
     "source": "HEALTH_CONNECT",
-    "syncedAt": "2026-07-21T12:00:00Z"
+    "syncedAt": "2026-07-21T12:00:00Z",
+    "growthResult": {
+      "potatoId": 2,
+      "potatoName": "곤드레감자",
+      "previousLevel": 2,
+      "currentLevel": 3,
+      "leveledUp": true,
+      "fullyGrown": false
+    }
   }
 }
 ```
@@ -876,7 +884,12 @@ Response:
 - 로그인 사용자의 HealthKit 또는 Health Connect 일일 활동 집계를 서버에 저장한다.
 - `activityDate`는 사용자 로컬 기준 날짜다.
 - `source`는 `HEALTH_KIT`, `HEALTH_CONNECT`, `MANUAL`, `UNKNOWN` 중 하나다.
-- 같은 사용자, 날짜, 출처 조합은 새 row를 만들지 않고 최신 값으로 갱신한다.
+- 같은 사용자, 날짜, 출처 조합은 새 row를 만들지 않고 저장된 최대 걸음 수와 이동 거리를 유지한다.
+- 최초 동기화는 요청 이동 거리 전체를, 재동기화는 저장된 최대 이동 거리보다 증가한 차이만 대표 감자 성장에 반영한다.
+- 동일하거나 감소한 스냅샷은 성장량을 중복 지급하거나 회수하지 않는다.
+- `growthResult`는 이번 요청의 양의 거리 증가분이 성장 전 대표 감자에 실제 반영된 경우에만 반환한다.
+- 대표 감자가 없거나 이미 완전히 성장했거나 거리 증가분이 없으면 `growthResult`는 `null`이다.
+- `leveledUp`은 현재 레벨이 이전 레벨보다 높을 때, `fullyGrown`은 이번 반영 후 레벨 5에 도달했을 때 `true`다.
 - `steps`와 `distanceMeters`는 음수일 수 없다.
 - `steps`가 비정상적으로 크거나 `distanceMeters`가 비정상적으로 크면 `400 Bad Request`를 반환한다.
 - 인증 정보가 없거나 사용자 정보가 유효하지 않으면 `401 Unauthorized`를 반환한다.

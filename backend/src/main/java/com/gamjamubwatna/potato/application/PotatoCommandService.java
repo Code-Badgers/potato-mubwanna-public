@@ -4,6 +4,7 @@ import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncRequest;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncResponse;
+import com.gamjamubwatna.potato.api.PotatoGrowthResultResponse;
 import com.gamjamubwatna.potato.api.PotatoRepresentativeResponse;
 import com.gamjamubwatna.potato.domain.ActivitySource;
 import com.gamjamubwatna.potato.domain.UserDailyActivity;
@@ -104,18 +105,34 @@ public class PotatoCommandService {
         }
 
         UserDailyActivity savedActivity = userDailyActivityRepository.save(activity);
-        applyRepresentativePotatoGrowth(userId, additionalGrowthDistance);
-        return PotatoDailyActivitySyncResponse.from(savedActivity);
+        PotatoGrowthResultResponse growthResult = applyRepresentativePotatoGrowth(
+            userId,
+            additionalGrowthDistance
+        );
+        return PotatoDailyActivitySyncResponse.from(savedActivity, growthResult);
     }
 
-    private void applyRepresentativePotatoGrowth(Long userId, double additionalGrowthDistance) {
+    private PotatoGrowthResultResponse applyRepresentativePotatoGrowth(
+        Long userId,
+        double additionalGrowthDistance
+    ) {
         if (additionalGrowthDistance <= 0) {
-            return;
+            return null;
         }
-        userPotatoRepository.findByUserId(userId).stream()
+
+        Optional<UserPotato> representativePotato = userPotatoRepository.findByUserId(userId)
+            .stream()
             .filter(UserPotato::isRepresentative)
-            .findFirst()
-            .ifPresent(userPotato -> userPotato.addGrowthDistance(additionalGrowthDistance));
+            .filter(userPotato -> !userPotato.isFullyGrown())
+            .findFirst();
+        if (representativePotato.isEmpty()) {
+            return null;
+        }
+
+        UserPotato userPotato = representativePotato.get();
+        int previousLevel = userPotato.getLevel();
+        userPotato.addGrowthDistance(additionalGrowthDistance);
+        return PotatoGrowthResultResponse.from(userPotato, previousLevel);
     }
 
     private void validateDailyActivityRequest(PotatoDailyActivitySyncRequest request) {
