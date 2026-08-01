@@ -127,6 +127,51 @@ class PotatoRepresentativeResult {
   }
 }
 
+class PotatoActivitySyncResult {
+  const PotatoActivitySyncResult({required this.growthResult});
+
+  final PotatoGrowthResult? growthResult;
+
+  static PotatoActivitySyncResult fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final growthResultJson = data['growthResult'];
+    return PotatoActivitySyncResult(
+      growthResult: growthResultJson is Map<String, dynamic>
+          ? PotatoGrowthResult.fromJson(growthResultJson)
+          : null,
+    );
+  }
+}
+
+class PotatoGrowthResult {
+  const PotatoGrowthResult({
+    required this.potatoId,
+    required this.potatoName,
+    required this.previousLevel,
+    required this.currentLevel,
+    required this.leveledUp,
+    required this.fullyGrown,
+  });
+
+  final String potatoId;
+  final String potatoName;
+  final int previousLevel;
+  final int currentLevel;
+  final bool leveledUp;
+  final bool fullyGrown;
+
+  static PotatoGrowthResult fromJson(Map<String, dynamic> json) {
+    return PotatoGrowthResult(
+      potatoId: json['potatoId']?.toString() ?? '',
+      potatoName: json['potatoName'] as String? ?? '',
+      previousLevel: json['previousLevel'] as int? ?? 0,
+      currentLevel: json['currentLevel'] as int? ?? 0,
+      leveledUp: json['leveledUp'] as bool? ?? false,
+      fullyGrown: json['fullyGrown'] as bool? ?? false,
+    );
+  }
+}
+
 class PotatoGrowthSummary {
   const PotatoGrowthSummary({
     required this.todaySteps,

@@ -14,23 +14,26 @@ final stepCountReaderProvider = Provider<StepCountReader>(
 );
 
 final potatoActivitySyncProvider =
-    FutureProvider.autoDispose<void>((ref) async {
+    FutureProvider.autoDispose<PotatoGrowthResult?>((ref) async {
   final authStatus = ref.watch(
     authControllerProvider.select((state) => state.status),
   );
   if (authStatus != AuthStatus.authenticated) {
-    return;
+    return null;
   }
 
   final snapshot = await ref.watch(stepCountReaderProvider).readTodaySteps();
   if (snapshot == null) {
-    return;
+    return null;
   }
 
   try {
-    await ref.watch(potatoRepositoryProvider).syncDailyActivity(snapshot);
+    return await ref
+        .watch(potatoRepositoryProvider)
+        .syncDailyActivity(snapshot);
   } catch (_) {
     // 동기화 실패가 도감 진입 자체를 막으면 안 되므로 서버의 마지막 상태를 계속 사용한다.
+    return null;
   }
 });
 

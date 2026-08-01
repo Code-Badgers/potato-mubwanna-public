@@ -35,8 +35,10 @@ class PotatoRepository {
     return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
-  Future<void> syncDailyActivity(StepCountSnapshot snapshot) async {
-    await _request(
+  Future<PotatoGrowthResult?> syncDailyActivity(
+    StepCountSnapshot snapshot,
+  ) async {
+    final response = await _request(
       () => _dio.put<Map<String, dynamic>>(
         ApiPaths.potatoDailyActivity,
         data: {
@@ -47,6 +49,15 @@ class PotatoRepository {
         },
       ),
     );
+    final apiResponse = ApiResponse<PotatoActivitySyncResult>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      PotatoActivitySyncResult.fromJson,
+    );
+
+    return _requireData(
+      apiResponse,
+      statusCode: response.statusCode,
+    ).growthResult;
   }
 
   Future<PotatoRepresentativeResult> updateRepresentativePotato(
