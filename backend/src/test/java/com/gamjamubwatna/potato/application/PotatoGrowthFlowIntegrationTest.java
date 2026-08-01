@@ -6,6 +6,7 @@ import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncRequest;
+import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncResponse;
 import com.gamjamubwatna.potato.api.PotatoGrowthSummaryResponse;
 import com.gamjamubwatna.potato.domain.ActivitySource;
 import com.gamjamubwatna.potato.domain.Potato;
@@ -66,9 +67,32 @@ class PotatoGrowthFlowIntegrationTest {
         ));
         LocalDate today = LocalDate.parse("2026-08-01");
 
-        sync(user.getId(), today, 3000, 2000.0);
-        sync(user.getId(), today, 2500, 1500.0);
-        sync(user.getId(), today, 6000, 4500.0);
+        PotatoDailyActivitySyncResponse initial = sync(
+            user.getId(),
+            today,
+            3000,
+            2000.0
+        );
+        PotatoDailyActivitySyncResponse decreased = sync(
+            user.getId(),
+            today,
+            2500,
+            1500.0
+        );
+        PotatoDailyActivitySyncResponse leveledUp = sync(
+            user.getId(),
+            today,
+            6000,
+            4500.0
+        );
+
+        assertThat(initial.growthResult()).isNotNull();
+        assertThat(initial.growthResult().leveledUp()).isFalse();
+        assertThat(decreased.growthResult()).isNull();
+        assertThat(leveledUp.growthResult()).isNotNull();
+        assertThat(leveledUp.growthResult().previousLevel()).isEqualTo(1);
+        assertThat(leveledUp.growthResult().currentLevel()).isEqualTo(2);
+        assertThat(leveledUp.growthResult().leveledUp()).isTrue();
 
         UserPotato grownPotato = userPotatoRepository.findByUserId(user.getId()).getFirst();
         assertThat(grownPotato.getLevel()).isEqualTo(2);
@@ -84,8 +108,13 @@ class PotatoGrowthFlowIntegrationTest {
         assertThat(summary.remainingDistanceKmForRepresentative()).isEqualTo(1.5);
     }
 
-    private void sync(Long userId, LocalDate date, int steps, double distanceMeters) {
-        potatoCommandService.syncDailyActivity(
+    private PotatoDailyActivitySyncResponse sync(
+        Long userId,
+        LocalDate date,
+        int steps,
+        double distanceMeters
+    ) {
+        return potatoCommandService.syncDailyActivity(
             userId,
             new PotatoDailyActivitySyncRequest(
                 date,

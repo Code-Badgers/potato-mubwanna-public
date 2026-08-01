@@ -10,16 +10,21 @@ public record PotatoDailyActivitySyncResponse(
     int steps,
     double distanceMeters,
     ActivitySource source,
-    Instant syncedAt
+    Instant syncedAt,
+    PotatoGrowthResultResponse growthResult
 ) {
 
-    public static PotatoDailyActivitySyncResponse from(UserDailyActivity activity) {
+    public static PotatoDailyActivitySyncResponse from(
+        UserDailyActivity activity,
+        PotatoGrowthResultResponse growthResult
+    ) {
         return new PotatoDailyActivitySyncResponse(
             activity.getActivityDate(),
             activity.getSteps(),
             activity.getDistanceMeters(),
             activity.getSource(),
-            activity.getSyncedAt()
+            activity.getSyncedAt(),
+            growthResult
         );
     }
 }
