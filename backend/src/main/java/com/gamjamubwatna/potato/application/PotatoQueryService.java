@@ -23,10 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PotatoQueryService {
 
-    private static final int MVP_TODAY_STEPS = 7842;
-    private static final int MVP_DAILY_STEP_GOAL = 10000;
-    private static final double MVP_WEEKLY_DISTANCE_KM = 28.4;
-    private static final double MVP_MONTHLY_DISTANCE_KM = 116.8;
+    private static final int DAILY_STEP_GOAL = 10000;
     private static final double METERS_PER_KILOMETER = 1000.0;
 
     private final PotatoRepository potatoRepository;
@@ -103,10 +100,6 @@ public class PotatoQueryService {
                 queryStartDate,
                 today
             );
-        if (activities.isEmpty()) {
-            return mvpGrowthSummary(userId);
-        }
-
         int todaySteps = activities.stream()
             .filter(activity -> activity.getActivityDate().isEqual(today))
             .mapToInt(UserDailyActivity::getSteps)
@@ -122,19 +115,9 @@ public class PotatoQueryService {
 
         return new PotatoGrowthSummaryResponse(
             todaySteps,
-            MVP_DAILY_STEP_GOAL,
+            DAILY_STEP_GOAL,
             weeklyDistanceKm,
             monthlyDistanceKm,
-            remainingDistanceKmForRepresentative(userId)
-        );
-    }
-
-    private PotatoGrowthSummaryResponse mvpGrowthSummary(Long userId) {
-        return new PotatoGrowthSummaryResponse(
-            MVP_TODAY_STEPS,
-            MVP_DAILY_STEP_GOAL,
-            MVP_WEEKLY_DISTANCE_KM,
-            MVP_MONTHLY_DISTANCE_KM,
             remainingDistanceKmForRepresentative(userId)
         );
     }
@@ -150,6 +133,9 @@ public class PotatoQueryService {
     }
 
     private double remainingGrowthDistanceKm(UserPotato userPotato) {
+        if (userPotato.isFullyGrown()) {
+            return 0.0;
+        }
         double remainingMeters = Math.max(
             0.0,
             userPotato.getPotato().getGrowthGoalDistance() - userPotato.getGrowthDistance()

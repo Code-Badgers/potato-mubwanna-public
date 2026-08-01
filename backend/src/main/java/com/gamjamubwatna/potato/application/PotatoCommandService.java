@@ -13,6 +13,7 @@ import com.gamjamubwatna.potato.domain.UserPotatoRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,22 +79,43 @@ public class PotatoCommandService {
         ActivitySource source = request.source();
         Instant now = Instant.now();
 
-        UserDailyActivity activity = userDailyActivityRepository
-            .findByUserIdAndActivityDateAndSource(userId, activityDate, source)
-            .map(existing -> {
-                existing.update(request.steps(), request.distanceMeters(), now);
-                return existing;
-            })
-            .orElseGet(() -> new UserDailyActivity(
+        UserDailyActivity activity;
+        double additionalGrowthDistance;
+        Optional<UserDailyActivity> existingActivity = userDailyActivityRepository
+            .findByUserIdAndActivityDateAndSource(userId, activityDate, source);
+        if (existingActivity.isPresent()) {
+            activity = existingActivity.get();
+            // 건강 데이터가 줄어들거나 재전송돼도 이미 지급한 성장량은 회수하거나 중복 지급하지 않는다.
+            additionalGrowthDistance = activity.mergeSnapshot(
+                request.steps(),
+                request.distanceMeters(),
+                now
+            );
+        } else {
+            activity = new UserDailyActivity(
                 user,
                 activityDate,
                 request.steps(),
                 request.distanceMeters(),
                 source,
                 now
-            ));
+            );
+            additionalGrowthDistance = request.distanceMeters();
+        }
 
-        return PotatoDailyActivitySyncResponse.from(userDailyActivityRepository.save(activity));
+        UserDailyActivity savedActivity = userDailyActivityRepository.save(activity);
+        applyRepresentativePotatoGrowth(userId, additionalGrowthDistance);
+        return PotatoDailyActivitySyncResponse.from(savedActivity);
+    }
+
+    private void applyRepresentativePotatoGrowth(Long userId, double additionalGrowthDistance) {
+        if (additionalGrowthDistance <= 0) {
+            return;
+        }
+        userPotatoRepository.findByUserId(userId).stream()
+            .filter(UserPotato::isRepresentative)
+            .findFirst()
+            .ifPresent(userPotato -> userPotato.addGrowthDistance(additionalGrowthDistance));
     }
 
     private void validateDailyActivityRequest(PotatoDailyActivitySyncRequest request) {
@@ -103,11 +125,10 @@ public class PotatoCommandService {
         if (request.steps() == null || request.steps() < 0 || request.steps() > MAX_DAILY_STEPS) {
             throw new PotatoActivityException("걸음 수가 허용 범위를 벗어났습니다.");
         }
-        if (
-            request.distanceMeters() == null
-                || request.distanceMeters() < 0
-                || request.distanceMeters() > MAX_DAILY_DISTANCE_METERS
-        ) {
+        if (request.distanceMeters() == null
+            || !Double.isFinite(request.distanceMeters())
+            || request.distanceMeters() < 0
+            || request.distanceMeters() > MAX_DAILY_DISTANCE_METERS) {
             throw new PotatoActivityException("이동 거리가 허용 범위를 벗어났습니다.");
         }
     }
