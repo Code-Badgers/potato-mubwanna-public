@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.auth.domain.User;
@@ -103,7 +105,9 @@ class PotatoCommandServiceTest {
     @Test
     void createsDailyActivityWhenActivityDoesNotExist() {
         User user = mock(User.class);
+        UserPotato representative = userPotato(1L, potato(1L, "하지감자"), true);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
         when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
             1L,
             LocalDate.parse("2026-07-21"),
@@ -127,6 +131,8 @@ class PotatoCommandServiceTest {
         assertThat(result.distanceMeters()).isEqualTo(5894.0);
         assertThat(result.source()).isEqualTo(ActivitySource.HEALTH_CONNECT);
         assertThat(result.syncedAt()).isNotNull();
+        assertThat(representative.getLevel()).isEqualTo(4);
+        assertThat(representative.getGrowthDistance()).isEqualTo(1394.0);
     }
 
     @Test
@@ -139,7 +145,9 @@ class PotatoCommandServiceTest {
             ActivitySource.HEALTH_KIT,
             Instant.parse("2026-07-21T00:00:00Z")
         );
+        UserPotato representative = userPotato(1L, potato(1L, "하지감자"), true);
         when(userRepository.findById(1L)).thenReturn(Optional.of(mock(User.class)));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
         when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
             1L,
             LocalDate.parse("2026-07-21"),
@@ -160,6 +168,42 @@ class PotatoCommandServiceTest {
 
         assertThat(result.steps()).isEqualTo(9000);
         assertThat(result.distanceMeters()).isEqualTo(6300.0);
+        assertThat(representative.getLevel()).isEqualTo(3);
+        assertThat(representative.getGrowthDistance()).isEqualTo(2700.0);
+    }
+
+    @Test
+    void doesNotDuplicateGrowthWhenSnapshotIsUnchangedOrDecreased() {
+        UserDailyActivity activity = new UserDailyActivity(
+            mock(User.class),
+            LocalDate.parse("2026-07-21"),
+            5000,
+            3500.0,
+            ActivitySource.HEALTH_CONNECT,
+            Instant.parse("2026-07-21T00:00:00Z")
+        );
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mock(User.class)));
+        when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
+            1L,
+            LocalDate.parse("2026-07-21"),
+            ActivitySource.HEALTH_CONNECT
+        )).thenReturn(Optional.of(activity));
+        when(userDailyActivityRepository.save(any(UserDailyActivity.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoDailyActivitySyncResponse result = potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                4500,
+                3000.0,
+                ActivitySource.HEALTH_CONNECT
+            )
+        );
+
+        assertThat(result.steps()).isEqualTo(5000);
+        assertThat(result.distanceMeters()).isEqualTo(3500.0);
+        verify(userPotatoRepository, never()).findByUserId(1L);
     }
 
     @Test
@@ -177,6 +221,23 @@ class PotatoCommandServiceTest {
         ))
             .isInstanceOf(PotatoActivityException.class)
             .hasMessage("걸음 수가 허용 범위를 벗어났습니다.");
+    }
+
+    @Test
+    void rejectsNonFiniteDistance() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mock(User.class)));
+
+        assertThatThrownBy(() -> potatoCommandService.syncDailyActivity(
+            1L,
+            new PotatoDailyActivitySyncRequest(
+                LocalDate.parse("2026-07-21"),
+                100,
+                Double.NaN,
+                ActivitySource.HEALTH_CONNECT
+            )
+        ))
+            .isInstanceOf(PotatoActivityException.class)
+            .hasMessage("이동 거리가 허용 범위를 벗어났습니다.");
     }
 
     private UserPotato userPotato(Long id, Potato potato, boolean representative) {

@@ -1,15 +1,18 @@
 package com.gamjamubwatna.potato.domain;
 
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface UserDailyActivityRepository extends JpaRepository<UserDailyActivity, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<UserDailyActivity> findByUserIdAndActivityDateAndSource(
         Long userId,
         LocalDate activityDate,

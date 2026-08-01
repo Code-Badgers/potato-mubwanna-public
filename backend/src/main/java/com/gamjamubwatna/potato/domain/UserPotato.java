@@ -25,6 +25,8 @@ import java.time.Instant;
 )
 public class UserPotato {
 
+    private static final int MAX_GROWTH_LEVEL = 5;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_potato_id")
@@ -95,6 +97,37 @@ public class UserPotato {
 
     public boolean isRepresentative() {
         return representative;
+    }
+
+    public boolean isFullyGrown() {
+        return level >= MAX_GROWTH_LEVEL;
+    }
+
+    public void addGrowthDistance(double additionalDistance) {
+        if (!Double.isFinite(additionalDistance) || additionalDistance < 0) {
+            throw new IllegalArgumentException("성장 거리는 0 이상의 유한한 값이어야 합니다.");
+        }
+
+        double growthGoalDistance = potato.getGrowthGoalDistance();
+        if (!Double.isFinite(growthGoalDistance) || growthGoalDistance <= 0) {
+            throw new IllegalStateException("감자 성장 목표 거리를 확인할 수 없습니다.");
+        }
+        if (isFullyGrown()) {
+            level = MAX_GROWTH_LEVEL;
+            growthDistance = growthGoalDistance;
+            return;
+        }
+
+        growthDistance += additionalDistance;
+        while (level < MAX_GROWTH_LEVEL && growthDistance >= growthGoalDistance) {
+            level++;
+            growthDistance -= growthGoalDistance;
+        }
+
+        // 완성 단계는 다음 목표가 없으므로 진행률을 100%로 고정한다.
+        if (isFullyGrown()) {
+            growthDistance = growthGoalDistance;
+        }
     }
 
     public void markRepresentative() {

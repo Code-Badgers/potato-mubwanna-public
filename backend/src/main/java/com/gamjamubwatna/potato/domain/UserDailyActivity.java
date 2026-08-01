@@ -80,11 +80,14 @@ public class UserDailyActivity {
         this.updatedAt = now;
     }
 
-    public void update(int steps, double distanceMeters, Instant now) {
-        this.steps = steps;
-        this.distanceMeters = distanceMeters;
+    // 하향 보정 뒤 같은 누적 구간이 다시 들어와 성장량이 중복 지급되지 않도록 최대값만 보관한다.
+    public double mergeSnapshot(int steps, double distanceMeters, Instant now) {
+        double previousDistanceMeters = this.distanceMeters;
+        this.steps = Math.max(this.steps, steps);
+        this.distanceMeters = Math.max(this.distanceMeters, distanceMeters);
         this.syncedAt = now;
         this.updatedAt = now;
+        return this.distanceMeters - previousDistanceMeters;
     }
 
     public LocalDate getActivityDate() {
