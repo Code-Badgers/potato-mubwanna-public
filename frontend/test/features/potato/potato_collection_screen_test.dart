@@ -25,8 +25,8 @@ void main() {
     expect(find.text('곤드레감자'), findsWidgets);
     expect(find.text('2 / 3'), findsOneWidget);
     expect(find.text('오늘의 감자걸음'), findsOneWidget);
-    expect(find.text('0 걸음'), findsWidgets);
-    expect(find.text('/10,000 걸음'), findsNothing);
+    expect(find.text('7,842 걸음'), findsOneWidget);
+    expect(find.text('/10,000 걸음'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, '정보 보기'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '대표 감자 변경'), findsOneWidget);
     expect(find.text('나의 감자 도감'), findsNothing);

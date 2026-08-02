@@ -14,6 +14,13 @@ const _potatoDark = Color(0xFF509B64);
 const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
 
+String _formatInt(int value) {
+  return value.toString().replaceAllMapped(
+        RegExp(r'\B(?=(\d{3})+(?!\d))'),
+        (match) => ',',
+      );
+}
+
 class PotatoCollectionScreen extends ConsumerStatefulWidget {
   const PotatoCollectionScreen({super.key});
 
@@ -579,7 +586,16 @@ class _TodayStepCard extends ConsumerWidget {
     final summaryState = ref.watch(potatoGrowthSummaryProvider);
 
     return summaryState.when(
-      data: (_) => const _TodayStepCardContent(),
+      data: (summary) => _TodayStepCardContent(
+        summary: summary ??
+            const PotatoGrowthSummary(
+              todaySteps: 0,
+              dailyStepGoal: 10000,
+              weeklyDistanceKm: 0,
+              monthlyDistanceKm: 0,
+              remainingDistanceKmForRepresentative: 0,
+            ),
+      ),
       loading: () => const _TodayStepCardShell(
         child: SizedBox(
           height: 148,
@@ -778,15 +794,24 @@ class _GrowthProgress extends StatelessWidget {
 }
 
 class _TodayStepCardContent extends StatelessWidget {
-  const _TodayStepCardContent();
+  const _TodayStepCardContent({required this.summary});
+
+  final PotatoGrowthSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    return const _TodayStepCardShell(
+    final ratio = summary.stepRatio;
+    final percent = (ratio * 100).round();
+    final remainingDistance = summary.remainingDistanceKmForRepresentative;
+    final remainingLabel = remainingDistance <= 0
+        ? '오늘 성장 목표를 달성했어요'
+        : '성장까지 약 ${remainingDistance.toStringAsFixed(1)}km 남았어요';
+
+    return _TodayStepCardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             '오늘의 감자걸음',
             style: TextStyle(
               color: AppColors.textPrimary,
@@ -795,7 +820,7 @@ class _TodayStepCardContent extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          SizedBox(height: 14),
+          const SizedBox(height: 14),
           Row(
             children: [
               SizedBox(
@@ -806,14 +831,15 @@ class _TodayStepCardContent extends StatelessWidget {
                   children: [
                     CircularProgressIndicator(
                       strokeWidth: 10,
-                      value: 0,
-                      backgroundColor: Color(0xFFE7EFE9),
-                      valueColor: AlwaysStoppedAnimation<Color>(_potatoPrimary),
+                      value: ratio,
+                      backgroundColor: const Color(0xFFE7EFE9),
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(_potatoPrimary),
                     ),
                     Center(
                       child: Text(
-                        '0%',
-                        style: TextStyle(
+                        '$percent%',
+                        style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
@@ -824,24 +850,34 @@ class _TodayStepCardContent extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: 18),
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '0 걸음',
-                      style: TextStyle(
+                      '${_formatInt(summary.todaySteps)} 걸음',
+                      style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 27,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
                     ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 6),
                     Text(
-                      '오늘의 걸음 기록을 준비 중이에요',
-                      style: TextStyle(
+                      '/${_formatInt(summary.dailyStepGoal)} 걸음',
+                      style: const TextStyle(
+                        color: _potatoDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      remainingLabel,
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -853,32 +889,32 @@ class _TodayStepCardContent extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _StepSummaryTile(
                   label: '이번 주',
-                  value: '0 걸음',
+                  value: '${summary.weeklyDistanceKm.toStringAsFixed(1)} km',
                 ),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: _StepSummaryTile(
                   label: '이번 달',
-                  value: '0 걸음',
+                  value: '${summary.monthlyDistanceKm.toStringAsFixed(1)} km',
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ClipRRect(
-            borderRadius: BorderRadius.all(Radius.circular(999)),
+            borderRadius: const BorderRadius.all(Radius.circular(999)),
             child: LinearProgressIndicator(
               minHeight: 10,
-              value: 0,
-              backgroundColor: Color(0xFFFFE9B6),
-              valueColor: AlwaysStoppedAnimation<Color>(_potatoYellow),
+              value: ratio,
+              backgroundColor: const Color(0xFFFFE9B6),
+              valueColor: const AlwaysStoppedAnimation<Color>(_potatoYellow),
             ),
           ),
         ],
