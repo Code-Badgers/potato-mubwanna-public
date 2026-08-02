@@ -116,27 +116,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             )
                           : const SizedBox.expand(
                               key: Key('kakao-login-button-content'),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Positioned(
-                                    left: 14,
-                                    child: Icon(
-                                      Icons.chat_bubble_rounded,
-                                      color: Color(0xFF191600),
-                                      size: 19,
-                                    ),
+                              child: Center(
+                                child: Text(
+                                  '카카오 로그인',
+                                  style: TextStyle(
+                                    color: Color(0xFF191600),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0,
                                   ),
-                                  Text(
-                                    '카카오 로그인',
-                                    style: TextStyle(
-                                      color: Color(0xFF191600),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                     ),
