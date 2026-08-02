@@ -26,6 +26,17 @@
 - `potato_legend_yanggu.png`: 짙은 보라색과 숨은 계곡 전설 컨셉의 양구 전설감자
 - `potato_unknown.png`: 미획득 슬롯용 잠금 감자
 
+## Temporary Code Mapping
+
+아래 코드는 백엔드 감자 카탈로그에는 존재하지만 아직 전용 캐릭터 이미지가 없다.
+프론트는 도감 레이아웃이 깨지지 않도록 임시로 가장 가까운 기존 이미지를 재사용한다.
+전용 이미지가 추가되면 `potato_asset.dart`의 alias만 제거하거나 실제 파일명으로 교체한다.
+
+- `POTATO_COMMON_SEED` -> `potato_haji_seed.png`
+- `POTATO_GOLDEN_HONGCHEON` -> `potato_golden_gangwon.png`
+- `POTATO_HOBAN_CHUNCHEON` -> `potato_haji_gangneung.png`
+- `POTATO_RARE_SEED` -> `potato_jaju_seed.png`
+
 ## Image Guide
 
 - 투명 배경 PNG 권장

@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/potato_collection_controller.dart';
 import '../../domain/potato_collection.dart';
+import '../potato_asset.dart';
 
 const _potatoPrimary = Color(0xFF56C787);
 const _potatoDark = Color(0xFF509B64);
@@ -1023,7 +1024,7 @@ class _PotatoArtSlot extends StatelessWidget {
     final imageUrl = potato?.imageUrl;
     final assetPath = locked || potato == null
         ? 'assets/potatoes/potato_unknown.png'
-        : _potatoAssetPath(potato.code);
+        : potatoLocalAssetPath(potato.code);
 
     return Container(
       width: size,
@@ -1068,10 +1069,6 @@ class _PotatoArtFallback extends StatelessWidget {
       color: locked ? AppColors.textSecondary : _potatoDark,
     );
   }
-}
-
-String _potatoAssetPath(String code) {
-  return 'assets/potatoes/${code.toLowerCase()}.png';
 }
 
 class _RarityBadge extends StatelessWidget {
