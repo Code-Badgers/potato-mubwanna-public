@@ -50,6 +50,8 @@
 	<string>점순이 미션의 QR 스캔과 인증 사진 촬영을 위해 카메라를 사용합니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>점순이 미션 인증 사진을 갤러리에서 선택하기 위해 사용합니다.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>주변 감자 스팟 탐색과 관광지 방문 인증을 위해 현재 위치를 사용합니다.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
