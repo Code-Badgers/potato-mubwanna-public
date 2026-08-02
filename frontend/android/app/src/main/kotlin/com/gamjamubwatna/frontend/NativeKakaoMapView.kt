@@ -166,7 +166,7 @@ class NativeKakaoMapView(
             val spotId = spot["id"]?.toString() ?: "${latitude}_${longitude}"
             val isRare = spot["rare"] as? Boolean ?: false
             val markerColor = spot["markerColor"]?.toString() ?: if (isRare) "#F6C23E" else "#36D98F"
-            val labelText = if (isRare) "🥔★" else "🥔"
+            val labelText = "🥔"
             val styleKey = "${markerColor.replace("#", "")}_${if (isRare) "rare" else "normal"}"
             val styles = styleCache.getOrPut(styleKey) {
                 val labelStyles = LabelStyles.from(

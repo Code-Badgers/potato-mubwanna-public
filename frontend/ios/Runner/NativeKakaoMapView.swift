@@ -360,11 +360,11 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   private func addPoiStyles(labelManager: LabelManager, markerColor: String, isRare: Bool) {
     let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
-    let text = isRare ? "🥔★" : "🥔"
+    let text = "🥔"
     [
-      ("small", CGSize(width: isRare ? 30 : 26, height: 26), CGFloat(isRare ? 10 : 13)),
-      ("medium", CGSize(width: isRare ? 38 : 32, height: 32), CGFloat(isRare ? 13 : 16)),
-      ("large", CGSize(width: isRare ? 44 : 38, height: 38), CGFloat(isRare ? 15 : 18)),
+      ("small", CGSize(width: 26, height: 26), CGFloat(13)),
+      ("medium", CGSize(width: 32, height: 32), CGFloat(16)),
+      ("large", CGSize(width: 38, height: 38), CGFloat(18)),
     ].forEach { sizeKey, size, fontSize in
       labelManager.addPoiStyle(
         makePoiStyle(

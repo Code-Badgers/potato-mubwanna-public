@@ -337,14 +337,14 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerElement.type = 'button';
           markerElement.title = spot.name;
           markerElement.setAttribute('aria-label', spot.name);
-          markerElement.textContent = spot.rare ? '🥔★' : '🥔';
-          markerElement.style.width = spot.rare ? '42px' : '36px';
+          markerElement.textContent = '🥔';
+          markerElement.style.width = '36px';
           markerElement.style.height = '36px';
           markerElement.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
           markerElement.style.borderRadius = '999px';
           markerElement.style.background = '#FFFFFF';
           markerElement.style.boxShadow = '0 6px 14px rgba(0,0,0,0.16)';
-          markerElement.style.fontSize = spot.rare ? '15px' : '18px';
+          markerElement.style.fontSize = '18px';
           markerElement.style.lineHeight = '1';
           markerElement.style.cursor = 'pointer';
           markerElement.style.padding = '0';
