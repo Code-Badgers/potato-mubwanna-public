@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,12 +29,80 @@ class PotatoCollectionScreen extends ConsumerStatefulWidget {
       _PotatoCollectionScreenState();
 }
 
-class _PotatoCollectionScreenState
-    extends ConsumerState<PotatoCollectionScreen> {
+class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
+    with WidgetsBindingObserver {
   PotatoRarity? _selectedRarity;
   bool _isUpdatingRepresentative = false;
   bool _isGrowthFeedbackScheduled = false;
   bool _hasShownGrowthFeedback = false;
+  bool _hasLeftForeground = false;
+  Future<void>? _refreshFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) {
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      if (!_hasLeftForeground) {
+        return;
+      }
+      _hasLeftForeground = false;
+      unawaited(_refreshPotatoData());
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _hasLeftForeground = true;
+    }
+  }
+
+  Future<void> _refreshPotatoData() {
+    final pendingRefresh = _refreshFuture;
+    if (pendingRefresh != null) {
+      return pendingRefresh;
+    }
+
+    late final Future<void> refresh;
+    refresh = _performPotatoDataRefresh().whenComplete(() {
+      if (identical(_refreshFuture, refresh)) {
+        _refreshFuture = null;
+      }
+    });
+    _refreshFuture = refresh;
+    return refresh;
+  }
+
+  Future<void> _performPotatoDataRefresh() async {
+    ref.invalidate(potatoActivitySyncProvider);
+    ref.invalidate(potatoCollectionProvider);
+    ref.invalidate(potatoGrowthSummaryProvider);
+
+    try {
+      await Future.wait<Object?>([
+        ref.read(potatoActivitySyncProvider.future),
+        ref.read(potatoCollectionProvider.future),
+        ref.read(potatoGrowthSummaryProvider.future),
+      ]);
+    } catch (_) {
+      // 각 provider가 기존 오류 UI를 유지하므로 새로고침 제스처만 정상 종료한다.
+    }
+  }
 
   List<PotatoCollectionItem> _filteredItems(List<PotatoCollectionItem> items) {
     final selectedRarity = _selectedRarity;
@@ -158,18 +228,22 @@ class _PotatoCollectionScreenState
         child: collectionState.when(
           data: (collection) => collection == null
               ? const _SignedOutPotatoState()
-              : _PotatoCollectionBody(
-                  collection: collection,
-                  selectedRarity: _selectedRarity,
-                  filteredItems: _filteredItems(collection.items),
-                  onRarityChanged: (rarity) {
-                    setState(() => _selectedRarity = rarity);
-                  },
-                  onTapItem: _showPotatoDetail,
-                  updatingRepresentative: _isUpdatingRepresentative,
-                  onChangeRepresentative: () {
-                    _showRepresentativePicker(collection);
-                  },
+              : RefreshIndicator(
+                  color: _potatoPrimary,
+                  onRefresh: _refreshPotatoData,
+                  child: _PotatoCollectionBody(
+                    collection: collection,
+                    selectedRarity: _selectedRarity,
+                    filteredItems: _filteredItems(collection.items),
+                    onRarityChanged: (rarity) {
+                      setState(() => _selectedRarity = rarity);
+                    },
+                    onTapItem: _showPotatoDetail,
+                    updatingRepresentative: _isUpdatingRepresentative,
+                    onChangeRepresentative: () {
+                      _showRepresentativePicker(collection);
+                    },
+                  ),
                 ),
           loading: () => const _PotatoStatusBody(
             child: Center(
@@ -307,6 +381,7 @@ class _PotatoCollectionBody extends StatelessWidget {
     final representative = collection.representativePotato;
 
     return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         const SliverToBoxAdapter(child: _PotatoHeader()),
         SliverToBoxAdapter(
