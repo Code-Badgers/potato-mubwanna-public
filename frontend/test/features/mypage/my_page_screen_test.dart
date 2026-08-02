@@ -15,7 +15,9 @@ import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
 import 'package:potato_mubwanna/features/mypage/application/user_activity_summary_controller.dart';
+import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_activity_summary.dart';
+import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
@@ -81,7 +83,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('마이'), findsNothing);
-    expect(find.text('감자여행자'), findsNothing);
+    expect(find.text('감자여행자'), findsOneWidget);
+    expect(find.text('강원 감자 여행자'), findsOneWidget);
     expect(find.text('Lv.2'), findsNothing);
     expect(find.text('6,420 / 10,000'), findsNothing);
 
@@ -323,6 +326,15 @@ List<Override> _myPageProviderOverrides({
         totalSteps: 256842,
         stampCount: 12,
         ownedPotatoCount: 7,
+      ),
+    ),
+    userProfileProvider.overrideWith(
+      (ref) async => const UserProfile(
+        userId: 1,
+        nickname: '감자여행자',
+        email: '',
+        profileImage: '',
+        createdAt: null,
       ),
     ),
     ...overrides,
