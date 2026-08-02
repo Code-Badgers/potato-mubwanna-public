@@ -319,7 +319,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       function applyMarkerScale() {
         const scale = markerScale(map.getLevel());
         markerElements.forEach(function (markerElement) {
-          markerElement.style.transform = 'scale(' + scale + ')';
+          markerElement.style.transform = 'scale(' + scale + ') rotate(-10deg)';
         });
       }
 
@@ -338,34 +338,49 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerElement.title = spot.name;
           markerElement.setAttribute('aria-label', spot.name);
           markerElement.textContent = '';
-          markerElement.style.width = '26px';
-          markerElement.style.height = '26px';
-          markerElement.style.border = '3px solid ' + (spot.markerColor || '#F6C23E');
-          markerElement.style.borderRadius = '999px';
-          markerElement.style.background = '#FFFFFF';
-          markerElement.style.boxShadow = '0 5px 12px rgba(32,35,26,0.16)';
+          markerElement.style.width = '34px';
+          markerElement.style.height = '40px';
+          markerElement.style.border = '0';
+          markerElement.style.borderRadius = '999px 999px 999px 10px';
+          markerElement.style.background = '#FFF2CA';
+          markerElement.style.boxShadow = '0 7px 16px rgba(32,35,26,0.18)';
           markerElement.style.position = 'relative';
           markerElement.style.lineHeight = '1';
           markerElement.style.cursor = 'pointer';
           markerElement.style.padding = '0';
           markerElement.style.transformOrigin = '50% 100%';
           markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
-          const markerDot = document.createElement('span');
-          markerDot.style.position = 'absolute';
-          markerDot.style.left = '50%';
-          markerDot.style.top = '50%';
-          markerDot.style.width = '8px';
-          markerDot.style.height = '8px';
-          markerDot.style.borderRadius = '999px';
-          markerDot.style.background = spot.markerColor || '#F6C23E';
-          markerDot.style.transform = 'translate(-50%, -50%)';
-          markerElement.appendChild(markerDot);
+          markerElement.style.outline = '2.5px solid ' + (spot.markerColor || '#F6C23E');
+          markerElement.style.outlineOffset = '-2.5px';
+          markerElement.style.transform = 'rotate(-10deg)';
+          const potatoEyeLeft = document.createElement('span');
+          potatoEyeLeft.style.position = 'absolute';
+          potatoEyeLeft.style.left = '11px';
+          potatoEyeLeft.style.top = '16px';
+          potatoEyeLeft.style.width = '3px';
+          potatoEyeLeft.style.height = '3px';
+          potatoEyeLeft.style.borderRadius = '999px';
+          potatoEyeLeft.style.background = '#7A4A24';
+          const potatoEyeRight = potatoEyeLeft.cloneNode();
+          potatoEyeRight.style.left = '21px';
+          const potatoLeaf = document.createElement('span');
+          potatoLeaf.style.position = 'absolute';
+          potatoLeaf.style.left = '20px';
+          potatoLeaf.style.top = '-5px';
+          potatoLeaf.style.width = '12px';
+          potatoLeaf.style.height = '8px';
+          potatoLeaf.style.borderRadius = '999px 999px 999px 2px';
+          potatoLeaf.style.background = '#56C787';
+          potatoLeaf.style.transform = 'rotate(24deg)';
+          markerElement.appendChild(potatoLeaf);
+          markerElement.appendChild(potatoEyeLeft);
+          markerElement.appendChild(potatoEyeRight);
           markerElement.addEventListener('click', function () {
             if (selectedMarkerElement) {
-              selectedMarkerElement.style.borderColor =
+              selectedMarkerElement.style.outlineColor =
                 selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
             }
-            markerElement.style.borderColor = '#F6C23E';
+            markerElement.style.outlineColor = '#F6C23E';
             selectedMarkerElement = markerElement;
             window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
               detail: { spotId: String(spot.id) }

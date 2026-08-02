@@ -415,27 +415,54 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     size: CGSize
   ) -> UIImage? {
     let renderer = UIGraphicsImageRenderer(size: size)
-    return renderer.image { _ in
-      let markerRect = CGRect(x: 4, y: 4, width: size.width - 8, height: size.height - 8)
-      let markerPath = UIBezierPath(
-        roundedRect: markerRect,
-        cornerRadius: markerRect.height / 2
-      )
-      UIColor.white.setFill()
-      markerPath.fill()
-      color.setStroke()
-      markerPath.lineWidth = 3
-      markerPath.stroke()
-
-      let dotSize = max(6, size.width * 0.26)
-      let dotRect = CGRect(
-        x: (size.width - dotSize) / 2,
-        y: (size.height - dotSize) / 2,
-        width: dotSize,
-        height: dotSize
-      )
+    return renderer.image { context in
+      let pinTip = UIBezierPath()
+      pinTip.move(to: CGPoint(x: size.width / 2 - 5, y: size.height - 13))
+      pinTip.addLine(to: CGPoint(x: size.width / 2 + 5, y: size.height - 13))
+      pinTip.addLine(to: CGPoint(x: size.width / 2, y: size.height - 3))
+      pinTip.close()
       color.setFill()
-      UIBezierPath(ovalIn: dotRect).fill()
+      pinTip.fill()
+
+      let leafRect = CGRect(
+        x: size.width - 17,
+        y: 2,
+        width: 12,
+        height: 9
+      )
+      context.cgContext.saveGState()
+      context.cgContext.translateBy(x: leafRect.midX, y: leafRect.midY)
+      context.cgContext.rotate(by: 24 * .pi / 180)
+      context.cgContext.translateBy(x: -leafRect.midX, y: -leafRect.midY)
+      UIColor(red: 0.337, green: 0.780, blue: 0.529, alpha: 1).setFill()
+      UIBezierPath(ovalIn: leafRect).fill()
+      context.cgContext.restoreGState()
+
+      let bodyRect = CGRect(
+        x: 7,
+        y: 8,
+        width: size.width - 14,
+        height: size.height - 20
+      )
+      context.cgContext.saveGState()
+      context.cgContext.translateBy(x: bodyRect.midX, y: bodyRect.midY)
+      context.cgContext.rotate(by: -9 * .pi / 180)
+      context.cgContext.translateBy(x: -bodyRect.midX, y: -bodyRect.midY)
+      let bodyPath = UIBezierPath(ovalIn: bodyRect)
+      UIColor(red: 1, green: 0.949, blue: 0.792, alpha: 1).setFill()
+      bodyPath.fill()
+      color.setStroke()
+      bodyPath.lineWidth = 3.5
+      bodyPath.stroke()
+
+      UIColor(red: 0.478, green: 0.290, blue: 0.141, alpha: 1).setFill()
+      UIBezierPath(
+        ovalIn: CGRect(x: bodyRect.midX - 7, y: bodyRect.midY - 4, width: 4, height: 4)
+      ).fill()
+      UIBezierPath(
+        ovalIn: CGRect(x: bodyRect.midX + 3, y: bodyRect.midY - 4, width: 4, height: 4)
+      ).fill()
+      context.cgContext.restoreGState()
     }
   }
 
