@@ -2,7 +2,15 @@ import '../data/step_count_reader_stub.dart'
     if (dart.library.io) '../data/step_count_reader_mobile.dart';
 
 abstract interface class StepCountReader {
-  Future<StepCountSnapshot?> readTodaySteps();
+  Future<StepCountSnapshot?> readTodaySteps({
+    StepCountAuthorization authorization =
+        StepCountAuthorization.requestIfNeeded,
+  });
+}
+
+enum StepCountAuthorization {
+  requestIfNeeded,
+  previouslyGrantedOnly,
 }
 
 class StepCountSnapshot {

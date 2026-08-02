@@ -170,6 +170,17 @@ class PotatoGrowthResult {
       fullyGrown: json['fullyGrown'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'potatoId': potatoId,
+      'potatoName': potatoName,
+      'previousLevel': previousLevel,
+      'currentLevel': currentLevel,
+      'leveledUp': leveledUp,
+      'fullyGrown': fullyGrown,
+    };
+  }
 }
 
 class PotatoGrowthSummary {
