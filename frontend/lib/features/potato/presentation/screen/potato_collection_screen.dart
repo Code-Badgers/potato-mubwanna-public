@@ -32,7 +32,6 @@ class PotatoCollectionScreen extends ConsumerStatefulWidget {
 
 class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
     with WidgetsBindingObserver {
-  PotatoRarity? _selectedRarity;
   bool _isUpdatingRepresentative = false;
   bool _isGrowthFeedbackScheduled = false;
   bool _hasShownGrowthFeedback = false;
@@ -103,30 +102,6 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
     } catch (_) {
       // 각 provider가 기존 오류 UI를 유지하므로 새로고침 제스처만 정상 종료한다.
     }
-  }
-
-  List<PotatoCollectionItem> _filteredItems(List<PotatoCollectionItem> items) {
-    final selectedRarity = _selectedRarity;
-    if (selectedRarity == null) {
-      return items;
-    }
-    return items.where((item) => item.rarity == selectedRarity).toList();
-  }
-
-  void _showPotatoDetail(PotatoCollectionItem item) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _PotatoDetailSheet(
-        item: item,
-        updatingRepresentative: _isUpdatingRepresentative,
-        onSetRepresentative: () {
-          Navigator.of(sheetContext).pop();
-          _updateRepresentativePotato(item);
-        },
-      ),
-    );
   }
 
   void _showRepresentativePicker(PotatoCollection collection) {
@@ -234,12 +209,6 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
                   onRefresh: _refreshPotatoData,
                   child: _PotatoCollectionBody(
                     collection: collection,
-                    selectedRarity: _selectedRarity,
-                    filteredItems: _filteredItems(collection.items),
-                    onRarityChanged: (rarity) {
-                      setState(() => _selectedRarity = rarity);
-                    },
-                    onTapItem: _showPotatoDetail,
                     updatingRepresentative: _isUpdatingRepresentative,
                     onChangeRepresentative: () {
                       _showRepresentativePicker(collection);
@@ -361,19 +330,11 @@ class _PotatoGrowthDialog extends StatelessWidget {
 class _PotatoCollectionBody extends StatelessWidget {
   const _PotatoCollectionBody({
     required this.collection,
-    required this.selectedRarity,
-    required this.filteredItems,
-    required this.onRarityChanged,
-    required this.onTapItem,
     required this.updatingRepresentative,
     required this.onChangeRepresentative,
   });
 
   final PotatoCollection collection;
-  final PotatoRarity? selectedRarity;
-  final List<PotatoCollectionItem> filteredItems;
-  final ValueChanged<PotatoRarity?> onRarityChanged;
-  final ValueChanged<PotatoCollectionItem> onTapItem;
   final bool updatingRepresentative;
   final VoidCallback onChangeRepresentative;
 
@@ -395,36 +356,7 @@ class _PotatoCollectionBody extends StatelessWidget {
           ),
         ),
         const SliverToBoxAdapter(child: _TodayStepCard()),
-        SliverToBoxAdapter(
-          child: _PotatoRarityFilter(
-            selectedRarity: selectedRarity,
-            onChanged: onRarityChanged,
-          ),
-        ),
-        const SliverToBoxAdapter(
-          child: _SectionTitle(title: '나의 감자 도감'),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
-          sliver: filteredItems.isEmpty
-              ? const SliverToBoxAdapter(child: _PotatoEmptyState())
-              : SliverGrid.builder(
-                  itemCount: filteredItems.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.72,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = filteredItems[index];
-                    return _PotatoTile(
-                      item: item,
-                      onTap: () => onTapItem(item),
-                    );
-                  },
-                ),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 28)),
       ],
     );
   }
@@ -435,29 +367,7 @@ class _PotatoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '감자',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-          Icon(
-            Icons.help_outline_rounded,
-            color: AppColors.textSecondary,
-            size: 24,
-          ),
-        ],
-      ),
-    );
+    return const SizedBox(height: 18);
   }
 }
 
@@ -865,148 +775,6 @@ class _StepSummaryTile extends StatelessWidget {
   }
 }
 
-class _PotatoRarityFilter extends StatelessWidget {
-  const _PotatoRarityFilter({
-    required this.selectedRarity,
-    required this.onChanged,
-  });
-
-  final PotatoRarity? selectedRarity;
-  final ValueChanged<PotatoRarity?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final filters = <({String label, PotatoRarity? rarity})>[
-      (label: '전체', rarity: null),
-      (label: '일반', rarity: PotatoRarity.common),
-      (label: '희귀', rarity: PotatoRarity.rare),
-      (label: '영웅', rarity: PotatoRarity.epic),
-      (label: '전설', rarity: PotatoRarity.legendary),
-    ];
-
-    return SizedBox(
-      height: 46,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        scrollDirection: Axis.horizontal,
-        itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final selected = selectedRarity == filter.rarity;
-          return ChoiceChip(
-            selected: selected,
-            label: Text(filter.label),
-            showCheckmark: false,
-            selectedColor: _potatoPrimary.withValues(alpha: 0.16),
-            backgroundColor: AppColors.surface,
-            side: BorderSide(
-              color: selected ? _potatoPrimary : _potatoLine,
-            ),
-            labelStyle: TextStyle(
-              color: selected ? _potatoDark : AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-            onSelected: (_) => onChanged(filter.rarity),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
-      ),
-    );
-  }
-}
-
-class _PotatoTile extends StatelessWidget {
-  const _PotatoTile({
-    required this.item,
-    required this.onTap,
-  });
-
-  final PotatoCollectionItem item;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final locked = !item.acquired;
-    final borderColor = locked ? _potatoLine : _rarityColor(item.rarity);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: borderColor,
-              width: locked ? 1 : 1.5,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(9),
-            child: Column(
-              children: [
-                _PotatoArtSlot(item: item, locked: locked, size: 70),
-                const SizedBox(height: 8),
-                Text(
-                  locked ? '미획득' : item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: locked
-                        ? AppColors.textSecondary
-                        : AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  potatoRarityLabel(item.rarity),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: _rarityColor(item.rarity),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _PotatoArtSlot extends StatelessWidget {
   const _PotatoArtSlot({
     required this.item,
@@ -1124,110 +892,6 @@ class _MetaChip extends StatelessWidget {
             letterSpacing: 0,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PotatoDetailSheet extends StatelessWidget {
-  const _PotatoDetailSheet({
-    required this.item,
-    required this.updatingRepresentative,
-    required this.onSetRepresentative,
-  });
-
-  final PotatoCollectionItem item;
-  final bool updatingRepresentative;
-  final VoidCallback onSetRepresentative;
-
-  @override
-  Widget build(BuildContext context) {
-    final locked = !item.acquired;
-    return _BottomSheetFrame(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  locked ? '아직 만나지 못한 감자' : item.name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: '닫기',
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Center(child: _PotatoArtSlot(item: item, locked: locked, size: 144)),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _RarityBadge(rarity: item.rarity),
-              _MetaChip(label: item.region),
-              _MetaChip(label: locked ? '미획득' : 'Lv.${item.level}'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _InfoBlock(
-            title: '감자 소개',
-            body: locked ? '획득 후 감자의 이야기가 열립니다.' : item.description,
-          ),
-          const SizedBox(height: 12),
-          _InfoBlock(
-            title: '획득 방법',
-            body: item.acquisitionHint,
-          ),
-          const SizedBox(height: 14),
-          _GrowthProgress(item: item),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: locked || item.representative || updatingRepresentative
-                  ? null
-                  : onSetRepresentative,
-              style: FilledButton.styleFrom(
-                backgroundColor: _potatoPrimary,
-                disabledBackgroundColor: const Color(0xFFBFE5CC),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: updatingRepresentative
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      item.representative ? '대표 감자로 설정됨' : '대표 감자로 설정',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1384,105 +1048,6 @@ class _RepresentativePotatoOption extends StatelessWidget {
   }
 }
 
-class _InfoBlock extends StatelessWidget {
-  const _InfoBlock({
-    required this.title,
-    required this.body,
-  });
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FBF5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _potatoLine),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(13),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              body,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                height: 1.45,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GrowthProgress extends StatelessWidget {
-  const _GrowthProgress({required this.item});
-
-  final PotatoCollectionItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                '성장 진행',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-            Text(
-              '${(item.growthDistance / 1000).toStringAsFixed(1)} / '
-              '${(item.growthGoalDistance / 1000).toStringAsFixed(1)}km',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            minHeight: 10,
-            value: item.growthRatio,
-            backgroundColor: const Color(0xFFE7EFE9),
-            valueColor: const AlwaysStoppedAnimation<Color>(_potatoPrimary),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _BottomSheetFrame extends StatelessWidget {
   const _BottomSheetFrame({required this.child});
 
@@ -1606,28 +1171,6 @@ class _PotatoErrorState extends StatelessWidget {
             child: const Text('다시 불러오기'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PotatoEmptyState extends StatelessWidget {
-  const _PotatoEmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _cardDecoration(),
-      child: const Text(
-        '조건에 맞는 감자가 없습니다.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
-        ),
       ),
     );
   }

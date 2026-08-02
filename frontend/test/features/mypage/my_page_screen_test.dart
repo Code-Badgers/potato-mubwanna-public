@@ -15,9 +15,7 @@ import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
 import 'package:potato_mubwanna/features/mypage/application/user_activity_summary_controller.dart';
-import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_activity_summary.dart';
-import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
@@ -66,7 +64,7 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('renders real profile and activity summary data', (tester) async {
+  testWidgets('renders activity summary and account actions', (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -82,8 +80,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('마이'), findsOneWidget);
-    expect(find.text('감자여행자'), findsOneWidget);
+    expect(find.text('마이'), findsNothing);
+    expect(find.text('감자여행자'), findsNothing);
     expect(find.text('Lv.2'), findsNothing);
     expect(find.text('6,420 / 10,000'), findsNothing);
 
@@ -97,11 +95,11 @@ void main() {
 
     expect(find.text('보상함'), findsOneWidget);
     expect(find.text('여행 기록'), findsOneWidget);
-    expect(find.text('내 미션'), findsOneWidget);
     expect(find.text('감자 도감'), findsOneWidget);
+    expect(find.text('내 미션'), findsNothing);
 
-    expect(find.text('강원 감자 여행'), findsOneWidget);
-    expect(find.text('기록을 확인해보세요!'), findsOneWidget);
+    expect(find.text('강원 감자 여행'), findsNothing);
+    expect(find.text('기록을 확인해보세요!'), findsNothing);
     expect(find.text('설정'), findsOneWidget);
     expect(find.text('공지사항'), findsOneWidget);
     expect(find.text('고객센터'), findsOneWidget);
@@ -142,97 +140,6 @@ void main() {
     expect(find.text('활동 요약 다시 시도'), findsOneWidget);
   });
 
-  testWidgets('renders the fetched nickname in the profile summary',
-      (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _myPageProviderOverrides(overrides: [
-          userProfileProvider.overrideWith(
-            (ref) async => const UserProfile(
-              userId: 1,
-              nickname: '실제 사용자',
-              email: 'user@example.com',
-              profileImage: 'https://example.com/profile.png',
-              createdAt: null,
-            ),
-          ),
-        ]),
-        child: const MaterialApp(
-          home: MyPageScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('실제 사용자'), findsOneWidget);
-    expect(find.text('감자여행자'), findsNothing);
-  });
-
-  testWidgets('uses the default avatar when profile image is absent',
-      (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _myPageProviderOverrides(overrides: [
-          userProfileProvider.overrideWith(
-            (ref) async => const UserProfile(
-              userId: 1,
-              nickname: '이미지 없는 사용자',
-              email: 'user@example.com',
-              profileImage: '',
-              createdAt: null,
-            ),
-          ),
-        ]),
-        child: const MaterialApp(
-          home: MyPageScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('이미지 없는 사용자'), findsOneWidget);
-    expect(find.byIcon(Icons.face_3_rounded), findsOneWidget);
-  });
-
-  testWidgets('shows a profile error instead of fallback user data',
-      (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _myPageProviderOverrides(overrides: [
-          userProfileProvider.overrideWith(
-            (ref) async => throw Exception('network unavailable'),
-          ),
-        ]),
-        child: const MaterialApp(
-          home: MyPageScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('내 정보를 불러오지 못했습니다.'), findsOneWidget);
-    expect(find.text('감자여행자'), findsNothing);
-  });
-
-  testWidgets(
-      'shows a profile-specific state for an authenticated null profile',
-      (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _myPageProviderOverrides(overrides: [
-          userProfileProvider.overrideWith((ref) async => null),
-        ]),
-        child: const MaterialApp(home: MyPageScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('프로필 정보를 찾을 수 없습니다.'), findsOneWidget);
-    expect(find.text('마이페이지를 확인하려면 로그인해주세요.'), findsNothing);
-    expect(find.text('로그인하기'), findsNothing);
-    expect(find.text('다시 시도'), findsOneWidget);
-  });
-
   testWidgets('clips account menu ink responses to the menu shape',
       (tester) async {
     await tester.pumpWidget(
@@ -249,7 +156,7 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is Material &&
-            widget.color == const Color(0xFFFFF8EA) &&
+            widget.color == const Color(0xFFFFFFFF) &&
             widget.clipBehavior == Clip.antiAlias,
       ),
       findsOneWidget,
@@ -363,8 +270,7 @@ void main() {
     expect(find.text('여행 기록'), findsOneWidget);
   });
 
-  testWidgets('opens settings from My Page header and account menu',
-      (tester) async {
+  testWidgets('opens settings from My Page account menu', (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -394,14 +300,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('설정'));
-    await tester.pumpAndSettle();
-    expect(find.text('설정'), findsOneWidget);
-    expect(find.text('권한 관리'), findsNothing);
-
-    router.pop();
-    await tester.pumpAndSettle();
-
     final settingsMenu = find.text('설정');
     await tester.scrollUntilVisible(settingsMenu, 200);
     await tester.tap(settingsMenu);
@@ -409,33 +307,6 @@ void main() {
 
     expect(find.text('설정'), findsOneWidget);
     expect(find.text('권한 관리'), findsNothing);
-  });
-
-  testWidgets('disables quick actions without a destination', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: _myPageProviderOverrides(),
-        child: const MaterialApp(
-          home: MyPageScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    for (final icon in [
-      Icons.assignment_turned_in_rounded,
-      Icons.inventory_2_rounded,
-    ]) {
-      expect(
-        find.ancestor(
-          of: find.byIcon(icon),
-          matching: find.byWidgetPredicate(
-            (widget) => widget is InkWell && widget.onTap == null,
-          ),
-        ),
-        findsOneWidget,
-      );
-    }
   });
 }
 
@@ -446,15 +317,6 @@ List<Override> _myPageProviderOverrides({
   return [
     authControllerProvider.overrideWith(
       (ref) => authController ?? _AuthenticatedAuthController(),
-    ),
-    userProfileProvider.overrideWith(
-      (ref) async => const UserProfile(
-        userId: 1,
-        nickname: '감자여행자',
-        email: 'user@example.com',
-        profileImage: '',
-        createdAt: null,
-      ),
     ),
     userActivitySummaryProvider.overrideWith(
       (ref) async => const UserActivitySummary(

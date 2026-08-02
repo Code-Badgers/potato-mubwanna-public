@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.view.View
 import android.widget.FrameLayout
@@ -236,27 +237,53 @@ class NativeKakaoMapView(
     }
 
     private fun markerBitmap(strokeColor: Int): Bitmap {
-        val width = 30
-        val height = 30
+        val width = 42
+        val height = 48
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
+            color = Color.parseColor("#FFF2CA")
             style = Paint.Style.FILL
         }
         val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = strokeColor
             style = Paint.Style.STROKE
-            strokeWidth = 3f
+            strokeWidth = 3.5f
         }
-        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val facePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#7A4A24")
+            style = Paint.Style.FILL
+        }
+        val leafPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#56C787")
+            style = Paint.Style.FILL
+        }
+        val pinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = strokeColor
             style = Paint.Style.FILL
         }
-        val markerRect = RectF(4f, 4f, width - 4f, height - 4f)
-        canvas.drawRoundRect(markerRect, markerRect.height() / 2, markerRect.height() / 2, fillPaint)
-        canvas.drawRoundRect(markerRect, markerRect.height() / 2, markerRect.height() / 2, strokePaint)
-        canvas.drawCircle(width / 2f, height / 2f, 4.5f, dotPaint)
+        val pointer = Path().apply {
+            moveTo(width / 2f - 5f, height - 13f)
+            lineTo(width / 2f + 5f, height - 13f)
+            lineTo(width / 2f, height - 3f)
+            close()
+        }
+        canvas.drawPath(pointer, pinPaint)
+
+        val leafRect = RectF(width - 17f, 2f, width - 5f, 11f)
+        canvas.save()
+        canvas.rotate(24f, leafRect.centerX(), leafRect.centerY())
+        canvas.drawOval(leafRect, leafPaint)
+        canvas.restore()
+
+        val bodyRect = RectF(7f, 8f, width - 7f, height - 12f)
+        canvas.save()
+        canvas.rotate(-9f, bodyRect.centerX(), bodyRect.centerY())
+        canvas.drawOval(bodyRect, fillPaint)
+        canvas.drawOval(bodyRect, strokePaint)
+        canvas.drawCircle(bodyRect.centerX() - 5f, bodyRect.centerY() - 2f, 2f, facePaint)
+        canvas.drawCircle(bodyRect.centerX() + 5f, bodyRect.centerY() - 2f, 2f, facePaint)
+        canvas.restore()
         return bitmap
     }
 

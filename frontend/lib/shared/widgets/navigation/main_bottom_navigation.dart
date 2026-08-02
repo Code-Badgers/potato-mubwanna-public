@@ -12,42 +12,33 @@ class MainBottomNavigation extends StatelessWidget {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return SizedBox(
-      height: 72 + bottomInset,
-      child: ColoredBox(
-        color: AppColors.surface,
-        child: Column(
-          children: [
-            SizedBox(
-              height: 72,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 430),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      border: Border(top: BorderSide(color: AppColors.line)),
-                    ),
-                    child: Row(
-                      children: List.generate(_destinations.length, (index) {
-                        final destination = _destinations[index];
+      height: 64 + bottomInset,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.line)),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(6, 9, 6, 5 + bottomInset),
+              child: Row(
+                children: List.generate(_destinations.length, (index) {
+                  final destination = _destinations[index];
 
-                        return Expanded(
-                          child: _FooterItem(
-                            icon: destination.icon,
-                            label: destination.label,
-                            isSelected: selectedIndex == index,
-                            onTap: () => context.go(_paths[index]),
-                          ),
-                        );
-                      }),
+                  return Expanded(
+                    child: _FooterItem(
+                      icon: destination.icon,
+                      label: destination.label,
+                      isSelected: selectedIndex == index,
+                      onTap: () => context.go(_paths[index]),
                     ),
-                  ),
-                ),
+                  );
+                }),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -104,8 +95,8 @@ class _FooterItem extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 42,
-              height: 28,
+              width: 40,
+              height: 26,
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.primary.withValues(alpha: 0.16)
@@ -114,7 +105,7 @@ class _FooterItem extends StatelessWidget {
               ),
               child: Icon(icon, color: foregroundColor, size: 22),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               label,
               maxLines: 1,

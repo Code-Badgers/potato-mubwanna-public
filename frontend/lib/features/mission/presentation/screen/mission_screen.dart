@@ -548,16 +548,6 @@ class _MissionHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '미션',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 14),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),

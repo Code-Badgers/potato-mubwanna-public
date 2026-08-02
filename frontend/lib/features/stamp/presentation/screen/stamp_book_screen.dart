@@ -156,25 +156,7 @@ class _StampHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
-      child: Row(
-        children: [
-          Icon(Icons.emoji_events_rounded,
-              color: AppColors.secondary, size: 30),
-          SizedBox(width: 10),
-          Text(
-            '랠리북',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox(height: 18);
   }
 }
 
