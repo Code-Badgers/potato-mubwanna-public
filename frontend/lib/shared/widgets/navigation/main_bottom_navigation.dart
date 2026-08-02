@@ -12,7 +12,7 @@ class MainBottomNavigation extends StatelessWidget {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return SizedBox(
-      height: 64 + bottomInset,
+      height: 72 + bottomInset,
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: AppColors.surface,
@@ -22,7 +22,7 @@ class MainBottomNavigation extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(6, 9, 6, 5 + bottomInset),
+              padding: EdgeInsets.fromLTRB(6, 14, 6, 7 + bottomInset),
               child: Row(
                 children: List.generate(_destinations.length, (index) {
                   final destination = _destinations[index];

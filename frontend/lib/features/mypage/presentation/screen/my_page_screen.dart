@@ -6,7 +6,9 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/user_activity_summary_controller.dart';
+import '../../application/user_profile_controller.dart';
 import '../../domain/user_activity_summary.dart';
+import '../../domain/user_profile.dart';
 
 class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
@@ -26,6 +28,7 @@ class MyPageScreen extends ConsumerWidget {
     }
 
     final activitySummaryState = ref.watch(userActivitySummaryProvider);
+    final profileState = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -33,6 +36,8 @@ class MyPageScreen extends ConsumerWidget {
         child: CustomScrollView(
           slivers: [
             const SliverToBoxAdapter(child: SizedBox(height: 18)),
+            SliverToBoxAdapter(
+                child: _ProfileHeader(profileState: profileState)),
             SliverToBoxAdapter(
               child: _TravelStats(
                 summaryState: activitySummaryState,
@@ -47,6 +52,105 @@ class MyPageScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.profileState});
+
+  final AsyncValue<UserProfile?> profileState;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = profileState.valueOrNull;
+    final nickname = profile == null || profile.nickname.trim().isEmpty
+        ? '감자여행자'
+        : profile.nickname.trim();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        children: [
+          _ProfileAvatar(profile: profile),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  '강원 감자 여행자',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.profile});
+
+  final UserProfile? profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final profileImage = profile?.profileImage.trim() ?? '';
+
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: profileImage.isEmpty
+          ? const Center(
+              child: Icon(
+                Icons.person_rounded,
+                color: AppColors.primaryDark,
+                size: 34,
+              ),
+            )
+          : Image.network(
+              profileImage,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(
+                  Icons.person_rounded,
+                  color: AppColors.primaryDark,
+                  size: 34,
+                ),
+              ),
+            ),
     );
   }
 }

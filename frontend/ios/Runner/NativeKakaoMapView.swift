@@ -361,9 +361,9 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private func addPoiStyles(labelManager: LabelManager, markerColor: String, isRare: Bool) {
     let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
     [
-      ("small", CGSize(width: 24, height: 24)),
-      ("medium", CGSize(width: 30, height: 30)),
-      ("large", CGSize(width: 36, height: 36)),
+      ("small", CGSize(width: 30, height: 34)),
+      ("medium", CGSize(width: 38, height: 43)),
+      ("large", CGSize(width: 46, height: 52)),
     ].forEach { sizeKey, size in
       labelManager.addPoiStyle(
         makePoiStyle(
@@ -416,53 +416,52 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   ) -> UIImage? {
     let renderer = UIGraphicsImageRenderer(size: size)
     return renderer.image { context in
+      let bodyDiameter = size.width * 0.82
+      let bodyRect = CGRect(
+        x: (size.width - bodyDiameter) / 2,
+        y: 1,
+        width: bodyDiameter,
+        height: bodyDiameter
+      )
+      let tipSize = max(7, size.width * 0.23)
       let pinTip = UIBezierPath()
-      pinTip.move(to: CGPoint(x: size.width / 2 - 5, y: size.height - 13))
-      pinTip.addLine(to: CGPoint(x: size.width / 2 + 5, y: size.height - 13))
+      pinTip.move(to: CGPoint(x: size.width / 2 - tipSize / 2, y: bodyRect.maxY - tipSize * 0.25))
+      pinTip.addLine(to: CGPoint(x: size.width / 2 + tipSize / 2, y: bodyRect.maxY - tipSize * 0.25))
       pinTip.addLine(to: CGPoint(x: size.width / 2, y: size.height - 3))
       pinTip.close()
       color.setFill()
       pinTip.fill()
 
-      let leafRect = CGRect(
-        x: size.width - 17,
-        y: 2,
-        width: 12,
-        height: 9
-      )
-      context.cgContext.saveGState()
-      context.cgContext.translateBy(x: leafRect.midX, y: leafRect.midY)
-      context.cgContext.rotate(by: 24 * .pi / 180)
-      context.cgContext.translateBy(x: -leafRect.midX, y: -leafRect.midY)
-      UIColor(red: 0.337, green: 0.780, blue: 0.529, alpha: 1).setFill()
-      UIBezierPath(ovalIn: leafRect).fill()
-      context.cgContext.restoreGState()
+      UIColor.black.withAlphaComponent(0.16).setFill()
+      UIBezierPath(
+        ovalIn: CGRect(
+          x: size.width * 0.18,
+          y: size.height - 5,
+          width: size.width * 0.64,
+          height: 3
+        )
+      ).fill()
 
-      let bodyRect = CGRect(
-        x: 7,
-        y: 8,
-        width: size.width - 14,
-        height: size.height - 20
-      )
-      context.cgContext.saveGState()
-      context.cgContext.translateBy(x: bodyRect.midX, y: bodyRect.midY)
-      context.cgContext.rotate(by: -9 * .pi / 180)
-      context.cgContext.translateBy(x: -bodyRect.midX, y: -bodyRect.midY)
-      let bodyPath = UIBezierPath(ovalIn: bodyRect)
-      UIColor(red: 1, green: 0.949, blue: 0.792, alpha: 1).setFill()
-      bodyPath.fill()
+      UIColor.white.withAlphaComponent(0.94).setFill()
+      UIBezierPath(ovalIn: bodyRect).fill()
       color.setStroke()
-      bodyPath.lineWidth = 3.5
+      let bodyPath = UIBezierPath(ovalIn: bodyRect)
+      bodyPath.lineWidth = max(2, size.width * 0.055)
       bodyPath.stroke()
 
-      UIColor(red: 0.478, green: 0.290, blue: 0.141, alpha: 1).setFill()
-      UIBezierPath(
-        ovalIn: CGRect(x: bodyRect.midX - 7, y: bodyRect.midY - 4, width: 4, height: 4)
-      ).fill()
-      UIBezierPath(
-        ovalIn: CGRect(x: bodyRect.midX + 3, y: bodyRect.midY - 4, width: 4, height: 4)
-      ).fill()
-      context.cgContext.restoreGState()
+      let emoji = "🥔" as NSString
+      let fontSize = size.width * 0.48
+      let attributes: [NSAttributedString.Key: Any] = [
+        .font: UIFont.systemFont(ofSize: fontSize),
+      ]
+      let emojiSize = emoji.size(withAttributes: attributes)
+      let emojiRect = CGRect(
+        x: (size.width - emojiSize.width) / 2,
+        y: bodyRect.midY - emojiSize.height / 2 + 1,
+        width: emojiSize.width,
+        height: emojiSize.height
+      )
+      emoji.draw(in: emojiRect, withAttributes: attributes)
     }
   }
 

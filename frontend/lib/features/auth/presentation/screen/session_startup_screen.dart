@@ -16,13 +16,14 @@ class SessionStartupScreen extends ConsumerStatefulWidget {
 }
 
 class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(_openInitialRoute);
-  }
+  bool _isOpeningInitialRoute = false;
 
   Future<void> _openInitialRoute() async {
+    if (_isOpeningInitialRoute) {
+      return;
+    }
+    setState(() => _isOpeningInitialRoute = true);
+
     final fallbackRoute =
         await ref.read(sessionStartupCoordinatorProvider).resolveInitialRoute();
     final route = sessionStartupRouteGate.completeSessionStartup(
@@ -39,12 +40,75 @@ class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: Image.asset(
-        'assets/onboading.png',
-        key: const Key('session-startup-brand-image'),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _openInitialRoute,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/onboading.png',
+              key: const Key('session-startup-brand-image'),
+              fit: BoxFit.cover,
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 34),
+                  child: _isOpeningInitialRoute
+                      ? const SizedBox.shrink()
+                      : const _BlinkingStartText(label: '터치하여 시작하기'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BlinkingStartText extends StatefulWidget {
+  const _BlinkingStartText({required this.label});
+
+  final String label;
+
+  @override
+  State<_BlinkingStartText> createState() => _BlinkingStartTextState();
+}
+
+class _BlinkingStartTextState extends State<_BlinkingStartText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 850),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _opacity = Tween<double>(
+    begin: 0.35,
+    end: 1,
+  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Text(
+        widget.label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 17,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
       ),
     );
   }

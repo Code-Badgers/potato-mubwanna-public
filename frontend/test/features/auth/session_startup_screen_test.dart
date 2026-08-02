@@ -8,7 +8,7 @@ import 'package:potato_mubwanna/features/auth/application/session_startup_coordi
 import 'package:potato_mubwanna/features/auth/presentation/screen/session_startup_screen.dart';
 
 void main() {
-  testWidgets('shows the onboarding image while resolving startup route',
+  testWidgets('waits on the onboarding image until the user taps to continue',
       (tester) async {
     final refreshTokenCompleter = Completer<String?>();
     final coordinator = SessionStartupCoordinator(
@@ -46,8 +46,14 @@ void main() {
 
     expect(
         find.byKey(const Key('session-startup-brand-image')), findsOneWidget);
+    expect(find.text('터치하여 시작하기'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('login-route')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('session-startup-brand-image')));
+    await tester.pump();
     refreshTokenCompleter.complete(null);
     await tester.pumpAndSettle();
 

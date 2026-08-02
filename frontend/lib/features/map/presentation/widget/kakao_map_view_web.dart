@@ -319,7 +319,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       function applyMarkerScale() {
         const scale = markerScale(map.getLevel());
         markerElements.forEach(function (markerElement) {
-          markerElement.style.transform = 'scale(' + scale + ') rotate(-10deg)';
+          markerElement.style.transform = 'scale(' + scale + ')';
         });
       }
 
@@ -338,49 +338,64 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerElement.title = spot.name;
           markerElement.setAttribute('aria-label', spot.name);
           markerElement.textContent = '';
-          markerElement.style.width = '34px';
-          markerElement.style.height = '40px';
+          markerElement.style.width = '42px';
+          markerElement.style.height = '48px';
           markerElement.style.border = '0';
-          markerElement.style.borderRadius = '999px 999px 999px 10px';
-          markerElement.style.background = '#FFF2CA';
-          markerElement.style.boxShadow = '0 7px 16px rgba(32,35,26,0.18)';
+          markerElement.style.borderRadius = '999px';
+          markerElement.style.background = 'transparent';
           markerElement.style.position = 'relative';
           markerElement.style.lineHeight = '1';
           markerElement.style.cursor = 'pointer';
           markerElement.style.padding = '0';
           markerElement.style.transformOrigin = '50% 100%';
           markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
-          markerElement.style.outline = '2.5px solid ' + (spot.markerColor || '#F6C23E');
-          markerElement.style.outlineOffset = '-2.5px';
-          markerElement.style.transform = 'rotate(-10deg)';
-          const potatoEyeLeft = document.createElement('span');
-          potatoEyeLeft.style.position = 'absolute';
-          potatoEyeLeft.style.left = '11px';
-          potatoEyeLeft.style.top = '16px';
-          potatoEyeLeft.style.width = '3px';
-          potatoEyeLeft.style.height = '3px';
-          potatoEyeLeft.style.borderRadius = '999px';
-          potatoEyeLeft.style.background = '#7A4A24';
-          const potatoEyeRight = potatoEyeLeft.cloneNode();
-          potatoEyeRight.style.left = '21px';
-          const potatoLeaf = document.createElement('span');
-          potatoLeaf.style.position = 'absolute';
-          potatoLeaf.style.left = '20px';
-          potatoLeaf.style.top = '-5px';
-          potatoLeaf.style.width = '12px';
-          potatoLeaf.style.height = '8px';
-          potatoLeaf.style.borderRadius = '999px 999px 999px 2px';
-          potatoLeaf.style.background = '#56C787';
-          potatoLeaf.style.transform = 'rotate(24deg)';
-          markerElement.appendChild(potatoLeaf);
-          markerElement.appendChild(potatoEyeLeft);
-          markerElement.appendChild(potatoEyeRight);
+          markerElement.style.transform = 'scale(1)';
+
+          const markerBody = document.createElement('span');
+          markerBody.style.position = 'absolute';
+          markerBody.style.left = '3px';
+          markerBody.style.top = '0';
+          markerBody.style.width = '36px';
+          markerBody.style.height = '36px';
+          markerBody.style.borderRadius = '999px';
+          markerBody.style.background = 'rgba(255, 255, 255, 0.92)';
+          markerBody.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
+          markerBody.style.boxShadow = '0 10px 22px rgba(32,35,26,0.18), inset 0 0 0 1px rgba(255,255,255,0.7)';
+          markerBody.style.display = 'flex';
+          markerBody.style.alignItems = 'center';
+          markerBody.style.justifyContent = 'center';
+          markerBody.style.backdropFilter = 'blur(8px)';
+          markerBody.style.webkitBackdropFilter = 'blur(8px)';
+
+          const markerEmoji = document.createElement('span');
+          markerEmoji.textContent = '🥔';
+          markerEmoji.style.fontSize = '22px';
+          markerEmoji.style.lineHeight = '1';
+          markerEmoji.style.transform = 'translateY(1px)';
+
+          const markerTip = document.createElement('span');
+          markerTip.style.position = 'absolute';
+          markerTip.style.left = '16px';
+          markerTip.style.top = '31px';
+          markerTip.style.width = '10px';
+          markerTip.style.height = '10px';
+          markerTip.style.background = spot.markerColor || '#F6C23E';
+          markerTip.style.borderRadius = '2px';
+          markerTip.style.transform = 'rotate(45deg)';
+          markerTip.style.boxShadow = '0 8px 14px rgba(32,35,26,0.14)';
+
+          markerBody.appendChild(markerEmoji);
+          markerElement.appendChild(markerTip);
+          markerElement.appendChild(markerBody);
           markerElement.addEventListener('click', function () {
             if (selectedMarkerElement) {
-              selectedMarkerElement.style.outlineColor =
+              selectedMarkerElement.children[0].style.background =
+                selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
+              selectedMarkerElement.children[1].style.borderColor =
                 selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
             }
-            markerElement.style.outlineColor = '#F6C23E';
+            markerTip.style.background = '#F6C23E';
+            markerBody.style.borderColor = '#F6C23E';
             selectedMarkerElement = markerElement;
             window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
               detail: { spotId: String(spot.id) }
