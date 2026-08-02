@@ -37,33 +37,42 @@ class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '감자무봤나?',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              SizedBox(height: 24),
-              SizedBox.square(
-                dimension: 28,
-                child: CircularProgressIndicator(
-                  key: Key('session-startup-progress'),
-                  strokeWidth: 3,
-                ),
-              ),
-            ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/onboading.png',
+            key: const Key('session-startup-brand-image'),
+            fit: BoxFit.cover,
           ),
-        ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 42),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface.withValues(alpha: 0.82),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const SizedBox.square(
+                    dimension: 46,
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(
+                        key: Key('session-startup-progress'),
+                        strokeWidth: 3,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
