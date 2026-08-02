@@ -46,7 +46,7 @@ void main() {
 
     expect(
         find.byKey(const Key('session-startup-brand-image')), findsOneWidget);
-    expect(find.byKey(const Key('session-startup-progress')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
 
     refreshTokenCompleter.complete(null);
     await tester.pumpAndSettle();
