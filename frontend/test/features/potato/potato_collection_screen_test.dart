@@ -25,7 +25,8 @@ void main() {
     expect(find.text('2 / 3'), findsOneWidget);
     expect(find.text('오늘의 감자걸음'), findsOneWidget);
     expect(find.text('7,842 / 10,000보'), findsOneWidget);
-    expect(find.text('나의 감자 도감'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '대표 감자 변경'), findsOneWidget);
+    expect(find.text('나의 감자 도감'), findsWidgets);
     expect(find.text('미획득'), findsOneWidget);
   });
 
@@ -72,7 +73,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('대표 감자 변경'));
+    await tester.tap(find.widgetWithText(FilledButton, '대표 감자 변경'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('하지감자').last);
     await tester.pumpAndSettle();
@@ -171,7 +172,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('성장했어요!'), findsNothing);
-    expect(find.text('나의 감자 도감'), findsOneWidget);
+    expect(find.text('나의 감자 도감'), findsWidgets);
   });
 
   testWidgets(

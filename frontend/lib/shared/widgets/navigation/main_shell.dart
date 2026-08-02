@@ -11,10 +11,7 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: const SafeArea(
-        top: false,
-        child: MainBottomNavigation(),
-      ),
+      bottomNavigationBar: const MainBottomNavigation(),
     );
   }
 }

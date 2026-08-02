@@ -6,19 +6,25 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/permissions/permission_service.dart';
 import '../../../push/application/push_notification_service.dart';
 
-const _settingsPrimary = Color(0xFF509B64);
-const _settingsLine = Color(0xFFE8E2D8);
-const _settingsCream = Color(0xFFFFF8EA);
-
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     PermissionService? permissionService,
     this.pushTokenLifecycle = const NoopPushTokenLifecycle(),
+    this.showAccountActions = false,
+    this.onLogout,
+    this.onWithdrawAccount,
+    this.authMessage,
+    this.onOpenLogin,
     super.key,
   }) : permissionService = permissionService ?? const PermissionService();
 
   final PermissionService permissionService;
   final PushTokenLifecycle pushTokenLifecycle;
+  final bool showAccountActions;
+  final Future<void> Function()? onLogout;
+  final Future<bool> Function()? onWithdrawAccount;
+  final String? Function()? authMessage;
+  final VoidCallback? onOpenLogin;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -133,6 +139,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                     child: _SettingsHeader(onBack: _handleBack),
                   ),
                   const SliverToBoxAdapter(child: _WebPermissionGuide()),
+                  if (widget.showAccountActions)
+                    SliverToBoxAdapter(
+                      child: _AccountSettingsSection(
+                        onLogout: _logout,
+                        onWithdraw: _confirmAccountWithdrawal,
+                      ),
+                    ),
                 ],
               )
             : _errorMessage != null
@@ -158,6 +171,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   _manageNotificationPermission,
                             ),
                           ),
+                          if (widget.showAccountActions)
+                            SliverToBoxAdapter(
+                              child: _AccountSettingsSection(
+                                onLogout: _logout,
+                                onWithdraw: _confirmAccountWithdrawal,
+                              ),
+                            ),
                         ],
                       ),
       ),
@@ -170,6 +190,69 @@ class _SettingsScreenState extends State<SettingsScreen>
     } else {
       context.go('/main/mypage');
     }
+  }
+
+  Future<void> _logout() async {
+    final logout = widget.onLogout;
+    if (logout == null) {
+      return;
+    }
+
+    await logout();
+    if (mounted) {
+      widget.onOpenLogin?.call();
+    }
+  }
+
+  Future<void> _confirmAccountWithdrawal() async {
+    final withdraw = widget.onWithdrawAccount;
+    if (withdraw == null) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: AppColors.error,
+          size: 36,
+        ),
+        title: const Text('정말 탈퇴하시겠어요?'),
+        content: const Text(
+          '스탬프, 감자, 쿠폰과 여행 기록이 모두 삭제되며 복구할 수 없습니다.\n\n'
+          '카카오 계정 자체는 삭제되지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('회원 탈퇴'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final withdrawn = await withdraw();
+    if (!mounted) {
+      return;
+    }
+    if (withdrawn) {
+      widget.onOpenLogin?.call();
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(widget.authMessage?.call() ?? '회원 탈퇴에 실패했습니다.')),
+    );
   }
 }
 
@@ -213,7 +296,7 @@ class _SettingsHeader extends StatelessWidget {
           const SizedBox(width: 4),
           const Expanded(
             child: Text(
-              '권한 관리',
+              '설정',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 28,
@@ -248,25 +331,6 @@ class _SettingsIntro extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: _settingsCream,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _settingsLine),
-            ),
-            child: const Text(
-              '필수 기능에 필요한 접근권한을 관리합니다.',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
           _PermissionRow(
             icon: Icons.location_on_outlined,
             title: '위치 권한',
@@ -318,7 +382,7 @@ class _PermissionRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _settingsLine),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         children: [
@@ -326,10 +390,10 @@ class _PermissionRow extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: const BoxDecoration(
-              color: Color(0xFFE5F6EA),
+              color: AppColors.primaryTint,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: _settingsPrimary, size: 24),
+            child: Icon(icon, color: AppColors.primaryDark, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -363,8 +427,9 @@ class _PermissionRow extends StatelessWidget {
                           ? '설정에서 허용 필요'
                           : '허용 필요',
                   style: TextStyle(
-                    color:
-                        isGranted ? _settingsPrimary : AppColors.textSecondary,
+                    color: isGranted
+                        ? AppColors.primaryDark
+                        : AppColors.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
@@ -386,6 +451,97 @@ class _PermissionRow extends StatelessWidget {
                   ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _AccountSettingsSection extends StatelessWidget {
+  const _AccountSettingsSection({
+    required this.onLogout,
+    required this.onWithdraw,
+  });
+
+  final VoidCallback onLogout;
+  final VoidCallback onWithdraw;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      child: Material(
+        color: AppColors.cream,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: AppColors.line),
+        ),
+        child: Column(
+          children: [
+            _SettingsActionRow(
+              icon: Icons.logout_rounded,
+              label: '로그아웃',
+              onTap: onLogout,
+            ),
+            const Divider(height: 1, color: AppColors.line, indent: 58),
+            _SettingsActionRow(
+              icon: Icons.person_off_outlined,
+              label: '회원 탈퇴',
+              destructive: true,
+              onTap: onWithdraw,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsActionRow extends StatelessWidget {
+  const _SettingsActionRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : AppColors.textPrimary;
+
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        height: 62,
+        child: Row(
+          children: [
+            const SizedBox(width: 20),
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary,
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
       ),
     );
   }

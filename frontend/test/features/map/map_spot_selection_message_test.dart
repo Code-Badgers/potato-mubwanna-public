@@ -6,8 +6,15 @@ void main() {
     expect(mapSpotIdFromSelectionMessage({'spotId': '42'}), '42');
   });
 
+  test('accepts native map payload variants', () {
+    expect(mapSpotIdFromSelectionMessage({'spotID': 42}), '42');
+    expect(mapSpotIdFromSelectionMessage({'poiID': 'potato-42'}), '42');
+    expect(mapSpotIdFromSelectionMessage({'id': 'potato-43'}), '43');
+  });
+
   test('keeps compatibility with the legacy string payload', () {
     expect(mapSpotIdFromSelectionMessage('42'), '42');
+    expect(mapSpotIdFromSelectionMessage(42), '42');
   });
 
   test('rejects missing or blank spot ids', () {

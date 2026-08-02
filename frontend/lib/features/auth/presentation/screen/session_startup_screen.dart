@@ -37,33 +37,14 @@ class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '감자무봤나?',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              SizedBox(height: 24),
-              SizedBox.square(
-                dimension: 28,
-                child: CircularProgressIndicator(
-                  key: Key('session-startup-progress'),
-                  strokeWidth: 3,
-                ),
-              ),
-            ],
-          ),
-        ),
+      body: Image.asset(
+        'assets/onboading.png',
+        key: const Key('session-startup-brand-image'),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
       ),
     );
   }

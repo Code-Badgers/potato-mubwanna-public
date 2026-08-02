@@ -10,12 +10,6 @@ import '../../application/user_profile_controller.dart';
 import '../../domain/user_activity_summary.dart';
 import '../../domain/user_profile.dart';
 
-const _mypagePrimary = Color(0xFF56C787);
-const _mypageLine = Color(0xFFE8E2D8);
-const _mypageCream = Color(0xFFFFF8EA);
-const _mypageBrown = Color(0xFF7A4A24);
-const _mypageGold = Color(0xFFF6C23E);
-
 class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
 
@@ -67,15 +61,7 @@ class MyPageScreen extends ConsumerWidget {
                 const SliverToBoxAdapter(child: _TravelBanner()),
                 SliverToBoxAdapter(
                   child: _AccountMenu(
-                    isLoggingOut: authStatus == AuthStatus.loading,
                     onSettings: () => context.push('/settings'),
-                    onLogout: () async {
-                      await ref.read(authControllerProvider.notifier).logout();
-                      if (context.mounted) {
-                        context.go('/login');
-                      }
-                    },
-                    onWithdraw: () => _confirmAccountWithdrawal(context, ref),
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -88,58 +74,6 @@ class MyPageScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Future<void> _confirmAccountWithdrawal(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        icon: const Icon(
-          Icons.warning_amber_rounded,
-          color: AppColors.error,
-          size: 36,
-        ),
-        title: const Text('정말 탈퇴하시겠어요?'),
-        content: const Text(
-          '스탬프, 감자, 쿠폰과 여행 기록이 모두 삭제되며 복구할 수 없습니다.\n\n'
-          '카카오 계정 자체는 삭제되지 않습니다.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('회원 탈퇴'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) {
-      return;
-    }
-
-    final withdrawn =
-        await ref.read(authControllerProvider.notifier).withdrawAccount();
-    if (!context.mounted) {
-      return;
-    }
-    if (withdrawn) {
-      context.go('/login');
-      return;
-    }
-
-    final message =
-        ref.read(authControllerProvider).message ?? '회원 탈퇴에 실패했습니다.';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
     );
   }
 }
@@ -334,7 +268,7 @@ class _ProfileAvatar extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF8D14E), width: 4),
         boxShadow: [
           BoxShadow(
-            color: _mypageGold.withValues(alpha: 0.22),
+            color: AppColors.secondary.withValues(alpha: 0.22),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -345,7 +279,7 @@ class _ProfileAvatar extends StatelessWidget {
           ? const Icon(
               Icons.face_3_rounded,
               size: 58,
-              color: _mypageBrown,
+              color: AppColors.brown,
             )
           : Image.network(
               profileImage!,
@@ -353,7 +287,7 @@ class _ProfileAvatar extends StatelessWidget {
               errorBuilder: (_, __, ___) => const Icon(
                 Icons.face_3_rounded,
                 size: 58,
-                color: _mypageBrown,
+                color: AppColors.brown,
               ),
             ),
     );
@@ -377,7 +311,7 @@ class _TravelStats extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _mypageLine),
+        border: Border.all(color: AppColors.line),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -512,7 +446,7 @@ class _VerticalDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 54,
-      color: _mypageLine,
+      color: AppColors.line,
     );
   }
 }
@@ -577,7 +511,7 @@ class _QuickActionCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _mypageLine),
+            border: Border.all(color: AppColors.line),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -589,7 +523,7 @@ class _QuickActionCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(action.icon, color: _mypageBrown, size: 30),
+              Icon(action.icon, color: AppColors.brown, size: 30),
               const SizedBox(height: 10),
               Text(
                 action.label,
@@ -630,7 +564,7 @@ class _TravelBanner extends StatelessWidget {
             bottom: -4,
             child: Icon(
               Icons.eco_rounded,
-              color: _mypagePrimary.withValues(alpha: 0.42),
+              color: AppColors.primary.withValues(alpha: 0.42),
               size: 86,
             ),
           ),
@@ -680,16 +614,10 @@ class _TravelBanner extends StatelessWidget {
 
 class _AccountMenu extends StatelessWidget {
   const _AccountMenu({
-    required this.isLoggingOut,
     required this.onSettings,
-    required this.onLogout,
-    required this.onWithdraw,
   });
 
-  final bool isLoggingOut;
   final VoidCallback onSettings;
-  final VoidCallback onLogout;
-  final VoidCallback onWithdraw;
 
   static const _items = [
     _MenuItem(
@@ -699,16 +627,6 @@ class _AccountMenu extends StatelessWidget {
     ),
     _MenuItem(icon: Icons.campaign_outlined, label: '공지사항'),
     _MenuItem(icon: Icons.help_outline_rounded, label: '고객센터'),
-    _MenuItem(
-      icon: Icons.logout_rounded,
-      label: '로그아웃',
-      isLogout: true,
-    ),
-    _MenuItem(
-      icon: Icons.person_off_outlined,
-      label: '회원 탈퇴',
-      isWithdrawal: true,
-    ),
   ];
 
   @override
@@ -716,27 +634,21 @@ class _AccountMenu extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Material(
-        color: _mypageCream,
+        color: AppColors.cream,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: _mypageLine),
+          side: const BorderSide(color: AppColors.line),
         ),
         child: Column(
           children: [
             for (var index = 0; index < _items.length; index++) ...[
               _MenuRow(
                 item: _items[index],
-                onTap: _items[index].isLogout
-                    ? (isLoggingOut ? null : onLogout)
-                    : _items[index].isWithdrawal
-                        ? (isLoggingOut ? null : onWithdraw)
-                        : _items[index].isSettings
-                            ? onSettings
-                            : () {},
+                onTap: _items[index].isSettings ? onSettings : () {},
               ),
               if (index < _items.length - 1)
-                const Divider(height: 1, color: _mypageLine, indent: 58),
+                const Divider(height: 1, color: AppColors.line, indent: 58),
             ],
           ],
         ),
@@ -765,17 +677,15 @@ class _MenuRow extends StatelessWidget {
             const SizedBox(width: 20),
             Icon(
               item.icon,
-              color: item.isWithdrawal ? AppColors.error : _mypageBrown,
+              color: AppColors.brown,
               size: 25,
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 item.label,
-                style: TextStyle(
-                  color: item.isWithdrawal
-                      ? AppColors.error
-                      : AppColors.textPrimary,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
@@ -811,14 +721,10 @@ class _MenuItem {
   const _MenuItem({
     required this.icon,
     required this.label,
-    this.isLogout = false,
     this.isSettings = false,
-    this.isWithdrawal = false,
   });
 
   final IconData icon;
   final String label;
-  final bool isLogout;
   final bool isSettings;
-  final bool isWithdrawal;
 }

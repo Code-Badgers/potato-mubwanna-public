@@ -3,46 +3,51 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 
-const _footerPrimary = Color(0xFF36D98F);
-const _footerLine = Color(0xFFE8E2D8);
-
 class MainBottomNavigation extends StatelessWidget {
   const MainBottomNavigation({super.key});
 
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _selectedIndex(context);
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return SizedBox(
-      height: 72,
+      height: 72 + bottomInset,
       child: ColoredBox(
         color: AppColors.surface,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: _footerLine)),
-              ),
-              child: Row(
-                children: List.generate(_destinations.length, (index) {
-                  final destination = _destinations[index];
-
-                  return Expanded(
-                    child: _FooterItem(
-                      icon: destination.icon,
-                      label: destination.label,
-                      isSelected: selectedIndex == index,
-                      onTap: () => context.go(_paths[index]),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 72,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border(top: BorderSide(color: AppColors.line)),
                     ),
-                  );
-                }),
+                    child: Row(
+                      children: List.generate(_destinations.length, (index) {
+                        final destination = _destinations[index];
+
+                        return Expanded(
+                          child: _FooterItem(
+                            icon: destination.icon,
+                            label: destination.label,
+                            isSelected: selectedIndex == index,
+                            onTap: () => context.go(_paths[index]),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -87,7 +92,7 @@ class _FooterItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foregroundColor =
-        isSelected ? _footerPrimary : AppColors.textSecondary;
+        isSelected ? AppColors.primary : AppColors.textSecondary;
 
     return Tooltip(
       message: label,
@@ -103,7 +108,7 @@ class _FooterItem extends StatelessWidget {
               height: 28,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _footerPrimary.withValues(alpha: 0.16)
+                    ? AppColors.primary.withValues(alpha: 0.16)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
               ),

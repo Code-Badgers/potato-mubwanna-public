@@ -33,6 +33,10 @@ void main() {
     expect(find.text('내 동선 0곳'), findsOneWidget);
     expect(find.text('전체'), findsOneWidget);
     expect(find.text('관광'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('전체')).dy,
+      lessThan(tester.getTopLeft(find.text('내 동선 0곳')).dy),
+    );
     expect(find.text('정선 5일장'), findsOneWidget);
     expect(find.text('상세보기'), findsOneWidget);
   });
@@ -371,7 +375,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('다음 추천 2곳 · 보라색 핀'), findsOneWidget);
+    expect(find.text('다음 추천 2곳 · 노란 핀'), findsOneWidget);
     expect(find.text('방문 후 추천 장소'), findsOneWidget);
     expect(find.text('감자 카페'), findsOneWidget);
     expect(

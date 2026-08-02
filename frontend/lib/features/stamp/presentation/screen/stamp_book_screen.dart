@@ -7,11 +7,6 @@ import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
 
-const _stampPrimary = Color(0xFF36D98F);
-const _stampDark = Color(0xFF509B64);
-const _stampGold = Color(0xFFF6C23E);
-const _stampLine = Color(0xFFE8E2D8);
-
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
 
@@ -165,7 +160,8 @@ class _StampHeader extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
       child: Row(
         children: [
-          Icon(Icons.emoji_events_rounded, color: _stampGold, size: 30),
+          Icon(Icons.emoji_events_rounded,
+              color: AppColors.secondary, size: 30),
           SizedBox(width: 10),
           Text(
             '랠리북',
@@ -200,8 +196,8 @@ class _ProgressSummary extends StatelessWidget {
     final rewardMessage = reward.canClaim
         ? '${reward.claimableTargetCount}개 달성 보상을 받을 수 있어요'
         : reward.completed || targetCount == null
-        ? '모든 보상 기준을 달성했어요'
-        : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
+            ? '모든 보상 기준을 달성했어요'
+            : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -209,7 +205,7 @@ class _ProgressSummary extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _stampLine),
+        border: Border.all(color: AppColors.line),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -252,8 +248,9 @@ class _ProgressSummary extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 12,
               value: progress.clamp(0, 1),
-              backgroundColor: const Color(0xFFE7EFE9),
-              valueColor: const AlwaysStoppedAnimation<Color>(_stampPrimary),
+              backgroundColor: AppColors.primaryTint,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
             ),
           ),
           const SizedBox(height: 14),
@@ -261,7 +258,7 @@ class _ProgressSummary extends StatelessWidget {
             children: [
               const Icon(
                 Icons.card_giftcard_rounded,
-                color: _stampGold,
+                color: AppColors.secondary,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -303,16 +300,17 @@ class _NextTargetsSection extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF8EF),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFC9E9D3)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(Icons.explore_rounded, color: _stampDark, size: 24),
+              Icon(Icons.explore_rounded,
+                  color: AppColors.primaryDark, size: 24),
               SizedBox(width: 8),
               Text(
                 '다음 목표',
@@ -352,9 +350,8 @@ class _NextTargetsSection extends StatelessWidget {
                   icon: completed
                       ? Icons.emoji_events_rounded
                       : Icons.location_off_rounded,
-                  message: completed
-                      ? '모든 지역 스탬프를 모았어요.'
-                      : '추천 가능한 스탬프 관광지가 없어요.',
+                  message:
+                      completed ? '모든 지역 스탬프를 모았어요.' : '추천 가능한 스탬프 관광지가 없어요.',
                 );
               }
               return Column(
@@ -395,7 +392,7 @@ class _NextTargetTile extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _stampLine),
+            border: Border.all(color: AppColors.line),
           ),
           child: Row(
             children: [
@@ -430,7 +427,8 @@ class _NextTargetTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, color: _stampDark),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppColors.primaryDark),
             ],
           ),
         ),
@@ -473,10 +471,11 @@ class _NextTargetPlaceholder extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF2C4),
+        color: AppColors.cream,
         borderRadius: BorderRadius.circular(9),
       ),
-      child: const Icon(Icons.location_on_rounded, color: _stampDark),
+      child:
+          const Icon(Icons.location_on_rounded, color: AppColors.primaryDark),
     );
   }
 }
@@ -495,7 +494,7 @@ class _NextTargetStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: _stampDark, size: 20),
+        Icon(icon, color: AppColors.primaryDark, size: 20),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -571,10 +570,9 @@ class _StampTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = stamp.acquired
-        ? AppColors.textPrimary
-        : AppColors.textSecondary;
-    final borderColor = stamp.acquired ? _stampPrimary : _stampLine;
+    final foreground =
+        stamp.acquired ? AppColors.textPrimary : AppColors.textSecondary;
+    final borderColor = stamp.acquired ? AppColors.primary : AppColors.line;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -587,43 +585,24 @@ class _StampTile extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: stamp.acquired
-                        ? const Color(0xFFEAF8EF)
-                        : const Color(0xFFF1F1EC),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      stamp.acquired ? '감자' : '?',
-                      style: TextStyle(
-                        color: stamp.acquired
-                            ? _stampDark
-                            : AppColors.textSecondary,
-                        fontSize: stamp.acquired ? 14 : 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ),
-                ),
-                if (stamp.acquired)
-                  const Positioned(
-                    right: -4,
-                    bottom: -2,
-                    child: Icon(
-                      Icons.check_circle_rounded,
-                      color: _stampPrimary,
-                      size: 18,
-                    ),
-                  ),
-              ],
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: stamp.acquired
+                    ? AppColors.primaryTint
+                    : const Color(0xFFF1F1EC),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                stamp.acquired
+                    ? Icons.check_rounded
+                    : Icons.lock_outline_rounded,
+                color: stamp.acquired
+                    ? AppColors.primaryDark
+                    : AppColors.textSecondary,
+                size: stamp.acquired ? 26 : 22,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -676,9 +655,9 @@ class _RewardCard extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBF1),
+        color: AppColors.cream,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF3DEAA)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         children: [
@@ -686,10 +665,13 @@ class _RewardCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: const BoxDecoration(
-              color: Color(0xFFFFF2C4),
+              color: AppColors.surface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.card_giftcard_rounded, color: _stampGold),
+            child: const Icon(
+              Icons.card_giftcard_rounded,
+              color: AppColors.secondary,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -710,7 +692,7 @@ class _RewardCard extends StatelessWidget {
                   Text(
                     '$claimableTargetCount개 달성 보상이 준비됐어요.',
                     style: const TextStyle(
-                      color: _stampDark,
+                      color: AppColors.primaryDark,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
@@ -746,7 +728,7 @@ class _RewardCard extends StatelessWidget {
                   const Text(
                     '18개 시군 랠리를 모두 완주했어요.',
                     style: TextStyle(
-                      color: _stampDark,
+                      color: AppColors.primaryDark,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
@@ -765,7 +747,7 @@ class _RewardCard extends StatelessWidget {
                   Text(
                     '앞으로 ${reward.remainingCount}개만 더 모으면 받을 수 있어요.',
                     style: const TextStyle(
-                      color: _stampDark,
+                      color: AppColors.primaryDark,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
