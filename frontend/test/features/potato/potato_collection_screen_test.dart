@@ -30,6 +30,30 @@ void main() {
     expect(find.text('미획득'), findsOneWidget);
   });
 
+  testWidgets('renders reward-only potato code with mapped local asset', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith(
+          (ref) async => _rewardOnlyCollection(),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final mappedAsset = find.byWidgetPredicate((widget) {
+      return widget is Image &&
+          widget.image is AssetImage &&
+          (widget.image as AssetImage).assetName ==
+              'assets/potatoes/potato_haji_seed.png';
+    });
+
+    expect(find.text('일반 씨앗감자'), findsWidgets);
+    expect(mappedAsset, findsWidgets);
+  });
+
   testWidgets('opens potato detail sheet from an acquired potato', (
     tester,
   ) async {
@@ -501,6 +525,31 @@ PotatoCollection _collection() {
         growthDistance: 0,
         growthGoalDistance: 10000,
         representative: false,
+      ),
+    ],
+  );
+}
+
+PotatoCollection _rewardOnlyCollection() {
+  return PotatoCollection(
+    totalCount: 1,
+    acquiredCount: 1,
+    items: [
+      PotatoCollectionItem(
+        id: '10',
+        code: 'POTATO_COMMON_SEED',
+        name: '일반 씨앗감자',
+        region: '평창군',
+        rarity: PotatoRarity.common,
+        description: '대관령 여행길에서 만날 수 있는 기본 씨앗 감자입니다.',
+        acquisitionHint: '대관령 양떼목장 방문 미션 완료',
+        imageUrl: null,
+        acquired: true,
+        acquiredAt: DateTime.parse('2026-07-10T00:00:00Z'),
+        level: 1,
+        growthDistance: 600,
+        growthGoalDistance: 3000,
+        representative: true,
       ),
     ],
   );
