@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
+import '../data/pending_potato_growth_store.dart';
 import '../data/potato_repository.dart';
 import '../domain/potato_collection.dart';
 import '../domain/step_count_reader.dart';
@@ -13,6 +14,10 @@ final stepCountReaderProvider = Provider<StepCountReader>(
   (ref) => createStepCountReader(),
 );
 
+final pendingPotatoGrowthStoreProvider = Provider<PendingPotatoGrowthStore>(
+  (ref) => const SharedPreferencesPendingPotatoGrowthStore(),
+);
+
 final potatoActivitySyncProvider =
     FutureProvider.autoDispose<PotatoGrowthResult?>((ref) async {
   final authStatus = ref.watch(
@@ -22,18 +27,33 @@ final potatoActivitySyncProvider =
     return null;
   }
 
+  final pendingGrowthStore = ref.watch(pendingPotatoGrowthStoreProvider);
+  PotatoGrowthResult? pendingGrowthResult;
+  try {
+    pendingGrowthResult = await pendingGrowthStore.take();
+  } catch (_) {
+    // 저장소 오류가 포그라운드 건강 데이터 동기화를 막지 않게 한다.
+  }
+
   final snapshot = await ref.watch(stepCountReaderProvider).readTodaySteps();
   if (snapshot == null) {
-    return null;
+    return pendingGrowthResult;
   }
 
   try {
-    return await ref
-        .watch(potatoRepositoryProvider)
-        .syncDailyActivity(snapshot);
+    final currentGrowthResult =
+        await ref.watch(potatoRepositoryProvider).syncDailyActivity(snapshot);
+    if (pendingGrowthResult != null && currentGrowthResult?.leveledUp == true) {
+      try {
+        await pendingGrowthStore.save(currentGrowthResult!);
+      } catch (_) {
+        // 현재 결과 저장 실패 시 먼저 발생한 성장 안내를 우선 전달한다.
+      }
+    }
+    return pendingGrowthResult ?? currentGrowthResult;
   } catch (_) {
     // 동기화 실패가 도감 진입 자체를 막으면 안 되므로 서버의 마지막 상태를 계속 사용한다.
-    return null;
+    return pendingGrowthResult;
   }
 });
 

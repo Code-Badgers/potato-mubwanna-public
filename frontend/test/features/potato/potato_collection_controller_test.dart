@@ -8,10 +8,16 @@ import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
 import 'package:potato_mubwanna/features/potato/data/potato_repository.dart';
+import 'package:potato_mubwanna/features/potato/data/pending_potato_growth_store.dart';
 import 'package:potato_mubwanna/features/potato/domain/potato_collection.dart';
 import 'package:potato_mubwanna/features/potato/domain/step_count_reader.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   test('parses the server-confirmed potato growth result', () {
     final result = PotatoActivitySyncResult.fromJson({
       'growthResult': {
@@ -136,6 +142,44 @@ void main() {
 
     expect(result, same(growthResult));
   });
+
+  test('returns a background growth result once on the next foreground sync',
+      () async {
+    final authController = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: _SessionAuthRepository(),
+    );
+    await authController.refreshSession();
+    const backgroundGrowthResult = PotatoGrowthResult(
+      potatoId: '2',
+      potatoName: '곤드레감자',
+      previousLevel: 2,
+      currentLevel: 3,
+      leveledUp: true,
+      fullyGrown: false,
+    );
+    final pendingGrowthStore = _MemoryPendingPotatoGrowthStore(
+      backgroundGrowthResult,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith((ref) => authController),
+        potatoRepositoryProvider.overrideWithValue(
+          _RecordingPotatoRepository(),
+        ),
+        stepCountReaderProvider.overrideWithValue(_FixedStepCountReader()),
+        pendingPotatoGrowthStoreProvider.overrideWithValue(
+          pendingGrowthStore,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final result = await container.read(potatoActivitySyncProvider.future);
+
+    expect(result, same(backgroundGrowthResult));
+    expect(await pendingGrowthStore.take(), isNull);
+  });
 }
 
 class _RecordingPotatoRepository extends PotatoRepository {
@@ -184,13 +228,34 @@ class _RecordingPotatoRepository extends PotatoRepository {
 
 class _FixedStepCountReader implements StepCountReader {
   @override
-  Future<StepCountSnapshot?> readTodaySteps() async {
+  Future<StepCountSnapshot?> readTodaySteps({
+    StepCountAuthorization authorization =
+        StepCountAuthorization.requestIfNeeded,
+  }) async {
     return StepCountSnapshot(
       activityDate: DateTime(2026, 8, 1),
       steps: 100,
       distanceMeters: 70,
       source: ActivitySyncSource.healthConnect,
     );
+  }
+}
+
+class _MemoryPendingPotatoGrowthStore implements PendingPotatoGrowthStore {
+  _MemoryPendingPotatoGrowthStore(this._growthResult);
+
+  PotatoGrowthResult? _growthResult;
+
+  @override
+  Future<void> save(PotatoGrowthResult growthResult) async {
+    _growthResult = growthResult;
+  }
+
+  @override
+  Future<PotatoGrowthResult?> take() async {
+    final growthResult = _growthResult;
+    _growthResult = null;
+    return growthResult;
   }
 }
 
