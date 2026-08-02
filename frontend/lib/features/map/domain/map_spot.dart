@@ -92,14 +92,14 @@ class MapSpot {
       return '#7A5AF8';
     }
     return switch (category) {
-      'POTATO_RESTAURANT' => '#FFB84D',
-      'POTATO_CAFE' => '#D98CFF',
+      'POTATO_RESTAURANT' => '#E5A94B',
+      'POTATO_CAFE' => '#B98BE5',
       'POTATO_SNACK' => '#F6C23E',
-      'POTATO_MARKET' => '#36D98F',
-      'POTATO_BREWERY' => '#7A9BFF',
-      'POTATO_SHOP' => '#64C7D9',
-      'POTATO_EXPERIENCE' => '#8BC34A',
-      _ => '#36D98F',
+      'POTATO_MARKET' => '#56C787',
+      'POTATO_BREWERY' => '#6F8FE8',
+      'POTATO_SHOP' => '#5DB8C8',
+      'POTATO_EXPERIENCE' => '#78B95C',
+      _ => '#56C787',
     };
   }
 

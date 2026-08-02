@@ -12,6 +12,8 @@
 - 지도 상단에서 카테고리 필터가 먼저 보이고, 내 동선 버튼이 그 아래에 보이도록 배치를 정리한다.
 - 마이페이지에서 로그아웃과 회원 탈퇴가 직접 노출되지 않고 설정 안에서만 보이도록 정리한다.
 - 프론트 공통 버튼/강조 색상을 `AppColors` 기준으로 통일한다.
+- 랠리북 화면의 보상/스탬프/다음 목표 UI가 다른 화면과 같은 톤으로 보이도록 정리한다.
+- 지도 감자 스팟 마커가 이모지 스티커처럼 보이지 않도록 Web, Android, iOS 표현을 단정한 위치 핀으로 통일한다.
 
 ## 진행 내용
 
@@ -27,6 +29,11 @@
 - 마이페이지 계정 메뉴에서 로그아웃과 회원 탈퇴를 제거하고, 설정 화면 계정 섹션으로 이동했다.
 - 설정 화면 제목을 `설정`으로 바꾸고, 권한 소개 문구를 제거했다.
 - `AppColors.primary`, `primaryDark`, `primaryTint`, `line`, `cream`, `brown`을 추가해 마이페이지, 설정, footer 색상 기준을 통일했다.
+- 랠리북의 로컬 색상 상수를 제거하고 `AppColors` 기반으로 수집률, 다음 목표, 보상 카드 색상을 맞췄다.
+- 랠리북 스탬프 타일의 `감자` 텍스트 표시를 체크/잠금 아이콘으로 바꿔 정보 밀도를 낮췄다.
+- Web Kakao 지도 마커를 감자 이모지에서 흰 원형 핀 + 카테고리 컬러 점으로 변경했다.
+- Android/iOS Kakao 지도 POI 이미지도 같은 원형 핀 스타일로 맞췄다.
+- 지도 카테고리별 마커 색상을 기존보다 낮은 채도로 조정해 전체 화면 팔레트와 충돌하지 않도록 했다.
 
 ## PAAR 기록
 
@@ -46,6 +53,22 @@
 
 지도 카드 갱신 테스트를 포함한 관련 프론트 테스트가 통과했다. 별표 마커는 모든 플랫폼 코드에서 제거했다. 실제 iOS 지도 SDK 터치 이벤트는 시뮬레이터에서 재확인이 필요하다.
 
+### Problem
+
+랠리북은 기능은 동작하지만 진행률, 다음 목표, 시군 스탬프, 보상 카드가 각각 다른 색상 규칙을 사용해 화면이 다소 산만하게 보였다. 지도 마커도 감자 이모지가 지도 위에 붙은 느낌이라 실제 장소 핀보다 장식 요소처럼 보였다.
+
+### Action
+
+랠리북의 초록/노랑/라인 색을 `AppColors`로 모으고, 스탬프 획득 상태는 텍스트 대신 체크/잠금 아이콘으로 정리했다. 지도는 Web/Android/iOS에서 모두 이모지 마커를 제거하고, 흰 원형 핀 안에 카테고리 색 점을 넣는 방식으로 바꿨다.
+
+### Analysis
+
+앱 전체의 기본 인상은 `#56C787` 초록과 `#F6C23E` 노랑이 중심인데, 화면마다 비슷한 색을 각자 정의하면 미묘하게 다른 온도가 생긴다. 특히 지도는 데이터가 많아질수록 마커가 화면을 많이 차지하므로, 마커 자체는 작고 단정해야 카테고리와 위치 정보가 살아난다.
+
+### Result
+
+랠리북은 카드 반경, 라인, 보상 색을 다른 페이지와 맞췄고, 지도 마커는 장소 좌표를 표시하는 UI로 더 읽히도록 정리했다. Flutter analyze와 지도/랠리북 관련 테스트가 통과했다.
+
 ## 검증
 
 - `/Users/mac/Documents/flutter/bin/flutter test --no-pub test/features/auth/session_startup_screen_test.dart test/features/map/map_spot_selection_message_test.dart test/features/map/map_screen_test.dart test/features/potato/potato_collection_screen_test.dart`
@@ -57,8 +80,14 @@
   - 결과: 통과
   - `/Users/mac/Documents/flutter/bin/flutter analyze --no-pub`
   - 결과: 통과
+- UI 톤 정리 검증:
+  - `/Users/mac/Documents/flutter/bin/flutter analyze --no-pub`
+  - 결과: 통과
+  - `/Users/mac/Documents/flutter/bin/flutter test --no-pub test/features/stamp/stamp_book_screen_test.dart test/features/map/map_screen_test.dart test/features/map/map_spot_selection_message_test.dart`
+  - 결과: 통과
 
 ## 남은 리스크
 
 - 실제 iOS 시뮬레이터에서 Kakao Maps SDK POI tap 이벤트가 Flutter로 전달되는지는 별도 수동 확인이 필요하다.
 - 감자 실제 이미지는 아직 제공되지 않았으므로, 현재는 파일명 규칙과 fallback 슬롯까지만 준비했다.
+- Android/iOS 네이티브 지도 마커 이미지는 정적 분석 대상이 아니므로 실제 기기 또는 시뮬레이터에서 한 번 더 시각 확인이 필요하다.

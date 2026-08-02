@@ -19,9 +19,9 @@ typedef MapViewBuilder = Widget Function(
   ValueChanged<String> onSpotSelected,
 );
 
-const _mapPrimary = Color(0xFF36D98F);
-const _mapDark = Color(0xFF509B64);
-const _rareGold = Color(0xFFF6C23E);
+const _mapPrimary = AppColors.primary;
+const _mapDark = AppColors.primaryDark;
+const _rareGold = AppColors.secondary;
 const _recommendationPurple = Color(0xFF7A5AF8);
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -435,7 +435,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: const Color(0xFFE8E2D8)),
+            border: Border.all(color: AppColors.line),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.12),
@@ -515,7 +515,7 @@ class _SheetDragHandle extends StatelessWidget {
       width: 44,
       height: 5,
       decoration: BoxDecoration(
-        color: const Color(0xFFD8D2C8),
+        color: AppColors.line,
         borderRadius: BorderRadius.circular(999),
       ),
     );
@@ -580,9 +580,8 @@ class _SelectedSpotSummary extends StatelessWidget {
             IconButton.filledTonal(
               onPressed: onFavoritePressed,
               style: IconButton.styleFrom(
-                backgroundColor: isFavorite
-                    ? const Color(0xFFFFF2B8)
-                    : const Color(0xFFEAF8EF),
+                backgroundColor:
+                    isFavorite ? AppColors.cream : AppColors.primaryTint,
                 foregroundColor: isFavorite ? _rareGold : _mapDark,
               ),
               icon: Icon(
@@ -609,7 +608,7 @@ class _SelectedSpotSummary extends StatelessWidget {
                 onPressed: onNavigationPressed,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _mapDark,
-                  side: const BorderSide(color: Color(0xFFC9E9D3)),
+                  side: const BorderSide(color: AppColors.line),
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -804,7 +803,7 @@ class _RouteStopTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFECE6DC)),
+              border: Border.all(color: AppColors.line),
             ),
             child: Row(
               children: [
@@ -818,9 +817,14 @@ class _RouteStopTile extends StatelessWidget {
                     ).withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    spot.isRare ? '🥔★' : '🥔',
-                    style: const TextStyle(fontSize: 18),
+                  child: Icon(
+                    spot.isRare
+                        ? Icons.auto_awesome_rounded
+                        : Icons.place_rounded,
+                    color: Color(
+                      int.parse(spot.markerColorHex.replaceFirst('#', '0xFF')),
+                    ),
+                    size: 22,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -881,7 +885,7 @@ class _RouteStepBadge extends StatelessWidget {
       height: 30,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: first ? const Color(0xFF65B7E8) : _mapDark,
+        color: first ? AppColors.secondary : _mapDark,
         shape: BoxShape.circle,
       ),
       child: first
@@ -911,7 +915,7 @@ class _RouteConnector extends StatelessWidget {
         child: VerticalDivider(
           width: 1,
           thickness: 1,
-          color: Color(0xFFD5E7DB),
+          color: AppColors.line,
         ),
       ),
     );
@@ -931,7 +935,7 @@ class _RouteModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = enabled ? const Color(0xFFFFF2B8) : Colors.white;
+    final backgroundColor = enabled ? AppColors.cream : Colors.white;
     final foregroundColor = enabled ? AppColors.textPrimary : _mapDark;
     return Material(
       color: backgroundColor.withValues(alpha: 0.96),
@@ -987,7 +991,7 @@ class _PotatoMapPreview extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: DecoratedBox(
-        decoration: const BoxDecoration(color: Color(0xFFEAF5D5)),
+        decoration: const BoxDecoration(color: AppColors.primaryTint),
         child: Stack(
           children: [
             Positioned.fill(
@@ -1064,7 +1068,7 @@ class _MapCategoryChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: selected ? _mapPrimary : const Color(0xFFE8E2D8),
+              color: selected ? _mapPrimary : AppColors.line,
             ),
           ),
           child: Row(
@@ -1109,7 +1113,7 @@ class _CongestionBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF8EF),
+        color: AppColors.primaryTint,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -1181,9 +1185,9 @@ class _FavoriteRouteLine extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFAE5),
+        color: AppColors.cream,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF4E0A2)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         children: [
@@ -1210,7 +1214,7 @@ class _MapLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const DecoratedBox(
-      decoration: BoxDecoration(color: Color(0xFFEAF5D5)),
+      decoration: BoxDecoration(color: AppColors.primaryTint),
       child: Center(
         child: CircularProgressIndicator(color: _mapPrimary),
       ),
@@ -1267,7 +1271,7 @@ class _MapStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF5D5),
+        color: AppColors.primaryTint,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Center(

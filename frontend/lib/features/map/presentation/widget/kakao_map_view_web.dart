@@ -53,7 +53,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       ..style.margin = '0'
       ..style.padding = '0'
       ..style.overflow = 'hidden'
-      ..style.backgroundColor = '#EAF5D5';
+      ..style.backgroundColor = '#E5F6EA';
 
     _messageElement = html.DivElement()
       ..dataset['kakaoMessage'] = 'true'
@@ -337,23 +337,33 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerElement.type = 'button';
           markerElement.title = spot.name;
           markerElement.setAttribute('aria-label', spot.name);
-          markerElement.textContent = '🥔';
-          markerElement.style.width = '36px';
-          markerElement.style.height = '36px';
-          markerElement.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
+          markerElement.textContent = '';
+          markerElement.style.width = '26px';
+          markerElement.style.height = '26px';
+          markerElement.style.border = '3px solid ' + (spot.markerColor || '#F6C23E');
           markerElement.style.borderRadius = '999px';
           markerElement.style.background = '#FFFFFF';
-          markerElement.style.boxShadow = '0 6px 14px rgba(0,0,0,0.16)';
-          markerElement.style.fontSize = '18px';
+          markerElement.style.boxShadow = '0 5px 12px rgba(32,35,26,0.16)';
+          markerElement.style.position = 'relative';
           markerElement.style.lineHeight = '1';
           markerElement.style.cursor = 'pointer';
           markerElement.style.padding = '0';
           markerElement.style.transformOrigin = '50% 100%';
           markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
+          const markerDot = document.createElement('span');
+          markerDot.style.position = 'absolute';
+          markerDot.style.left = '50%';
+          markerDot.style.top = '50%';
+          markerDot.style.width = '8px';
+          markerDot.style.height = '8px';
+          markerDot.style.borderRadius = '999px';
+          markerDot.style.background = spot.markerColor || '#F6C23E';
+          markerDot.style.transform = 'translate(-50%, -50%)';
+          markerElement.appendChild(markerDot);
           markerElement.addEventListener('click', function () {
             if (selectedMarkerElement) {
               selectedMarkerElement.style.borderColor =
-                selectedMarkerElement.dataset.defaultBorderColor || '#36D98F';
+                selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
             }
             markerElement.style.borderColor = '#F6C23E';
             selectedMarkerElement = markerElement;

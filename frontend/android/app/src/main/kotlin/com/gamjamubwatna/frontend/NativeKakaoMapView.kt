@@ -134,7 +134,7 @@ class NativeKakaoMapView(
 
     private fun showFallback(context: Context, message: String) {
         container.removeAllViews()
-        container.setBackgroundColor(0xFFEAF5D5.toInt())
+        container.setBackgroundColor(0xFFE5F6EA.toInt())
         val textView = TextView(context).apply {
             text = message
             textAlignment = View.TEXT_ALIGNMENT_CENTER
@@ -165,13 +165,12 @@ class NativeKakaoMapView(
             val longitude = (spot["longitude"] as? Number)?.toDouble() ?: return@forEach
             val spotId = spot["id"]?.toString() ?: "${latitude}_${longitude}"
             val isRare = spot["rare"] as? Boolean ?: false
-            val markerColor = spot["markerColor"]?.toString() ?: if (isRare) "#F6C23E" else "#36D98F"
-            val labelText = "🥔"
+            val markerColor = spot["markerColor"]?.toString() ?: if (isRare) "#F6C23E" else "#56C787"
             val styleKey = "${markerColor.replace("#", "")}_${if (isRare) "rare" else "normal"}"
             val styles = styleCache.getOrPut(styleKey) {
                 val labelStyles = LabelStyles.from(
                     "potato_$styleKey",
-                    LabelStyle.from(markerBitmap(labelText, parseColor(markerColor)))
+                    LabelStyle.from(markerBitmap(parseColor(markerColor)))
                         .setAnchorPoint(0.5f, 1.0f),
                 )
                 labelManager.addLabelStyles(labelStyles) ?: labelStyles
@@ -236,9 +235,9 @@ class NativeKakaoMapView(
         routeLayer.showAllPolyline()
     }
 
-    private fun markerBitmap(text: String, strokeColor: Int): Bitmap {
-        val width = if (text.contains("★")) 42 else 36
-        val height = 36
+    private fun markerBitmap(strokeColor: Int): Bitmap {
+        val width = 30
+        val height = 30
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -248,24 +247,21 @@ class NativeKakaoMapView(
         val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = strokeColor
             style = Paint.Style.STROKE
-            strokeWidth = 2f
+            strokeWidth = 3f
         }
-        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.BLACK
-            textAlign = Paint.Align.CENTER
-            textSize = if (text.contains("★")) 15f else 18f
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = strokeColor
+            style = Paint.Style.FILL
         }
-        val markerRect = RectF(3f, 3f, width - 3f, height - 3f)
+        val markerRect = RectF(4f, 4f, width - 4f, height - 4f)
         canvas.drawRoundRect(markerRect, markerRect.height() / 2, markerRect.height() / 2, fillPaint)
         canvas.drawRoundRect(markerRect, markerRect.height() / 2, markerRect.height() / 2, strokePaint)
-
-        val baseline = (height / 2f) - ((textPaint.descent() + textPaint.ascent()) / 2f)
-        canvas.drawText(text, width / 2f, baseline, textPaint)
+        canvas.drawCircle(width / 2f, height / 2f, 4.5f, dotPaint)
         return bitmap
     }
 
     private fun parseColor(hex: String): Int {
-        return runCatching { Color.parseColor(hex) }.getOrDefault(0xFF36D98F.toInt())
+        return runCatching { Color.parseColor(hex) }.getOrDefault(0xFF56C787.toInt())
     }
 
     private fun spotMaps(value: Any?): List<Map<*, *>> {

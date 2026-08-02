@@ -240,7 +240,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       let spotID = "\(spot["id"] ?? UUID().uuidString)"
       let poiID = "potato-\(spotID)"
       let isRare = Self.boolValue(spot["rare"]) ?? false
-      let markerColor = spot["markerColor"] as? String ?? (isRare ? "#F6C23E" : "#36D98F")
+      let markerColor = spot["markerColor"] as? String ?? (isRare ? "#F6C23E" : "#56C787")
       addPoiStyles(
         labelManager: labelManager,
         markerColor: markerColor,
@@ -360,19 +360,16 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   private func addPoiStyles(labelManager: LabelManager, markerColor: String, isRare: Bool) {
     let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
-    let text = "🥔"
     [
-      ("small", CGSize(width: 26, height: 26), CGFloat(13)),
-      ("medium", CGSize(width: 32, height: 32), CGFloat(16)),
-      ("large", CGSize(width: 38, height: 38), CGFloat(18)),
-    ].forEach { sizeKey, size, fontSize in
+      ("small", CGSize(width: 24, height: 24)),
+      ("medium", CGSize(width: 30, height: 30)),
+      ("large", CGSize(width: 36, height: 36)),
+    ].forEach { sizeKey, size in
       labelManager.addPoiStyle(
         makePoiStyle(
           styleID: styleIDFor(markerColor: markerColor, isRare: isRare, sizeKey: sizeKey),
-          text: text,
           color: color,
-          size: size,
-          fontSize: fontSize
+          size: size
         )
       )
     }
@@ -402,13 +399,11 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   private func makePoiStyle(
     styleID: String,
-    text: String,
     color: UIColor,
-    size: CGSize,
-    fontSize: CGFloat
+    size: CGSize
   ) -> PoiStyle {
     let iconStyle = PoiIconStyle(
-      symbol: makeMarkerImage(text: text, color: color, size: size, fontSize: fontSize),
+      symbol: makeMarkerImage(color: color, size: size),
       anchorPoint: CGPoint(x: 0.5, y: 1.0)
     )
     let perLevelStyle = PerLevelPoiStyle(iconStyle: iconStyle, padding: 0, level: 0)
@@ -416,14 +411,12 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   private func makeMarkerImage(
-    text: String,
     color: UIColor,
-    size: CGSize,
-    fontSize: CGFloat
+    size: CGSize
   ) -> UIImage? {
     let renderer = UIGraphicsImageRenderer(size: size)
     return renderer.image { _ in
-      let markerRect = CGRect(x: 3, y: 3, width: size.width - 6, height: size.height - 6)
+      let markerRect = CGRect(x: 4, y: 4, width: size.width - 8, height: size.height - 8)
       let markerPath = UIBezierPath(
         roundedRect: markerRect,
         cornerRadius: markerRect.height / 2
@@ -431,17 +424,18 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       UIColor.white.setFill()
       markerPath.fill()
       color.setStroke()
-      markerPath.lineWidth = 2
+      markerPath.lineWidth = 3
       markerPath.stroke()
 
-      let paragraph = NSMutableParagraphStyle()
-      paragraph.alignment = .center
-      let attributes: [NSAttributedString.Key: Any] = [
-        .font: UIFont.systemFont(ofSize: fontSize),
-        .paragraphStyle: paragraph,
-      ]
-      let textRect = CGRect(x: 0, y: (size.height - fontSize) / 2 - 1, width: size.width, height: fontSize + 4)
-      NSAttributedString(string: text, attributes: attributes).draw(in: textRect)
+      let dotSize = max(6, size.width * 0.26)
+      let dotRect = CGRect(
+        x: (size.width - dotSize) / 2,
+        y: (size.height - dotSize) / 2,
+        width: dotSize,
+        height: dotSize
+      )
+      color.setFill()
+      UIBezierPath(ovalIn: dotRect).fill()
     }
   }
 
