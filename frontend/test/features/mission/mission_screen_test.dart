@@ -63,7 +63,7 @@ void main() {
   testWidgets('renders mission list and category filters', (tester) async {
     await _pumpMissionScreen(tester);
 
-    expect(find.text('미션'), findsOneWidget);
+    expect(find.text('미션'), findsNothing);
     expect(find.text('점순이와 함께 도전해요'), findsOneWidget);
     expect(find.text('점순이'), findsNothing);
     expect(find.text('일일'), findsOneWidget);

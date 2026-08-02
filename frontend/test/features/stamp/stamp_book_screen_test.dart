@@ -24,7 +24,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('랠리북'), findsOneWidget);
+    expect(find.text('랠리북'), findsNothing);
     expect(find.text('수집률'), findsOneWidget);
     expect(find.text('8 / 18'), findsOneWidget);
     expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
@@ -112,7 +112,7 @@ void main() {
       override: stampBookProvider.overrideWith((ref) => completer.future),
     );
 
-    expect(find.text('랠리북'), findsOneWidget);
+    expect(find.text('랠리북'), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
@@ -127,7 +127,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('랠리북'), findsOneWidget);
+    expect(find.text('랠리북'), findsNothing);
     expect(find.text('랠리북을 불러오지 못했습니다.'), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
   });
@@ -364,8 +364,7 @@ StampBook _stampBook({
           ),
       ],
     ),
-    nextReward:
-        reward ??
+    nextReward: reward ??
         NextStampReward(
           acquiredCount: acquiredCount,
           nextTargetCount: completed ? null : 12,
