@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -171,12 +173,230 @@ void main() {
     expect(find.textContaining('성장했어요!'), findsNothing);
     expect(find.text('나의 감자 도감'), findsOneWidget);
   });
+
+  testWidgets(
+    'pull to refresh reloads activity, collection, and summary once',
+    (tester) async {
+      var activitySyncCalls = 0;
+      var collectionCalls = 0;
+      var growthSummaryCalls = 0;
+
+      await _pumpScreen(
+        tester,
+        activitySyncOverride: potatoActivitySyncProvider.overrideWith((
+          ref,
+        ) async {
+          activitySyncCalls += 1;
+          return null;
+        }),
+        growthSummaryOverride: potatoGrowthSummaryProvider.overrideWith((
+          ref,
+        ) async {
+          growthSummaryCalls += 1;
+          return _growthSummary();
+        }),
+        overrides: [
+          potatoCollectionProvider.overrideWith((ref) async {
+            collectionCalls += 1;
+            return _collection();
+          }),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+      await tester.fling(
+        find.byType(CustomScrollView),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(activitySyncCalls, 2);
+      expect(collectionCalls, 2);
+      expect(growthSummaryCalls, 2);
+    },
+  );
+
+  testWidgets('resuming the app reloads potato data once', (tester) async {
+    var activitySyncCalls = 0;
+    var collectionCalls = 0;
+    var growthSummaryCalls = 0;
+
+    await _pumpScreen(
+      tester,
+      activitySyncOverride: potatoActivitySyncProvider.overrideWith((
+        ref,
+      ) async {
+        activitySyncCalls += 1;
+        return null;
+      }),
+      growthSummaryOverride: potatoGrowthSummaryProvider.overrideWith((
+        ref,
+      ) async {
+        growthSummaryCalls += 1;
+        return _growthSummary();
+      }),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async {
+          collectionCalls += 1;
+          return _collection();
+        }),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(activitySyncCalls, 2);
+    expect(collectionCalls, 2);
+    expect(growthSummaryCalls, 2);
+  });
+
+  testWidgets('overlapping manual and resume refreshes share one request', (
+    tester,
+  ) async {
+    var activitySyncCalls = 0;
+    var collectionCalls = 0;
+    var growthSummaryCalls = 0;
+    final collectionRefresh = Completer<PotatoCollection?>();
+    final growthSummaryRefresh = Completer<PotatoGrowthSummary?>();
+
+    await _pumpScreen(
+      tester,
+      activitySyncOverride: potatoActivitySyncProvider.overrideWith((
+        ref,
+      ) async {
+        activitySyncCalls += 1;
+        return null;
+      }),
+      growthSummaryOverride: potatoGrowthSummaryProvider.overrideWith((
+        ref,
+      ) async {
+        growthSummaryCalls += 1;
+        if (growthSummaryCalls == 1) {
+          return _growthSummary();
+        }
+        return growthSummaryRefresh.future;
+      }),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async {
+          collectionCalls += 1;
+          if (collectionCalls == 1) {
+            return _collection();
+          }
+          return collectionRefresh.future;
+        }),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final refreshIndicator = tester.state<RefreshIndicatorState>(
+      find.byType(RefreshIndicator),
+    );
+    unawaited(refreshIndicator.show());
+    await tester.pump();
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(activitySyncCalls, 2);
+    expect(collectionCalls, 2);
+    expect(growthSummaryCalls, 2);
+
+    collectionRefresh.complete(_collection());
+    growthSummaryRefresh.complete(_growthSummary());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('shows refreshed growth feedback only once', (tester) async {
+    var activitySyncCalls = 0;
+    const growthResult = PotatoGrowthResult(
+      potatoId: '2',
+      potatoName: '곤드레감자',
+      previousLevel: 2,
+      currentLevel: 3,
+      leveledUp: true,
+      fullyGrown: false,
+    );
+
+    await _pumpScreen(
+      tester,
+      activitySyncOverride: potatoActivitySyncProvider.overrideWith((
+        ref,
+      ) async {
+        activitySyncCalls += 1;
+        return activitySyncCalls == 1 ? null : growthResult;
+      }),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    final refreshIndicator = tester.state<RefreshIndicatorState>(
+      find.byType(RefreshIndicator),
+    );
+    unawaited(refreshIndicator.show());
+    await tester.pumpAndSettle();
+
+    expect(find.text('곤드레감자가 성장했어요!'), findsOneWidget);
+    await tester.tap(find.text('도감에서 확인'));
+    await tester.pumpAndSettle();
+
+    unawaited(refreshIndicator.show());
+    await tester.pumpAndSettle();
+
+    expect(activitySyncCalls, 3);
+    expect(find.text('곤드레감자가 성장했어요!'), findsNothing);
+  });
+
+  testWidgets('does not refresh after the potato screen is disposed', (
+    tester,
+  ) async {
+    var activitySyncCalls = 0;
+
+    await _pumpScreen(
+      tester,
+      activitySyncOverride: potatoActivitySyncProvider.overrideWith((
+        ref,
+      ) async {
+        activitySyncCalls += 1;
+        return null;
+      }),
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
+    );
+    await tester.pumpAndSettle();
+    expect(activitySyncCalls, 1);
+    final screenState = tester.state(find.byType(PotatoCollectionScreen));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    expect(screenState.mounted, isFalse);
+    expect(activitySyncCalls, 1);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(activitySyncCalls, 1);
+  });
 }
 
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required List<Override> overrides,
   PotatoGrowthResult? growthResult,
+  Override? activitySyncOverride,
+  Override? growthSummaryOverride,
 }) async {
   tester.view.physicalSize = const Size(430, 932);
   tester.view.devicePixelRatio = 1;
@@ -186,12 +406,14 @@ Future<void> _pumpScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        potatoActivitySyncProvider.overrideWith(
-          (ref) async => growthResult,
-        ),
-        potatoGrowthSummaryProvider.overrideWith(
-          (ref) async => _growthSummary(),
-        ),
+        activitySyncOverride ??
+            potatoActivitySyncProvider.overrideWith(
+              (ref) async => growthResult,
+            ),
+        growthSummaryOverride ??
+            potatoGrowthSummaryProvider.overrideWith(
+              (ref) async => _growthSummary(),
+            ),
         ...overrides,
       ],
       child: const MaterialApp(home: PotatoCollectionScreen()),
