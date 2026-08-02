@@ -32,12 +32,21 @@ class TouristSpotMigrationTest {
 
     @Test
     void seedsCuratedSpotsForFreshDatabase() {
-        List<TouristSpot> spots = touristSpotRepository.findActiveSpots(null, null, null);
+        List<TouristSpot> spots = curatedSpots();
 
         assertThat(spots)
-            .hasSize(3)
+            .hasSize(8)
             .extracting(TouristSpot::getName)
-            .containsExactlyInAnyOrder("정선 5일장", "남이섬", "감자밭");
+            .containsExactlyInAnyOrder(
+                "정선 5일장",
+                "남이섬",
+                "감자밭",
+                "감자적1번지",
+                "강릉 길감자",
+                "바회마을",
+                "감자아일랜드 춘천",
+                "대관령원예농협 바우파머스"
+            );
     }
 
     @Test
@@ -59,15 +68,30 @@ class TouristSpotMigrationTest {
 
     @Test
     void seedsMapCategoriesUsedByTheMvp() {
-        List<TouristSpot> spots = touristSpotRepository.findActiveSpots(null, null, null);
+        List<TouristSpot> spots = curatedSpots();
 
         assertThat(spots)
             .extracting(TouristSpot::getCategory)
             .containsExactlyInAnyOrder(
                 SpotCategory.POTATO_MARKET,
                 SpotCategory.POTATO_TOUR,
-                SpotCategory.POTATO_CAFE
+                SpotCategory.POTATO_CAFE,
+                SpotCategory.POTATO_RESTAURANT,
+                SpotCategory.POTATO_SNACK,
+                SpotCategory.POTATO_EXPERIENCE,
+                SpotCategory.POTATO_BREWERY,
+                SpotCategory.POTATO_SHOP
             );
+    }
+
+    @Test
+    void seedsCuratedContentIdsWithoutDuplicates() {
+        List<TouristSpot> spots = curatedSpots();
+
+        assertThat(spots)
+            .extracting(TouristSpot::getContentId)
+            .allSatisfy(contentId -> assertThat(contentId).startsWith("CURATED:"))
+            .doesNotHaveDuplicates();
     }
 
     @Test
@@ -75,9 +99,22 @@ class TouristSpotMigrationTest {
         mockMvc.perform(get("/spots"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.length()").value(3))
             .andExpect(jsonPath("$.data[?(@.name == '정선 5일장')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '남이섬')]").isNotEmpty())
-            .andExpect(jsonPath("$.data[?(@.name == '감자밭')]").isNotEmpty());
+            .andExpect(jsonPath("$.data[?(@.name == '감자밭')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '감자적1번지')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '강릉 길감자')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '바회마을')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '감자아일랜드 춘천')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '대관령원예농협 바우파머스')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.category == 'POTATO_SNACK')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.category == 'POTATO_BREWERY')]").isNotEmpty());
+    }
+
+    private List<TouristSpot> curatedSpots() {
+        return touristSpotRepository.findActiveSpots(null, null, null).stream()
+            .filter(spot -> spot.getContentId() != null)
+            .filter(spot -> spot.getContentId().startsWith("CURATED:"))
+            .toList();
     }
 }
