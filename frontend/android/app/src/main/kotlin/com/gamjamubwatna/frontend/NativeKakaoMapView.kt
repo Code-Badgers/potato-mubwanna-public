@@ -237,53 +237,46 @@ class NativeKakaoMapView(
     }
 
     private fun markerBitmap(strokeColor: Int): Bitmap {
-        val width = 42
-        val height = 48
+        val width = 46
+        val height = 52
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#FFF2CA")
+            color = Color.argb(240, 255, 255, 255)
             style = Paint.Style.FILL
         }
         val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = strokeColor
             style = Paint.Style.STROKE
-            strokeWidth = 3.5f
+            strokeWidth = 2.8f
         }
-        val facePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#7A4A24")
-            style = Paint.Style.FILL
-        }
-        val leafPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#56C787")
+        val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(34, 32, 35, 26)
             style = Paint.Style.FILL
         }
         val pinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = strokeColor
             style = Paint.Style.FILL
         }
+        val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            textSize = 23f
+        }
+
+        canvas.drawOval(RectF(9f, height - 5f, width - 9f, height - 2f), shadowPaint)
+
         val pointer = Path().apply {
-            moveTo(width / 2f - 5f, height - 13f)
-            lineTo(width / 2f + 5f, height - 13f)
+            moveTo(width / 2f - 5f, 35f)
+            lineTo(width / 2f + 5f, 35f)
             lineTo(width / 2f, height - 3f)
             close()
         }
         canvas.drawPath(pointer, pinPaint)
 
-        val leafRect = RectF(width - 17f, 2f, width - 5f, 11f)
-        canvas.save()
-        canvas.rotate(24f, leafRect.centerX(), leafRect.centerY())
-        canvas.drawOval(leafRect, leafPaint)
-        canvas.restore()
-
-        val bodyRect = RectF(7f, 8f, width - 7f, height - 12f)
-        canvas.save()
-        canvas.rotate(-9f, bodyRect.centerX(), bodyRect.centerY())
+        val bodyRect = RectF(4f, 1f, width - 4f, 39f)
         canvas.drawOval(bodyRect, fillPaint)
         canvas.drawOval(bodyRect, strokePaint)
-        canvas.drawCircle(bodyRect.centerX() - 5f, bodyRect.centerY() - 2f, 2f, facePaint)
-        canvas.drawCircle(bodyRect.centerX() + 5f, bodyRect.centerY() - 2f, 2f, facePaint)
-        canvas.restore()
+        canvas.drawText("🥔", width / 2f, bodyRect.centerY() + 8f, emojiPaint)
         return bitmap
     }
 
