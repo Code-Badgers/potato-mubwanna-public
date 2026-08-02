@@ -503,8 +503,9 @@ class _RepresentativePotatoCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed:
-                  potato == null || updating ? null : onChangeRepresentative,
+              onPressed: acquiredCount == 0 || updating
+                  ? null
+                  : onChangeRepresentative,
               style: FilledButton.styleFrom(
                 backgroundColor: _potatoPrimary,
                 disabledBackgroundColor: const Color(0xFFBFE5CC),
@@ -1183,7 +1184,7 @@ class _RepresentativePotatoSheet extends StatelessWidget {
             children: [
               const Expanded(
                 child: Text(
-                  '대표 감자 변경',
+                  '나의 감자 도감',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 22,
@@ -1201,7 +1202,7 @@ class _RepresentativePotatoSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '수집한 감자 ${acquiredItems.length}개',
+            '대표로 세울 감자를 선택하세요. 수집한 감자 ${acquiredItems.length}개',
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,

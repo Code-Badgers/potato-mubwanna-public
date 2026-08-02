@@ -6,6 +6,8 @@
 - 감자 도감 슬롯이 향후 감자 이미지 파일 또는 백엔드 이미지 URL을 표시할 수 있도록 준비한다.
 - 지도 감자 스팟 선택 시 하단 카드가 갱신되지 않는 문제를 줄이기 위해 플랫폼 선택 메시지 파싱을 보강한다.
 - 지도 감자 핀 오른쪽 별표 표시를 제거하고 핀을 감자 아이콘 하나로 통일한다.
+- iOS에서 footer가 떠 보이지 않도록 하단 safe area 배경 처리를 정리한다.
+- 대표 감자 변경 버튼을 통해 나의 감자 도감 선택 화면을 열도록 흐름을 맞춘다.
 
 ## 진행 내용
 
@@ -14,6 +16,8 @@
 - 감자 도감 슬롯이 `imageUrl`을 우선 사용하고, 없으면 `assets/potatoes/{code}.png`를 시도하도록 변경했다.
 - Web, Android, iOS Kakao 지도 마커의 `🥔★` 표시를 `🥔`로 통일했다.
 - 지도 선택 이벤트 payload가 `spotId`, `spotID`, `id`, `poiID`, `potato-<id>` 형태여도 같은 스팟 ID로 파싱되도록 보강했다.
+- `MainBottomNavigation`이 iOS 하단 inset까지 같은 배경색으로 채워 footer가 바닥에 붙어 보이도록 수정했다.
+- 대표 감자 카드의 `대표 감자 변경` 버튼을 누르면 `나의 감자 도감` 선택 화면이 열리도록 조건과 시트 제목을 조정했다.
 
 ## PAAR 기록
 
@@ -38,6 +42,11 @@
 - `/Users/mac/Documents/flutter/bin/flutter test --no-pub test/features/auth/session_startup_screen_test.dart test/features/map/map_spot_selection_message_test.dart test/features/map/map_screen_test.dart test/features/potato/potato_collection_screen_test.dart`
   - 결과: 통과
 - `/Users/mac/Documents/flutter/bin/flutter analyze --no-pub`
+  - 결과: 통과
+- 추가 검증:
+  - `/Users/mac/Documents/flutter/bin/flutter test --no-pub test/features/potato/potato_collection_screen_test.dart test/features/map/map_screen_test.dart test/features/map/map_spot_selection_message_test.dart`
+  - 결과: 통과
+  - `/Users/mac/Documents/flutter/bin/flutter analyze --no-pub`
   - 결과: 통과
 
 ## 남은 리스크
