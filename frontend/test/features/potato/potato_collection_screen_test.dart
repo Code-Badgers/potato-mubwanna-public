@@ -70,7 +70,7 @@ void main() {
 
     expect(find.text('감자 소개'), findsOneWidget);
     expect(find.text('획득 방법'), findsOneWidget);
-    expect(find.text('대표 감자로 설정'), findsOneWidget);
+    expect(find.text('대표 감자로 설정'), findsNothing);
   });
 
   testWidgets('shows a signed out state for guests', (tester) async {
@@ -100,29 +100,6 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '대표 감자 변경'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('하지감자').last);
-    await tester.pumpAndSettle();
-
-    expect(repository.updatedPotatoId, '1');
-    expect(find.text('대표 감자를 하지감자로 변경했어요.'), findsOneWidget);
-  });
-
-  testWidgets('updates representative potato from the detail sheet', (
-    tester,
-  ) async {
-    final repository = _FakePotatoRepository();
-
-    await _pumpScreen(
-      tester,
-      overrides: [
-        potatoCollectionProvider.overrideWith((ref) async => _collection()),
-        potatoRepositoryProvider.overrideWithValue(repository),
-      ],
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('하지감자').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('대표 감자로 설정'));
     await tester.pumpAndSettle();
 
     expect(repository.updatedPotatoId, '1');
