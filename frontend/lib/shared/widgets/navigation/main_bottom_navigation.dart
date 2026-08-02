@@ -3,9 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 
-const _footerPrimary = Color(0xFF36D98F);
-const _footerLine = Color(0xFFE8E2D8);
-
 class MainBottomNavigation extends StatelessWidget {
   const MainBottomNavigation({super.key});
 
@@ -30,7 +27,7 @@ class MainBottomNavigation extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
                     decoration: const BoxDecoration(
                       color: AppColors.surface,
-                      border: Border(top: BorderSide(color: _footerLine)),
+                      border: Border(top: BorderSide(color: AppColors.line)),
                     ),
                     child: Row(
                       children: List.generate(_destinations.length, (index) {
@@ -95,7 +92,7 @@ class _FooterItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foregroundColor =
-        isSelected ? _footerPrimary : AppColors.textSecondary;
+        isSelected ? AppColors.primary : AppColors.textSecondary;
 
     return Tooltip(
       message: label,
@@ -111,7 +108,7 @@ class _FooterItem extends StatelessWidget {
               height: 28,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? _footerPrimary.withValues(alpha: 0.16)
+                    ? AppColors.primary.withValues(alpha: 0.16)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
               ),

@@ -41,7 +41,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('권한 관리'), findsOneWidget);
+    expect(find.text('설정'), findsOneWidget);
+    expect(find.text('권한 관리'), findsNothing);
+    expect(find.text('필수 기능에 필요한 접근권한을 관리합니다.'), findsNothing);
     expect(find.text('위치 권한'), findsOneWidget);
     expect(find.text('알림 권한'), findsOneWidget);
     expect(find.text('허용됨'), findsOneWidget);
@@ -113,6 +115,73 @@ void main() {
     expect(service.notificationStatusCalls, 2);
     expect(find.text('허용됨'), findsNWidgets(2));
     expect(find.text('허용하기'), findsNothing);
+  });
+
+  testWidgets('shows account actions in settings when authenticated',
+      (tester) async {
+    final service = _FakePermissionService(
+      location: PermissionStatus.granted,
+      notification: PermissionStatus.granted,
+    );
+    var logoutCalls = 0;
+    var loginCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          showAccountActions: true,
+          onLogout: () async => logoutCalls++,
+          onOpenLogin: () => loginCalls++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('로그아웃'), findsOneWidget);
+    expect(find.text('회원 탈퇴'), findsOneWidget);
+
+    await tester.tap(find.text('로그아웃'));
+    await tester.pumpAndSettle();
+
+    expect(logoutCalls, 1);
+    expect(loginCalls, 1);
+  });
+
+  testWidgets('confirms account withdrawal inside settings', (tester) async {
+    final service = _FakePermissionService(
+      location: PermissionStatus.granted,
+      notification: PermissionStatus.granted,
+    );
+    var withdrawalCalls = 0;
+    var loginCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          showAccountActions: true,
+          onWithdrawAccount: () async {
+            withdrawalCalls++;
+            return true;
+          },
+          onOpenLogin: () => loginCalls++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('회원 탈퇴'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('정말 탈퇴하시겠어요?'), findsOneWidget);
+    expect(withdrawalCalls, 0);
+
+    await tester.tap(find.widgetWithText(FilledButton, '회원 탈퇴'));
+    await tester.pumpAndSettle();
+
+    expect(withdrawalCalls, 1);
+    expect(loginCalls, 1);
   });
 }
 

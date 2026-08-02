@@ -62,6 +62,12 @@ final appRouter = GoRouter(
             pushTokenLifecycle: isAuthenticated
                 ? ref.read(pushNotificationServiceProvider)
                 : const NoopPushTokenLifecycle(),
+            showAccountActions: isAuthenticated,
+            onLogout: ref.read(authControllerProvider.notifier).logout,
+            onWithdrawAccount:
+                ref.read(authControllerProvider.notifier).withdrawAccount,
+            authMessage: () => ref.read(authControllerProvider).message,
+            onOpenLogin: () => context.go('/login'),
           );
         },
       ),
