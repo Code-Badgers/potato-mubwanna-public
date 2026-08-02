@@ -416,6 +416,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _PotatoArtSlot(
+                item: potato,
                 locked: potato == null || !potato.acquired,
                 size: 86,
               ),
@@ -893,7 +894,7 @@ class _PotatoTile extends StatelessWidget {
             padding: const EdgeInsets.all(9),
             child: Column(
               children: [
-                _PotatoArtSlot(locked: locked, size: 70),
+                _PotatoArtSlot(item: item, locked: locked, size: 70),
                 const SizedBox(height: 8),
                 Text(
                   locked ? '미획득' : item.name,
@@ -931,15 +932,23 @@ class _PotatoTile extends StatelessWidget {
 
 class _PotatoArtSlot extends StatelessWidget {
   const _PotatoArtSlot({
+    required this.item,
     required this.locked,
     required this.size,
   });
 
+  final PotatoCollectionItem? item;
   final bool locked;
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final potato = item;
+    final imageUrl = potato?.imageUrl;
+    final assetPath = locked || potato == null
+        ? 'assets/potatoes/potato_unknown.png'
+        : _potatoAssetPath(potato.code);
+
     return Container(
       width: size,
       height: size,
@@ -950,8 +959,43 @@ class _PotatoArtSlot extends StatelessWidget {
           color: locked ? _potatoLine : _potatoYellow,
         ),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.all(size * 0.12),
+        child: imageUrl != null && imageUrl.isNotEmpty
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) =>
+                    _PotatoArtFallback(locked: locked),
+              )
+            : Image.asset(
+                assetPath,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) =>
+                    _PotatoArtFallback(locked: locked),
+              ),
+      ),
     );
   }
+}
+
+class _PotatoArtFallback extends StatelessWidget {
+  const _PotatoArtFallback({required this.locked});
+
+  final bool locked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      locked ? Icons.question_mark_rounded : Icons.eco_rounded,
+      color: locked ? AppColors.textSecondary : _potatoDark,
+    );
+  }
+}
+
+String _potatoAssetPath(String code) {
+  return 'assets/potatoes/${code.toLowerCase()}.png';
 }
 
 class _RarityBadge extends StatelessWidget {
@@ -1052,7 +1096,7 @@ class _PotatoDetailSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Center(child: _PotatoArtSlot(locked: locked, size: 144)),
+          Center(child: _PotatoArtSlot(item: item, locked: locked, size: 144)),
           const SizedBox(height: 18),
           Wrap(
             spacing: 8,
@@ -1225,7 +1269,7 @@ class _RepresentativePotatoOption extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const _PotatoArtSlot(locked: false, size: 66),
+                    _PotatoArtSlot(item: item, locked: false, size: 66),
                     if (selected)
                       Positioned(
                         right: -5,
