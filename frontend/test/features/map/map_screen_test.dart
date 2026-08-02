@@ -33,6 +33,10 @@ void main() {
     expect(find.text('내 동선 0곳'), findsOneWidget);
     expect(find.text('전체'), findsOneWidget);
     expect(find.text('관광'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('전체')).dy,
+      lessThan(tester.getTopLeft(find.text('내 동선 0곳')).dy),
+    );
     expect(find.text('정선 5일장'), findsOneWidget);
     expect(find.text('상세보기'), findsOneWidget);
   });

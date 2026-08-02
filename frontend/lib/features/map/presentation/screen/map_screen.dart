@@ -307,16 +307,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _RouteModeChip(
-                                enabled: _showFavoriteRouteOnly,
-                                favoriteCount: favoriteSpotIds.length,
-                                onTap: _toggleFavoriteRouteOnly,
-                              ),
-                              const SizedBox(height: 10),
                               _CategoryFilterBar(
                                 categories: _categories,
                                 selectedIndex: _selectedCategoryIndex,
                                 onSelected: _selectCategory,
+                              ),
+                              const SizedBox(height: 10),
+                              _RouteModeChip(
+                                enabled: _showFavoriteRouteOnly,
+                                favoriteCount: favoriteSpotIds.length,
+                                onTap: _toggleFavoriteRouteOnly,
                               ),
                               if (recommendationSourceSpotId != null) ...[
                                 const SizedBox(height: 10),
