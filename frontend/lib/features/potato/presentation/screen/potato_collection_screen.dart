@@ -11,16 +11,8 @@ import '../potato_asset.dart';
 
 const _potatoPrimary = Color(0xFF56C787);
 const _potatoDark = Color(0xFF509B64);
-const _potatoCream = Color(0xFFFFF8EA);
 const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
-
-String _formatInt(int value) {
-  return value.toString().replaceAllMapped(
-        RegExp(r'\B(?=(\d{3})+(?!\d))'),
-        (_) => ',',
-      );
-}
 
 class PotatoCollectionScreen extends ConsumerStatefulWidget {
   const PotatoCollectionScreen({super.key});
@@ -414,20 +406,14 @@ class _RepresentativePotatoCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration(color: _potatoCream),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _PotatoArtSlot(
-                item: potato,
-                locked: potato == null || !potato.acquired,
-                size: 86,
-              ),
-              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,6 +462,13 @@ class _RepresentativePotatoCard extends StatelessWidget {
                       ),
                   ],
                 ),
+              ),
+              const SizedBox(width: 16),
+              _PotatoArtSlot(
+                item: potato,
+                locked: potato == null || !potato.acquired,
+                size: 128,
+                framed: false,
               ),
             ],
           ),
@@ -586,16 +579,7 @@ class _TodayStepCard extends ConsumerWidget {
     final summaryState = ref.watch(potatoGrowthSummaryProvider);
 
     return summaryState.when(
-      data: (summary) => _TodayStepCardContent(
-        summary: summary ??
-            const PotatoGrowthSummary(
-              todaySteps: 0,
-              dailyStepGoal: 0,
-              weeklyDistanceKm: 0,
-              monthlyDistanceKm: 0,
-              remainingDistanceKmForRepresentative: 0,
-            ),
-      ),
+      data: (_) => const _TodayStepCardContent(),
       loading: () => const _TodayStepCardShell(
         child: SizedBox(
           height: 148,
@@ -794,24 +778,15 @@ class _GrowthProgress extends StatelessWidget {
 }
 
 class _TodayStepCardContent extends StatelessWidget {
-  const _TodayStepCardContent({required this.summary});
-
-  final PotatoGrowthSummary summary;
+  const _TodayStepCardContent();
 
   @override
   Widget build(BuildContext context) {
-    final ratio = summary.stepRatio;
-    final percentage = (ratio * 100).round();
-    final remainingDistance = summary.remainingDistanceKmForRepresentative;
-    final remainingLabel = remainingDistance <= 0
-        ? '성장 목표를 달성했어요'
-        : '성장까지 약 ${remainingDistance.toStringAsFixed(1)}km 남았어요';
-
-    return _TodayStepCardShell(
+    return const _TodayStepCardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '오늘의 감자걸음',
             style: TextStyle(
               color: AppColors.textPrimary,
@@ -820,26 +795,25 @@ class _TodayStepCardContent extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Row(
             children: [
               SizedBox(
-                width: 92,
-                height: 92,
+                width: 104,
+                height: 104,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     CircularProgressIndicator(
                       strokeWidth: 10,
-                      value: ratio,
-                      backgroundColor: const Color(0xFFE7EFE9),
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(_potatoPrimary),
+                      value: 0,
+                      backgroundColor: Color(0xFFE7EFE9),
+                      valueColor: AlwaysStoppedAnimation<Color>(_potatoPrimary),
                     ),
                     Center(
                       child: Text(
-                        '$percentage%',
-                        style: const TextStyle(
+                        '0%',
+                        style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
@@ -850,25 +824,24 @@ class _TodayStepCardContent extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 18),
+              SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_formatInt(summary.todaySteps)} / '
-                      '${_formatInt(summary.dailyStepGoal)}보',
-                      style: const TextStyle(
+                      '0 걸음',
+                      style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 22,
+                        fontSize: 27,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 10),
                     Text(
-                      remainingLabel,
-                      style: const TextStyle(
+                      '오늘의 걸음 기록을 준비 중이에요',
+                      style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -880,23 +853,33 @@ class _TodayStepCardContent extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: _StepSummaryTile(
                   label: '이번 주',
-                  value: '${summary.weeklyDistanceKm.toStringAsFixed(1)} km',
+                  value: '0 걸음',
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: _StepSummaryTile(
                   label: '이번 달',
-                  value: '${summary.monthlyDistanceKm.toStringAsFixed(1)} km',
+                  value: '0 걸음',
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+            child: LinearProgressIndicator(
+              minHeight: 10,
+              value: 0,
+              backgroundColor: Color(0xFFFFE9B6),
+              valueColor: AlwaysStoppedAnimation<Color>(_potatoYellow),
+            ),
           ),
         ],
       ),
@@ -1010,11 +993,13 @@ class _PotatoArtSlot extends StatelessWidget {
     required this.item,
     required this.locked,
     required this.size,
+    this.framed = true,
   });
 
   final PotatoCollectionItem? item;
   final bool locked;
   final double size;
+  final bool framed;
 
   @override
   Widget build(BuildContext context) {
@@ -1024,33 +1009,39 @@ class _PotatoArtSlot extends StatelessWidget {
         ? 'assets/potatoes/potato_unknown.png'
         : potatoLocalAssetPath(potato.code);
 
+    final image = imageUrl != null && imageUrl.isNotEmpty
+        ? Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
+          )
+        : Image.asset(
+            assetPath,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
+          );
+
+    if (!framed) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.02),
+          child: image,
+        ),
+      );
+    }
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: locked ? const Color(0xFFF2F0EA) : const Color(0xFFFFF3C7),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: locked ? _potatoLine : _potatoYellow,
-        ),
+        border: Border.all(color: locked ? _potatoLine : _potatoYellow),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: EdgeInsets.all(size * 0.12),
-        child: imageUrl != null && imageUrl.isNotEmpty
-            ? Image.network(
-                imageUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) =>
-                    _PotatoArtFallback(locked: locked),
-              )
-            : Image.asset(
-                assetPath,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) =>
-                    _PotatoArtFallback(locked: locked),
-              ),
-      ),
+      child: Padding(padding: EdgeInsets.all(size * 0.12), child: image),
     );
   }
 }
@@ -1062,9 +1053,12 @@ class _PotatoArtFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      locked ? Icons.question_mark_rounded : Icons.eco_rounded,
-      color: locked ? AppColors.textSecondary : _potatoDark,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: locked ? const Color(0xFFF2F0EA) : AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const SizedBox.expand(),
     );
   }
 }
