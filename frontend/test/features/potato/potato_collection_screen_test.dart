@@ -26,9 +26,31 @@ void main() {
     expect(find.text('2 / 3'), findsOneWidget);
     expect(find.text('오늘의 감자걸음'), findsOneWidget);
     expect(find.text('7,842 / 10,000보'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, '정보 보기'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '대표 감자 변경'), findsOneWidget);
     expect(find.text('나의 감자 도감'), findsNothing);
     expect(find.text('미획득'), findsNothing);
+  });
+
+  testWidgets('opens representative potato detail from the main card', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, '정보 보기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('곤드레감자'), findsWidgets);
+    expect(find.text('감자 소개'), findsOneWidget);
+    expect(find.text('획득 방법'), findsOneWidget);
+    expect(find.text('성장 진행'), findsOneWidget);
+    expect(find.text('대표 감자로 설정'), findsNothing);
   });
 
   testWidgets('renders reward-only potato code with mapped local asset', (
@@ -72,7 +94,33 @@ void main() {
     expect(find.text('나의 감자 도감'), findsOneWidget);
     expect(find.text('대표로 세울 감자를 선택하세요. 수집한 감자 2개'), findsOneWidget);
     expect(find.text('하지감자'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, '상세'), findsNWidgets(2));
     expect(find.text('대표 감자로 설정'), findsNothing);
+  });
+
+  testWidgets('opens a picker item detail without changing representative', (
+    tester,
+  ) async {
+    final repository = _FakePotatoRepository();
+
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+        potatoRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '대표 감자 변경'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, '상세').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('하지감자'), findsWidgets);
+    expect(find.text('감자 소개'), findsOneWidget);
+    expect(find.text('획득 방법'), findsOneWidget);
+    expect(repository.updatedPotatoId, isNull);
   });
 
   testWidgets('shows a signed out state for guests', (tester) async {

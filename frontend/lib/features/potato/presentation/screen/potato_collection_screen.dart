@@ -111,11 +111,24 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => _RepresentativePotatoSheet(
         collection: collection,
+        onShowDetail: (item) {
+          Navigator.of(sheetContext).pop();
+          _showPotatoDetail(item);
+        },
         onSelect: (item) {
           Navigator.of(sheetContext).pop();
           _updateRepresentativePotato(item);
         },
       ),
+    );
+  }
+
+  void _showPotatoDetail(PotatoCollectionItem item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PotatoDetailSheet(item: item),
     );
   }
 
@@ -210,6 +223,7 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
                   child: _PotatoCollectionBody(
                     collection: collection,
                     updatingRepresentative: _isUpdatingRepresentative,
+                    onShowDetail: _showPotatoDetail,
                     onChangeRepresentative: () {
                       _showRepresentativePicker(collection);
                     },
@@ -331,11 +345,13 @@ class _PotatoCollectionBody extends StatelessWidget {
   const _PotatoCollectionBody({
     required this.collection,
     required this.updatingRepresentative,
+    required this.onShowDetail,
     required this.onChangeRepresentative,
   });
 
   final PotatoCollection collection;
   final bool updatingRepresentative;
+  final ValueChanged<PotatoCollectionItem> onShowDetail;
   final VoidCallback onChangeRepresentative;
 
   @override
@@ -352,6 +368,9 @@ class _PotatoCollectionBody extends StatelessWidget {
             acquiredCount: collection.acquiredCount,
             totalCount: collection.totalCount,
             updating: updatingRepresentative,
+            onShowDetail: representative == null
+                ? null
+                : () => onShowDetail(representative),
             onChangeRepresentative: onChangeRepresentative,
           ),
         ),
@@ -377,6 +396,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
     required this.acquiredCount,
     required this.totalCount,
     required this.updating,
+    required this.onShowDetail,
     required this.onChangeRepresentative,
   });
 
@@ -384,6 +404,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
   final int acquiredCount;
   final int totalCount;
   final bool updating;
+  final VoidCallback? onShowDetail;
   final VoidCallback onChangeRepresentative;
 
   @override
@@ -486,39 +507,70 @@ class _RepresentativePotatoCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: acquiredCount == 0 || updating
-                  ? null
-                  : onChangeRepresentative,
-              style: FilledButton.styleFrom(
-                backgroundColor: _potatoPrimary,
-                disabledBackgroundColor: const Color(0xFFBFE5CC),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: potato == null ? null : onShowDetail,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _potatoDark,
+                    disabledForegroundColor: AppColors.textSecondary,
+                    side: BorderSide(
+                      color: potato == null
+                          ? _potatoLine
+                          : _potatoPrimary.withValues(alpha: 0.55),
+                    ),
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.info_outline_rounded, size: 18),
+                  label: const Text(
+                    '정보 보기',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
                 ),
               ),
-              child: updating
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      '대표 감자 변경',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: acquiredCount == 0 || updating
+                      ? null
+                      : onChangeRepresentative,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _potatoPrimary,
+                    disabledBackgroundColor: const Color(0xFFBFE5CC),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-            ),
+                  ),
+                  child: updating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          '대표 감자 변경',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -557,6 +609,184 @@ class _TodayStepCard extends ConsumerWidget {
           message:
               error is ApiException ? error.message : '오늘의 감자걸음을 불러오지 못했습니다.',
           onRetry: () => ref.invalidate(potatoGrowthSummaryProvider),
+        ),
+      ),
+    );
+  }
+}
+
+class _PotatoDetailSheet extends StatelessWidget {
+  const _PotatoDetailSheet({required this.item});
+
+  final PotatoCollectionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final locked = !item.acquired;
+
+    return _BottomSheetFrame(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  locked ? '아직 만나지 못한 감자' : item.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: '닫기',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: _PotatoArtSlot(item: item, locked: locked, size: 144),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _RarityBadge(rarity: item.rarity),
+              _MetaChip(label: item.region),
+              _MetaChip(label: locked ? '미획득' : 'Lv.${item.level}'),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _InfoBlock(
+            title: '감자 소개',
+            body: locked ? '획득 후 감자의 이야기가 열립니다.' : item.description,
+          ),
+          _InfoBlock(title: '획득 방법', body: item.acquisitionHint),
+          _GrowthProgress(item: item),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoBlock extends StatelessWidget {
+  const _InfoBlock({
+    required this.title,
+    required this.body,
+  });
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              height: 1.45,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GrowthProgress extends StatelessWidget {
+  const _GrowthProgress({required this.item});
+
+  final PotatoCollectionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final goal = item.growthGoalDistance;
+    final progress = goal <= 0 ? 0.0 : item.growthDistance / goal;
+    final distanceLabel = item.acquired
+        ? '${(item.growthDistance / 1000).toStringAsFixed(1)}km 이동'
+        : '획득 후 성장 기록이 쌓입니다.';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBF5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _potatoLine),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '성장 진행',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+                Text(
+                  item.acquired ? 'Lv.${item.level}' : '잠김',
+                  style: const TextStyle(
+                    color: _potatoDark,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                minHeight: 9,
+                value: progress.clamp(0, 1),
+                backgroundColor: const Color(0xFFE7EFE9),
+                valueColor: const AlwaysStoppedAnimation<Color>(_potatoPrimary),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              distanceLabel,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -900,10 +1130,12 @@ class _MetaChip extends StatelessWidget {
 class _RepresentativePotatoSheet extends StatelessWidget {
   const _RepresentativePotatoSheet({
     required this.collection,
+    required this.onShowDetail,
     required this.onSelect,
   });
 
   final PotatoCollection collection;
+  final ValueChanged<PotatoCollectionItem> onShowDetail;
   final ValueChanged<PotatoCollectionItem> onSelect;
 
   @override
@@ -961,6 +1193,7 @@ class _RepresentativePotatoSheet extends StatelessWidget {
               final item = acquiredItems[index];
               return _RepresentativePotatoOption(
                 item: item,
+                onShowDetail: () => onShowDetail(item),
                 onSelect: () => onSelect(item),
               );
             },
@@ -974,10 +1207,12 @@ class _RepresentativePotatoSheet extends StatelessWidget {
 class _RepresentativePotatoOption extends StatelessWidget {
   const _RepresentativePotatoOption({
     required this.item,
+    required this.onShowDetail,
     required this.onSelect,
   });
 
   final PotatoCollectionItem item;
+  final VoidCallback onShowDetail;
   final VoidCallback onSelect;
 
   @override
@@ -1037,6 +1272,27 @@ class _RepresentativePotatoOption extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  height: 28,
+                  child: TextButton(
+                    onPressed: onShowDetail,
+                    style: TextButton.styleFrom(
+                      foregroundColor: _potatoDark,
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      '상세',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
                   ),
                 ),
               ],
