@@ -22,7 +22,6 @@ typedef MapViewBuilder = Widget Function(
 const _mapPrimary = AppColors.primary;
 const _mapDark = AppColors.primaryDark;
 const _rareGold = AppColors.secondary;
-const _recommendationPurple = Color(0xFF7A5AF8);
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({
@@ -657,14 +656,14 @@ class _RecommendedSpotBadge extends StatelessWidget {
       children: [
         Icon(
           Icons.auto_awesome_rounded,
-          color: _recommendationPurple,
+          color: _rareGold,
           size: 16,
         ),
         SizedBox(width: 5),
         Text(
           '방문 후 추천 장소',
           style: TextStyle(
-            color: _recommendationPurple,
+            color: AppColors.textPrimary,
             fontSize: 12,
             fontWeight: FontWeight.w900,
             letterSpacing: 0,
@@ -690,7 +689,7 @@ class _RecommendationStatusChip extends StatelessWidget {
           ? (Icons.location_off_rounded, '추천 장소를 찾지 못했어요', false)
           : (
               Icons.auto_awesome_rounded,
-              '다음 추천 ${recommendations.length}곳 · 보라색 핀',
+              '다음 추천 ${recommendations.length}곳 · 노란 핀',
               false,
             ),
     );
@@ -709,7 +708,7 @@ class _RecommendationStatusChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: _recommendationPurple),
+              Icon(icon, size: 18, color: _rareGold),
               const SizedBox(width: 7),
               Text(
                 label,
@@ -725,7 +724,7 @@ class _RecommendationStatusChip extends StatelessWidget {
                 const Text(
                   '다시 시도',
                   style: TextStyle(
-                    color: _recommendationPurple,
+                    color: _mapDark,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,

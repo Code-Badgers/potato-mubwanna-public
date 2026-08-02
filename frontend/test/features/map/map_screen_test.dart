@@ -375,7 +375,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('다음 추천 2곳 · 보라색 핀'), findsOneWidget);
+    expect(find.text('다음 추천 2곳 · 노란 핀'), findsOneWidget);
     expect(find.text('방문 후 추천 장소'), findsOneWidget);
     expect(find.text('감자 카페'), findsOneWidget);
     expect(

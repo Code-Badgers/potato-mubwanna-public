@@ -88,19 +88,10 @@ class MapSpot {
   }
 
   String get markerColorHex {
-    if (isRecommended) {
-      return '#7A5AF8';
+    if (isRecommended || isRare) {
+      return '#F6C23E';
     }
-    return switch (category) {
-      'POTATO_RESTAURANT' => '#E5A94B',
-      'POTATO_CAFE' => '#B98BE5',
-      'POTATO_SNACK' => '#F6C23E',
-      'POTATO_MARKET' => '#56C787',
-      'POTATO_BREWERY' => '#6F8FE8',
-      'POTATO_SHOP' => '#5DB8C8',
-      'POTATO_EXPERIENCE' => '#78B95C',
-      _ => '#56C787',
-    };
+    return '#56C787';
   }
 
   bool get isRare => congestionLevel == 'LOW' || category == 'POTATO_TOUR';
