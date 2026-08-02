@@ -26,3 +26,8 @@ Future<void> main() async {
     ),
   );
 }
+
+@pragma('vm:entry-point')
+void iosHealthBackgroundSyncEntrypoint() {
+  initializeIosHealthBackgroundSyncEntrypoint();
+}

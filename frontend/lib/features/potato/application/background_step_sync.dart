@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../app/config/app_environment.dart';
@@ -15,6 +16,10 @@ import '../domain/step_count_reader.dart';
 const backgroundStepSyncTaskName = 'backgroundPotatoStepSync';
 const backgroundStepSyncUniqueName = 'periodicBackgroundPotatoStepSync';
 const backgroundStepSyncTag = 'potatoStepSync';
+const _iosBackgroundStepSyncChannel =
+    MethodChannel('potato_mubwanna/health_background_sync');
+const _iosBackgroundStepSyncStartMethod = 'start';
+const _iosBackgroundStepSyncCompletedMethod = 'completed';
 
 enum BackgroundStepSyncOutcome { completed, skipped, retry }
 
@@ -99,13 +104,46 @@ void backgroundStepSyncCallbackDispatcher() {
       return true;
     }
 
-    final outcome = await _runBackgroundStepSync();
+    final outcome = await runBackgroundStepSync();
     return outcome != BackgroundStepSyncOutcome.retry;
   });
 }
 
-Future<BackgroundStepSyncOutcome> _runBackgroundStepSync() async {
-  const tokenStorage = TokenStorage(FlutterSecureStorage());
+void initializeIosHealthBackgroundSyncEntrypoint() {
+  WidgetsFlutterBinding.ensureInitialized();
+  _iosBackgroundStepSyncChannel.setMethodCallHandler((call) async {
+    if (call.method != _iosBackgroundStepSyncStartMethod) {
+      return;
+    }
+
+    try {
+      await runIosHealthBackgroundStepSync();
+    } catch (_) {
+      // Native code owns a timeout fallback, so the headless isolate can end quietly.
+    }
+  });
+}
+
+@visibleForTesting
+Future<void> runIosHealthBackgroundStepSync({
+  Future<BackgroundStepSyncOutcome> Function()? synchronize,
+  Future<void> Function()? notifyCompletion,
+}) async {
+  try {
+    await (synchronize ?? runBackgroundStepSync)();
+  } finally {
+    if (notifyCompletion != null) {
+      await notifyCompletion();
+    } else {
+      await _iosBackgroundStepSyncChannel.invokeMethod<void>(
+        _iosBackgroundStepSyncCompletedMethod,
+      );
+    }
+  }
+}
+
+Future<BackgroundStepSyncOutcome> runBackgroundStepSync() async {
+  const tokenStorage = TokenStorage(applicationSecureStorage);
   final dioClient = DioClient(
     tokenStorage: tokenStorage,
     baseUrl: AppEnvironment.apiBaseUrl,

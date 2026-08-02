@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:health/health.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,8 @@ class HealthStepCountReader implements StepCountReader {
   static const _estimatedMetersPerStep = 0.7;
   static const _backgroundPermissionRequestedKey =
       'healthBackgroundPermissionRequested';
+  static const _iosBackgroundSyncChannel =
+      MethodChannel('potato_mubwanna/health_background_sync');
 
   final Health _health;
 
@@ -52,6 +55,10 @@ class HealthStepCountReader implements StepCountReader {
         return null;
       }
       if (authorization == StepCountAuthorization.requestIfNeeded &&
+          Platform.isIOS) {
+        await _enableIosBackgroundDelivery();
+      }
+      if (authorization == StepCountAuthorization.requestIfNeeded &&
           Platform.isAndroid) {
         await _requestBackgroundAuthorizationOnce();
       }
@@ -84,6 +91,12 @@ class HealthStepCountReader implements StepCountReader {
     List<HealthDataType> types,
     List<HealthDataAccess> permissions,
   ) async {
+    if (Platform.isIOS) {
+      // HealthKit hides read authorization state. Query without prompting and
+      // treat unavailable data as a skipped background sync instead.
+      return true;
+    }
+
     final hasStepPermission =
         await _health.hasPermissions(types, permissions: permissions) == true;
     if (!hasStepPermission || !Platform.isAndroid) {
@@ -107,5 +120,13 @@ class HealthStepCountReader implements StepCountReader {
 
     await _health.requestHealthDataInBackgroundAuthorization();
     await preferences.setBool(_backgroundPermissionRequestedKey, true);
+  }
+
+  Future<void> _enableIosBackgroundDelivery() async {
+    try {
+      await _iosBackgroundSyncChannel.invokeMethod<void>('enable');
+    } catch (_) {
+      // A foreground step read should still succeed if native setup is absent.
+    }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/potato/application/background_step_sync.dart';
 import 'package:potato_mubwanna/features/potato/domain/potato_collection.dart';
 import 'package:potato_mubwanna/features/potato/domain/step_count_reader.dart';
@@ -87,5 +88,41 @@ void main() {
     final outcome = await service.synchronize();
 
     expect(outcome, BackgroundStepSyncOutcome.retry);
+  });
+
+  test('notifies iOS native code after a successful background sync', () async {
+    var completionCount = 0;
+
+    await runIosHealthBackgroundStepSync(
+      synchronize: () async => BackgroundStepSyncOutcome.completed,
+      notifyCompletion: () async {
+        completionCount++;
+      },
+    );
+
+    expect(completionCount, 1);
+  });
+
+  test('notifies iOS native code even when background sync throws', () async {
+    var completionCount = 0;
+
+    await expectLater(
+      runIosHealthBackgroundStepSync(
+        synchronize: () async => throw StateError('sync failed'),
+        notifyCompletion: () async {
+          completionCount++;
+        },
+      ),
+      throwsStateError,
+    );
+
+    expect(completionCount, 1);
+  });
+
+  test('keeps iOS auth tokens available after the first device unlock', () {
+    expect(
+      applicationSecureStorage.iOptions.toMap()['accessibility'],
+      'first_unlock_this_device',
+    );
   });
 }

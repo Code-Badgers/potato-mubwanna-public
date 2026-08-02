@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../app/config/app_environment.dart';
 import '../../../core/network/dio_client.dart';
@@ -11,7 +10,7 @@ import '../data/auth_repository.dart';
 import '../data/kakao_login_service.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>(
-  (ref) => const TokenStorage(FlutterSecureStorage()),
+  (ref) => const TokenStorage(applicationSecureStorage),
 );
 
 final dioClientProvider = Provider<DioClient>(

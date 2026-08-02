@@ -28,6 +28,7 @@ class SharedPreferencesPendingPotatoGrowthStore
   @override
   Future<PotatoGrowthResult?> take() async {
     final preferences = await SharedPreferences.getInstance();
+    await preferences.reload();
     final encodedGrowth = preferences.getString(_pendingGrowthKey);
     if (encodedGrowth == null || encodedGrowth.isEmpty) {
       return null;
