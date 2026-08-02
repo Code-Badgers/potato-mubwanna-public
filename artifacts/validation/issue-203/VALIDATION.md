@@ -37,6 +37,10 @@
 - 지도 카테고리별 마커 색상을 기존보다 낮은 채도로 조정해 전체 화면 팔레트와 충돌하지 않도록 했다.
 - 지도 마커 색상 정책을 일반 스팟 `#56C787`, 희귀/추천 스팟 `#F6C23E`로 단순화했다.
 - 추천 장소의 보라색 강조를 제거하고, 보상/희귀와 같은 노란 포인트 색으로 통일했다.
+- 온보딩 이미지와 캐릭터 디자인 가이드를 참고해 감자 도감용 캐릭터 PNG 12종을 생성했다.
+- 생성한 캐릭터는 `frontend/assets/potatoes/`에 백엔드 `potatoes.code` 기반 파일명으로 저장했다.
+- 생성 이미지 프리뷰를 `artifacts/validation/issue-203/potato-character-assets-preview.png`에 남겼다.
+- 기본 노란 감자 외에 자주감자, 러셋 브라운 감자, 자작나무 아이보리 감자, 인디고 전설 감자처럼 품종별 색 차이가 드러나는 추가 세트를 만들었다.
 
 ## PAAR 기록
 
@@ -88,6 +92,22 @@
 
 지도 색상 체계가 `일반=초록`, `희귀/추천=노랑`, `선택/행동=초록 계열`로 정리되었다. 기존 테스트는 추천 문구가 `보라색 핀`을 기대해 한 번 실패했고, 새 정책에 맞춰 `노란 핀`으로 수정한 뒤 통과했다.
 
+### Problem
+
+감자 도감 슬롯은 로컬 이미지 fallback 구조가 준비되어 있었지만, 실제 감자 캐릭터 이미지가 없어 수집형 서비스의 핵심 매력이 약했다.
+
+### Action
+
+`onboading.png`와 캐릭터 디자인 가이드를 스타일 레퍼런스로 사용해 3x2 캐릭터 시트를 생성했다. 이후 하지감자, 곤드레감자, 황금감자, 전설감자, 평화감자, 미획득 감자로 잘라내고 초록 chroma-key 배경을 투명 PNG로 제거했다. 사용자가 감자 색 다양성이 부족하다고 지적해 자주감자, 두루미감자, 한우감자, 자작감자, 양구 전설감자 등 추가 3x2 시트를 한 번 더 생성했다.
+
+### Analysis
+
+감자 도감은 캐릭터 실루엣이 너무 비슷하면 수집 동기가 약해지고, 반대로 스타일이 제각각이면 앱 전체 톤이 흔들린다. 그래서 기본 몸 비율과 표정은 통일하고, 여행 가방, 곤드레 바구니, 황금 장식, 고랭지 망토, 평화 비둘기, 잠금 장식처럼 작은 소품으로 개성을 나눴다. 추가 세트에서는 노란 감자만 반복되지 않도록 크림색, 자주색, 러셋 브라운, 자작나무 아이보리, 인디고 보라색을 사용했다.
+
+### Result
+
+도감에서 바로 사용할 수 있는 512x512 투명 PNG 12종을 추가했다. 현재 프론트는 `assets/potatoes/{code 소문자}.png`를 fallback으로 읽으므로 백엔드 `image_url`이 비어 있어도 이미지가 표시될 수 있다. 추가 6종은 현재 카탈로그에는 없더라도, 미션 보상 코드가 향후 도감 카탈로그에 포함되면 바로 사용할 수 있다.
+
 ## 검증
 
 - `/Users/mac/Documents/flutter/bin/flutter test --no-pub test/features/auth/session_startup_screen_test.dart test/features/map/map_spot_selection_message_test.dart test/features/map/map_screen_test.dart test/features/potato/potato_collection_screen_test.dart`
@@ -109,6 +129,16 @@
   - 1차 결과: 실패. 추천 상태 문구가 기존 `보라색 핀`을 기대하고 있었음.
   - 조치: 새 색상 정책에 맞춰 테스트 기대값을 `노란 핀`으로 수정.
   - 최종 결과: 통과
+  - `/Users/mac/Documents/flutter/bin/flutter analyze --no-pub`
+  - 결과: 통과
+- 감자 캐릭터 이미지 검증:
+  - 생성 방식: built-in image generation, chroma-key 배경 제거
+  - 저장 경로: `frontend/assets/potatoes/*.png`
+  - 확인 내용: 512x512 RGBA PNG, 투명 배경, 도감 파일명 규칙 일치
+  - 프리뷰: `artifacts/validation/issue-203/potato-character-assets-preview.png`
+  - 보정: `potato_jajak_inje.png` 오른쪽에 잘린 이웃 캐릭터 조각이 있어 투명 처리 후 프리뷰 재생성
+  - `/Users/mac/Documents/flutter/bin/flutter test --no-pub test/features/potato/potato_collection_screen_test.dart`
+  - 결과: 통과
   - `/Users/mac/Documents/flutter/bin/flutter analyze --no-pub`
   - 결과: 통과
 
