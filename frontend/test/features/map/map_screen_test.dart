@@ -151,6 +151,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('상세 2'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('상세 2'), findsNothing);
+    expect(find.text('감자 카페'), findsOneWidget);
+    expect(find.text('상세보기'), findsOneWidget);
   });
 
   testWidgets('keeps all category spots visible when a spot is bookmarked', (

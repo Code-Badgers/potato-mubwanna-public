@@ -411,7 +411,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               }
                             },
                             onDetailPressed: () {
-                              context.go('/spots/${selectedSpot.id}');
+                              context.push('/spots/${selectedSpot.id}');
                             },
                           ),
                       ],
