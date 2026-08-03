@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -73,11 +74,25 @@ public class AudioGuideService {
                 KOREAN,
                 Instant.now(clock)
             );
-            return AudioGuideResponse.from(audioGuideRepository.save(audioGuide));
+            return saveOrReadConcurrentCache(audioGuide, spot.getId());
         } catch (AudioGuideNotFoundException exception) {
             throw exception;
         } catch (OdiiApiException exception) {
             throw new AudioGuideExternalException("오디오 가이드 제공 서비스에 연결할 수 없습니다.", exception);
+        }
+    }
+
+    private AudioGuideResponse saveOrReadConcurrentCache(
+        AudioGuide audioGuide,
+        Long spotId
+    ) {
+        try {
+            return AudioGuideResponse.from(audioGuideRepository.saveAndFlush(audioGuide));
+        } catch (DataIntegrityViolationException exception) {
+            // 다른 요청이 같은 캐시를 먼저 저장했다면 그 결과를 반환하고 중복 row는 남기지 않는다.
+            return audioGuideRepository.findByTouristSpotIdAndLanguage(spotId, KOREAN)
+                .map(AudioGuideResponse::from)
+                .orElseThrow(() -> exception);
         }
     }
 
