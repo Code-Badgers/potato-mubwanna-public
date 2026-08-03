@@ -12,6 +12,7 @@ import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import 'map_layout_waiter.dart';
 import 'map_spot_selection_message.dart';
+import 'map_view_render_data.dart';
 
 const _kakaoJavaScriptKey = String.fromEnvironment('KAKAO_JAVASCRIPT_KEY');
 
@@ -122,10 +123,20 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   @override
   void didUpdateWidget(covariant KakaoMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.spots == widget.spots &&
-        oldWidget.favoriteSpotIds == widget.favoriteSpotIds &&
-        oldWidget.routePolyline == widget.routePolyline &&
-        oldWidget.currentLocation == widget.currentLocation) {
+    if (hasSameMapSpotRenderData(
+          oldWidget.spots,
+          oldWidget.favoriteSpotIds,
+          widget.spots,
+          widget.favoriteSpotIds,
+        ) &&
+        hasSameRoutePolyline(
+          oldWidget.routePolyline,
+          widget.routePolyline,
+        ) &&
+        hasSameMapPoint(
+          oldWidget.currentLocation,
+          widget.currentLocation,
+        )) {
       return;
     }
     _injectKakaoMapScript();
