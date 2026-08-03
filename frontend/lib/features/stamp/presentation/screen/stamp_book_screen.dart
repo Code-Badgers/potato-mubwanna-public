@@ -7,6 +7,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
 import '../model/gangwon_map_region.dart';
+import '../model/korea_context_map.dart';
 
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
@@ -435,7 +436,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                     ..showSnackBar(
                       SnackBar(
                         content: Text(
-                          '${_primaryLandmark(selectedRegion)} 스탬프 장소 데이터를 연결한 뒤 방문 인증할 수 있어요.',
+                          '${_primaryLandmark(selectedRegion)} 스탬프는 아직 준비 중이에요. 곧 찍을 수 있게 열어둘게요.',
                         ),
                       ),
                     );
@@ -469,6 +470,7 @@ class _GangwonMapPainter extends CustomPainter {
     final mapRect = _gangwonMapRect(size);
     canvas.drawRect(
         Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
+    _drawKoreaContext(canvas, mapRect);
 
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
@@ -538,6 +540,48 @@ class _GangwonMapPainter extends CustomPainter {
   bool shouldRepaint(covariant _GangwonMapPainter oldDelegate) {
     return oldDelegate.stampsByCity != stampsByCity ||
         oldDelegate.selectedCity != selectedCity;
+  }
+}
+
+void _drawKoreaContext(Canvas canvas, Rect gangwonRect) {
+  final paths = [
+    for (final polygon in koreaContextPolygons)
+      Path()
+        ..addPolygon(
+          [
+            for (final point in polygon)
+              Offset(
+                gangwonRect.left + point.dx * gangwonRect.width,
+                gangwonRect.top + point.dy * gangwonRect.height,
+              ),
+          ],
+          true,
+        ),
+  ];
+
+  final shadowPaint = Paint()
+    ..color = const Color(0xFF839095).withValues(alpha: 0.12)
+    ..style = PaintingStyle.fill
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.8);
+  for (final path in paths) {
+    canvas.drawPath(path.shift(const Offset(6, 8)), shadowPaint);
+  }
+
+  final fillPaint = Paint()
+    ..color = const Color(0xFFF1F4F2).withValues(alpha: 0.74)
+    ..style = PaintingStyle.fill;
+  for (final path in paths) {
+    canvas.drawPath(path, fillPaint);
+  }
+
+  final linePaint = Paint()
+    ..color = const Color(0xFFB7C1BF).withValues(alpha: 0.48)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.8
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+  for (final path in paths) {
+    canvas.drawPath(path, linePaint);
   }
 }
 

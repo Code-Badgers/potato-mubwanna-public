@@ -14,6 +14,7 @@ import '../../data/mission_repository.dart';
 import '../../data/mission_upload_repository.dart';
 import '../../domain/mission_challenge.dart';
 import '../../domain/mission_verification.dart';
+import '../mission_jumsooni_dialogue.dart';
 
 const _missionPrimary = Color(0xFF56C787);
 const _missionDark = Color(0xFF6A4A2A);
@@ -659,11 +660,11 @@ class _MissionFeaturedCard extends StatelessWidget {
                 top: 0,
                 child: _SpecialLabel(),
               ),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 48),
-                  Text(
+                  const SizedBox(height: 48),
+                  const Text(
                     '점순이의 미션',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -674,9 +675,12 @@ class _MissionFeaturedCard extends StatelessWidget {
                       letterSpacing: 0,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   _SpeechBubble(
-                    text: '오늘은 가까운 명소에서\n감자 추억을 하나 만들어볼까요?',
+                    text: MissionJumsooniDialogue.pick(
+                      MissionJumsooniDialogue.featured,
+                      mission.id,
+                    ),
                   ),
                 ],
               ),
@@ -968,11 +972,11 @@ String _compactRewardLabel(MissionChallenge mission) {
 
 String _gentleMissionLine(MissionChallenge mission) {
   return switch (mission.type) {
-    MissionType.visitAndStep => '천천히 걸어볼까요?',
-    MissionType.photo || MissionType.photoOcr => '사진 한 장 남겨볼까요?',
-    MissionType.qrScan => '숨은 QR을 찾아볼까요?',
-    MissionType.quiz => '가벼운 퀴즈 하나 풀어볼까요?',
-    _ => '가까운 곳부터 들러볼까요?',
+    MissionType.visitAndStep => '감자가 기다리고 있어요',
+    MissionType.photo || MissionType.photoOcr => '사진 한 장 남겨요',
+    MissionType.qrScan => '숨은 표식을 찾아봐요',
+    MissionType.quiz => '이 정도는 알아야죠',
+    _ => '내가 골라둔 곳이에요',
   };
 }
 
@@ -1038,7 +1042,10 @@ class _MissionDetailViewState extends State<_MissionDetailView> {
     }
     setState(() {
       _quizCorrect = true;
-      _quizFeedback = '정답입니다! 미션 완료를 진행할게요.';
+      _quizFeedback = MissionJumsooniDialogue.pick(
+        MissionJumsooniDialogue.quizSuccess,
+        widget.mission.id,
+      );
     });
     await widget.onSubmitQuiz!(answer);
   }
@@ -1253,21 +1260,6 @@ class _SpeechBubble extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 30,
-          top: -5,
-          child: Transform.rotate(
-            angle: 0.785398,
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
@@ -1760,13 +1752,7 @@ String _detailJumsooniAsset(MissionChallenge mission) {
 }
 
 String _detailSpeech(MissionChallenge mission) {
-  return switch (mission.type) {
-    MissionType.photo || MissionType.photoOcr => '멋진 풍경이나 감자 사진을 한 장 남겨주세요!',
-    MissionType.quiz => '강원도의 감자에 대해 퀴즈 하나 풀어볼까요?',
-    MissionType.visitAndStep => '${mission.spotName}에 들러서 미션을 해줄 수 있나요?',
-    MissionType.qrScan => '숨겨진 QR을 찾아서 인증해볼까요?',
-    _ => '가까운 명소에서 감자 추억을 만들어볼까요?',
-  };
+  return MissionJumsooniDialogue.detail(mission);
 }
 
 String _detailTitle(MissionChallenge mission) {
@@ -2292,11 +2278,16 @@ class _MissionRewardDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              '미션 완료!',
-              style: TextStyle(
+            Text(
+              MissionJumsooniDialogue.pick(
+                MissionJumsooniDialogue.complete,
+                mission.id,
+              ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 24,
+                fontSize: 22,
+                height: 1.32,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
               ),

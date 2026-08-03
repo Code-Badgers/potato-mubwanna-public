@@ -15,7 +15,7 @@
 - Action: 감자 도감의 대표 감자 없음 문구를 제거하고 시작 상태 이름을 `초보 감자`로 표시했다.
 - Action: 오늘의 감자걸음 하단 노란 진행 막대를 제거했다.
 - Action: 대표 감자 변경 시트에서 획득한 감자만 보여주던 구조를 전체 감자 카드 그리드로 변경했다.
-- Result: 획득 전 감자는 그림자처럼 표시하고, 이름은 `???`, 버튼은 `힌트`로 노출한다. 클릭하면 획득 방법과 설명을 확인할 수 있다.
+- Result: 획득 전 감자는 그림자처럼 표시하고, 이름은 `???`로 노출한다. 불필요한 힌트 버튼은 후속 정리에서 제거했다.
 
 ## 실행한 검증
 
@@ -73,3 +73,43 @@
 - Problem: 미션 메인에서 점순이 이미지가 카드 하단에서 잘린 느낌이 강했고, 말풍선 꼬리가 어색한 방향에 있었다.
 - Action: 점순이 이미지를 말풍선보다 위 레이어로 올리고, 말풍선 꼬리를 우측 상단으로 옮겼다. featured 카드 높이와 이미지 위치를 조정해 하단 잘림이 덜 드러나도록 했다.
 - Result: 점순이가 말풍선에 가려지지 않고, 카드 하단의 불필요한 세로 여백이 줄었다.
+
+### 4차: 점순이 보이스와 스탬프 지도 맥락 정리
+
+- Problem: 점순이 대사가 화면별 하드코딩 문자열에 흩어져 있으면 말투 기준이 흔들리고, 원작 캐릭터를 현대적으로 재해석한 서비스 톤을 일관되게 유지하기 어렵다.
+- Action: `MissionJumsooniDialogue`를 추가해 점순이 말풍선, 미션 소개, 완료 메시지 후보를 상황별로 중앙 관리하도록 분리했다.
+- Action: `agents_docs/12_jumsooni_voice_guide.md`에 점순이의 성격, 말투 원칙, 피해야 할 표현, UI 적용 기준을 기록했다. `agents_docs/`는 로컬 exclude 대상이라 해당 파일은 커밋 시 강제로 포함해야 한다.
+- Result: 기능성 문구와 캐릭터 대사를 분리했고, 미션 완료/퀴즈/사진/위치/QR/걸음 로직은 그대로 유지했다.
+
+- Problem: 말풍선 꼬리와 마침표가 붙은 대사가 사각형 안내문처럼 보여 점순이 캐릭터 말투가 딱딱하게 느껴졌다.
+- Action: 말풍선 화살표를 제거하고, 점순이 대사 후보와 홈 카드 대사의 마침표를 제거했다.
+- Result: 짧고 구어적인 해요체 중심의 대사로 정리했다.
+
+- Problem: 스탬프 투어에서 강원도 지도만 단독으로 놓이면서 섬처럼 보였고, 손으로 만든 대한민국 배경 윤곽은 실제 경계와 이어지는 느낌이 약했다.
+- Action: 사용자가 제공한 `TL_SCCO_CTPRVN.json` 시도 GeoJSON에서 강원도 외 본토 시도 경계를 단순화해 `korea_context_map.dart`로 분리했다. 강원도 path는 기존 데이터를 그대로 사용하고, 배경 시도만 옅은 회색 레이어로 먼저 그린다.
+- Result: 강원도 스탬프 지도는 유지하면서 경기도, 충북, 경북 등 주변 지역과 이어지는 지리적 맥락이 생겼고, 강원도 영역이 여전히 가장 선명하게 보인다.
+
+- Problem: 스탬프 찍기 실패 안내가 `장소 데이터를 연결한 뒤`처럼 내부 구현 사정이 드러나는 문장이라 사용자 입장에서 어색했다.
+- Action: 준비 중인 스탬프는 `스탬프는 아직 준비 중이에요`처럼 사용자 친화적인 안내로 바꿨다.
+- Result: 데이터 연결 상태가 부족한 경우에도 화면 문구가 덜 개발자스럽게 보인다.
+
+## 4차 실행한 검증
+
+- `dart format lib/features/mission/presentation/mission_jumsooni_dialogue.dart lib/features/mission/presentation/screen/mission_screen.dart lib/features/potato/presentation/screen/potato_collection_screen.dart lib/features/stamp/presentation/screen/stamp_book_screen.dart test/features/mission/mission_screen_test.dart test/features/potato/potato_collection_screen_test.dart test/features/stamp/stamp_book_screen_test.dart`
+  - 결과: 통과
+- `flutter test test/features/mission/mission_screen_test.dart`
+  - 결과: 통과
+- `flutter test test/features/stamp/stamp_book_screen_test.dart`
+  - 결과: 통과
+- `flutter test test/features/potato/potato_collection_screen_test.dart`
+  - 결과: 통과
+- `flutter test test/features/stamp/stamp_book_screen_test.dart`
+  - 결과: GeoJSON 기반 대한민국 배경 교체 후 재실행, 통과
+- `flutter analyze`
+  - 결과: 통과, `No issues found`
+
+## 후속 UX 메모
+
+- 스탬프 투어는 현재 18개 시군 방문 인증의 뼈대는 있으나, 수집 목적과 보상 피드백이 화면에서 충분히 설명되지 않는다.
+- 감자 도감의 `0 / 15`는 전체 감자 중 수집한 감자 수를 의미하지만, 왜 모아야 하는지와 다 모았을 때 무엇을 얻는지가 화면에 약하다.
+- 후속 이슈에서는 스탬프 완주 보상, 감자 성장/진화 목적, 도감 세트 완성 보상, 방문 인증 후 획득 연출을 함께 설계하는 것이 좋다.

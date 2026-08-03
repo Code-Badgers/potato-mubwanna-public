@@ -1144,7 +1144,7 @@ class _RepresentativePotatoSheet extends StatelessWidget {
                 crossAxisCount: 3,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 0.76,
+                childAspectRatio: 0.92,
               ),
               itemBuilder: (context, index) {
                 final item = allItems[index];
@@ -1241,8 +1241,9 @@ class _RepresentativePotatoOption extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(9),
+            padding: const EdgeInsets.fromLTRB(9, 10, 9, 12),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Stack(
                   clipBehavior: Clip.none,
