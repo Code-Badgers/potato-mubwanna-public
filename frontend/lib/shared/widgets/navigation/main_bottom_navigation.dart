@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,31 +13,38 @@ class MainBottomNavigation extends StatelessWidget {
     final selectedIndex = _selectedIndex(context);
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
-    return SizedBox(
-      height: 72 + bottomInset,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.line)),
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(6, 14, 6, 7 + bottomInset),
-              child: Row(
-                children: List.generate(_destinations.length, (index) {
-                  final destination = _destinations[index];
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: SizedBox(
+          height: 76 + bottomInset,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.88),
+              border: Border(
+                top: BorderSide(color: AppColors.line.withValues(alpha: 0.72)),
+              ),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(10, 12, 10, 8 + bottomInset),
+                  child: Row(
+                    children: List.generate(_destinations.length, (index) {
+                      final destination = _destinations[index];
 
-                  return Expanded(
-                    child: _FooterItem(
-                      icon: destination.icon,
-                      label: destination.label,
-                      isSelected: selectedIndex == index,
-                      onTap: () => context.go(_paths[index]),
-                    ),
-                  );
-                }),
+                      return Expanded(
+                        child: _FooterItem(
+                          icon: destination.icon,
+                          label: destination.label,
+                          isSelected: selectedIndex == index,
+                          onTap: () => context.go(_paths[index]),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
               ),
             ),
           ),
@@ -95,17 +104,17 @@ class _FooterItem extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 40,
-              height: 26,
+              width: isSelected ? 42 : 36,
+              height: 30,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.16)
+                    ? AppColors.primary.withValues(alpha: 0.18)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Icon(icon, color: foregroundColor, size: 22),
+              child: Icon(icon, color: foregroundColor, size: 21),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               label,
               maxLines: 1,

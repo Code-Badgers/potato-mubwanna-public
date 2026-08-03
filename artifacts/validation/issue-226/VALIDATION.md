@@ -24,6 +24,11 @@
   - 결과: 통과
 - `flutter test test/features/potato/potato_collection_screen_test.dart`
   - 결과: 통과
+- `dart format lib/features/mypage/presentation/screen/my_page_screen.dart lib/shared/widgets/navigation/main_bottom_navigation.dart`
+- `flutter test test/features/mypage/my_page_screen_test.dart`
+  - 결과: 통과
+- `flutter test test/shared/widgets/main_shell_test.dart`
+  - 결과: 통과
 
 ## 트러블슈팅
 
@@ -41,5 +46,13 @@
 
 ## 남은 확인
 
-- 마이페이지와 하단 내비게이션 UI 정리 후 `flutter analyze`와 관련 widget test를 추가로 실행한다.
+- 전체 정리 후 `flutter analyze`를 실행한다.
 - 화면 캡처는 전체 UI 정리 완료 후 남긴다.
+
+### 2차: 마이페이지/Footer 톤 정리
+
+- Problem: 마이페이지의 프로필 카드, 활동 요약 카드, 빠른 실행 버튼, 계정 메뉴가 각자 다른 표면감과 모서리로 보여 전체 톤이 분리되어 보였다.
+- Action: 마이페이지 카드 장식을 `_myPageCardDecoration`으로 통일하고, 프로필 아바타에 은은한 그라데이션/그림자를 적용했다.
+- Action: 빠른 실행 버튼과 메뉴는 흰색 반투명 표면, 20~24px 모서리, 약한 라인으로 정리했다.
+- Action: 하단 내비게이션은 blur가 들어간 반투명 표면과 더 낮은 대비의 selected pill로 정리했다.
+- Result: 기존 라우팅과 메뉴 동작은 유지하면서 화면 사이의 카드 톤을 더 가볍게 맞췄다.
