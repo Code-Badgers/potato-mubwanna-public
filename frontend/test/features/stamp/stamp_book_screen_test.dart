@@ -24,7 +24,7 @@ void main() {
     expect(find.text('랠리북'), findsNothing);
     expect(find.text('스탬프 투어'), findsNothing);
     expect(find.text('강원도 지도 위에 도장을 모아보세요'), findsNothing);
-    expect(find.text('8/18'), findsNothing);
+    expect(find.text('8/18'), findsOneWidget);
     expect(find.text('12개 달성까지 4개 남았어요'), findsNothing);
     expect(find.text('다음 스탬프 추천'), findsNothing);
     expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
@@ -107,7 +107,7 @@ void main() {
     expect(find.text('미획득'), findsWidgets);
   });
 
-  testWidgets('keeps rallybook visible when next target loading fails', (
+  testWidgets('keeps stamp tour visible when next target loading fails', (
     tester,
   ) async {
     await _pumpScreen(
@@ -128,7 +128,7 @@ void main() {
     );
   });
 
-  testWidgets('shows a loading indicator while rallybook is loading', (
+  testWidgets('shows a loading indicator while stamp tour is loading', (
     tester,
   ) async {
     final completer = Completer<StampBook?>();
@@ -142,7 +142,7 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('shows an error and retry action when rallybook loading fails', (
+  testWidgets('shows an error and retry action when stamp tour loading fails', (
     tester,
   ) async {
     await _pumpScreen(
@@ -154,7 +154,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('랠리북'), findsNothing);
-    expect(find.text('랠리북을 불러오지 못했습니다.'), findsOneWidget);
+    expect(find.text('스탬프 투어를 불러오지 못했습니다.'), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
   });
 
@@ -165,7 +165,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('로그인 후 랠리북을 확인할 수 있어요.'), findsOneWidget);
+    expect(find.text('로그인 후 스탬프 투어를 확인할 수 있어요.'), findsOneWidget);
   });
 }
 

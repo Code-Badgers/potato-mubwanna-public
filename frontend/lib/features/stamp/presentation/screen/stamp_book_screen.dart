@@ -407,6 +407,14 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                         ),
                       ),
                     ),
+                  Positioned(
+                    top: 14,
+                    right: 14,
+                    child: _MapPassportBadge(
+                      acquiredCount: widget.progress.acquiredCount,
+                      totalCount: widget.progress.totalCount,
+                    ),
+                  ),
                 ],
               );
             },
@@ -522,11 +530,15 @@ Rect _gangwonMapRect(Size size) {
 
 Path _regionPath(GangwonMapRegion region, Rect mapRect) {
   var regionPath = Path();
+  final maxArea = region.polygons
+      .map(_polygonArea)
+      .fold<double>(0, (max, area) => math.max(max, area));
+
   for (final polygon in region.polygons) {
     if (polygon.length < 3) {
       continue;
     }
-    if (_isTinyMapFragment(polygon)) {
+    if (!_isDisplayMapPolygon(polygon, maxArea)) {
       continue;
     }
     final polygonPath = Path()
@@ -552,22 +564,29 @@ Path _regionPath(GangwonMapRegion region, Rect mapRect) {
   return regionPath;
 }
 
-bool _isTinyMapFragment(List<Offset> polygon) {
-  var minX = double.infinity;
-  var maxX = double.negativeInfinity;
-  var minY = double.infinity;
-  var maxY = double.negativeInfinity;
-
-  for (final point in polygon) {
-    minX = math.min(minX, point.dx);
-    maxX = math.max(maxX, point.dx);
-    minY = math.min(minY, point.dy);
-    maxY = math.max(maxY, point.dy);
+bool _isDisplayMapPolygon(List<Offset> polygon, double maxArea) {
+  final area = _polygonArea(polygon);
+  if (area <= 0 || maxArea <= 0) {
+    return false;
   }
 
-  // GeoJSON 세부 경계에는 여행 지도에서 의미가 약한 작은 분리 조각이 많다.
-  // 작은 파편은 제외해 시군 외곽이 더 깨끗하게 보이도록 한다.
-  return (maxX - minX) * (maxY - minY) < 0.00025;
+  // 원본 GeoJSON은 행정동 단위 조각이 섞여 있어 지도 내부에 산맥처럼 보이는
+  // 파편이 생긴다. 스탬프 투어 지도에서는 시군 외곽을 알아보는 것이 목적이므로
+  // 시군별 대표 면적에 비해 작은 행정동 조각은 표시하지 않는다.
+  return area >= 0.0009 && area >= maxArea * 0.12;
+}
+
+double _polygonArea(List<Offset> polygon) {
+  if (polygon.length < 3) {
+    return 0;
+  }
+  var area = 0.0;
+  for (var i = 0; i < polygon.length; i += 1) {
+    final current = polygon[i];
+    final next = polygon[(i + 1) % polygon.length];
+    area += current.dx * next.dy - next.dx * current.dy;
+  }
+  return area.abs() / 2;
 }
 
 Path _scaledPath(Path path, double scale) {
@@ -724,6 +743,57 @@ class _SelectedRegionCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MapPassportBadge extends StatelessWidget {
+  const _MapPassportBadge({
+    required this.acquiredCount,
+    required this.totalCount,
+  });
+
+  final int acquiredCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.auto_stories_rounded,
+              color: AppColors.primaryDark,
+              size: 17,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$acquiredCount/$totalCount',
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -897,7 +967,7 @@ class _StampBookError extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              '랠리북을 불러오지 못했습니다.',
+              '스탬프 투어를 불러오지 못했습니다.',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 16,
@@ -920,7 +990,7 @@ class _SignedOutState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: Text(
-        '로그인 후 랠리북을 확인할 수 있어요.',
+        '로그인 후 스탬프 투어를 확인할 수 있어요.',
         style: TextStyle(
           color: AppColors.textSecondary,
           fontSize: 15,
