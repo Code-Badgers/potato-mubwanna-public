@@ -31,3 +31,32 @@ flutter analyze
 flutter test
 ```
 
+### Kakao Map on a Windows Android emulator
+
+The Kakao Maps native engine included in this project does not provide an
+`x86_64` library. A normal `flutter run` therefore installs an x86_64 app on a
+typical Windows emulator and leaves the map area blank.
+
+If the emulator reports `arm64-v8a` in its supported ABI list, build and install
+the app through Android's ARM64 translation layer instead:
+
+```powershell
+.\tool\run_android_arm64_emulator.ps1 -DeviceId emulator-5554
+```
+
+The script reads `frontend/.env` without printing its values, builds an ARM64
+debug APK, replaces the installed app while preserving its data, verifies the
+selected ABI, connects an emulator `localhost` API URL to the local backend,
+and starts the app. It looks for `flutter` and `adb` on `PATH` and in the common
+Windows SDK locations. Explicit paths can also be supplied:
+
+```powershell
+.\tool\run_android_arm64_emulator.ps1 `
+  -DeviceId emulator-5554 `
+  -FlutterPath C:\src\flutter\bin\flutter.bat `
+  -AdbPath C:\Android\Sdk\platform-tools\adb.exe
+```
+
+Run the script again after source changes. A subsequent normal `flutter run`
+can replace the app with an x86_64 build and reproduce the blank map.
+
