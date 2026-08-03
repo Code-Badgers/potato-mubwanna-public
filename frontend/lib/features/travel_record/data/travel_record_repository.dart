@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/constants/api_paths.dart';
@@ -32,5 +34,17 @@ class TravelRecordRepository {
       );
     }
     return result.data!;
+  }
+
+  Future<Uint8List> fetchProtectedImage(String path) async {
+    final response = await _dio.get<List<int>>(
+      path,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw const FormatException('인증 사진 데이터가 비어 있습니다.');
+    }
+    return Uint8List.fromList(bytes);
   }
 }

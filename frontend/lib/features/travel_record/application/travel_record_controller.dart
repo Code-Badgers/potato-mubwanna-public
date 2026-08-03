@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
@@ -11,3 +13,9 @@ final travelRecordRepositoryProvider = Provider<TravelRecordRepository>(
 final travelRecordsProvider = FutureProvider.autoDispose<List<TravelRecord>>(
   (ref) => ref.watch(travelRecordRepositoryProvider).fetchTravelRecords(),
 );
+
+final travelRecordImageProvider = FutureProvider.autoDispose
+    .family<Uint8List, String>(
+      (ref, path) =>
+          ref.watch(travelRecordRepositoryProvider).fetchProtectedImage(path),
+    );

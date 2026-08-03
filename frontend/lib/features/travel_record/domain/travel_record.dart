@@ -7,6 +7,7 @@ class TravelRecord {
     required this.cityName,
     required this.address,
     required this.imageUrl,
+    required this.uploadedImageUrl,
     required this.visitedAt,
   });
 
@@ -19,6 +20,7 @@ class TravelRecord {
       cityName: json['cityName'] as String? ?? '',
       address: json['address'] as String? ?? '',
       imageUrl: json['imageUrl'] as String?,
+      uploadedImageUrl: json['uploadedImageUrl'] as String?,
       visitedAt: _requiredDateTime(json['visitedAt']),
     );
   }
@@ -30,6 +32,7 @@ class TravelRecord {
   final String cityName;
   final String address;
   final String? imageUrl;
+  final String? uploadedImageUrl;
   final DateTime visitedAt;
 
   String get categoryLabel => switch (category) {
