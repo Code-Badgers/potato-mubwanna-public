@@ -101,7 +101,9 @@ void main() {
 
     await _openMission(tester, '정선 5일장 곤드레 퀴즈');
 
-    expect(find.text('점순이의 미션'), findsOneWidget);
+    expect(find.text('미션 카드'), findsOneWidget);
+    expect(find.text('점순이 한마디'), findsOneWidget);
+    expect(find.text('도전 조건'), findsOneWidget);
     expect(find.text('퀴즈 풀기'), findsOneWidget);
     expect(find.textContaining('황금감자 성장 아이템'), findsOneWidget);
 
@@ -395,7 +397,7 @@ void main() {
       visitEntryMissionId: '1004',
     );
 
-    expect(find.text('점순이의 미션'), findsOneWidget);
+    expect(find.text('미션 카드'), findsOneWidget);
     expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
     expect(find.text('퀴즈 풀기'), findsOneWidget);
   });

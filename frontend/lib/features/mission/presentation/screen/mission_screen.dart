@@ -897,11 +897,7 @@ class _MissionDetailView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               sliver: SliverList(
                 delegate: SliverChildListDelegate.fixed([
-                  _MissionDialogue(dialogue: mission.dialogue),
-                  const SizedBox(height: 12),
-                  _MissionInfoPanel(mission: mission),
-                  const SizedBox(height: 12),
-                  _MissionConditionPanel(mission: mission),
+                  _MissionPlayCard(mission: mission),
                   const SizedBox(height: 18),
                   FilledButton.icon(
                     onPressed: canComplete ? onComplete : null,
@@ -986,7 +982,7 @@ class _MissionDetailHero extends StatelessWidget {
               ),
               const Expanded(
                 child: Text(
-                  '점순이의 미션',
+                  '미션 카드',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textPrimary,
@@ -1049,6 +1045,155 @@ class _MissionDetailHero extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MissionPlayCard extends StatelessWidget {
+  const _MissionPlayCard({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _MissionPlayRow(
+            icon: Icons.chat_bubble_rounded,
+            title: '점순이 한마디',
+            body: mission.dialogue,
+          ),
+          const SizedBox(height: 16),
+          _MissionPlayRow(
+            icon: Icons.flag_rounded,
+            title: '도전 조건',
+            body: mission.conditionLabel,
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: mission.progressRatio,
+              minHeight: 8,
+              color: _missionPrimary,
+              backgroundColor: const Color(0xFFF0EEE8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              mission.progressLabel,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _missionCream,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _missionLine),
+            ),
+            child: Row(
+              children: [
+                _RewardIcon(type: mission.rewardType),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${mission.rewardType.label} · ${mission.rewardLabel}',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionPlayRow extends StatelessWidget {
+  const _MissionPlayRow({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: const BoxDecoration(
+            color: AppColors.primaryTint,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: _missionPrimary, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                body,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
