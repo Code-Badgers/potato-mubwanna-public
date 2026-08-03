@@ -378,12 +378,6 @@ class _QuickActionGrid extends StatelessWidget {
         onTap: () => context.push('/travel-records'),
       ),
       _QuickAction(
-        icon: Icons.eco_rounded,
-        label: '감자 도감',
-        key: const ValueKey('mypage-quick-action-potatoes'),
-        onTap: () => context.go('/main/potatoes'),
-      ),
-      _QuickAction(
         icon: Icons.grid_view_rounded,
         label: '스탬프 투어',
         key: const ValueKey('mypage-quick-action-stamp-tour'),

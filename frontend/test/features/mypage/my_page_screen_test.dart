@@ -98,7 +98,7 @@ void main() {
 
     expect(find.text('보상함'), findsOneWidget);
     expect(find.text('여행 기록'), findsOneWidget);
-    expect(find.text('감자 도감'), findsOneWidget);
+    expect(find.text('감자 도감'), findsNothing);
     expect(find.text('스탬프 투어'), findsOneWidget);
     expect(find.text('내 미션'), findsNothing);
 
