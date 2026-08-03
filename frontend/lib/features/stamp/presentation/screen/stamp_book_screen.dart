@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
+import '../model/gangwon_context_region.dart';
 import '../model/gangwon_map_region.dart';
 
 class StampBookScreen extends ConsumerWidget {
@@ -555,6 +556,20 @@ class _GangwonMapPainter extends CustomPainter {
     canvas.drawRect(
         Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
 
+    final contextFillPaint = Paint()
+      ..color = const Color(0xFFE9EFF0).withValues(alpha: 0.82)
+      ..style = PaintingStyle.fill;
+    final contextLinePaint = Paint()
+      ..color = const Color(0xFFC5D3D6).withValues(alpha: 0.78)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeJoin = StrokeJoin.round;
+    for (final region in gangwonContextRegions) {
+      final path = _contextRegionPath(region, mapRect);
+      canvas.drawPath(path, contextFillPaint);
+      canvas.drawPath(path, contextLinePaint);
+    }
+
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
     final thinLinePaint = Paint()
@@ -850,6 +865,20 @@ Path _regionPath(GangwonMapRegion region, Rect mapRect) {
     }
   }
   return regionPath;
+}
+
+Path _contextRegionPath(GangwonContextRegion region, Rect mapRect) {
+  return Path()
+    ..addPolygon(
+      [
+        for (final point in region.polygon)
+          Offset(
+            mapRect.left + point.dx * mapRect.width,
+            mapRect.top + point.dy * mapRect.height,
+          ),
+      ],
+      true,
+    );
 }
 
 Path _scaledPath(Path path, double scale) {
