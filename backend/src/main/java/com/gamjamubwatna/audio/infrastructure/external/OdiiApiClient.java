@@ -1,7 +1,9 @@
 package com.gamjamubwatna.audio.infrastructure.external;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -50,12 +52,7 @@ public class OdiiApiClient {
 
             OdiiSearchResponse response = envelope == null ? null : envelope.response();
             validateResponse(response);
-            if (response.body() == null
-                || response.body().items() == null
-                || response.body().items().item() == null) {
-                return List.of();
-            }
-            return response.body().items().item();
+            return stories(response.body());
         } catch (OdiiApiException exception) {
             throw exception;
         } catch (RuntimeException exception) {
@@ -100,7 +97,47 @@ public class OdiiApiClient {
     }
 
     private String encodeServiceKey(String value) {
-        return value.contains("%") ? value : encode(value);
+        return value.contains("%")
+            ? value
+            : UriUtils.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private List<OdiiStory> stories(OdiiBody body) {
+        if (body == null || body.items() == null || !body.items().isObject()) {
+            return List.of();
+        }
+
+        JsonNode itemNode = body.items().get("item");
+        if (itemNode == null || itemNode.isNull()) {
+            return List.of();
+        }
+
+        List<OdiiStory> stories = new ArrayList<>();
+        if (itemNode.isArray()) {
+            itemNode.forEach(item -> stories.add(story(item)));
+        } else if (itemNode.isObject()) {
+            stories.add(story(itemNode));
+        }
+        return stories;
+    }
+
+    private OdiiStory story(JsonNode item) {
+        return new OdiiStory(
+            text(item, "tid"),
+            text(item, "tlid"),
+            text(item, "stid"),
+            text(item, "stlid"),
+            text(item, "title"),
+            text(item, "audioTitle"),
+            text(item, "script"),
+            text(item, "audioUrl"),
+            text(item, "langCode")
+        );
+    }
+
+    private String text(JsonNode item, String fieldName) {
+        JsonNode value = item.get(fieldName);
+        return value == null || value.isNull() ? null : value.asText();
     }
 
     public record OdiiStory(
@@ -125,9 +162,6 @@ public class OdiiApiClient {
     private record OdiiHeader(String resultCode, String resultMsg) {
     }
 
-    private record OdiiBody(OdiiItems items) {
-    }
-
-    private record OdiiItems(List<OdiiStory> item) {
+    private record OdiiBody(JsonNode items) {
     }
 }

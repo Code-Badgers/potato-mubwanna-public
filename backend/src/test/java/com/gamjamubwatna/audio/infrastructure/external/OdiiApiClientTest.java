@@ -68,6 +68,39 @@ class OdiiApiClientTest {
     }
 
     @Test
+    void encodesDecodedServiceKeyReservedCharacters() throws Exception {
+        AtomicReference<String> rawQuery = new AtomicReference<>();
+        startServer("""
+            {
+              "response": {
+                "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
+                "body": {"items": {"item": []}}
+              }
+            }
+            """, rawQuery);
+
+        client("decoded/service+key==").searchStories("남이섬");
+
+        assertThat(rawQuery.get())
+            .contains("serviceKey=decoded%2Fservice%2Bkey%3D%3D")
+            .doesNotContain("serviceKey=decoded/service+key==");
+    }
+
+    @Test
+    void returnsEmptyListWhenApiUsesEmptyStringForItems() throws Exception {
+        startServer("""
+            {
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {"items": "", "numOfRows": 0, "pageNo": 1, "totalCount": 0}
+              }
+            }
+            """, new AtomicReference<>());
+
+        assertThat(client("service-key").searchStories("감자밭")).isEmpty();
+    }
+
+    @Test
     void rejectsApiErrorResponse() throws Exception {
         startServer("""
             {
