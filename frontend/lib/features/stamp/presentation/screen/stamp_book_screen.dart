@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -529,51 +527,40 @@ Rect _gangwonMapRect(Size size) {
 }
 
 Path _regionPath(GangwonMapRegion region, Rect mapRect) {
-  var regionPath = Path();
-  final maxArea = region.polygons
-      .map(_polygonArea)
-      .fold<double>(0, (max, area) => math.max(max, area));
-
-  for (final polygon in region.polygons) {
-    if (polygon.length < 3) {
-      continue;
-    }
-    if (!_isDisplayMapPolygon(polygon, maxArea)) {
-      continue;
-    }
-    final polygonPath = Path()
-      ..addPolygon(
-        [
-          for (final point in polygon)
-            Offset(
-              mapRect.left + point.dx * mapRect.width,
-              mapRect.top + point.dy * mapRect.height,
-            ),
-        ],
-        true,
-      );
-
-    try {
-      regionPath = regionPath.computeMetrics().isEmpty
-          ? polygonPath
-          : Path.combine(PathOperation.union, regionPath, polygonPath);
-    } catch (_) {
-      regionPath.addPath(polygonPath, Offset.zero);
-    }
-  }
-  return regionPath;
-}
-
-bool _isDisplayMapPolygon(List<Offset> polygon, double maxArea) {
-  final area = _polygonArea(polygon);
-  if (area <= 0 || maxArea <= 0) {
-    return false;
+  final polygon = _primaryRegionPolygon(region);
+  if (polygon == null) {
+    return Path();
   }
 
   // 원본 GeoJSON은 행정동 단위 조각이 섞여 있어 지도 내부에 산맥처럼 보이는
-  // 파편이 생긴다. 스탬프 투어 지도에서는 시군 외곽을 알아보는 것이 목적이므로
-  // 시군별 대표 면적에 비해 작은 행정동 조각은 표시하지 않는다.
-  return area >= 0.0009 && area >= maxArea * 0.12;
+  // 파편이 생긴다. 스탬프 투어 지도에서는 정밀 행정 경계보다 시군을 고르는
+  // 명확한 경험이 더 중요하므로, 시군마다 가장 큰 대표 외곽만 그린다.
+  return Path()
+    ..addPolygon(
+      [
+        for (final point in polygon)
+          Offset(
+            mapRect.left + point.dx * mapRect.width,
+            mapRect.top + point.dy * mapRect.height,
+          ),
+      ],
+      true,
+    );
+}
+
+List<Offset>? _primaryRegionPolygon(GangwonMapRegion region) {
+  List<Offset>? primary;
+  var primaryArea = 0.0;
+
+  for (final polygon in region.polygons) {
+    final area = _polygonArea(polygon);
+    if (area > primaryArea) {
+      primary = polygon;
+      primaryArea = area;
+    }
+  }
+
+  return primary;
 }
 
 double _polygonArea(List<Offset> polygon) {
