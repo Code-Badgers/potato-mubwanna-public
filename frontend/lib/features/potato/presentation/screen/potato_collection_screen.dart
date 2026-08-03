@@ -13,6 +13,7 @@ const _potatoPrimary = Color(0xFF56C787);
 const _potatoDark = Color(0xFF509B64);
 const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
+const _potatoCardRadius = 20.0;
 
 String _formatInt(int value) {
   return value.toString().replaceAllMapped(
@@ -264,7 +265,7 @@ class _PotatoGrowthDialog extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(_potatoCardRadius),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -321,7 +322,7 @@ class _PotatoGrowthDialog extends StatelessWidget {
                 backgroundColor: accentColor,
                 foregroundColor: AppColors.surface,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(_potatoCardRadius),
                 ),
               ),
               child: const Text(
@@ -414,6 +415,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -522,7 +524,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
                     ),
                     minimumSize: const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(_potatoCardRadius),
                     ),
                   ),
                   icon: const Icon(Icons.info_outline_rounded, size: 18),
@@ -546,7 +548,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(48),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(_potatoCardRadius),
                     ),
                   ),
                   child: updating
@@ -732,7 +734,7 @@ class _GrowthProgress extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xFFF8FBF5),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_potatoCardRadius),
         border: Border.all(color: _potatoLine),
       ),
       child: Padding(
@@ -1013,7 +1015,7 @@ class _PotatoArtSlot extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: locked ? const Color(0xFFF2F0EA) : const Color(0xFFFFF3C7),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_potatoCardRadius),
         border: Border.all(color: locked ? _potatoLine : _potatoYellow),
       ),
       clipBehavior: Clip.antiAlias,
@@ -1037,7 +1039,7 @@ class _PotatoArtFallback extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: locked ? const Color(0xFFF2F0EA) : AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_potatoCardRadius),
       ),
       child: const SizedBox.expand(),
     );
@@ -1192,7 +1194,7 @@ class _RepresentativePotatoEmpty extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       decoration: BoxDecoration(
         color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_potatoCardRadius),
         border: Border.all(color: _potatoPrimary.withValues(alpha: 0.24)),
       ),
       child: const Column(
@@ -1247,14 +1249,14 @@ class _RepresentativePotatoOption extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_potatoCardRadius),
         onTap: selected ? null : onSelect,
         child: Ink(
           decoration: BoxDecoration(
             color: selected
                 ? _potatoPrimary.withValues(alpha: 0.12)
                 : AppColors.surface,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(_potatoCardRadius),
             border: Border.all(
               color: selected ? _potatoPrimary : _potatoLine,
               width: selected ? 1.6 : 1,
@@ -1461,7 +1463,7 @@ class _PotatoErrorState extends StatelessWidget {
 BoxDecoration _cardDecoration({Color color = AppColors.surface}) {
   return BoxDecoration(
     color: color,
-    borderRadius: BorderRadius.circular(8),
+    borderRadius: BorderRadius.circular(_potatoCardRadius),
     border: Border.all(color: _potatoLine),
     boxShadow: [
       BoxShadow(
