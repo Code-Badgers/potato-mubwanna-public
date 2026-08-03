@@ -237,7 +237,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         continue
       }
 
-      let spotID = "\(spot["id"] ?? UUID().uuidString)"
+      let spotID = Self.stringValue(spot["id"]) ?? UUID().uuidString
       let poiID = "potato-\(spotID)"
       let isFavorite = Self.boolValue(spot["favorite"]) ?? false
       let markerColor = spot["markerColor"] as? String ?? (isFavorite ? "#F6C23E" : "#56C787")
@@ -520,6 +520,16 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
     if let string = value as? String {
       return Int(string)
+    }
+    return nil
+  }
+
+  private static func stringValue(_ value: Any?) -> String? {
+    if let string = value as? String {
+      return string
+    }
+    if let number = value as? NSNumber {
+      return number.stringValue
     }
     return nil
   }

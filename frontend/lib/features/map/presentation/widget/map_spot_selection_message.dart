@@ -22,6 +22,9 @@ String? _spotIdFromPayload(Map<Object?, Object?> payload) {
 
 String _normalizeSpotId(String value) {
   var spotId = value.trim();
+  if (spotId.startsWith('Optional(') && spotId.endsWith(')')) {
+    spotId = spotId.substring('Optional('.length, spotId.length - 1).trim();
+  }
   if (spotId.startsWith('potato-')) {
     spotId = spotId.substring('potato-'.length);
   }

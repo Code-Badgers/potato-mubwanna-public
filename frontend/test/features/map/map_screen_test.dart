@@ -65,8 +65,8 @@ void main() {
                     top: 180,
                     child: TextButton(
                       key: ValueKey('marker-${spots[index].id}'),
-                      onPressed: () =>
-                          onSpotSelected('potato-${spots[index].id}.0'),
+                      onPressed: () => onSpotSelected(
+                          'Optional(potato-${spots[index].id}.0)'),
                       child: Text('마커 ${spots[index].id}'),
                     ),
                   ),
