@@ -4,6 +4,7 @@ import com.gamjamubwatna.spot.domain.CongestionLevel;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import java.math.BigDecimal;
+import java.util.List;
 
 public record SpotListResponse(
     Long id,
@@ -14,10 +15,14 @@ public record SpotListResponse(
     String address,
     String cityName,
     CongestionLevel congestionLevel,
-    Boolean stampEnabled
+    Boolean stampEnabled,
+    List<SpotMenuItemResponse> menuItems
 ) {
 
-    public static SpotListResponse from(TouristSpot spot) {
+    public static SpotListResponse from(
+        TouristSpot spot,
+        List<SpotMenuItemResponse> menuItems
+    ) {
         return new SpotListResponse(
             spot.getId(),
             spot.getName(),
@@ -27,7 +32,8 @@ public record SpotListResponse(
             spot.getAddress(),
             spot.getCityName(),
             spot.getCongestionLevel(),
-            spot.getStampEnabled()
+            spot.getStampEnabled(),
+            List.copyOf(menuItems)
         );
     }
 }
