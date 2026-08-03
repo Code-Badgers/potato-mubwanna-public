@@ -6,6 +6,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.mission.domain.MissionPeriod;
+import com.gamjamubwatna.mission.domain.UserMission;
+import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.visit.api.VisitHistoryResponse;
@@ -22,20 +25,27 @@ class VisitHistoryServiceTest {
 
     private UserRepository userRepository;
     private UserVisitRepository userVisitRepository;
+    private UserMissionRepository userMissionRepository;
     private VisitHistoryService visitHistoryService;
 
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
         userVisitRepository = mock(UserVisitRepository.class);
-        visitHistoryService = new VisitHistoryService(userRepository, userVisitRepository);
+        userMissionRepository = mock(UserMissionRepository.class);
+        visitHistoryService = new VisitHistoryService(
+            userRepository,
+            userVisitRepository,
+            userMissionRepository
+        );
     }
 
     @Test
     void returnsVisitsWithSpotInformationInRepositoryOrder() {
+        TouristSpot latestSpot = spot(20L, "감자 카페", SpotCategory.POTATO_CAFE);
         UserVisit latest = visit(
             2L,
-            spot(20L, "감자 카페", SpotCategory.POTATO_CAFE),
+            latestSpot,
             "2026-07-27T12:00:00Z"
         );
         UserVisit previous = visit(
@@ -46,6 +56,11 @@ class VisitHistoryServiceTest {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userVisitRepository.findByUserIdOrderByVisitedAtDesc(1L))
             .thenReturn(List.of(latest, previous));
+        when(userMissionRepository.findTravelEvidence(1L, List.of(20L, 10L)))
+            .thenReturn(List.of(
+                completion(31L, latestSpot, "2026-07-27T11:00:00Z"),
+                completion(30L, latestSpot, "2026-07-26T11:00:00Z")
+            ));
 
         List<VisitHistoryResponse> result = visitHistoryService.getMyVisits(1L);
 
@@ -54,9 +69,12 @@ class VisitHistoryServiceTest {
         assertThat(result.getFirst().spotId()).isEqualTo(20L);
         assertThat(result.getFirst().spotName()).isEqualTo("감자 카페");
         assertThat(result.getFirst().category()).isEqualTo("POTATO_CAFE");
+        assertThat(result.getFirst().uploadedImageUrl())
+            .isEqualTo("/mission-uploads/completions/31/image");
         assertThat(result.getFirst().visitedAt())
             .isEqualTo(Instant.parse("2026-07-27T12:00:00Z"));
         assertThat(result.get(1).visitId()).isEqualTo(1L);
+        assertThat(result.get(1).uploadedImageUrl()).isNull();
     }
 
     @Test
@@ -104,5 +122,18 @@ class VisitHistoryServiceTest {
         );
         ReflectionTestUtils.setField(spot, "id", id);
         return spot;
+    }
+
+    private UserMission completion(Long id, TouristSpot spot, String completedAt) {
+        UserMission completion = new UserMission(
+            null,
+            null,
+            Instant.parse(completedAt),
+            MissionPeriod.ONE_TIME_KEY,
+            "mission-uploads/1/20/photo-" + id + ".jpg",
+            spot
+        );
+        ReflectionTestUtils.setField(completion, "id", id);
+        return completion;
     }
 }

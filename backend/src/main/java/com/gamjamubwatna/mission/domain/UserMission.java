@@ -1,6 +1,7 @@
 package com.gamjamubwatna.mission.domain;
 
 import com.gamjamubwatna.auth.domain.User;
+import com.gamjamubwatna.spot.domain.TouristSpot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -44,6 +45,13 @@ public class UserMission {
     @Column(name = "completion_period", nullable = false, length = 40)
     private String completionPeriod;
 
+    @Column(name = "evidence_upload_key", length = 500)
+    private String evidenceUploadKey;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tourist_spot_id")
+    private TouristSpot touristSpot;
+
     protected UserMission() {
     }
 
@@ -57,10 +65,27 @@ public class UserMission {
         Instant completedAt,
         String completionPeriod
     ) {
+        this(user, mission, completedAt, completionPeriod, null, null);
+    }
+
+    public UserMission(
+        User user,
+        Mission mission,
+        Instant completedAt,
+        String completionPeriod,
+        String evidenceUploadKey,
+        TouristSpot touristSpot
+    ) {
         this.user = user;
         this.mission = mission;
         this.completedAt = completedAt;
         this.completionPeriod = completionPeriod;
+        this.evidenceUploadKey = evidenceUploadKey;
+        this.touristSpot = touristSpot;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public Mission getMission() {
@@ -73,5 +98,13 @@ public class UserMission {
 
     public String getCompletionPeriod() {
         return completionPeriod;
+    }
+
+    public String getEvidenceUploadKey() {
+        return evidenceUploadKey;
+    }
+
+    public TouristSpot getTouristSpot() {
+        return touristSpot;
     }
 }

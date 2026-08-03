@@ -41,6 +41,7 @@ class VisitHistoryControllerTest {
                 "정선군",
                 "강원특별자치도 정선군",
                 "https://example.com/spot.png",
+                "/mission-uploads/completions/31/image",
                 Instant.parse("2026-07-27T12:00:00Z")
             )
         ));
@@ -53,6 +54,8 @@ class VisitHistoryControllerTest {
             .andExpect(jsonPath("$.data[0].spotName").value("감자 카페"))
             .andExpect(jsonPath("$.data[0].category").value("POTATO_CAFE"))
             .andExpect(jsonPath("$.data[0].cityName").value("정선군"))
+            .andExpect(jsonPath("$.data[0].uploadedImageUrl")
+                .value("/mission-uploads/completions/31/image"))
             .andExpect(jsonPath("$.data[0].visitedAt").value("2026-07-27T12:00:00Z"));
     }
 

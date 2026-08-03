@@ -146,7 +146,27 @@ class MissionMigrationTest {
         }
 
         assertThat(indexNames)
-            .contains("idx_user_missions_user_id", "idx_user_missions_mission_id");
+            .contains(
+                "idx_user_missions_user_id",
+                "idx_user_missions_mission_id",
+                "idx_user_missions_travel_evidence"
+            );
+    }
+
+    @Test
+    void createsNullableMissionEvidenceColumns() throws Exception {
+        Set<String> columnNames = new HashSet<>();
+        try (
+            Connection connection = dataSource.getConnection();
+            ResultSet columns = connection.getMetaData()
+                .getColumns(null, null, "user_missions", null)
+        ) {
+            while (columns.next()) {
+                columnNames.add(columns.getString("COLUMN_NAME").toLowerCase());
+            }
+        }
+
+        assertThat(columnNames).contains("evidence_upload_key", "tourist_spot_id");
     }
 
     @Test

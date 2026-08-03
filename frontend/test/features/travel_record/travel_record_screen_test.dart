@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,6 +81,9 @@ void main() {
             (ref) => _AuthenticatedAuthController(),
           ),
           travelRecordsProvider.overrideWith((ref) async => _records),
+          travelRecordImageProvider.overrideWith(
+            (ref, path) async => base64Decode(_onePixelPng),
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -89,6 +94,14 @@ void main() {
     expect(find.text('감자 카페'), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
     expect(find.text('정선군 · 카페'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('travel-record-uploaded-image-2')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('travel-record-image-fallback-1')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('travel-record-2')));
     await tester.pumpAndSettle();
@@ -227,6 +240,7 @@ final _records = [
     cityName: '정선군',
     address: '강원특별자치도 정선군',
     imageUrl: null,
+    uploadedImageUrl: '/mission-uploads/completions/31/image',
     visitedAt: DateTime.utc(2026, 7, 27, 12),
   ),
   TravelRecord(
@@ -237,6 +251,10 @@ final _records = [
     cityName: '정선군',
     address: '강원특별자치도 정선군',
     imageUrl: null,
+    uploadedImageUrl: null,
     visitedAt: DateTime.utc(2026, 7, 26, 9),
   ),
 ];
+
+const _onePixelPng =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

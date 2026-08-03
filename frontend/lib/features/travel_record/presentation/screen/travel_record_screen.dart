@@ -226,19 +226,7 @@ class _TravelRecordCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: _travelCream,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.location_on_rounded,
-                  color: _travelDark,
-                  size: 30,
-                ),
-              ),
+              _TravelRecordThumbnail(record: record),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -300,6 +288,61 @@ class _TravelRecordCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TravelRecordThumbnail extends ConsumerWidget {
+  const _TravelRecordThumbnail({required this.record});
+
+  final TravelRecord record;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final uploadedImageUrl = record.uploadedImageUrl?.trim();
+    final uploadedImage = uploadedImageUrl == null || uploadedImageUrl.isEmpty
+        ? null
+        : ref.watch(travelRecordImageProvider(uploadedImageUrl)).valueOrNull;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 54,
+        height: 54,
+        child: uploadedImage != null && uploadedImage.isNotEmpty
+            ? Image.memory(
+                uploadedImage,
+                key: ValueKey('travel-record-uploaded-image-${record.visitId}'),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _touristImageOrFallback(),
+              )
+            : _touristImageOrFallback(),
+      ),
+    );
+  }
+
+  Widget _touristImageOrFallback() {
+    final touristImageUrl = record.imageUrl?.trim();
+    if (touristImageUrl == null || touristImageUrl.isEmpty) {
+      return _fallbackIcon();
+    }
+    return Image.network(
+      touristImageUrl,
+      key: ValueKey('travel-record-tourist-image-${record.visitId}'),
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _fallbackIcon(),
+    );
+  }
+
+  Widget _fallbackIcon() {
+    return Container(
+      key: ValueKey('travel-record-image-fallback-${record.visitId}'),
+      color: _travelCream,
+      child: const Icon(
+        Icons.location_on_rounded,
+        color: _travelDark,
+        size: 30,
       ),
     );
   }

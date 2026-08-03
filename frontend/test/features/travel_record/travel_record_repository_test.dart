@@ -32,7 +32,38 @@ void main() {
     expect(records.first.spotId, 20);
     expect(records.first.spotName, '감자 카페');
     expect(records.first.categoryLabel, '카페');
+    expect(
+      records.first.uploadedImageUrl,
+      '/mission-uploads/completions/31/image',
+    );
     expect(records.first.visitedAt, DateTime.parse('2026-07-27T12:00:00Z'));
+  });
+
+  test('fetches protected mission image bytes', () async {
+    RequestOptions? request;
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            request = options;
+            handler.resolve(
+              Response<List<int>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: const [1, 2, 3],
+              ),
+            );
+          },
+        ),
+      );
+
+    final bytes = await TravelRecordRepository(
+      dio: dio,
+    ).fetchProtectedImage('/mission-uploads/completions/31/image');
+
+    expect(request?.path, '/mission-uploads/completions/31/image');
+    expect(request?.responseType, ResponseType.bytes);
+    expect(bytes, [1, 2, 3]);
   });
 
   test('filters invalid record identifiers', () async {
@@ -56,6 +87,7 @@ void main() {
                       'cityName': '정선군',
                       'address': '',
                       'imageUrl': null,
+                      'uploadedImageUrl': null,
                       'visitedAt': '2026-07-27T12:00:00Z',
                     },
                   ],
@@ -119,6 +151,7 @@ const _travelRecordResponse = <String, Object?>{
       'cityName': '정선군',
       'address': '강원특별자치도 정선군',
       'imageUrl': 'https://example.com/cafe.png',
+      'uploadedImageUrl': '/mission-uploads/completions/31/image',
       'visitedAt': '2026-07-27T12:00:00Z',
     },
     {
@@ -129,6 +162,7 @@ const _travelRecordResponse = <String, Object?>{
       'cityName': '정선군',
       'address': '강원특별자치도 정선군',
       'imageUrl': null,
+      'uploadedImageUrl': null,
       'visitedAt': '2026-07-26T09:00:00Z',
     },
   ],
