@@ -610,8 +610,6 @@ class _MissionGentleStart extends StatelessWidget {
               ),
               const SizedBox(height: 10),
             ],
-          const SizedBox(height: 4),
-          const _MissionTomorrowCard(),
         ],
       ),
     );
@@ -637,13 +635,18 @@ class _MissionFeaturedCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.line),
           ),
           child: Stack(
             children: [
+              const Positioned(
+                left: 0,
+                top: 0,
+                child: _SpecialLabel(),
+              ),
               Positioned(
                 right: -12,
                 bottom: 64,
@@ -660,58 +663,32 @@ class _MissionFeaturedCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      _SpecialLabel(),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '점순이의 미션',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 52),
+                  const Text(
+                    '점순이의 미션',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   const _SpeechBubble(
                     text: '오늘은 가까운 명소에서\n감자 추억을 하나 만들어볼까요?',
                   ),
-                  const SizedBox(height: 86),
+                  const SizedBox(height: 88),
                   Container(
-                    width: double.infinity,
-                    height: 56,
-                    alignment: Alignment.center,
+                    height: 46,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: _missionPrimary,
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFF3F8F4),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: const Color(0xFFDDECE2)),
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '특별 미션 시작',
-                          style: TextStyle(
-                            color: AppColors.surface,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.surface,
-                          size: 26,
-                        ),
-                      ],
-                    ),
+                    child: const _FeaturedActionText(),
                   ),
                 ],
               ),
@@ -719,6 +696,34 @@ class _MissionFeaturedCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FeaturedActionText extends StatelessWidget {
+  const _FeaturedActionText();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(
+          child: Text(
+            '시작하기',
+            style: TextStyle(
+              color: _missionPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+        Icon(
+          Icons.chevron_right_rounded,
+          color: _missionPrimary,
+          size: 24,
+        ),
+      ],
     );
   }
 }
@@ -950,59 +955,6 @@ class _MissionTypeCircle extends StatelessWidget {
   }
 }
 
-class _MissionTomorrowCard extends StatelessWidget {
-  const _MissionTomorrowCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFDF7),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: const Row(
-        children: [
-          Icon(
-            Icons.eco_rounded,
-            color: _missionGold,
-            size: 26,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '매일 가볍게 여행 미션을 이어가보세요!',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '내일 새로운 미션이 찾아옵니다.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 String _compactRewardLabel(MissionChallenge mission) {
   final value = RegExp(r'\d+').firstMatch(mission.rewardLabel)?.group(0);
   return value == null ? mission.rewardType.label : '코인 $value';
@@ -1228,34 +1180,38 @@ class _MissionDetailScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      child: Container(
-        height: 250,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF8EA),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.line),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            Positioned(
-              right: 16,
-              top: 26,
-              child: _SpeechBubble(text: _detailSpeech(mission)),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 18),
+      child: SizedBox(
+        height: 236,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.background, Color(0xFFFFFAEE)],
             ),
-            Positioned(
-              left: 8,
-              bottom: -4,
-              child: Image.asset(
-                _detailJumsooniAsset(mission),
-                width: 158,
-                height: 208,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                right: 0,
+                top: 24,
+                child: _SpeechBubble(text: _detailSpeech(mission)),
               ),
-            ),
-          ],
+              Positioned(
+                left: 0,
+                bottom: -4,
+                child: Image.asset(
+                  _detailJumsooniAsset(mission),
+                  width: 162,
+                  height: 214,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

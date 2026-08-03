@@ -87,7 +87,8 @@ void main() {
     expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
     expect(find.text('숨은 QR을 찾아볼까요?'), findsOneWidget);
 
-    expect(find.text('특별 미션 시작'), findsOneWidget);
+    expect(find.text('시작하기'), findsOneWidget);
+    expect(find.text('매일 가볍게 여행 미션을 이어가보세요!'), findsNothing);
     expect(find.text('속초 시장 QR 찾기'), findsNothing);
     expect(find.text('시군 2곳 방문하기'), findsNothing);
   });
