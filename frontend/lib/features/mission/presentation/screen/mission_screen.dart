@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +19,7 @@ const _missionPrimary = Color(0xFF56C787);
 const _missionDark = Color(0xFF6A4A2A);
 const _missionGold = Color(0xFFF6C23E);
 const _missionLine = Color(0xFFE8E2D8);
+const _missionCardRadius = 20.0;
 const _featuredJumsooniAssets = [
   'assets/characters/jumsooni/jumsooni_neutral.png',
   'assets/characters/jumsooni/jumsooni_wave_hand.png',
@@ -391,7 +394,7 @@ class _VisitMissionEntryBanner extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFFFFF6DE),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(_missionCardRadius),
           border: Border.all(color: const Color(0xFFFFE1A3)),
         ),
         child: Row(
@@ -528,7 +531,7 @@ class _MissionErrorState extends StatelessWidget {
                 backgroundColor: _missionPrimary,
                 foregroundColor: AppColors.surface,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(_missionCardRadius),
                 ),
               ),
               child: const Text('다시 시도'),
@@ -550,7 +553,7 @@ class _MissionEmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: _missionLine),
       ),
       child: const Text(
@@ -629,16 +632,25 @@ class _MissionFeaturedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(_missionCardRadius),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Container(
           width: double.infinity,
+          constraints: const BoxConstraints(minHeight: 256),
           padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(_missionCardRadius),
             border: Border.all(color: AppColors.line),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           child: Stack(
             children: [
@@ -648,23 +660,28 @@ class _MissionFeaturedCard extends StatelessWidget {
                 child: _SpecialLabel(),
               ),
               Positioned(
-                right: -12,
-                bottom: 64,
+                right: -8,
+                bottom: 4,
                 child: IgnorePointer(
                   child: Image.asset(
                     _featuredJumsooniAsset(mission),
-                    width: 154,
-                    height: 198,
+                    width: 146,
+                    height: 188,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                   ),
                 ),
               ),
-              Column(
+              const Positioned(
+                right: 0,
+                top: 18,
+                child: _FeaturedChevronButton(),
+              ),
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 52),
-                  const Text(
+                  SizedBox(height: 52),
+                  Text(
                     '점순이의 미션',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -675,21 +692,11 @@ class _MissionFeaturedCard extends StatelessWidget {
                       letterSpacing: 0,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  const _SpeechBubble(
+                  SizedBox(height: 14),
+                  _SpeechBubble(
                     text: '오늘은 가까운 명소에서\n감자 추억을 하나 만들어볼까요?',
                   ),
-                  const SizedBox(height: 88),
-                  Container(
-                    height: 46,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F8F4),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFFDDECE2)),
-                    ),
-                    child: const _FeaturedActionText(),
-                  ),
+                  SizedBox(height: 78),
                 ],
               ),
             ],
@@ -700,30 +707,30 @@ class _MissionFeaturedCard extends StatelessWidget {
   }
 }
 
-class _FeaturedActionText extends StatelessWidget {
-  const _FeaturedActionText();
+class _FeaturedChevronButton extends StatelessWidget {
+  const _FeaturedChevronButton();
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(
-          child: Text(
-            '시작하기',
-            style: TextStyle(
-              color: _missionPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.74),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.surface.withValues(alpha: 0.9)),
+          ),
+          child: const Icon(
+            Icons.chevron_right_rounded,
+            color: _missionPrimary,
+            size: 28,
           ),
         ),
-        Icon(
-          Icons.chevron_right_rounded,
-          color: _missionPrimary,
-          size: 24,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -832,7 +839,7 @@ class _MissionCompactTile extends StatelessWidget {
 
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(_missionCardRadius),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -842,7 +849,7 @@ class _MissionCompactTile extends StatelessWidget {
             color: mission.status == MissionStatus.completed
                 ? AppColors.primaryTint
                 : AppColors.surface,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(_missionCardRadius),
             border: Border.all(color: AppColors.line),
           ),
           child: Row(
@@ -1056,14 +1063,11 @@ class _MissionDetailViewState extends State<_MissionDetailView> {
             Expanded(
               child: CustomScrollView(
                 slivers: [
-                  SliverToBoxAdapter(
-                    child: _MissionDetailScene(mission: mission),
-                  ),
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate.fixed([
-                        _MissionDetailSummaryCard(mission: mission),
+                        _MissionDetailIntro(mission: mission),
                         const SizedBox(height: 14),
                         _MissionHowToCard(mission: mission),
                         const SizedBox(height: 18),
@@ -1111,7 +1115,7 @@ class _MissionDetailViewState extends State<_MissionDetailView> {
                   foregroundColor: AppColors.surface,
                   disabledBackgroundColor: _missionLine,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(_missionCardRadius),
                   ),
                   textStyle: const TextStyle(
                     fontSize: 17,
@@ -1172,47 +1176,41 @@ class _MissionDetailTopBar extends StatelessWidget {
   }
 }
 
-class _MissionDetailScene extends StatelessWidget {
-  const _MissionDetailScene({required this.mission});
+class _MissionDetailIntro extends StatelessWidget {
+  const _MissionDetailIntro({required this.mission});
 
   final MissionChallenge mission;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 18),
-      child: SizedBox(
-        height: 236,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppColors.background, Color(0xFFFFFAEE)],
+    return SizedBox(
+      height: 386,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 182,
+            child: _MissionDetailSummaryCard(mission: mission),
+          ),
+          Positioned(
+            left: 0,
+            top: 2,
+            child: Image.asset(
+              _detailJumsooniAsset(mission),
+              width: 156,
+              height: 210,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
             ),
           ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                right: 0,
-                top: 24,
-                child: _SpeechBubble(text: _detailSpeech(mission)),
-              ),
-              Positioned(
-                left: 0,
-                bottom: -4,
-                child: Image.asset(
-                  _detailJumsooniAsset(mission),
-                  width: 162,
-                  height: 214,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                ),
-              ),
-            ],
+          Positioned(
+            right: 0,
+            top: 28,
+            child: _SpeechBubble(text: _detailSpeech(mission)),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1225,24 +1223,57 @@ class _SpeechBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 190),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 14,
-          height: 1.45,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 196),
+              padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppColors.line),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  height: 1.45,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
+        Positioned(
+          left: 26,
+          bottom: -6,
+          child: Transform.rotate(
+            angle: 0.785398,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1258,7 +1289,7 @@ class _MissionDetailSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
@@ -1303,7 +1334,7 @@ class _MissionHowToCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFEFF9F2),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: const Color(0xFFD8F0DF)),
       ),
       child: Column(
@@ -1394,7 +1425,7 @@ class _MissionInlineQuiz extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
@@ -1575,7 +1606,7 @@ class _RewardSmallCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: AppColors.line),
       ),
       child: Row(
@@ -1614,7 +1645,7 @@ class _MissionNoticeCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8EA),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: const Color(0xFFF1DBA9)),
       ),
       child: Column(
@@ -1663,14 +1694,14 @@ class _MissionQuizOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: selected ? AppColors.primaryTint : AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(_missionCardRadius),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(_missionCardRadius),
             border: Border.all(
               color: selected ? _missionPrimary : AppColors.line,
               width: selected ? 2 : 1,
@@ -1949,7 +1980,7 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
               foregroundColor: AppColors.surface,
               disabledBackgroundColor: _missionLine,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(_missionCardRadius),
               ),
               textStyle: const TextStyle(
                 fontSize: 16,
@@ -1987,7 +2018,7 @@ class _MissionActionSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(_missionCardRadius),
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -2054,7 +2085,7 @@ class _MissionUploadPreview extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFEAF8EF),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: const Color(0xFFD5EFDE)),
       ),
       child: Row(
@@ -2064,7 +2095,7 @@ class _MissionUploadPreview extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_missionCardRadius),
             ),
             child: const Icon(
               Icons.image_rounded,
@@ -2116,7 +2147,7 @@ class _MissionInputProgress extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8EA),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: const Color(0xFFF1DBA9)),
       ),
       child: Row(
@@ -2156,7 +2187,7 @@ class _MissionInputError extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF0F0),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         border: Border.all(color: const Color(0xFFF4C7C7)),
       ),
       child: Row(
@@ -2195,10 +2226,10 @@ class _MissionSheetButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: onTap == null ? const Color(0xFFF2F0EC) : const Color(0xFFEAF8EF),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(_missionCardRadius),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -2243,7 +2274,7 @@ class _MissionRewardDialog extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(_missionCardRadius),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2290,7 +2321,7 @@ class _MissionRewardDialog extends StatelessWidget {
                 backgroundColor: _missionPrimary,
                 foregroundColor: AppColors.surface,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(_missionCardRadius),
                 ),
               ),
               child: const Text(
