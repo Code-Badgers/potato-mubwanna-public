@@ -29,6 +29,8 @@
   - 결과: 통과
 - `flutter test test/shared/widgets/main_shell_test.dart`
   - 결과: 통과
+- `flutter analyze`
+  - 결과: 통과, `No issues found`
 
 ## 트러블슈팅
 
@@ -46,8 +48,7 @@
 
 ## 남은 확인
 
-- 전체 정리 후 `flutter analyze`를 실행한다.
-- 화면 캡처는 전체 UI 정리 완료 후 남긴다.
+- iOS/Android 실기기 화면 캡처는 로컬 시뮬레이터/기기 실행 환경에서 추가 확인이 필요하다.
 
 ### 2차: 마이페이지/Footer 톤 정리
 
