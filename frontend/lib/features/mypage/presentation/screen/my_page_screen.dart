@@ -70,12 +70,8 @@ class _ProfileHeader extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.line),
-      ),
+      padding: const EdgeInsets.all(18),
+      decoration: _myPageCardDecoration(),
       child: Row(
         children: [
           _ProfileAvatar(profile: profile),
@@ -124,12 +120,26 @@ class _ProfileAvatar extends StatelessWidget {
     final profileImage = profile?.profileImage.trim() ?? '';
 
     return Container(
-      width: 64,
-      height: 64,
+      width: 68,
+      height: 68,
       decoration: BoxDecoration(
-        color: AppColors.primaryTint,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFEAF9F0),
+            Color(0xFFFFF8EA),
+          ],
+        ),
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: profileImage.isEmpty
@@ -209,18 +219,7 @@ class _TravelStats extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 7),
-          ),
-        ],
-      ),
+      decoration: _myPageCardDecoration(),
       child: summaryState.when(
         data: (summary) => _TravelStatRow(
           summary: summary ?? UserActivitySummary.empty,
@@ -408,34 +407,29 @@ class _QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
+      color: AppColors.surface.withValues(alpha: 0.86),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         key: action.key,
         onTap: action.onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          height: 92,
+          height: 90,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.line),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.line.withValues(alpha: 0.84),
+            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryTint,
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTint.withValues(alpha: 0.92),
                   shape: BoxShape.circle,
                 ),
                 child:
@@ -484,11 +478,11 @@ class _AccountMenu extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Material(
-        color: AppColors.surface,
+        color: AppColors.surface.withValues(alpha: 0.9),
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: AppColors.line),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.line.withValues(alpha: 0.84)),
         ),
         child: Column(
           children: [
@@ -580,4 +574,19 @@ class _MenuItem {
   final IconData icon;
   final String label;
   final bool isSettings;
+}
+
+BoxDecoration _myPageCardDecoration() {
+  return BoxDecoration(
+    color: AppColors.surface.withValues(alpha: 0.88),
+    borderRadius: BorderRadius.circular(24),
+    border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.045),
+        blurRadius: 24,
+        offset: const Offset(0, 10),
+      ),
+    ],
+  );
 }

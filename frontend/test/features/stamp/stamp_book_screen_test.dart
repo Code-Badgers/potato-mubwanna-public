@@ -31,7 +31,7 @@ void main() {
     expect(find.text('안목해변'), findsOneWidget);
     expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
     expect(find.text('강원 18개 시군 스탬프 투어'), findsOneWidget);
-    expect(find.text('지도에서 깃발 선택'), findsOneWidget);
+    expect(find.text('지도에서 깃발 선택'), findsNothing);
     expect(find.text('스탬프 찍기'), findsNothing);
 
     await tester.tap(find.text('정선 5일장'));

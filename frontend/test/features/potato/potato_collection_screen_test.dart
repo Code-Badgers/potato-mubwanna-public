@@ -93,9 +93,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('나의 감자 도감'), findsOneWidget);
-    expect(find.text('대표로 세울 감자를 선택하세요. 수집한 감자 2개'), findsOneWidget);
+    expect(find.textContaining('감자를 누르면'), findsNothing);
     expect(find.text('하지감자'), findsOneWidget);
-    expect(find.widgetWithText(TextButton, '상세'), findsNWidgets(2));
+    expect(find.text('???'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, '상세'), findsNothing);
+    expect(find.widgetWithText(TextButton, '힌트'), findsNothing);
     expect(find.text('대표 감자로 설정'), findsNothing);
   });
 
@@ -115,10 +117,10 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, '대표 감자 변경'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, '상세').first);
+    await tester.tap(find.text('???'));
     await tester.pumpAndSettle();
 
-    expect(find.text('하지감자'), findsWidgets);
+    expect(find.text('???'), findsWidgets);
     expect(find.text('감자 소개'), findsOneWidget);
     expect(find.text('획득 방법'), findsOneWidget);
     expect(repository.updatedPotatoId, isNull);

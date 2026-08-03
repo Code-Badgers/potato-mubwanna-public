@@ -324,8 +324,37 @@ class _GangwonStampMap extends StatefulWidget {
   State<_GangwonStampMap> createState() => _GangwonStampMapState();
 }
 
-class _GangwonStampMapState extends State<_GangwonStampMap> {
+class _GangwonStampMapState extends State<_GangwonStampMap>
+    with SingleTickerProviderStateMixin {
   String? _selectedCity;
+  String? _travelFromCity;
+  late final AnimationController _travelController;
+
+  @override
+  void initState() {
+    super.initState();
+    _travelController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 780),
+    )..value = 1;
+  }
+
+  @override
+  void dispose() {
+    _travelController.dispose();
+    super.dispose();
+  }
+
+  void _selectCity(String city) {
+    if (_selectedCity == city) {
+      return;
+    }
+    setState(() {
+      _travelFromCity = _selectedCity;
+      _selectedCity = city;
+    });
+    _travelController.forward(from: 0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -380,7 +409,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                       if (city == null) {
                         return;
                       }
-                      setState(() => _selectedCity = city);
+                      _selectCity(city);
                     },
                     child: CustomPaint(
                       painter: _GangwonMapPainter(
@@ -390,6 +419,30 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                       child: const SizedBox.expand(),
                     ),
                   ),
+                  if (selectedRegion != null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: AnimatedBuilder(
+                          animation: _travelController,
+                          builder: (context, _) {
+                            final start = _stampTravelStart(
+                              mapRect,
+                              fromCity: _travelFromCity,
+                            );
+                            return CustomPaint(
+                              painter: _StampTravelRoutePainter(
+                                start: start,
+                                end: _stampRegionAnchor(
+                                  selectedRegion,
+                                  mapRect,
+                                ),
+                                progress: _travelController.value,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   for (final region in gangwonMapRegions)
                     Positioned(
                       left:
@@ -397,13 +450,45 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                       top: mapRect.top + region.anchor.dy * mapRect.height - 20,
                       width: 76,
                       child: GestureDetector(
-                        onTap: () =>
-                            setState(() => _selectedCity = region.city),
+                        onTap: () => _selectCity(region.city),
                         child: _StampMapNode(
                           region: region,
                           stamp: stampsByCity[region.city],
                           target: targetsByCity[region.city],
                           selected: selectedRegion?.city == region.city,
+                        ),
+                      ),
+                    ),
+                  if (selectedRegion != null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: AnimatedBuilder(
+                          animation: _travelController,
+                          builder: (context, _) {
+                            final start = _stampTravelStart(
+                              mapRect,
+                              fromCity: _travelFromCity,
+                            );
+                            final end = _stampRegionAnchor(
+                              selectedRegion,
+                              mapRect,
+                            );
+                            final value = Curves.easeInOutCubic
+                                .transform(_travelController.value);
+                            final position = Offset.lerp(start, end, value)!;
+
+                            return Stack(
+                              children: [
+                                Positioned(
+                                  left: position.dx - 18,
+                                  top: position.dy - 18,
+                                  width: 36,
+                                  height: 36,
+                                  child: const _StampTravelCarMarker(),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -435,7 +520,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                     ..showSnackBar(
                       SnackBar(
                         content: Text(
-                          '${_primaryLandmark(selectedRegion)} 스탬프 장소 데이터를 연결한 뒤 방문 인증할 수 있어요.',
+                          '${_primaryLandmark(selectedRegion)} 스탬프는 아직 준비 중이에요. 곧 찍을 수 있게 열어둘게요.',
                         ),
                       ),
                     );
@@ -539,6 +624,182 @@ class _GangwonMapPainter extends CustomPainter {
     return oldDelegate.stampsByCity != stampsByCity ||
         oldDelegate.selectedCity != selectedCity;
   }
+}
+
+Offset _stampTravelStart(
+  Rect mapRect, {
+  String? fromCity,
+}) {
+  if (fromCity != null) {
+    final fromRegion = _findRegion(fromCity);
+    if (fromRegion != null) {
+      return _stampRegionAnchor(fromRegion, mapRect);
+    }
+  }
+
+  return Offset(
+    mapRect.left + mapRect.width * 0.16,
+    mapRect.top + mapRect.height * 0.86,
+  );
+}
+
+Offset _stampRegionAnchor(GangwonMapRegion region, Rect mapRect) {
+  return Offset(
+    mapRect.left + region.anchor.dx * mapRect.width,
+    mapRect.top + region.anchor.dy * mapRect.height,
+  );
+}
+
+class _StampTravelRoutePainter extends CustomPainter {
+  const _StampTravelRoutePainter({
+    required this.start,
+    required this.end,
+    required this.progress,
+  });
+
+  final Offset start;
+  final Offset end;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final control = Offset(
+      (start.dx + end.dx) / 2,
+      (start.dy + end.dy) / 2 - 44,
+    );
+    final routePaint = Paint()
+      ..color = AppColors.primary.withValues(alpha: 0.52)
+      ..style = PaintingStyle.fill;
+    const dotCount = 22;
+    for (var index = 0; index <= dotCount; index += 1) {
+      final t = index / dotCount;
+      if (t > progress) {
+        break;
+      }
+      final point = _quadraticPoint(start, control, end, t);
+      final fade = (0.42 + t * 0.36).clamp(0.0, 1.0);
+      canvas.drawCircle(
+        point,
+        2.2,
+        routePaint..color = AppColors.primary.withValues(alpha: fade),
+      );
+    }
+
+    final haloPaint = Paint()
+      ..color = AppColors.secondary.withValues(alpha: 0.16 * progress)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(end, 22 * progress, haloPaint);
+  }
+
+  Offset _quadraticPoint(Offset a, Offset control, Offset b, double t) {
+    final oneMinusT = 1 - t;
+    return Offset(
+      oneMinusT * oneMinusT * a.dx +
+          2 * oneMinusT * t * control.dx +
+          t * t * b.dx,
+      oneMinusT * oneMinusT * a.dy +
+          2 * oneMinusT * t * control.dy +
+          t * t * b.dy,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _StampTravelRoutePainter oldDelegate) {
+    return oldDelegate.start != start ||
+        oldDelegate.end != end ||
+        oldDelegate.progress != progress;
+  }
+}
+
+class _StampTravelCarMarker extends StatelessWidget {
+  const _StampTravelCarMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CustomPaint(
+      painter: _StampTravelCarPainter(),
+    );
+  }
+}
+
+class _StampTravelCarPainter extends CustomPainter {
+  const _StampTravelCarPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bodyPaint = Paint()
+      ..color = AppColors.primary
+      ..style = PaintingStyle.fill;
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.14)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+    final windowPaint = Paint()
+      ..color = const Color(0xFFDDF2FA)
+      ..style = PaintingStyle.fill;
+    final wheelPaint = Paint()
+      ..color = const Color(0xFF6D6252)
+      ..style = PaintingStyle.fill;
+
+    final body = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        size.width * 0.19,
+        size.height * 0.42,
+        size.width * 0.62,
+        size.height * 0.25,
+      ),
+      const Radius.circular(5),
+    );
+    final roof = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        size.width * 0.31,
+        size.height * 0.29,
+        size.width * 0.37,
+        size.height * 0.22,
+      ),
+      const Radius.circular(5),
+    );
+    canvas.drawOval(
+      Rect.fromLTWH(
+        size.width * 0.18,
+        size.height * 0.68,
+        size.width * 0.64,
+        size.height * 0.16,
+      ),
+      shadowPaint,
+    );
+    canvas.drawRRect(body, bodyPaint);
+    canvas.drawRRect(roof, bodyPaint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          size.width * 0.39,
+          size.height * 0.34,
+          size.width * 0.20,
+          size.height * 0.12,
+        ),
+        const Radius.circular(2),
+      ),
+      windowPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.33, size.height * 0.69),
+      size.width * 0.055,
+      wheelPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.68, size.height * 0.69),
+      size.width * 0.055,
+      wheelPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.75, size.height * 0.51),
+      size.width * 0.025,
+      Paint()..color = AppColors.secondary,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _StampTravelCarPainter oldDelegate) => false;
 }
 
 Rect _gangwonMapRect(Size size) {
@@ -645,7 +906,7 @@ class _SelectedRegionCard extends StatelessWidget {
         : '${region.city} 스탬프 투어 명소 · ${target!.categoryLabel}';
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 178),
+      height: 186,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
@@ -660,7 +921,8 @@ class _SelectedRegionCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -819,7 +1081,7 @@ class _EmptyRegionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 178),
+      height: 186,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -834,7 +1096,8 @@ class _EmptyRegionCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -894,25 +1157,6 @@ class _EmptyRegionCard extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            height: 48,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.primaryTint,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Text(
-              '지도에서 깃발 선택',
-              style: TextStyle(
-                color: AppColors.primaryDark,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -937,64 +1181,69 @@ class _StampMapNode extends StatelessWidget {
     final acquired = stamp?.acquired ?? false;
     final label = target?.spotName ?? _primaryLandmark(region);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: selected ? 34 : 26,
-          height: selected ? 34 : 26,
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.secondary
-                : acquired
-                    ? AppColors.primary
-                    : AppColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.surface,
-              width: selected ? 3 : 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: selected ? 0.18 : 0.1),
-                blurRadius: selected ? 12 : 5,
-                offset: const Offset(0, 3),
+    return AnimatedScale(
+      scale: selected ? 1.07 : 1,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: selected ? 34 : 26,
+            height: selected ? 34 : 26,
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.secondary
+                  : acquired
+                      ? AppColors.primary
+                      : AppColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.surface,
+                width: selected ? 3 : 2,
               ),
-            ],
-          ),
-          child: Icon(
-            acquired ? Icons.check_rounded : Icons.flag_rounded,
-            color:
-                acquired || selected ? Colors.white : const Color(0xFF9A8C72),
-            size: acquired ? 18 : 14,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? AppColors.secondary : AppColors.line,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: selected ? 0.18 : 0.1),
+                  blurRadius: selected ? 12 : 5,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(
+              acquired ? Icons.check_rounded : Icons.flag_rounded,
+              color:
+                  acquired || selected ? Colors.white : const Color(0xFF9A8C72),
+              size: acquired ? 18 : 14,
             ),
           ),
-          child: Text(
-            label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 9,
-              height: 1.1,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
+          const SizedBox(height: 2),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.94),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected ? AppColors.secondary : AppColors.line,
+              ),
+            ),
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 9,
+                height: 1.1,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

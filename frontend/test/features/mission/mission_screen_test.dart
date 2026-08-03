@@ -17,6 +17,7 @@ import 'package:potato_mubwanna/features/mission/data/mission_native_input_servi
 import 'package:potato_mubwanna/features/mission/data/mission_repository.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_upload_repository.dart';
 import 'package:potato_mubwanna/features/mission/domain/mission_challenge.dart';
+import 'package:potato_mubwanna/features/mission/presentation/mission_jumsooni_dialogue.dart';
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
 
 void main() {
@@ -69,7 +70,7 @@ void main() {
     expect(find.text('0 / 4'), findsNothing);
     expect(find.text('점순이의 미션'), findsOneWidget);
     expect(find.text('오늘의 일일 미션'), findsOneWidget);
-    expect(find.textContaining('볼까요?'), findsWidgets);
+    expect(find.text('점순이의 미션'), findsOneWidget);
     expect(find.textContaining('코인'), findsNothing);
     expect(find.textContaining('쿠폰'), findsNothing);
     expect(find.textContaining('CP_'), findsNothing);
@@ -79,13 +80,13 @@ void main() {
     expect(find.text('이벤트'), findsNothing);
 
     await tester.scrollUntilVisible(
-      find.text('천천히 걸어볼까요?'),
+      find.text('감자가 기다리고 있어요'),
       160,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
-    expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
-    expect(find.text('숨은 QR을 찾아볼까요?'), findsOneWidget);
+    expect(find.text('감자가 기다리고 있어요'), findsOneWidget);
+    expect(find.text('이 정도는 알아야죠'), findsOneWidget);
+    expect(find.text('숨은 표식을 찾아봐요'), findsOneWidget);
 
     expect(find.text('시작하기'), findsNothing);
     expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
@@ -98,7 +99,7 @@ void main() {
       (tester) async {
     await _pumpMissionScreen(tester);
 
-    await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
+    await _openMission(tester, '이 정도는 알아야죠');
 
     expect(find.text('미션 상세'), findsOneWidget);
     expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
@@ -114,7 +115,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('미션 완료!'), findsOneWidget);
+    _expectCompletionDialog('1004');
     expect(find.text('황금감자 성장 아이템을 획득했어요.'), findsOneWidget);
 
     await tester.tap(find.text('확인'));
@@ -130,14 +131,14 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
+    await _openMission(tester, '이 정도는 알아야죠');
 
     await _tapVisibleText(tester, '옥수수감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('정답이 틀렸습니다. 다시 풀어주세요.'), findsOneWidget);
-    expect(find.text('미션 완료!'), findsNothing);
+    _expectNoCompletionDialog();
     expect(repository.completeCallCount, 0);
   });
 
@@ -146,13 +147,13 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _openMission(tester, '천천히 걸어볼까요?');
+    await _openMission(tester, '감자가 기다리고 있어요');
 
     await tester.tap(find.widgetWithText(FilledButton, '걸음 인증하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('걸음을 다 채우고 재시도해주세요.'), findsOneWidget);
-    expect(find.text('미션 완료!'), findsNothing);
+    _expectNoCompletionDialog();
     expect(repository.completeCallCount, 1);
   });
 
@@ -199,7 +200,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '인증 완료하기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('미션 완료!'), findsOneWidget);
+    _expectCompletionDialog('1002');
     expect(repository.completeCallCount, 1);
     expect(repository.lastPayload?.uploadKey,
         'mission-uploads/1/1002/receipt.jpg');
@@ -238,7 +239,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('지원하지 않는 이미지 형식입니다.'), findsOneWidget);
-    expect(find.text('미션 완료!'), findsNothing);
+    _expectNoCompletionDialog();
     expect(repository.completeCallCount, 0);
   });
 
@@ -275,7 +276,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'QR 스캔하기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('미션 완료!'), findsOneWidget);
+    _expectCompletionDialog('1003');
     expect(repository.completeCallCount, 1);
     expect(repository.lastPayload?.qrCode, _sokchoMissionQrPayload);
   });
@@ -292,14 +293,14 @@ void main() {
       ),
     );
 
-    await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
+    await _openMission(tester, '이 정도는 알아야죠');
 
     await _tapVisibleText(tester, '곤드레감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('이미 완료한 미션입니다.'), findsOneWidget);
-    expect(find.text('미션 완료!'), findsNothing);
+    _expectNoCompletionDialog();
   });
 
   testWidgets('prevents duplicate completion requests while submitting',
@@ -322,7 +323,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.completeCallCount, 1);
-    expect(find.text('미션 완료!'), findsOneWidget);
+    _expectCompletionDialog('1003');
   });
 
   testWidgets('disables completion action for completed missions',
@@ -336,7 +337,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '완료된 미션'));
     await tester.pumpAndSettle();
 
-    expect(find.text('미션 완료!'), findsNothing);
+    _expectNoCompletionDialog();
   });
 
   testWidgets(
@@ -346,9 +347,9 @@ void main() {
 
     expect(find.text('스탬프 1개 획득하기'), findsNothing);
     expect(find.text('[시즌 한정] 얼음나라 산천어 미션'), findsNothing);
-    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
-    expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
-    expect(find.text('숨은 QR을 찾아볼까요?'), findsOneWidget);
+    expect(find.text('감자가 기다리고 있어요'), findsOneWidget);
+    expect(find.text('이 정도는 알아야죠'), findsOneWidget);
+    expect(find.text('숨은 표식을 찾아봐요'), findsOneWidget);
   });
 
   testWidgets('shows visit mission entry banner from spot verification',
@@ -368,9 +369,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('오늘의 미션'), findsNothing);
-    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
-    expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
-    expect(find.text('숨은 QR을 찾아볼까요?'), findsOneWidget);
+    expect(find.text('감자가 기다리고 있어요'), findsOneWidget);
+    expect(find.text('이 정도는 알아야죠'), findsOneWidget);
+    expect(find.text('숨은 표식을 찾아봐요'), findsOneWidget);
   });
 
   testWidgets('opens visit unlocked mission detail from mission id',
@@ -597,6 +598,24 @@ class _FakeMissionUploadRepository extends MissionUploadRepository {
       throw error;
     }
     return result;
+  }
+}
+
+void _expectCompletionDialog(String missionId) {
+  expect(
+    find.text(
+      MissionJumsooniDialogue.pick(
+        MissionJumsooniDialogue.complete,
+        missionId,
+      ),
+    ),
+    findsOneWidget,
+  );
+}
+
+void _expectNoCompletionDialog() {
+  for (final message in MissionJumsooniDialogue.complete) {
+    expect(find.text(message), findsNothing);
   }
 }
 
