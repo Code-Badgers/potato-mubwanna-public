@@ -337,20 +337,21 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
         _selectedCity == null ? null : _findRegion(_selectedCity!);
     final selectedStamp =
         selectedRegion == null ? null : stampsByCity[selectedRegion.city];
-    final selectedTarget = widget.nextTargets.maybeWhen(
+    final targetsByCity = widget.nextTargets.maybeWhen(
       data: (targets) {
-        if (selectedRegion == null || targets == null || targets.isEmpty) {
-          return null;
+        if (targets == null || targets.isEmpty) {
+          return const <String, StampNextTarget>{};
         }
+        final values = <String, StampNextTarget>{};
         for (final target in targets) {
-          if (_normalizeCityName(target.cityName) == selectedRegion.city) {
-            return target;
-          }
+          values.putIfAbsent(_normalizeCityName(target.cityName), () => target);
         }
-        return null;
+        return values;
       },
-      orElse: () => null,
+      orElse: () => const <String, StampNextTarget>{},
     );
+    final selectedTarget =
+        selectedRegion == null ? null : targetsByCity[selectedRegion.city];
 
     return Column(
       children: [
@@ -358,9 +359,9 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
           margin: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           height: 470,
           decoration: BoxDecoration(
-            color: const Color(0xFFEAF7FF),
+            color: const Color(0xFFDDF2FA),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.line),
+            border: Border.all(color: const Color(0xFFC7E7F0)),
           ),
           clipBehavior: Clip.antiAlias,
           child: LayoutBuilder(
@@ -392,15 +393,16 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                   for (final region in gangwonMapRegions)
                     Positioned(
                       left:
-                          mapRect.left + region.anchor.dx * mapRect.width - 32,
-                      top: mapRect.top + region.anchor.dy * mapRect.height - 27,
-                      width: 64,
+                          mapRect.left + region.anchor.dx * mapRect.width - 38,
+                      top: mapRect.top + region.anchor.dy * mapRect.height - 20,
+                      width: 76,
                       child: GestureDetector(
                         onTap: () =>
                             setState(() => _selectedCity = region.city),
                         child: _StampMapNode(
                           region: region,
                           stamp: stampsByCity[region.city],
+                          target: targetsByCity[region.city],
                           selected: selectedRegion?.city == region.city,
                         ),
                       ),
@@ -425,9 +427,21 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
               region: selectedRegion,
               stamp: selectedStamp,
               target: selectedTarget,
-              onTargetTap: selectedTarget == null
-                  ? null
-                  : () => widget.onTargetTap(selectedTarget),
+              onTargetTap: () {
+                if (selectedTarget == null) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${_primaryLandmark(selectedRegion)} 스탬프 장소 데이터를 연결한 뒤 방문 인증할 수 있어요.',
+                        ),
+                      ),
+                    );
+                  return;
+                }
+                widget.onTargetTap(selectedTarget);
+              },
             ),
           )
         else
@@ -453,35 +467,25 @@ class _GangwonMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final mapRect = _gangwonMapRect(size);
     canvas.drawRect(
-        Offset.zero & size, Paint()..color = const Color(0xFFEAF7FF));
+        Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
 
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
     final thinLinePaint = Paint()
-      ..color = const Color(0xFFB6D6C0)
+      ..color = const Color(0xFFB9E2EA)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
     final selectedLinePaint = Paint()
-      ..color = AppColors.primaryDark
+      ..color = const Color(0xFF59B8C7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4;
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
     for (final region in gangwonMapRegions) {
       final path = _regionPath(region, mapRect);
-      final acquired = stampsByCity[region.city]?.acquired ?? false;
-      final selected = region.city == selectedCity;
-      final displayPath = selected ? _scaledPath(path, 1.035) : path;
-      fillPaint.color = selected
-          ? const Color(0xFFD8F2E2)
-          : acquired
-              ? const Color(0xFFE2F6E8)
-              : const Color(0xFFF7FAF4);
-      canvas.drawPath(displayPath, fillPaint);
-      canvas.drawPath(
-        displayPath,
-        selected ? selectedLinePaint : thinLinePaint,
-      );
-
       try {
         fullPath = fullPath.computeMetrics().isEmpty
             ? path
@@ -491,11 +495,42 @@ class _GangwonMapPainter extends CustomPainter {
       }
     }
 
-    final outerPaint = Paint()
-      ..color = AppColors.primaryDark.withValues(alpha: 0.58)
+    final coastlinePaint = Paint()
+      ..color = const Color(0xFF9FCFE0).withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.2;
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.6);
+    canvas.drawPath(fullPath.shift(const Offset(7, 8)), coastlinePaint);
+
+    for (final region in gangwonMapRegions) {
+      if (region.city == selectedCity) {
+        continue;
+      }
+      final path = _regionPath(region, mapRect);
+      final acquired = stampsByCity[region.city]?.acquired ?? false;
+      fillPaint.color = acquired ? const Color(0xFFF1FFF6) : AppColors.surface;
+      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(path, thinLinePaint);
+    }
+
+    final outerPaint = Paint()
+      ..color = const Color(0xFFB9E2EA)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(fullPath, outerPaint);
+
+    final selectedRegion =
+        selectedCity == null ? null : _findRegion(selectedCity!);
+    if (selectedRegion != null) {
+      final path = _scaledPath(_regionPath(selectedRegion, mapRect), 1.035);
+      fillPaint.color = const Color(0xFFE9FBF4);
+      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(path, selectedLinePaint);
+    }
   }
 
   @override
@@ -527,53 +562,32 @@ Rect _gangwonMapRect(Size size) {
 }
 
 Path _regionPath(GangwonMapRegion region, Rect mapRect) {
-  final polygon = _primaryRegionPolygon(region);
-  if (polygon == null) {
-    return Path();
-  }
-
-  // 원본 GeoJSON은 행정동 단위 조각이 섞여 있어 지도 내부에 산맥처럼 보이는
-  // 파편이 생긴다. 스탬프 투어 지도에서는 정밀 행정 경계보다 시군을 고르는
-  // 명확한 경험이 더 중요하므로, 시군마다 가장 큰 대표 외곽만 그린다.
-  return Path()
-    ..addPolygon(
-      [
-        for (final point in polygon)
-          Offset(
-            mapRect.left + point.dx * mapRect.width,
-            mapRect.top + point.dy * mapRect.height,
-          ),
-      ],
-      true,
-    );
-}
-
-List<Offset>? _primaryRegionPolygon(GangwonMapRegion region) {
-  List<Offset>? primary;
-  var primaryArea = 0.0;
-
+  var regionPath = Path();
   for (final polygon in region.polygons) {
-    final area = _polygonArea(polygon);
-    if (area > primaryArea) {
-      primary = polygon;
-      primaryArea = area;
+    if (polygon.length < 3) {
+      continue;
+    }
+    final polygonPath = Path()
+      ..addPolygon(
+        [
+          for (final point in polygon)
+            Offset(
+              mapRect.left + point.dx * mapRect.width,
+              mapRect.top + point.dy * mapRect.height,
+            ),
+        ],
+        true,
+      );
+
+    try {
+      regionPath = regionPath.computeMetrics().isEmpty
+          ? polygonPath
+          : Path.combine(PathOperation.union, regionPath, polygonPath);
+    } catch (_) {
+      regionPath.addPath(polygonPath, Offset.zero);
     }
   }
-
-  return primary;
-}
-
-double _polygonArea(List<Offset> polygon) {
-  if (polygon.length < 3) {
-    return 0;
-  }
-  var area = 0.0;
-  for (var i = 0; i < polygon.length; i += 1) {
-    final current = polygon[i];
-    final next = polygon[(i + 1) % polygon.length];
-    area += current.dx * next.dy - next.dx * current.dy;
-  }
-  return area.abs() / 2;
+  return regionPath;
 }
 
 Path _scaledPath(Path path, double scale) {
@@ -618,13 +632,16 @@ class _SelectedRegionCard extends StatelessWidget {
   final GangwonMapRegion region;
   final RallybookStamp? stamp;
   final StampNextTarget? target;
-  final VoidCallback? onTargetTap;
+  final VoidCallback onTargetTap;
 
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
-    final canOpenStamp = target != null;
     final statusText = acquired ? '스탬프 완료' : '방문 인증 필요';
+    final spotName = target?.spotName ?? _primaryLandmark(region);
+    final spotDescription = target == null
+        ? region.landmarks
+        : '${region.city} 스탬프 투어 명소 · ${target!.categoryLabel}';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -665,7 +682,7 @@ class _SelectedRegionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      region.city,
+                      spotName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -677,7 +694,7 @@ class _SelectedRegionCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      statusText,
+                      '${region.city} · $statusText',
                       style: TextStyle(
                         color:
                             acquired ? AppColors.primaryDark : AppColors.brown,
@@ -693,7 +710,7 @@ class _SelectedRegionCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            region.landmarks,
+            spotDescription,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -709,19 +726,17 @@ class _SelectedRegionCard extends StatelessWidget {
             width: double.infinity,
             height: 48,
             child: FilledButton(
-              onPressed: canOpenStamp ? onTargetTap : null,
+              onPressed: onTargetTap,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.line,
-                disabledForegroundColor: AppColors.textSecondary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: Text(
-                canOpenStamp ? '스탬프 찍기' : '스탬프 준비중',
-                style: const TextStyle(
+              child: const Text(
+                '스탬프 찍기',
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
@@ -859,53 +874,56 @@ class _StampMapNode extends StatelessWidget {
   const _StampMapNode({
     required this.region,
     required this.stamp,
+    required this.target,
     required this.selected,
   });
 
   final GangwonMapRegion region;
   final RallybookStamp? stamp;
+  final StampNextTarget? target;
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
+    final label = target?.spotName ?? _primaryLandmark(region);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          width: selected ? 48 : 38,
-          height: selected ? 48 : 38,
+          width: selected ? 34 : 26,
+          height: selected ? 34 : 26,
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: selected
+                ? AppColors.secondary
+                : acquired
+                    ? AppColors.primary
+                    : AppColors.surface,
             shape: BoxShape.circle,
             border: Border.all(
-              color: selected
-                  ? AppColors.secondary
-                  : acquired
-                      ? AppColors.primary
-                      : const Color(0xFFCDBF9F),
-              width: selected ? 4 : 2.5,
+              color: AppColors.surface,
+              width: selected ? 3 : 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: (selected ? AppColors.secondary : AppColors.primary)
-                    .withValues(alpha: selected ? 0.28 : 0.1),
-                blurRadius: selected ? 16 : 7,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: selected ? 0.18 : 0.1),
+                blurRadius: selected ? 12 : 5,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: Icon(
-            acquired ? Icons.check_rounded : Icons.circle_outlined,
-            color: acquired ? AppColors.primaryDark : const Color(0xFFB5A88D),
-            size: acquired ? 27 : 20,
+            acquired ? Icons.check_rounded : Icons.flag_rounded,
+            color:
+                acquired || selected ? Colors.white : const Color(0xFF9A8C72),
+            size: acquired ? 18 : 14,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
             color: AppColors.surface.withValues(alpha: 0.94),
             borderRadius: BorderRadius.circular(8),
@@ -914,12 +932,14 @@ class _StampMapNode extends StatelessWidget {
             ),
           ),
           child: Text(
-            region.city,
-            maxLines: 1,
+            label,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 11,
+              fontSize: 9,
+              height: 1.1,
               fontWeight: FontWeight.w900,
               letterSpacing: 0,
             ),
@@ -932,6 +952,10 @@ class _StampMapNode extends StatelessWidget {
 
 String _normalizeCityName(String value) {
   return value.replaceAll(RegExp(r'(특별자치도|시|군|구)$'), '').trim();
+}
+
+String _primaryLandmark(GangwonMapRegion region) {
+  return region.landmarks.split('/').first.trim();
 }
 
 class _StampBookError extends StatelessWidget {

@@ -28,19 +28,20 @@ void main() {
     expect(find.text('12개 달성까지 4개 남았어요'), findsNothing);
     expect(find.text('다음 스탬프 추천'), findsNothing);
     expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
-    expect(find.text('강릉'), findsOneWidget);
+    expect(find.text('안목해변'), findsOneWidget);
     expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
     expect(find.text('지역을 선택하면 스탬프를 찍을 장소가 나타나요.'), findsOneWidget);
     expect(find.text('스탬프 찍기'), findsNothing);
 
-    await tester.tap(find.text('정선'));
+    await tester.tap(find.text('정선 5일장'));
     await tester.pumpAndSettle();
 
     expect(find.text('여행할 지역을 골라보세요'), findsNothing);
-    expect(find.text('스탬프 완료'), findsOneWidget);
-    expect(find.text('정선 5일장 / 아리랑시장'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsWidgets);
+    expect(find.text('정선 · 스탬프 완료'), findsOneWidget);
     expect(find.text('대표 스팟 보기'), findsNothing);
     expect(find.text('오디오 준비중'), findsNothing);
+    expect(find.text('스탬프 준비중'), findsNothing);
     expect(find.text('스탬프 찍기'), findsOneWidget);
     expect(find.text('투어 진행률'), findsNothing);
   });
@@ -73,7 +74,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('정선'));
+    await tester.tap(find.text('정선 5일장'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('스탬프 찍기'));
@@ -121,7 +122,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('강릉'), findsOneWidget);
+    expect(find.text('안목해변'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stamp-next-target-error')),
       findsNothing,
