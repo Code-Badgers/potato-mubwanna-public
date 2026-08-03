@@ -638,8 +638,8 @@ class _MissionFeaturedCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 256),
-          padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+          constraints: const BoxConstraints(minHeight: 224),
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(_missionCardRadius),
@@ -660,13 +660,13 @@ class _MissionFeaturedCard extends StatelessWidget {
                 child: _SpecialLabel(),
               ),
               Positioned(
-                right: -8,
-                bottom: 4,
+                right: -4,
+                bottom: -24,
                 child: IgnorePointer(
                   child: Image.asset(
                     _featuredJumsooniAsset(mission),
-                    width: 146,
-                    height: 188,
+                    width: 148,
+                    height: 192,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                   ),
@@ -696,7 +696,7 @@ class _MissionFeaturedCard extends StatelessWidget {
                   _SpeechBubble(
                     text: '오늘은 가까운 명소에서\n감자 추억을 하나 만들어볼까요?',
                   ),
-                  SizedBox(height: 78),
+                  SizedBox(height: 22),
                 ],
               ),
             ],
@@ -1184,16 +1184,10 @@ class _MissionDetailIntro extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 386,
+      height: 430,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 182,
-            child: _MissionDetailSummaryCard(mission: mission),
-          ),
           Positioned(
             left: 0,
             top: 2,
@@ -1204,6 +1198,12 @@ class _MissionDetailIntro extends StatelessWidget {
               fit: BoxFit.contain,
               filterQuality: FilterQuality.high,
             ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 178,
+            child: _MissionDetailSummaryCard(mission: mission),
           ),
           Positioned(
             right: 0,
