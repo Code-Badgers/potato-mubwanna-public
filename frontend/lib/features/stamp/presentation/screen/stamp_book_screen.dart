@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
+import '../model/gangwon_map_region.dart';
 
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
@@ -108,41 +109,27 @@ class _StampBookBody extends StatelessWidget {
       slivers: [
         const SliverToBoxAdapter(child: _StampHeader()),
         SliverToBoxAdapter(
-          child: _ProgressSummary(
-            acquiredCount: progress.acquiredCount,
-            totalCount: progress.totalCount,
-            reward: reward,
+          child: _GangwonStampMap(
+            progress: progress,
+            nextTargets: nextTargets,
+            onTargetTap: (target) => context.push('/spots/${target.spotId}'),
           ),
         ),
         SliverToBoxAdapter(
-          child: _NextTargetsSection(
+          child: _RallyProgressCard(
+            acquiredCount: progress.acquiredCount,
+            totalCount: progress.totalCount,
+            reward: reward,
+            isClaiming: isClaiming,
+            onClaim: onClaim,
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: _NextStampHintCard(
             state: nextTargets,
             completed: reward.completed,
             onRetry: onRetryTargets,
             onTargetTap: (target) => context.push('/spots/${target.spotId}'),
-          ),
-        ),
-        const SliverToBoxAdapter(child: _SectionTitle(title: '시군별 스탬프')),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-          sliver: SliverGrid.builder(
-            itemCount: progress.stamps.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 0.92,
-            ),
-            itemBuilder: (context, index) {
-              return _StampTile(stamp: progress.stamps[index]);
-            },
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: _RewardCard(
-            reward: reward,
-            isClaiming: isClaiming,
-            onClaim: onClaim,
           ),
         ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -156,33 +143,584 @@ class _StampHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(height: 18);
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 22, 20, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '스탬프 투어',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 34,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            '강원도 지도 위에 도장을 모아보세요',
+            style: TextStyle(
+              color: AppColors.primaryDark,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _ProgressSummary extends StatelessWidget {
-  const _ProgressSummary({
+class _GangwonStampMap extends StatefulWidget {
+  const _GangwonStampMap({
+    required this.progress,
+    required this.nextTargets,
+    required this.onTargetTap,
+  });
+
+  final StampProgress progress;
+  final AsyncValue<List<StampNextTarget>?> nextTargets;
+  final ValueChanged<StampNextTarget> onTargetTap;
+
+  @override
+  State<_GangwonStampMap> createState() => _GangwonStampMapState();
+}
+
+class _GangwonStampMapState extends State<_GangwonStampMap> {
+  String? _selectedCity;
+
+  @override
+  Widget build(BuildContext context) {
+    final stampsByCity = {
+      for (final stamp in widget.progress.stamps)
+        _normalizeCityName(stamp.cityName): stamp,
+    };
+    final nearbyCity = widget.nextTargets.maybeWhen(
+      data: (targets) => targets == null || targets.isEmpty
+          ? _firstIncompleteCity(stampsByCity)
+          : _normalizeCityName(targets.first.cityName),
+      orElse: () => _firstIncompleteCity(stampsByCity),
+    );
+    final selectedCity = _selectedCity ?? nearbyCity;
+    final selectedRegion = _findRegion(selectedCity) ?? gangwonMapRegions.first;
+    final selectedStamp = stampsByCity[selectedRegion.city];
+    final selectedTarget = widget.nextTargets.maybeWhen(
+      data: (targets) {
+        if (targets == null || targets.isEmpty) {
+          return null;
+        }
+        for (final target in targets) {
+          if (_normalizeCityName(target.cityName) == selectedRegion.city) {
+            return target;
+          }
+        }
+        return targets.first;
+      },
+      orElse: () => null,
+    );
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+      height: 540,
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.biggest;
+          final mapRect = _gangwonMapRect(size);
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (details) {
+                  final city = _hitTestRegion(details.localPosition, mapRect);
+                  if (city == null) {
+                    return;
+                  }
+                  setState(() => _selectedCity = city);
+                },
+                child: CustomPaint(
+                  painter: _GangwonMapPainter(
+                    stampsByCity: stampsByCity,
+                    selectedCity: selectedRegion.city,
+                    nearbyCity: nearbyCity,
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              for (final region in gangwonMapRegions)
+                Positioned(
+                  left: mapRect.left + region.anchor.dx * mapRect.width - 32,
+                  top: mapRect.top + region.anchor.dy * mapRect.height - 27,
+                  width: 64,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedCity = region.city),
+                    child: _StampMapNode(
+                      region: region,
+                      stamp: stampsByCity[region.city],
+                      nearby: nearbyCity == region.city,
+                      selected: selectedRegion.city == region.city,
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: 14,
+                right: 14,
+                child: _MapPassportBadge(
+                  acquiredCount: widget.progress.acquiredCount,
+                  totalCount: widget.progress.totalCount,
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: _SelectedRegionCard(
+                  region: selectedRegion,
+                  stamp: selectedStamp,
+                  target: selectedTarget,
+                  onTargetTap: selectedTarget == null
+                      ? null
+                      : () => widget.onTargetTap(selectedTarget),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GangwonMapPainter extends CustomPainter {
+  const _GangwonMapPainter({
+    required this.stampsByCity,
+    required this.selectedCity,
+    required this.nearbyCity,
+  });
+
+  final Map<String, RallybookStamp> stampsByCity;
+  final String selectedCity;
+  final String nearbyCity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final mapRect = _gangwonMapRect(size);
+    final seaPaint = Paint()..color = const Color(0xFFDFF4F7);
+    canvas.drawRect(
+      Rect.fromLTRB(
+        mapRect.left + mapRect.width * 0.76,
+        0,
+        size.width,
+        size.height,
+      ),
+      seaPaint,
+    );
+    _drawWaves(canvas, mapRect);
+
+    var fullPath = Path();
+    final fillPaint = Paint()..style = PaintingStyle.fill;
+    final thinLinePaint = Paint()
+      ..color = const Color(0xFFB8CB9B)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+    final selectedLinePaint = Paint()
+      ..color = AppColors.primaryDark
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+
+    for (final region in gangwonMapRegions) {
+      final path = _regionPath(region, mapRect);
+      final acquired = stampsByCity[region.city]?.acquired ?? false;
+      final nearby = region.city == nearbyCity;
+      final selected = region.city == selectedCity;
+      fillPaint.color = selected
+          ? const Color(0xFFD6F1DE)
+          : nearby
+              ? const Color(0xFFFFF1BF)
+              : acquired
+                  ? AppColors.primaryTint
+                  : const Color(0xFFF1F6E7);
+      canvas.drawPath(path, fillPaint);
+      canvas.drawPath(path, selected ? selectedLinePaint : thinLinePaint);
+
+      try {
+        fullPath = fullPath.computeMetrics().isEmpty
+            ? path
+            : Path.combine(PathOperation.union, fullPath, path);
+      } catch (_) {
+        fullPath.addPath(path, Offset.zero);
+      }
+    }
+
+    final outerPaint = Paint()
+      ..color = AppColors.primaryDark.withValues(alpha: 0.42)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.4;
+    canvas.drawPath(fullPath, outerPaint);
+  }
+
+  void _drawWaves(Canvas canvas, Rect mapRect) {
+    final wavePaint = Paint()
+      ..color = const Color(0xFF91CED7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    for (final yRatio in [0.18, 0.35, 0.52, 0.69, 0.86]) {
+      final path = Path();
+      final y = mapRect.top + mapRect.height * yRatio;
+      final startX = mapRect.left + mapRect.width * 0.78;
+      path.moveTo(startX, y);
+      for (var i = 0; i <= 7; i++) {
+        final x = startX + i * 34;
+        path.quadraticBezierTo(x + 17, y + 7, x + 34, y);
+      }
+      canvas.drawPath(path, wavePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GangwonMapPainter oldDelegate) {
+    return oldDelegate.stampsByCity != stampsByCity ||
+        oldDelegate.selectedCity != selectedCity ||
+        oldDelegate.nearbyCity != nearbyCity;
+  }
+}
+
+Rect _gangwonMapRect(Size size) {
+  const mapAspectRatio = 1000 / 1180;
+  final available = Rect.fromLTWH(8, 2, size.width - 16, size.height - 112);
+  if (available.width / available.height > mapAspectRatio) {
+    final width = available.height * mapAspectRatio;
+    return Rect.fromLTWH(
+      available.left + (available.width - width) / 2,
+      available.top,
+      width,
+      available.height,
+    );
+  }
+  final height = available.width / mapAspectRatio;
+  return Rect.fromLTWH(
+    available.left,
+    available.top + (available.height - height) / 2,
+    available.width,
+    height,
+  );
+}
+
+Path _regionPath(GangwonMapRegion region, Rect mapRect) {
+  final path = Path();
+  for (final polygon in region.polygons) {
+    if (polygon.length < 3) {
+      continue;
+    }
+    path.addPolygon(
+      [
+        for (final point in polygon)
+          Offset(
+            mapRect.left + point.dx * mapRect.width,
+            mapRect.top + point.dy * mapRect.height,
+          ),
+      ],
+      true,
+    );
+  }
+  return path;
+}
+
+String? _hitTestRegion(Offset position, Rect mapRect) {
+  for (final region in gangwonMapRegions.reversed) {
+    if (_regionPath(region, mapRect).contains(position)) {
+      return region.city;
+    }
+  }
+  return null;
+}
+
+GangwonMapRegion? _findRegion(String city) {
+  for (final region in gangwonMapRegions) {
+    if (region.city == city) {
+      return region;
+    }
+  }
+  return null;
+}
+
+class _SelectedRegionCard extends StatelessWidget {
+  const _SelectedRegionCard({
+    required this.region,
+    required this.stamp,
+    required this.target,
+    required this.onTargetTap,
+  });
+
+  final GangwonMapRegion region;
+  final RallybookStamp? stamp;
+  final StampNextTarget? target;
+  final VoidCallback? onTargetTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final acquired = stamp?.acquired ?? false;
+    final statusText = acquired ? '도장 완료' : '도장 필요';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: acquired ? AppColors.primaryTint : AppColors.cream,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: acquired ? AppColors.primary : AppColors.secondary,
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              acquired ? Icons.check_rounded : Icons.location_on_rounded,
+              color: acquired ? AppColors.primaryDark : AppColors.brown,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${region.city} 스탬프',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        color:
+                            acquired ? AppColors.primaryDark : AppColors.brown,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  region.landmarks,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onTargetTap,
+                        child: Text(target == null ? '대표 스팟 준비중' : '대표 스팟 보기'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: OutlinedButton(
+                        onPressed: null,
+                        child: Text('오디오 준비중'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StampMapNode extends StatelessWidget {
+  const _StampMapNode({
+    required this.region,
+    required this.stamp,
+    required this.nearby,
+    required this.selected,
+  });
+
+  final GangwonMapRegion region;
+  final RallybookStamp? stamp;
+  final bool nearby;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final acquired = stamp?.acquired ?? false;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: selected || nearby ? 48 : 38,
+          height: selected || nearby ? 48 : 38,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected || nearby
+                  ? AppColors.secondary
+                  : acquired
+                      ? AppColors.primary
+                      : const Color(0xFFCDBF9F),
+              width: selected || nearby ? 4 : 2.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (selected || nearby
+                        ? AppColors.secondary
+                        : AppColors.primary)
+                    .withValues(alpha: selected || nearby ? 0.28 : 0.1),
+                blurRadius: selected || nearby ? 16 : 7,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            acquired ? Icons.check_rounded : Icons.circle_outlined,
+            color: acquired ? AppColors.primaryDark : const Color(0xFFB5A88D),
+            size: acquired ? 27 : 20,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? AppColors.secondary : AppColors.line,
+            ),
+          ),
+          child: Text(
+            region.city,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapPassportBadge extends StatelessWidget {
+  const _MapPassportBadge({
+    required this.acquiredCount,
+    required this.totalCount,
+  });
+
+  final int acquiredCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.auto_stories_rounded,
+              color: AppColors.primaryDark, size: 18),
+          const SizedBox(width: 6),
+          Text(
+            '$acquiredCount/$totalCount',
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RallyProgressCard extends StatelessWidget {
+  const _RallyProgressCard({
     required this.acquiredCount,
     required this.totalCount,
     required this.reward,
+    required this.isClaiming,
+    required this.onClaim,
   });
 
   final int acquiredCount;
   final int totalCount;
   final NextStampReward reward;
+  final bool isClaiming;
+  final ValueChanged<int> onClaim;
 
   @override
   Widget build(BuildContext context) {
     final progress = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
     final targetCount = reward.nextTargetCount;
-    final rewardMessage = reward.canClaim
-        ? '${reward.claimableTargetCount}개 달성 보상을 받을 수 있어요'
+    final claimableTargetCount = reward.claimableTargetCount;
+    final title = reward.canClaim ? '받을 수 있는 보상' : '투어 진행률';
+    final message = reward.canClaim && claimableTargetCount != null
+        ? '$claimableTargetCount개 달성 보상이 준비됐어요.'
         : reward.completed || targetCount == null
-            ? '모든 보상 기준을 달성했어요'
+            ? '18개 시군 랠리를 모두 완주했어요.'
             : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -191,80 +729,124 @@ class _ProgressSummary extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 18,
+            blurRadius: 16,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Expanded(
-                child: Text(
-                  '수집률',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+              Container(
+                width: 54,
+                height: 54,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryTint,
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.check_rounded,
+                    color: AppColors.primaryDark, size: 32),
               ),
-              Text(
-                '$acquiredCount / $totalCount',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 12,
-              value: progress.clamp(0, 1),
-              backgroundColor: AppColors.primaryTint,
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              const Icon(
-                Icons.card_giftcard_rounded,
-                color: AppColors.secondary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 14),
               Expanded(
-                child: Text(
-                  rewardMessage,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 10,
+                        value: progress.clamp(0, 1),
+                        backgroundColor: const Color(0xFFEFE9DC),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '$acquiredCount',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' / $totalCount',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+          if (reward.canClaim && claimableTargetCount != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const ValueKey('stamp-reward-claim-button'),
+                onPressed:
+                    isClaiming ? null : () => onClaim(claimableTargetCount),
+                child: isClaiming
+                    ? const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 8),
+                          Text('보상 받는 중...'),
+                        ],
+                      )
+                    : Text('$claimableTargetCount개 보상 받기'),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _NextTargetsSection extends StatelessWidget {
-  const _NextTargetsSection({
+class _NextStampHintCard extends StatelessWidget {
+  const _NextStampHintCard({
     required this.state,
     required this.completed,
     required this.onRetry,
@@ -279,187 +861,92 @@ class _NextTargetsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.primaryTint,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.line),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.explore_rounded,
-                  color: AppColors.primaryDark, size: 24),
-              SizedBox(width: 8),
-              Text(
-                '다음 목표',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          const Text(
-            '아직 스탬프가 없는 지역부터 추천해요.',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          state.when(
-            loading: () => const _NextTargetStatus(
-              key: ValueKey('stamp-next-target-loading'),
-              icon: Icons.hourglass_top_rounded,
-              message: '다음 목표를 찾고 있어요.',
-            ),
-            error: (_, __) => _NextTargetError(onRetry: onRetry),
-            data: (targets) {
-              if (targets == null) {
-                return const SizedBox.shrink();
-              }
-              if (targets.isEmpty) {
-                return _NextTargetStatus(
-                  key: const ValueKey('stamp-next-target-empty'),
-                  icon: completed
-                      ? Icons.emoji_events_rounded
-                      : Icons.location_off_rounded,
-                  message:
-                      completed ? '모든 지역 스탬프를 모았어요.' : '추천 가능한 스탬프 관광지가 없어요.',
-                );
-              }
-              return Column(
-                children: [
-                  for (var index = 0; index < targets.length; index++) ...[
-                    _NextTargetTile(
-                      target: targets[index],
-                      onTap: () => onTargetTap(targets[index]),
-                    ),
-                    if (index < targets.length - 1) const SizedBox(height: 10),
-                  ],
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NextTargetTile extends StatelessWidget {
-  const _NextTargetTile({required this.target, required this.onTap});
-
-  final StampNextTarget target;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        key: ValueKey('stamp-next-target-${target.spotId}'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: Row(
-            children: [
-              _NextTargetThumbnail(imageUrl: target.imageUrl),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      target.spotName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${target.cityName} · ${target.categoryLabel}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppColors.primaryDark),
-            ],
-          ),
+      child: state.when(
+        loading: () => const _NextTargetStatus(
+          key: ValueKey('stamp-next-target-loading'),
+          icon: Icons.hourglass_top_rounded,
+          message: '다음 도장을 찾고 있어요.',
         ),
+        error: (_, __) => _NextTargetError(onRetry: onRetry),
+        data: (targets) {
+          if (targets == null) {
+            return const SizedBox.shrink();
+          }
+          if (targets.isEmpty) {
+            return _NextTargetStatus(
+              key: const ValueKey('stamp-next-target-empty'),
+              icon: completed
+                  ? Icons.emoji_events_rounded
+                  : Icons.location_off_rounded,
+              message: completed ? '모든 지역 스탬프를 모았어요.' : '추천 가능한 스탬프 관광지가 없어요.',
+            );
+          }
+          final target = targets.first;
+          return InkWell(
+            onTap: () => onTargetTap(target),
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                const Icon(Icons.explore_rounded,
+                    color: AppColors.primaryDark, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '다음 스탬프 추천',
+                        style: TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${target.spotName} · ${target.cityName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.primaryDark),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _NextTargetThumbnail extends StatelessWidget {
-  const _NextTargetThumbnail({required this.imageUrl});
+String _normalizeCityName(String value) {
+  return value.replaceAll(RegExp(r'(특별자치도|시|군|구)$'), '').trim();
+}
 
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = imageUrl?.trim();
-    if (url == null || url.isEmpty) {
-      return const _NextTargetPlaceholder();
+String _firstIncompleteCity(Map<String, RallybookStamp> stampsByCity) {
+  for (final region in gangwonMapRegions) {
+    if (stampsByCity[region.city]?.acquired != true) {
+      return region.city;
     }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(9),
-      child: Image.network(
-        url,
-        width: 48,
-        height: 48,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const _NextTargetPlaceholder(),
-      ),
-    );
   }
-}
-
-class _NextTargetPlaceholder extends StatelessWidget {
-  const _NextTargetPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child:
-          const Icon(Icons.location_on_rounded, color: AppColors.primaryDark),
-    );
-  }
+  return '';
 }
 
 class _NextTargetStatus extends StatelessWidget {
@@ -519,228 +1006,6 @@ class _NextTargetError extends StatelessWidget {
           child: const Text('다시 시도'),
         ),
       ],
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
-      ),
-    );
-  }
-}
-
-class _StampTile extends StatelessWidget {
-  const _StampTile({required this.stamp});
-
-  final RallybookStamp stamp;
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground =
-        stamp.acquired ? AppColors.textPrimary : AppColors.textSecondary;
-    final borderColor = stamp.acquired ? AppColors.primary : AppColors.line;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor, width: stamp.acquired ? 1.6 : 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: stamp.acquired
-                    ? AppColors.primaryTint
-                    : const Color(0xFFF1F1EC),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                stamp.acquired
-                    ? Icons.check_rounded
-                    : Icons.lock_outline_rounded,
-                color: stamp.acquired
-                    ? AppColors.primaryDark
-                    : AppColors.textSecondary,
-                size: stamp.acquired ? 26 : 22,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              stamp.cityName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: foreground,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              stamp.acquired ? stamp.stampName : '미획득',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RewardCard extends StatelessWidget {
-  const _RewardCard({
-    required this.reward,
-    required this.isClaiming,
-    required this.onClaim,
-  });
-
-  final NextStampReward reward;
-  final bool isClaiming;
-  final ValueChanged<int> onClaim;
-
-  @override
-  Widget build(BuildContext context) {
-    final targetCount = reward.nextTargetCount;
-    final claimableTargetCount = reward.claimableTargetCount;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.card_giftcard_rounded,
-              color: AppColors.secondary,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  reward.canClaim ? '받을 수 있는 보상' : '다음 보상',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                if (reward.canClaim && claimableTargetCount != null) ...[
-                  Text(
-                    '$claimableTargetCount개 달성 보상이 준비됐어요.',
-                    style: const TextStyle(
-                      color: AppColors.primaryDark,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      key: const ValueKey('stamp-reward-claim-button'),
-                      onPressed: isClaiming
-                          ? null
-                          : () => onClaim(claimableTargetCount),
-                      child: isClaiming
-                          ? const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Text('보상 받는 중...'),
-                              ],
-                            )
-                          : Text('$claimableTargetCount개 보상 받기'),
-                    ),
-                  ),
-                ] else if (reward.completed || targetCount == null)
-                  const Text(
-                    '18개 시군 랠리를 모두 완주했어요.',
-                    style: TextStyle(
-                      color: AppColors.primaryDark,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  )
-                else ...[
-                  Text(
-                    '$targetCount개 달성 시 지역쿠폰 지급',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  Text(
-                    '앞으로 ${reward.remainingCount}개만 더 모으면 받을 수 있어요.',
-                    style: const TextStyle(
-                      color: AppColors.primaryDark,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
