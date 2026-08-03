@@ -165,6 +165,7 @@ class NativeKakaoMapView(
         val labelManager = kakaoMap.labelManager ?: return
         val layer = labelManager.layer ?: return
         layer.removeAll()
+        layer.setClickable(true)
         spotLabels.clear()
         spotIdByLabelId.clear()
         if (spots.isEmpty()) return
