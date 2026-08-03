@@ -64,6 +64,20 @@ public class StampController {
         }
     }
 
+    // 랠리북 지도에 표시할 선별 관광지와 공식 좌표를 모두 조회한다.
+    @GetMapping("/rallybook-spots")
+    public ResponseEntity<AuthApiResponse<List<RallybookSpotResponse>>> getRallybookSpots(
+        Authentication authentication
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                stampQueryService.getRallybookSpots(userId(authentication))
+            ));
+        } catch (StampAuthenticationException exception) {
+            return unauthorized();
+        }
+    }
+
     // 스탬프 진행도와 아직 받지 않은 가장 낮은 달성 보상을 조회한다.
     @GetMapping("/rewards/check")
     public ResponseEntity<AuthApiResponse<StampRewardStatusResponse>> getRewardStatus(
