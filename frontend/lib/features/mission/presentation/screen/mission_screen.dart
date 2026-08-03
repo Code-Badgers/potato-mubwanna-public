@@ -18,6 +18,7 @@ const _missionDark = Color(0xFF6A4A2A);
 const _missionGold = Color(0xFFF6C23E);
 const _missionCream = Color(0xFFFFF8EA);
 const _missionLine = Color(0xFFE8E2D8);
+const _jumsooniWaveAsset = 'assets/characters/jumsooni/jumsooni_wave.png';
 
 class MissionScreen extends ConsumerStatefulWidget {
   const MissionScreen({
@@ -701,28 +702,43 @@ class _MissionGentleStart extends StatelessWidget {
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: _missionLine),
             ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '오늘은 가까운 곳부터 가볍게 시작해요',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '오늘은 가까운 곳부터 가볍게 시작해요',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '산책하거나, 사진 한 장 남기거나, 짧은 퀴즈 하나만 풀어도 충분해요.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          height: 1.4,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  '산책하거나, 사진 한 장 남기거나, 짧은 퀴즈 하나만 풀어도 충분해요.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    height: 1.4,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
+                const SizedBox(width: 12),
+                Image.asset(
+                  _jumsooniWaveAsset,
+                  width: 76,
+                  height: 112,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
                 ),
               ],
             ),
