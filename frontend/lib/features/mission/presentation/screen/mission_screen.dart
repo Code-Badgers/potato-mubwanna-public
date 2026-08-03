@@ -18,7 +18,6 @@ const _missionDark = Color(0xFF6A4A2A);
 const _missionGold = Color(0xFFF6C23E);
 const _missionCream = Color(0xFFFFF8EA);
 const _missionLine = Color(0xFFE8E2D8);
-const _jumsooniWaveAsset = 'assets/characters/jumsooni/jumsooni_wave.png';
 
 class MissionScreen extends ConsumerStatefulWidget {
   const MissionScreen({
@@ -37,10 +36,8 @@ class MissionScreen extends ConsumerStatefulWidget {
 class _MissionScreenState extends ConsumerState<MissionScreen> {
   static const _verificationService = MissionVerificationService();
 
-  MissionGroup? _selectedGroup;
   String? _selectedMissionId;
   bool _isCompleting = false;
-  bool _showAllMissions = false;
 
   @override
   void initState() {
@@ -48,20 +45,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     _selectedMissionId = widget.visitEntryMissionId;
   }
 
-  List<MissionChallenge> _filteredMissions(List<MissionChallenge> missions) {
-    final selectedGroup = _selectedGroup;
-    final filtered = selectedGroup == null
-        ? missions
-        : missions.where((mission) => mission.group == selectedGroup).toList();
-    return [...filtered]..sort(_compareMissionPriority);
-  }
-
   void _showMissionDetail(String missionId) {
     setState(() => _selectedMissionId = missionId);
-  }
-
-  void _showAllMissionList() {
-    setState(() => _showAllMissions = true);
   }
 
   void _closeMissionDetail() {
@@ -296,17 +281,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Widget _buildMissionList(List<MissionChallenge> missions) {
-    final filteredMissions = _filteredMissions(missions);
-    final showFullList = _showAllMissions || _selectedGroup != null;
-    final introMissions = _introMissions(filteredMissions);
-    final completedCount = missions
+    final todayMissions = _todayMissions(missions);
+    final completedCount = todayMissions
         .where((mission) => mission.status == MissionStatus.completed)
-        .length;
-    final actionableCount = missions
-        .where((mission) =>
-            mission.active &&
-            mission.status != MissionStatus.locked &&
-            mission.status != MissionStatus.completed)
         .length;
 
     return Scaffold(
@@ -316,9 +293,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: _MissionHeader(
-                actionableCount: actionableCount,
                 completedCount: completedCount,
-                totalCount: missions.length,
+                totalCount: todayMissions.length,
               ),
             ),
             if (widget.visitEntrySpotName != null)
@@ -327,40 +303,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                   spotName: widget.visitEntrySpotName!,
                 ),
               ),
-            if (showFullList) ...[
-              SliverToBoxAdapter(
-                child: _MissionFilterBar(
-                  selectedGroup: _selectedGroup,
-                  onChanged: (group) => setState(() {
-                    _selectedGroup = group;
-                    _showAllMissions = true;
-                  }),
-                ),
+            SliverToBoxAdapter(
+              child: _MissionGentleStart(
+                missions: todayMissions,
+                onMissionTap: _showMissionDetail,
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-                sliver: filteredMissions.isEmpty
-                    ? const SliverToBoxAdapter(child: _MissionEmptyState())
-                    : SliverList.separated(
-                        itemCount: filteredMissions.length,
-                        itemBuilder: (_, index) {
-                          final mission = filteredMissions[index];
-                          return _MissionCard(
-                            mission: mission,
-                            onTap: () => _showMissionDetail(mission.id),
-                          );
-                        },
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      ),
-              ),
-            ] else
-              SliverToBoxAdapter(
-                child: _MissionGentleStart(
-                  missions: introMissions,
-                  onMissionTap: _showMissionDetail,
-                  onShowAll: _showAllMissionList,
-                ),
-              ),
+            ),
           ],
         ),
       ),
@@ -368,16 +316,47 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 }
 
-List<MissionChallenge> _introMissions(List<MissionChallenge> missions) {
-  final actionable = missions
+List<MissionChallenge> _todayMissions(List<MissionChallenge> missions) {
+  final candidates = missions
       .where((mission) =>
           mission.active &&
           mission.status != MissionStatus.locked &&
           mission.status != MissionStatus.completed)
-      .take(3)
-      .toList();
-  if (actionable.isNotEmpty) {
-    return actionable;
+      .toList()
+    ..sort(_compareMissionPriority);
+  final selected = <MissionChallenge>[];
+
+  void addFirstWhere(bool Function(MissionChallenge mission) test) {
+    for (final mission in candidates) {
+      final alreadySelected =
+          selected.any((selectedMission) => selectedMission.id == mission.id);
+      if (!alreadySelected && test(mission) && selected.length < 3) {
+        selected.add(mission);
+        return;
+      }
+    }
+  }
+
+  addFirstWhere((mission) => mission.type == MissionType.visitAndStep);
+  addFirstWhere((mission) =>
+      mission.type == MissionType.photo ||
+      mission.type == MissionType.photoOcr);
+  addFirstWhere((mission) => mission.type == MissionType.quiz);
+  addFirstWhere((mission) => mission.type == MissionType.qrScan);
+  addFirstWhere((mission) =>
+      mission.type == MissionType.visit || mission.type == MissionType.stamp);
+
+  for (final mission in candidates) {
+    if (selected.length >= 3) {
+      break;
+    }
+    if (!selected.any((selectedMission) => selectedMission.id == mission.id)) {
+      selected.add(mission);
+    }
+  }
+
+  if (selected.isNotEmpty) {
+    return selected;
   }
   return missions.take(3).toList();
 }
@@ -575,102 +554,65 @@ class _MissionEmptyState extends StatelessWidget {
 
 class _MissionHeader extends StatelessWidget {
   const _MissionHeader({
-    required this.actionableCount,
     required this.completedCount,
     required this.totalCount,
   });
 
-  final int actionableCount;
   final int completedCount;
   final int totalCount;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+      child: Row(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.line),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryTint,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.task_alt_rounded,
-                    color: _missionPrimary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '오늘의 미션',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 21,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$actionableCount개 도전 가능 · 완료 $completedCount/$totalCount',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryTint,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$completedCount/$totalCount',
-                    style: const TextStyle(
-                      color: AppColors.primaryDark,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ],
+          const Expanded(
+            child: Text(
+              '점순이의 미션',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 23,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
             ),
           ),
+          _TodayMissionCountBadge(
+            completedCount: completedCount,
+            totalCount: totalCount,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _TodayMissionCountBadge extends StatelessWidget {
+  const _TodayMissionCountBadge({
+    required this.completedCount,
+    required this.totalCount,
+  });
+
+  final int completedCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$completedCount / $totalCount',
+        style: const TextStyle(
+          color: AppColors.primaryDark,
+          fontSize: 14,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
       ),
     );
   }
@@ -680,109 +622,39 @@ class _MissionGentleStart extends StatelessWidget {
   const _MissionGentleStart({
     required this.missions,
     required this.onMissionTap,
-    required this.onShowAll,
   });
 
   final List<MissionChallenge> missions;
   final ValueChanged<String> onMissionTap;
-  final VoidCallback onShowAll;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: _missionCream,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _missionLine),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '오늘은 가까운 곳부터 가볍게 시작해요',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        '산책하거나, 사진 한 장 남기거나, 짧은 퀴즈 하나만 풀어도 충분해요.',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          height: 1.4,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Image.asset(
-                  _jumsooniWaveAsset,
-                  width: 76,
-                  height: 112,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            '가볍게 할 일',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 10),
           if (missions.isEmpty)
             const _MissionEmptyState()
           else
-            for (final mission in missions) ...[
+            for (final entry in missions.indexed) ...[
               _MissionCompactTile(
-                mission: mission,
-                onTap: () => onMissionTap(mission.id),
+                index: entry.$1,
+                mission: entry.$2,
+                onTap: () => onMissionTap(entry.$2.id),
               ),
               const SizedBox(height: 10),
             ],
           const SizedBox(height: 4),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: OutlinedButton(
-              onPressed: onShowAll,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primaryDark,
-                side: const BorderSide(color: AppColors.line),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
+          const Center(
+            child: Text(
+              '내일 새로운 미션이 도착해요',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
               ),
-              child: const Text('전체 미션 보기'),
             ),
           ),
         ],
@@ -793,48 +665,94 @@ class _MissionGentleStart extends StatelessWidget {
 
 class _MissionCompactTile extends StatelessWidget {
   const _MissionCompactTile({
+    required this.index,
     required this.mission,
     required this.onTap,
   });
 
+  final int index;
   final MissionChallenge mission;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = mission.active && mission.status != MissionStatus.locked;
+    final actionLabel = _compactActionLabel(mission);
+
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            color: mission.status == MissionStatus.completed
+                ? AppColors.primaryTint
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.line),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _MissionTypeIcon(type: mission.type, enabled: true),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              Row(
+                children: [
+                  _MissionNumberBadge(index: index),
+                  const SizedBox(width: 10),
+                  _MissionTypeIcon(type: mission.type, enabled: enabled),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
                       _gentleMissionLine(mission),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        color: enabled
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
                         fontSize: 15,
+                        height: 1.24,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: mission.progressRatio,
+                  minHeight: 6,
+                  color: enabled ? _missionPrimary : _missionLine,
+                  backgroundColor: const Color(0xFFF0EEE8),
+                ),
+              ),
+              const SizedBox(height: 7),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      mission.progressLabel,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                  _RewardPill(mission: mission),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
                       mission.spotName.isEmpty
                           ? mission.cityName
                           : '${mission.cityName} · ${mission.spotName}',
@@ -847,13 +765,28 @@ class _MissionCompactTile extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: enabled ? _missionPrimary : _missionLine,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      actionLabel,
+                      style: const TextStyle(
+                        color: AppColors.surface,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -861,6 +794,47 @@ class _MissionCompactTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MissionNumberBadge extends StatelessWidget {
+  const _MissionNumberBadge({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: _missionCream,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        '${index + 1}',
+        style: const TextStyle(
+          color: _missionDark,
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+}
+
+String _compactActionLabel(MissionChallenge mission) {
+  if (mission.status == MissionStatus.completed) {
+    return '완료';
+  }
+  return switch (mission.type) {
+    MissionType.photo || MissionType.photoOcr => '사진 찍기',
+    MissionType.qrScan => '스캔하기',
+    MissionType.quiz => '퀴즈 풀기',
+    MissionType.visitAndStep => '이어하기',
+    _ => '시작하기',
+  };
 }
 
 String _gentleMissionLine(MissionChallenge mission) {
@@ -871,228 +845,6 @@ String _gentleMissionLine(MissionChallenge mission) {
     MissionType.quiz => '가벼운 퀴즈 하나 풀어볼까요?',
     _ => '가까운 곳부터 들러볼까요?',
   };
-}
-
-class _MissionFilterBar extends StatelessWidget {
-  const _MissionFilterBar({
-    required this.selectedGroup,
-    required this.onChanged,
-  });
-
-  final MissionGroup? selectedGroup;
-  final ValueChanged<MissionGroup?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const visibleGroups = [
-      MissionGroup.daily,
-      MissionGroup.weekly,
-      MissionGroup.event,
-    ];
-    final filters = <_MissionFilter>[
-      const _MissionFilter(label: '전체'),
-      ...visibleGroups.map((group) => _MissionFilter(
-            label: group.label,
-            group: group,
-          )),
-    ];
-
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        scrollDirection: Axis.horizontal,
-        itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final selected = filter.group == selectedGroup;
-          return _MissionFilterChip(
-            label: filter.label,
-            selected: selected,
-            onTap: () => onChanged(filter.group),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _MissionFilterChip extends StatelessWidget {
-  const _MissionFilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? _missionDark : AppColors.surface,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 68),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? _missionDark : _missionLine,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? AppColors.surface : AppColors.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MissionCard extends StatelessWidget {
-  const _MissionCard({
-    required this.mission,
-    required this.onTap,
-  });
-
-  final MissionChallenge mission;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = mission.active && mission.status != MissionStatus.locked;
-    final showProgress = mission.target > 1;
-
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: enabled ? AppColors.line : const Color(0xFFEDEAE3),
-            ),
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _MissionTypeIcon(type: mission.type, enabled: enabled),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          mission.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: enabled
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          mission.spotName.isEmpty
-                              ? mission.cityName
-                              : '${mission.cityName} · ${mission.spotName}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  _MissionStatusBadge(status: mission.status),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                mission.conditionLabel,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                  height: 1.35,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                ),
-              ),
-              if (showProgress) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: mission.progressRatio,
-                    minHeight: 7,
-                    color: enabled ? _missionPrimary : _missionLine,
-                    backgroundColor: const Color(0xFFF0EEE8),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _RewardPill(mission: mission),
-                  if (mission.isNew) ...[
-                    const SizedBox(width: 8),
-                    const _NewBadge(),
-                  ],
-                  const Spacer(),
-                  Text(
-                    mission.progressLabel,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.textSecondary,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _MissionDetailView extends StatelessWidget {
@@ -1125,17 +877,17 @@ class _MissionDetailView extends StatelessWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
               sliver: SliverList(
                 delegate: SliverChildListDelegate.fixed([
                   _MissionPlayCard(mission: mission),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
                   FilledButton.icon(
                     onPressed: canComplete ? onComplete : null,
                     icon: Icon(_actionIcon(mission.type)),
                     label: Text(_actionLabel(mission)),
                     style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(58),
+                      minimumSize: const Size.fromHeight(54),
                       backgroundColor: _missionDark,
                       foregroundColor: AppColors.surface,
                       disabledBackgroundColor: _missionLine,
@@ -1143,7 +895,7 @@ class _MissionDetailView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       textStyle: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 16,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
@@ -1196,7 +948,7 @@ class _MissionDetailHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 20, 20),
+      padding: const EdgeInsets.fromLTRB(10, 6, 20, 16),
       decoration: const BoxDecoration(
         color: _missionCream,
         border: Border(bottom: BorderSide(color: _missionLine)),
@@ -1226,14 +978,14 @@ class _MissionDetailHero extends StatelessWidget {
               const SizedBox(width: 48),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
                 Container(
-                  width: 66,
-                  height: 66,
+                  width: 54,
+                  height: 54,
                   decoration: const BoxDecoration(
                     color: Color(0xFFE6F7EC),
                     shape: BoxShape.circle,
@@ -1241,7 +993,7 @@ class _MissionDetailHero extends StatelessWidget {
                   child: Icon(
                     mission.type.icon,
                     color: _missionPrimary,
-                    size: 34,
+                    size: 28,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -1263,7 +1015,7 @@ class _MissionDetailHero extends StatelessWidget {
                         mission.title,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 24,
+                          fontSize: 21,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
@@ -1289,18 +1041,11 @@ class _MissionPlayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1310,7 +1055,7 @@ class _MissionPlayCard extends StatelessWidget {
             title: '마을 안내',
             body: mission.dialogue,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           _MissionPlayRow(
             icon: Icons.flag_rounded,
             title: '도전 조건',
@@ -1321,7 +1066,7 @@ class _MissionPlayCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: mission.progressRatio,
-              minHeight: 8,
+              minHeight: 6,
               color: _missionPrimary,
               backgroundColor: const Color(0xFFF0EEE8),
             ),
@@ -1339,12 +1084,12 @@ class _MissionPlayCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: _missionCream,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: _missionLine),
             ),
             child: Row(
@@ -1388,13 +1133,13 @@ class _MissionPlayRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 34,
-          height: 34,
+          width: 30,
+          height: 30,
           decoration: const BoxDecoration(
             color: AppColors.primaryTint,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: _missionPrimary, size: 18),
+          child: Icon(icon, color: _missionPrimary, size: 16),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -2141,46 +1886,6 @@ class _RewardPill extends StatelessWidget {
   }
 }
 
-class _MissionStatusBadge extends StatelessWidget {
-  const _MissionStatusBadge({required this.status});
-
-  final MissionStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      MissionStatus.completed => _missionPrimary,
-      MissionStatus.inProgress => _missionGold,
-      MissionStatus.ready => _missionDark,
-      MissionStatus.locked => AppColors.textSecondary,
-    };
-    final backgroundColor = switch (status) {
-      MissionStatus.completed => const Color(0xFFE6F7EC),
-      MissionStatus.inProgress => const Color(0xFFFFF2C7),
-      MissionStatus.ready => const Color(0xFFFFF8EA),
-      MissionStatus.locked => const Color(0xFFF0EEE8),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.32)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
-      ),
-    );
-  }
-}
-
 class _RewardIcon extends StatelessWidget {
   const _RewardIcon({required this.type});
 
@@ -2201,40 +1906,6 @@ class _RewardIcon extends StatelessWidget {
       ),
     );
   }
-}
-
-class _NewBadge extends StatelessWidget {
-  const _NewBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFE1A3),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: const Text(
-        'NEW',
-        style: TextStyle(
-          color: _missionDark,
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
-      ),
-    );
-  }
-}
-
-class _MissionFilter {
-  const _MissionFilter({
-    required this.label,
-    this.group,
-  });
-
-  final String label;
-  final MissionGroup? group;
 }
 
 IconData _rewardIconData(MissionRewardType type) {

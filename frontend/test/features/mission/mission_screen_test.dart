@@ -60,56 +60,38 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('renders mission list and category filters', (tester) async {
+  testWidgets('renders only three daily requests on mission home',
+      (tester) async {
     await _pumpMissionScreen(tester);
 
     expect(find.text('미션'), findsNothing);
-    expect(find.text('오늘의 미션'), findsOneWidget);
-    expect(find.text('5개 도전 가능 · 완료 1/7'), findsOneWidget);
-    expect(find.text('오늘은 가까운 곳부터 가볍게 시작해요'), findsOneWidget);
-    expect(find.text('가볍게 할 일'), findsOneWidget);
-    expect(find.text('전체 미션 보기'), findsOneWidget);
+    expect(find.text('점순이의 미션'), findsOneWidget);
+    expect(find.text('0 / 3'), findsOneWidget);
     expect(find.text('점순이'), findsNothing);
     expect(find.textContaining('볼까요?'), findsWidgets);
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsNothing);
-    expect(find.text('10,000걸음 걷기'), findsNothing);
+    expect(find.text('전체 미션 보기'), findsNothing);
     expect(find.text('일일'), findsNothing);
-
-    await _showAllMissions(tester);
-
-    expect(find.text('일일'), findsOneWidget);
-    expect(find.text('주간'), findsOneWidget);
-    expect(find.text('이벤트'), findsOneWidget);
-
-    await tester.tap(find.text('일일').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsNothing);
-    expect(find.text('10,000걸음 걷기'), findsOneWidget);
-
-    await tester.tap(find.text('전체').first);
-    await tester.pumpAndSettle();
+    expect(find.text('주간'), findsNothing);
+    expect(find.text('이벤트'), findsNothing);
 
     await tester.scrollUntilVisible(
-      find.text('안목 해변에서 하지감자 찾기'),
+      find.text('천천히 걸어볼까요?'),
       160,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('안목 해변에서 하지감자 찾기'), findsOneWidget);
+    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
+    expect(find.text('사진 한 장 남겨볼까요?'), findsOneWidget);
+    expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('10,000걸음 걷기'),
-      220,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('10,000걸음 걷기'), findsOneWidget);
+    expect(find.text('속초 시장 QR 찾기'), findsNothing);
+    expect(find.text('시군 2곳 방문하기'), findsNothing);
   });
 
   testWidgets('opens mission detail and updates completion state',
       (tester) async {
     await _pumpMissionScreen(tester);
 
-    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
+    await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
 
     expect(find.text('미션 카드'), findsOneWidget);
     expect(find.text('마을 안내'), findsOneWidget);
@@ -140,7 +122,7 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
+    await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
 
     await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
     await tester.pumpAndSettle();
@@ -159,11 +141,7 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _showAllMissions(tester);
-    await tester.tap(find.text('일일').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('10,000걸음 걷기'));
-    await tester.pumpAndSettle();
+    await _openMission(tester, '천천히 걸어볼까요?');
 
     await tester.tap(find.widgetWithText(FilledButton, '걸음 인증하기'));
     await tester.pumpAndSettle();
@@ -202,7 +180,7 @@ void main() {
       uploadRepository: uploadRepository,
     );
 
-    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+    await _openMission(tester, '사진 한 장 남겨볼까요?');
 
     await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
     await tester.pumpAndSettle();
@@ -247,7 +225,7 @@ void main() {
       uploadRepository: uploadRepository,
     );
 
-    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+    await _openMission(tester, '사진 한 장 남겨볼까요?');
 
     await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
     await tester.pumpAndSettle();
@@ -270,7 +248,7 @@ void main() {
       ),
     );
 
-    await _openMission(tester, '안목 해변에서 하지감자 찾기');
+    await _openMission(tester, '사진 한 장 남겨볼까요?');
 
     await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
     await tester.pumpAndSettle();
@@ -289,9 +267,8 @@ void main() {
       inputService: _FakeMissionNativeInputService(
         qrCode: _sokchoMissionQrPayload,
       ),
+      visitEntryMissionId: '1003',
     );
-
-    await _openMission(tester, '속초 시장 QR 찾기');
 
     await tester.tap(find.widgetWithText(FilledButton, 'QR 스캔하기'));
     await tester.pumpAndSettle();
@@ -313,7 +290,7 @@ void main() {
       ),
     );
 
-    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
+    await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
 
     await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
     await tester.pumpAndSettle();
@@ -331,9 +308,11 @@ void main() {
     final repository = _FakeMissionRepository(
       completeDelay: const Duration(milliseconds: 120),
     );
-    await _pumpMissionScreen(tester, repository: repository);
-
-    await _openMission(tester, '시군 2곳 방문하기');
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      visitEntryMissionId: 'weekly-cities',
+    );
 
     await tester.tap(find.widgetWithText(FilledButton, '미션 인증하기'));
     await tester.pump();
@@ -346,14 +325,7 @@ void main() {
 
   testWidgets('disables completion action for completed missions',
       (tester) async {
-    await _pumpMissionScreen(tester);
-
-    await _showAllMissions(tester);
-    await tester.tap(find.text('일일').first);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('스탬프 1개 획득하기'));
-    await tester.pumpAndSettle();
+    await _pumpMissionScreen(tester, visitEntryMissionId: 'daily-stamp');
 
     final completedButton = tester
         .widget<FilledButton>(find.widgetWithText(FilledButton, '완료된 미션'));
@@ -365,17 +337,14 @@ void main() {
     expect(find.text('미션 완료!'), findsNothing);
   });
 
-  testWidgets('sorts completed missions below actionable missions',
+  testWidgets(
+      'does not show completed or locked missions on daily request home',
       (tester) async {
     await _pumpMissionScreen(tester);
 
-    await _showAllMissions(tester);
-    await tester.tap(find.text('일일').first);
-    await tester.pumpAndSettle();
-
-    final stepTop = tester.getTopLeft(find.text('10,000걸음 걷기')).dy;
-    final completedTop = tester.getTopLeft(find.text('스탬프 1개 획득하기')).dy;
-    expect(stepTop, lessThan(completedTop));
+    expect(find.text('스탬프 1개 획득하기'), findsNothing);
+    expect(find.text('[시즌 한정] 얼음나라 산천어 미션'), findsNothing);
+    expect(find.textContaining('볼까요?'), findsNWidgets(3));
   });
 
   testWidgets('shows visit mission entry banner from spot verification',
@@ -394,13 +363,8 @@ void main() {
       find.text('정선 5일장에서 이어지는 미션을 확인하고 바로 도전해보세요.'),
       findsOneWidget,
     );
-    await _showAllMissions(tester);
-    await tester.scrollUntilVisible(
-      find.text('정선 5일장 곤드레 퀴즈'),
-      120,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('점순이의 미션'), findsOneWidget);
+    expect(find.textContaining('볼까요?'), findsNWidgets(3));
   });
 
   testWidgets('opens visit unlocked mission detail from mission id',
@@ -453,7 +417,6 @@ Future<void> _pumpMissionScreen(
 }
 
 Future<void> _openMission(WidgetTester tester, String title) async {
-  await _showAllMissions(tester);
   await tester.scrollUntilVisible(
     find.text(title),
     220,
@@ -462,30 +425,6 @@ Future<void> _openMission(WidgetTester tester, String title) async {
   await tester.ensureVisible(find.text(title));
   await tester.pumpAndSettle();
   await tester.tap(find.text(title));
-  await tester.pumpAndSettle();
-}
-
-Future<void> _showAllMissions(WidgetTester tester) async {
-  final showAllButton = find.text('전체 미션 보기');
-  if (showAllButton.evaluate().isEmpty) {
-    return;
-  }
-  await tester.scrollUntilVisible(
-    showAllButton,
-    120,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.ensureVisible(showAllButton);
-  await tester.pumpAndSettle();
-
-  final viewSize = tester.view.physicalSize / tester.view.devicePixelRatio;
-  final buttonBottom = tester.getBottomRight(showAllButton).dy;
-  if (buttonBottom > viewSize.height - 12) {
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -120));
-    await tester.pumpAndSettle();
-  }
-
-  await tester.tap(showAllButton);
   await tester.pumpAndSettle();
 }
 
