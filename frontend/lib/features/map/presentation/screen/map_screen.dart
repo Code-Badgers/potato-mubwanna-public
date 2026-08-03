@@ -295,6 +295,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           child: _PotatoMapPreview(
                             spots: visibleSpots,
                             routePolyline: recommendedRoutePolyline,
+                            favoriteSpotIds: favoriteSpotIds,
                             onSpotSelected: _selectSpotById,
                             mapViewBuilder: widget.mapViewBuilder,
                           ),
@@ -976,12 +977,14 @@ class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
     required this.spots,
     required this.routePolyline,
+    required this.favoriteSpotIds,
     required this.onSpotSelected,
     this.mapViewBuilder,
   });
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final Set<String> favoriteSpotIds;
   final ValueChanged<String> onSpotSelected;
   final MapViewBuilder? mapViewBuilder;
 
@@ -998,6 +1001,7 @@ class _PotatoMapPreview extends StatelessWidget {
                   KakaoMapView(
                     spots: spots,
                     routePolyline: routePolyline,
+                    favoriteSpotIds: favoriteSpotIds,
                     onSpotSelected: onSpotSelected,
                   ),
             ),

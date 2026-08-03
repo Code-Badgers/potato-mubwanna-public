@@ -26,7 +26,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private let routeLayerID = "potatoRouteLayer"
   private let routeStyleID = "potatoRoutePolylineStyle"
   private let routeShapeID = "potatoRoutePolyline"
-  private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
+  private var spotStyleByPoiID: [String: (markerColor: String, isFavorite: Bool)] = [:]
   private var spotIDByPoiID: [String: String] = [:]
   private var eventHandlers: [DisposableEventHandler] = []
   private var didRegisterRouteStyle = false
@@ -239,20 +239,20 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
       let spotID = "\(spot["id"] ?? UUID().uuidString)"
       let poiID = "potato-\(spotID)"
-      let isRare = Self.boolValue(spot["rare"]) ?? false
-      let markerColor = spot["markerColor"] as? String ?? (isRare ? "#F6C23E" : "#56C787")
+      let isFavorite = Self.boolValue(spot["favorite"]) ?? false
+      let markerColor = spot["markerColor"] as? String ?? (isFavorite ? "#F6C23E" : "#56C787")
       addPoiStyles(
         labelManager: labelManager,
         markerColor: markerColor,
-        isRare: isRare
+        isFavorite: isFavorite
       )
-      let styleID = styleIDFor(markerColor: markerColor, isRare: isRare, sizeKey: "medium")
+      let styleID = styleIDFor(markerColor: markerColor, isFavorite: isFavorite, sizeKey: "medium")
       let option = PoiOptions(
         styleID: styleID,
         poiID: poiID
       )
       option.clickable = true
-      spotStyleByPoiID[poiID] = (markerColor: markerColor, isRare: isRare)
+      spotStyleByPoiID[poiID] = (markerColor: markerColor, isFavorite: isFavorite)
       spotIDByPoiID[poiID] = spotID
       let poi = layer?.addPoi(
         option: option,
@@ -282,7 +282,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     spotStyleByPoiID.forEach { poiID, style in
       let styleID = styleIDFor(
         markerColor: style.markerColor,
-        isRare: style.isRare,
+        isFavorite: style.isFavorite,
         sizeKey: sizeKey
       )
       layer.getPoi(poiID: poiID)?.changeStyle(styleID: styleID, enableTransition: false)
@@ -358,7 +358,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     return "small"
   }
 
-  private func addPoiStyles(labelManager: LabelManager, markerColor: String, isRare: Bool) {
+  private func addPoiStyles(labelManager: LabelManager, markerColor: String, isFavorite: Bool) {
     let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
     [
       ("small", CGSize(width: 30, height: 34)),
@@ -367,7 +367,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     ].forEach { sizeKey, size in
       labelManager.addPoiStyle(
         makePoiStyle(
-          styleID: styleIDFor(markerColor: markerColor, isRare: isRare, sizeKey: sizeKey),
+          styleID: styleIDFor(markerColor: markerColor, isFavorite: isFavorite, sizeKey: sizeKey),
           color: color,
           size: size
         )
@@ -375,11 +375,11 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
   }
 
-  private func styleIDFor(markerColor: String, isRare: Bool, sizeKey: String) -> String {
+  private func styleIDFor(markerColor: String, isFavorite: Bool, sizeKey: String) -> String {
     let colorKey = markerColor
       .replacingOccurrences(of: "#", with: "")
       .replacingOccurrences(of: " ", with: "")
-    return "potato\(colorKey)\(isRare ? "Rare" : "Normal")\(sizeKey)"
+    return "potato\(colorKey)\(isFavorite ? "Favorite" : "Normal")\(sizeKey)"
   }
 
   private func colorFromHex(_ hex: String) -> UIColor? {

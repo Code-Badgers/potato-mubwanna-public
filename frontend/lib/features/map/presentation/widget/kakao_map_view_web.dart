@@ -20,11 +20,13 @@ class KakaoMapView extends StatefulWidget {
     super.key,
     required this.spots,
     this.routePolyline = const [],
+    this.favoriteSpotIds = const {},
     this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final Set<String> favoriteSpotIds;
   final ValueChanged<String>? onSpotSelected;
 
   @override
@@ -119,6 +121,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   void didUpdateWidget(covariant KakaoMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.spots == widget.spots &&
+        oldWidget.favoriteSpotIds == widget.favoriteSpotIds &&
         oldWidget.routePolyline == widget.routePolyline) {
       return;
     }
@@ -241,12 +244,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'id': spot.id,
               'lat': spot.latitude,
               'lng': spot.longitude,
-              'rare': spot.isRare,
-              'markerColor': spot.isRecommended
-                  ? spot.markerColorHex
-                  : spot.isRare
-                      ? '#F6C23E'
-                      : spot.markerColorHex,
+              'favorite': widget.favoriteSpotIds.contains(spot.id),
+              'markerColor': widget.favoriteSpotIds.contains(spot.id)
+                  ? '#F6C23E'
+                  : spot.markerColorHex,
             })
         .toList());
     final routePolyline = jsonEncode(widget.routePolyline
@@ -394,8 +395,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               selectedMarkerElement.children[1].style.borderColor =
                 selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
             }
-            markerTip.style.background = '#F6C23E';
-            markerBody.style.borderColor = '#F6C23E';
+            const selectedColor = spot.favorite ? '#F6C23E' : '#509B64';
+            markerTip.style.background = selectedColor;
+            markerBody.style.borderColor = selectedColor;
             selectedMarkerElement = markerElement;
             window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
               detail: { spotId: String(spot.id) }

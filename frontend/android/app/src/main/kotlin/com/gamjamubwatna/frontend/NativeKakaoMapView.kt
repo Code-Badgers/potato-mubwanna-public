@@ -165,9 +165,9 @@ class NativeKakaoMapView(
             val latitude = (spot["latitude"] as? Number)?.toDouble() ?: return@forEach
             val longitude = (spot["longitude"] as? Number)?.toDouble() ?: return@forEach
             val spotId = spot["id"]?.toString() ?: "${latitude}_${longitude}"
-            val isRare = spot["rare"] as? Boolean ?: false
-            val markerColor = spot["markerColor"]?.toString() ?: if (isRare) "#F6C23E" else "#56C787"
-            val styleKey = "${markerColor.replace("#", "")}_${if (isRare) "rare" else "normal"}"
+            val isFavorite = spot["favorite"] as? Boolean ?: false
+            val markerColor = spot["markerColor"]?.toString() ?: if (isFavorite) "#F6C23E" else "#56C787"
+            val styleKey = "${markerColor.replace("#", "")}_${if (isFavorite) "favorite" else "normal"}"
             val styles = styleCache.getOrPut(styleKey) {
                 val labelStyles = LabelStyles.from(
                     "potato_$styleKey",
