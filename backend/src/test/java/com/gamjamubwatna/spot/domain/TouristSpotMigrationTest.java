@@ -7,6 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,6 +27,44 @@ import org.springframework.test.web.servlet.MockMvc;
 })
 class TouristSpotMigrationTest {
 
+    private static final Map<String, String> OFFICIAL_ATTRACTIONS = Map.ofEntries(
+        Map.entry("남이섬", "128019"),
+        Map.entry("소양강 스카이워크", "2396037"),
+        Map.entry("뮤지엄 산", "2633832"),
+        Map.entry("안목해변", "127722"),
+        Map.entry("경포대", "125790"),
+        Map.entry("묵호등대", "129176"),
+        Map.entry("논골담길", "1223212"),
+        Map.entry("황지연못", "125740"),
+        Map.entry("속초관광수산시장", "1260275"),
+        Map.entry("영금정", "125779"),
+        Map.entry("환선굴", "126729"),
+        Map.entry("장호항", "125711"),
+        Map.entry("수타사", "125764"),
+        Map.entry("비발디파크", "131301"),
+        Map.entry("횡성호수길", "2774026"),
+        Map.entry("청령포", "125785"),
+        Map.entry("장릉", "125794"),
+        Map.entry("대관령 양떼목장", "129263"),
+        Map.entry("이효석문학관", "130415"),
+        Map.entry("정선 5일장", "132003"),
+        Map.entry("고석정", "2615225"),
+        Map.entry("산천어축제장", "507599"),
+        Map.entry("박수근미술관", "130493"),
+        Map.entry("두타연", "126603"),
+        Map.entry("원대리 자작나무숲", "1818945"),
+        Map.entry("통일전망대", "128171"),
+        Map.entry("화진포", "125706"),
+        Map.entry("서피비치", "2501905"),
+        Map.entry("낙산사", "125773")
+    );
+
+    private static final Set<String> GANGWON_CITIES = Set.of(
+        "춘천시", "원주시", "강릉시", "동해시", "태백시", "속초시", "삼척시",
+        "홍천군", "횡성군", "영월군", "평창군", "정선군", "철원군", "화천군",
+        "양구군", "인제군", "고성군", "양양군"
+    );
+
     @Autowired
     private TouristSpotRepository touristSpotRepository;
 
@@ -35,11 +76,9 @@ class TouristSpotMigrationTest {
         List<TouristSpot> spots = curatedSpots();
 
         assertThat(spots)
-            .hasSize(8)
+            .hasSize(6)
             .extracting(TouristSpot::getName)
             .containsExactlyInAnyOrder(
-                "정선 5일장",
-                "남이섬",
                 "감자밭",
                 "감자적1번지",
                 "강릉 길감자",
@@ -47,6 +86,40 @@ class TouristSpotMigrationTest {
                 "감자아일랜드 춘천",
                 "대관령원예농협 바우파머스"
             );
+    }
+
+    @Test
+    void seedsOfficialAttractionsForEveryGangwonCity() {
+        List<TouristSpot> spots = officialAttractions();
+
+        assertThat(spots)
+            .hasSize(OFFICIAL_ATTRACTIONS.size())
+            .allSatisfy(spot -> {
+                assertThat(spot.getContentId()).isEqualTo(OFFICIAL_ATTRACTIONS.get(spot.getName()));
+                assertThat(spot.getLatitude())
+                    .isBetween(new BigDecimal("37.0"), new BigDecimal("38.7"));
+                assertThat(spot.getLongitude())
+                    .isBetween(new BigDecimal("127.0"), new BigDecimal("129.5"));
+                assertThat(spot.getImageUrl()).startsWith("https://tong.visitkorea.or.kr/");
+                assertThat(spot.getStampEnabled()).isTrue();
+            });
+
+        assertThat(spots.stream().map(TouristSpot::getCityName).collect(Collectors.toSet()))
+            .containsExactlyInAnyOrderElementsOf(GANGWON_CITIES);
+    }
+
+    @Test
+    void replacesHandWrittenCoordinatesWithTourApiCoordinates() {
+        Map<String, TouristSpot> spotsByName = officialAttractions().stream()
+            .collect(Collectors.toMap(TouristSpot::getName, spot -> spot));
+
+        TouristSpot namiIsland = spotsByName.get("남이섬");
+        assertThat(namiIsland.getLatitude()).isEqualByComparingTo("37.7962651");
+        assertThat(namiIsland.getLongitude()).isEqualByComparingTo("127.5254892");
+
+        TouristSpot jeongseonMarket = spotsByName.get("정선 5일장");
+        assertThat(jeongseonMarket.getLatitude()).isEqualByComparingTo("37.3805311");
+        assertThat(jeongseonMarket.getLongitude()).isEqualByComparingTo("128.6647911");
     }
 
     @Test
@@ -68,11 +141,11 @@ class TouristSpotMigrationTest {
 
     @Test
     void seedsMapCategoriesUsedByTheMvp() {
-        List<TouristSpot> spots = curatedSpots();
+        List<TouristSpot> spots = touristSpotRepository.findActiveSpots(null, null, null);
 
         assertThat(spots)
             .extracting(TouristSpot::getCategory)
-            .containsExactlyInAnyOrder(
+            .contains(
                 SpotCategory.POTATO_MARKET,
                 SpotCategory.POTATO_TOUR,
                 SpotCategory.POTATO_CAFE,
@@ -107,6 +180,10 @@ class TouristSpotMigrationTest {
             .andExpect(jsonPath("$.data[?(@.name == '바회마을')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '감자아일랜드 춘천')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '대관령원예농협 바우파머스')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '소양강 스카이워크')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '뮤지엄 산')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '통일전망대')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '낙산사')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.category == 'POTATO_SNACK')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.category == 'POTATO_BREWERY')]").isNotEmpty());
     }
@@ -115,6 +192,12 @@ class TouristSpotMigrationTest {
         return touristSpotRepository.findActiveSpots(null, null, null).stream()
             .filter(spot -> spot.getContentId() != null)
             .filter(spot -> spot.getContentId().startsWith("CURATED:"))
+            .toList();
+    }
+
+    private List<TouristSpot> officialAttractions() {
+        return touristSpotRepository.findActiveSpots(null, null, null).stream()
+            .filter(spot -> OFFICIAL_ATTRACTIONS.containsKey(spot.getName()))
             .toList();
     }
 }
