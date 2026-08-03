@@ -15,8 +15,8 @@ void main() {
     await _pumpScreen(
       tester,
       override: stampBookProvider.overrideWith((ref) async => _stampBook()),
-      nextTargetsOverride: stampNextTargetsProvider.overrideWith(
-        (ref) async => _nextTargets,
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) async => _rallybookSpots,
       ),
     );
     await tester.pumpAndSettle();
@@ -28,13 +28,24 @@ void main() {
     expect(find.text('12개 달성까지 4개 남았어요'), findsNothing);
     expect(find.text('다음 스탬프 추천'), findsNothing);
     expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
-    expect(find.text('안목해변'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('rallybook-spot-marker-101')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('rallybook-spot-marker-102')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('rallybook-spot-marker-103')),
+      findsOneWidget,
+    );
     expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
     expect(find.text('강원 18개 시군 스탬프 투어'), findsOneWidget);
     expect(find.text('지도에서 깃발 선택'), findsNothing);
     expect(find.text('스탬프 찍기'), findsNothing);
 
-    await tester.tap(find.text('정선 5일장'));
+    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-101')));
     await tester.pumpAndSettle();
 
     expect(find.text('여행할 지역을 골라보세요'), findsNothing);
@@ -45,6 +56,31 @@ void main() {
     expect(find.text('스탬프 준비중'), findsNothing);
     expect(find.text('스탬프 찍기'), findsOneWidget);
     expect(find.text('투어 진행률'), findsNothing);
+  });
+
+  testWidgets('updates the card between multiple spots in the same city', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) async => _rallybookSpots,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-102')));
+    await tester.pumpAndSettle();
+    expect(find.text('남이섬'), findsWidgets);
+    expect(find.text('춘천 · 스탬프 완료'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('rallybook-city-spot-103')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('소양강 스카이워크'), findsWidgets);
+    expect(find.text('남이섬'), findsOneWidget);
   });
 
   testWidgets('opens the selected stamp spot detail', (tester) async {
@@ -68,14 +104,16 @@ void main() {
       ProviderScope(
         overrides: [
           stampBookProvider.overrideWith((ref) async => _stampBook()),
-          stampNextTargetsProvider.overrideWith((ref) async => _nextTargets),
+          stampRallybookSpotsProvider.overrideWith(
+            (ref) async => _rallybookSpots,
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('정선 5일장'));
+    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-101')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('스탬프 찍기'));
@@ -107,7 +145,9 @@ void main() {
       ProviderScope(
         overrides: [
           stampBookProvider.overrideWith((ref) async => _stampBook()),
-          stampNextTargetsProvider.overrideWith((ref) async => _nextTargets),
+          stampRallybookSpotsProvider.overrideWith(
+            (ref) async => _rallybookSpots,
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -151,21 +191,22 @@ void main() {
     expect(find.text('미획득'), findsWidgets);
   });
 
-  testWidgets('keeps stamp tour visible when next target loading fails', (
+  testWidgets('keeps stamp tour visible when rallybook spots fail to load', (
     tester,
   ) async {
     await _pumpScreen(
       tester,
       override: stampBookProvider.overrideWith((ref) async => _stampBook()),
-      nextTargetsOverride: stampNextTargetsProvider.overrideWith(
-        (ref) => Future<List<StampNextTarget>?>.error(
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) => Future<List<RallybookSpot>?>.error(
           Exception('network unavailable'),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('안목해변'), findsOneWidget);
+    expect(find.text('8/18'), findsOneWidget);
+    expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stamp-next-target-error')),
       findsNothing,
@@ -216,7 +257,7 @@ void main() {
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required Override override,
-  Override? nextTargetsOverride,
+  Override? rallybookSpotsOverride,
   List<Override> additionalOverrides = const [],
 }) async {
   tester.view.physicalSize = const Size(430, 932);
@@ -228,9 +269,9 @@ Future<void> _pumpScreen(
     ProviderScope(
       overrides: [
         override,
-        nextTargetsOverride ??
-            stampNextTargetsProvider.overrideWith(
-              (ref) async => const <StampNextTarget>[],
+        rallybookSpotsOverride ??
+            stampRallybookSpotsProvider.overrideWith(
+              (ref) async => const <RallybookSpot>[],
             ),
         ...additionalOverrides,
       ],
@@ -239,21 +280,35 @@ Future<void> _pumpScreen(
   );
 }
 
-const _nextTargets = <StampNextTarget>[
-  StampNextTarget(
+const _rallybookSpots = <RallybookSpot>[
+  RallybookSpot(
     spotId: 101,
     spotName: '정선 5일장',
     cityName: '정선군',
     category: 'POTATO_MARKET',
+    latitude: 37.3805311,
+    longitude: 128.6647911,
     address: '강원특별자치도 정선군',
     imageUrl: null,
   ),
-  StampNextTarget(
+  RallybookSpot(
     spotId: 102,
-    spotName: '평창 감자 체험장',
-    cityName: '평창군',
-    category: 'POTATO_EXPERIENCE',
-    address: '강원특별자치도 평창군',
+    spotName: '남이섬',
+    cityName: '춘천시',
+    category: 'POTATO_TOUR',
+    latitude: 37.7962651,
+    longitude: 127.5254892,
+    address: '강원특별자치도 춘천시 남이섬길 1 남이섬',
+    imageUrl: null,
+  ),
+  RallybookSpot(
+    spotId: 103,
+    spotName: '소양강 스카이워크',
+    cityName: '춘천시',
+    category: 'POTATO_TOUR',
+    latitude: 37.8932774,
+    longitude: 127.7236633,
+    address: '강원특별자치도 춘천시 영서로 2663',
     imageUrl: null,
   ),
 ];

@@ -87,6 +87,34 @@ void main() {
     expect(result.first.categoryLabel, '시장');
   });
 
+  test('fetches rallybook spots with official coordinates', () async {
+    String? requestedPath;
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestedPath = options.path;
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: _rallybookSpotsResponse,
+              ),
+            );
+          },
+        ),
+      );
+
+    final result = await StampRepository(dio: dio).fetchRallybookSpots();
+
+    expect(requestedPath, '/stamps/rallybook-spots');
+    expect(result, hasLength(2));
+    expect(result.first.spotName, '남이섬');
+    expect(result.first.latitude, 37.7962651);
+    expect(result.first.longitude, 127.5254892);
+    expect(result.last.spotName, '소양강 스카이워크');
+  });
+
   test(
     'claims the lowest available reward and maps the issued coupon',
     () async {
@@ -265,4 +293,31 @@ const _claimResponse = <String, Object?>{
     'couponName': '강원 감자 제휴점 3,000원 할인권',
     'expiresAt': '2026-08-16T00:00:00Z',
   },
+};
+
+const _rallybookSpotsResponse = <String, Object?>{
+  'success': true,
+  'message': '요청이 성공했습니다.',
+  'data': [
+    {
+      'spotId': 101,
+      'spotName': '남이섬',
+      'cityName': '춘천시',
+      'category': 'POTATO_TOUR',
+      'latitude': 37.7962651,
+      'longitude': 127.5254892,
+      'address': '강원특별자치도 춘천시 남이섬길 1 남이섬',
+      'imageUrl': null,
+    },
+    {
+      'spotId': 102,
+      'spotName': '소양강 스카이워크',
+      'cityName': '춘천시',
+      'category': 'POTATO_TOUR',
+      'latitude': 37.8932774,
+      'longitude': 127.7236633,
+      'address': '강원특별자치도 춘천시 영서로 2663',
+      'imageUrl': null,
+    },
+  ],
 };
