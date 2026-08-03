@@ -70,7 +70,8 @@ class _PotatoMubwannaAppState extends ConsumerState<PotatoMubwannaApp>
   }
 
   void _showForegroundMessage(PushMessage message) {
-    if (!message.hasDisplayContent) {
+    if (ref.read(authControllerProvider).status != AuthStatus.authenticated ||
+        !message.hasDisplayContent) {
       return;
     }
     final route = PushRouteResolver.resolve(message.data);
