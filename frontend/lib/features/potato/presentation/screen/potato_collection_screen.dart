@@ -1107,8 +1107,6 @@ class _RepresentativePotatoSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final allItems = collection.items;
-    final acquiredCount = allItems.where((item) => item.acquired).length;
-
     return _BottomSheetFrame(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1133,16 +1131,6 @@ class _RepresentativePotatoSheet extends StatelessWidget {
                 icon: const Icon(Icons.close_rounded),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '감자를 누르면 획득 방법과 이야기를 확인할 수 있어요. 수집한 감자 $acquiredCount개',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
           ),
           const SizedBox(height: 16),
           if (allItems.isEmpty)
@@ -1290,27 +1278,6 @@ class _RepresentativePotatoOption extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
-                  ),
-                ),
-                const Spacer(),
-                SizedBox(
-                  height: 28,
-                  child: TextButton(
-                    onPressed: onShowDetail,
-                    style: TextButton.styleFrom(
-                      foregroundColor: _potatoDark,
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      locked ? '힌트' : '상세',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
                   ),
                 ),
               ],

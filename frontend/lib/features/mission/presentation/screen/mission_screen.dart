@@ -638,8 +638,8 @@ class _MissionFeaturedCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 224),
-          padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+          constraints: const BoxConstraints(minHeight: 206),
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(_missionCardRadius),
@@ -659,28 +659,10 @@ class _MissionFeaturedCard extends StatelessWidget {
                 top: 0,
                 child: _SpecialLabel(),
               ),
-              Positioned(
-                right: -4,
-                bottom: -24,
-                child: IgnorePointer(
-                  child: Image.asset(
-                    _featuredJumsooniAsset(mission),
-                    width: 148,
-                    height: 192,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                  ),
-                ),
-              ),
-              const Positioned(
-                right: 0,
-                top: 18,
-                child: _FeaturedChevronButton(),
-              ),
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 52),
+                  SizedBox(height: 48),
                   Text(
                     '점순이의 미션',
                     maxLines: 1,
@@ -692,12 +674,29 @@ class _MissionFeaturedCard extends StatelessWidget {
                       letterSpacing: 0,
                     ),
                   ),
-                  SizedBox(height: 14),
+                  SizedBox(height: 12),
                   _SpeechBubble(
                     text: '오늘은 가까운 명소에서\n감자 추억을 하나 만들어볼까요?',
                   ),
-                  SizedBox(height: 22),
                 ],
+              ),
+              Positioned(
+                right: -2,
+                bottom: -42,
+                child: IgnorePointer(
+                  child: Image.asset(
+                    _featuredJumsooniAsset(mission),
+                    width: 142,
+                    height: 184,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+              ),
+              const Positioned(
+                right: 0,
+                top: 18,
+                child: _FeaturedChevronButton(),
               ),
             ],
           ),
@@ -1259,8 +1258,8 @@ class _SpeechBubble extends StatelessWidget {
           ),
         ),
         Positioned(
-          left: 26,
-          bottom: -6,
+          right: 30,
+          top: -5,
           child: Transform.rotate(
             angle: 0.785398,
             child: Container(
