@@ -645,7 +645,7 @@ class _SelectedRegionCard extends StatelessWidget {
         : '${region.city} 스탬프 투어 명소 · ${target!.categoryLabel}';
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 178),
+      height: 178,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
@@ -819,7 +819,7 @@ class _EmptyRegionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 178),
+      height: 178,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -892,25 +892,6 @@ class _EmptyRegionCard extends StatelessWidget {
               height: 1.35,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            height: 48,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.primaryTint,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Text(
-              '지도에서 깃발 선택',
-              style: TextStyle(
-                color: AppColors.primaryDark,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
             ),
           ),
         ],

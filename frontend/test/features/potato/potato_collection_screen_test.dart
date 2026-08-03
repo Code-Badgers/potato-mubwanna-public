@@ -93,9 +93,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('나의 감자 도감'), findsOneWidget);
-    expect(find.text('대표로 세울 감자를 선택하세요. 수집한 감자 2개'), findsOneWidget);
+    expect(
+      find.text('감자를 누르면 획득 방법과 이야기를 확인할 수 있어요. 수집한 감자 2개'),
+      findsOneWidget,
+    );
     expect(find.text('하지감자'), findsOneWidget);
+    expect(find.text('???'), findsOneWidget);
     expect(find.widgetWithText(TextButton, '상세'), findsNWidgets(2));
+    expect(find.widgetWithText(TextButton, '힌트'), findsOneWidget);
     expect(find.text('대표 감자로 설정'), findsNothing);
   });
 

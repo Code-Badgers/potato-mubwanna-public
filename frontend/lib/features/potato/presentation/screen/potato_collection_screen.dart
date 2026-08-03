@@ -423,39 +423,27 @@ class _RepresentativePotatoCard extends StatelessWidget {
             child: _PotatoArtSlot(
               item: potato,
               locked: potato == null || !potato.acquired,
-              size: 204,
+              size: 244,
               framed: false,
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            potato?.name ?? '아직 대표 감자가 없어요',
-            textAlign: potato == null ? TextAlign.center : TextAlign.start,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              potato?.name ?? '초보 감자',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          if (potato == null)
-            const Center(
-              child: Text(
-                '감자 스팟을 방문해 첫 감자를 모아보세요. 수집한 감자는 대표 감자로 세울 수 있어요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  height: 1.45,
-                  letterSpacing: 0,
-                ),
-              ),
-            )
-          else ...[
+          if (potato != null) ...[
+            const SizedBox(height: 8),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -633,7 +621,7 @@ class _PotatoDetailSheet extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  locked ? '아직 만나지 못한 감자' : item.name,
+                  locked ? '???' : item.name,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 22,
@@ -666,7 +654,9 @@ class _PotatoDetailSheet extends StatelessWidget {
           const SizedBox(height: 18),
           _InfoBlock(
             title: '감자 소개',
-            body: locked ? '획득 후 감자의 이야기가 열립니다.' : item.description,
+            body: item.description.isEmpty
+                ? '획득하면 감자의 이야기가 열립니다.'
+                : item.description,
           ),
           _InfoBlock(title: '획득 방법', body: item.acquisitionHint),
           _GrowthProgress(item: item),
@@ -889,16 +879,6 @@ class _TodayStepCardContent extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(999)),
-            child: LinearProgressIndicator(
-              minHeight: 10,
-              value: ratio,
-              backgroundColor: const Color(0xFFFFE9B6),
-              valueColor: const AlwaysStoppedAnimation<Color>(_potatoYellow),
-            ),
-          ),
         ],
       ),
     );
@@ -975,7 +955,7 @@ class _PotatoArtSlot extends StatelessWidget {
   Widget build(BuildContext context) {
     final potato = item;
     final imageUrl = potato?.imageUrl;
-    final assetPath = locked || potato == null
+    final assetPath = potato == null
         ? 'assets/potatoes/potato_unknown.png'
         : potatoLocalAssetPath(potato.code);
 
@@ -990,12 +970,21 @@ class _PotatoArtSlot extends StatelessWidget {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
           );
-    final alignedImage = locked
-        ? Transform.translate(
-            offset: Offset(size * 0.092, size * 0.033),
-            child: image,
+    final visualImage = locked && potato != null
+        ? ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: 0.58),
+              BlendMode.srcATop,
+            ),
+            child: Opacity(opacity: 0.32, child: image),
           )
         : image;
+    final alignedImage = locked && potato == null
+        ? Transform.translate(
+            offset: Offset(size * 0.092, size * 0.033),
+            child: visualImage,
+          )
+        : visualImage;
 
     if (!framed) {
       return SizedBox(
@@ -1117,8 +1106,8 @@ class _RepresentativePotatoSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final acquiredItems =
-        collection.items.where((item) => item.acquired).toList(growable: false);
+    final allItems = collection.items;
+    final acquiredCount = allItems.where((item) => item.acquired).length;
 
     return _BottomSheetFrame(
       child: Column(
@@ -1147,7 +1136,7 @@ class _RepresentativePotatoSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '대표로 세울 감자를 선택하세요. 수집한 감자 ${acquiredItems.length}개',
+            '감자를 누르면 획득 방법과 이야기를 확인할 수 있어요. 수집한 감자 $acquiredCount개',
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,
@@ -1156,13 +1145,13 @@ class _RepresentativePotatoSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          if (acquiredItems.isEmpty)
+          if (allItems.isEmpty)
             const _RepresentativePotatoEmpty()
           else
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: acquiredItems.length,
+              itemCount: allItems.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 mainAxisSpacing: 10,
@@ -1170,7 +1159,7 @@ class _RepresentativePotatoSheet extends StatelessWidget {
                 childAspectRatio: 0.76,
               ),
               itemBuilder: (context, index) {
-                final item = acquiredItems[index];
+                final item = allItems[index];
                 return _RepresentativePotatoOption(
                   item: item,
                   onShowDetail: () => onShowDetail(item),
@@ -1246,11 +1235,12 @@ class _RepresentativePotatoOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = item.representative;
+    final locked = !item.acquired;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(_potatoCardRadius),
-        onTap: selected ? null : onSelect,
+        onTap: locked || selected ? onShowDetail : onSelect,
         child: Ink(
           decoration: BoxDecoration(
             color: selected
@@ -1269,7 +1259,7 @@ class _RepresentativePotatoOption extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    _PotatoArtSlot(item: item, locked: false, size: 66),
+                    _PotatoArtSlot(item: item, locked: locked, size: 66),
                     if (selected)
                       Positioned(
                         right: -5,
@@ -1292,7 +1282,7 @@ class _RepresentativePotatoOption extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  item.name,
+                  locked ? '???' : item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1313,9 +1303,9 @@ class _RepresentativePotatoOption extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text(
-                      '상세',
-                      style: TextStyle(
+                    child: Text(
+                      locked ? '힌트' : '상세',
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
