@@ -79,18 +79,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('정선 5일장'), findsOneWidget);
+    expect(find.text('대표 메뉴'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('marker-2')));
     await tester.pump();
 
     expect(find.text('감자 카페'), findsOneWidget);
     expect(find.text('정선 5일장'), findsNothing);
+    expect(find.text('대표 메뉴'), findsOneWidget);
+    expect(find.text('감자빵'), findsOneWidget);
+    expect(find.text('3,300원'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('marker-3')));
     await tester.pump();
 
     expect(find.text('감자 체험장'), findsOneWidget);
     expect(find.text('감자 카페'), findsNothing);
+    expect(find.text('대표 메뉴'), findsNothing);
   });
 
   testWidgets('opens detail for the currently selected map marker', (
@@ -608,6 +613,20 @@ const _spots = [
     cityName: '정선',
     congestionLevel: 'LOW',
     stampEnabled: true,
+    menuItems: [
+      MapSpotMenuItem(
+        name: '감자빵',
+        priceWon: 3300,
+        priceNote: null,
+        verifiedOn: '2026-08-03',
+      ),
+      MapSpotMenuItem(
+        name: '아메리카노',
+        priceWon: 4800,
+        priceNote: null,
+        verifiedOn: '2026-08-03',
+      ),
+    ],
   ),
   MapSpot(
     id: '3',

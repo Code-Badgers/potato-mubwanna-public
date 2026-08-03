@@ -1,11 +1,13 @@
 package com.gamjamubwatna.spot.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,6 +69,9 @@ class TouristSpotMigrationTest {
 
     @Autowired
     private TouristSpotRepository touristSpotRepository;
+
+    @Autowired
+    private SpotMenuItemRepository spotMenuItemRepository;
 
     @Autowired
     private MockMvc mockMvc;
@@ -176,6 +181,39 @@ class TouristSpotMigrationTest {
             .extracting(TouristSpot::getContentId)
             .allSatisfy(contentId -> assertThat(contentId).startsWith("CURATED:"))
             .doesNotHaveDuplicates();
+    }
+
+    @Test
+    void seedsVerifiedMenuPricesOnlyForSupportedCuratedSpots() {
+        Map<String, TouristSpot> spotsByName = curatedSpots().stream()
+            .collect(Collectors.toMap(TouristSpot::getName, spot -> spot));
+        List<Long> curatedSpotIds = spotsByName.values().stream()
+            .map(TouristSpot::getId)
+            .toList();
+
+        List<SpotMenuItem> menuItems = spotMenuItemRepository
+            .findActiveByTouristSpotIds(curatedSpotIds);
+
+        assertThat(menuItems)
+            .hasSize(11)
+            .allSatisfy(item -> {
+                assertThat(item.getVerifiedOn()).isEqualTo(LocalDate.of(2026, 8, 3));
+                assertThat(item.getSourceUrl()).startsWith("https://place.map.kakao.com/");
+            });
+        assertThat(menuItems)
+            .extracting(SpotMenuItem::getName, SpotMenuItem::getPriceWon)
+            .contains(
+                tuple("감자빵", 3300),
+                tuple("감자적", 6000),
+                tuple("컵~길감자", 3100),
+                tuple("감자 맥주", 6000)
+            );
+        assertThat(menuItems)
+            .extracting(SpotMenuItem::getTouristSpotId)
+            .doesNotContain(
+                spotsByName.get("바회마을").getId(),
+                spotsByName.get("대관령원예농협 바우파머스").getId()
+            );
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.gamjamubwatna.spot.application.SpotService;
 import com.gamjamubwatna.spot.domain.CongestionLevel;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,13 @@ class SpotControllerTest {
                 "강원특별자치도 정선군",
                 "정선군",
                 CongestionLevel.NORMAL,
-                true
+                true,
+                List.of(new SpotMenuItemResponse(
+                    "감자옹심이",
+                    10000,
+                    null,
+                    LocalDate.of(2026, 8, 3)
+                ))
             )));
 
         mockMvc.perform(get("/spots")
@@ -60,6 +67,10 @@ class SpotControllerTest {
             .andExpect(jsonPath("$.data[0].id").value(1))
             .andExpect(jsonPath("$.data[0].name").value("정선 감자옹심이"))
             .andExpect(jsonPath("$.data[0].category").value("POTATO_RESTAURANT"))
-            .andExpect(jsonPath("$.data[0].cityName").value("정선군"));
+            .andExpect(jsonPath("$.data[0].cityName").value("정선군"))
+            .andExpect(jsonPath("$.data[0].menuItems[0].name").value("감자옹심이"))
+            .andExpect(jsonPath("$.data[0].menuItems[0].priceWon").value(10000))
+            .andExpect(jsonPath("$.data[0].menuItems[0].priceNote").isEmpty())
+            .andExpect(jsonPath("$.data[0].menuItems[0].verifiedOn").value("2026-08-03"));
     }
 }

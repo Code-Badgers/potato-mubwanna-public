@@ -458,13 +458,19 @@ class _RouteRecommendationSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasRoute = routeSpots.length >= 2;
+    final hasMenu = selectedSpot.menuItems.isNotEmpty;
     final totalDistance = routeDistanceKm ?? routeSpots.totalRouteDistanceKm;
+    final initialChildSize =
+        hasRoute ? (hasMenu ? 0.50 : 0.34) : (hasMenu ? 0.42 : 0.28);
+    final snapSizes = hasRoute
+        ? (hasMenu ? const [0.50, 0.78] : const [0.34, 0.78])
+        : (hasMenu ? const [0.42, 0.68] : const [0.28, 0.56]);
     return DraggableScrollableSheet(
       minChildSize: 0.24,
-      initialChildSize: hasRoute ? 0.34 : 0.28,
+      initialChildSize: initialChildSize,
       maxChildSize: 0.78,
       snap: true,
-      snapSizes: hasRoute ? const [0.34, 0.78] : const [0.28, 0.56],
+      snapSizes: snapSizes,
       builder: (context, scrollController) {
         return DecoratedBox(
           decoration: BoxDecoration(
@@ -676,7 +682,110 @@ class _SelectedSpotSummary extends StatelessWidget {
             ),
           ],
         ),
+        if (spot.menuItems.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _SpotMenuPreview(
+            key: ValueKey('spot-menu-preview-${spot.id}'),
+            menuItems: spot.menuItems,
+          ),
+        ],
       ],
+    );
+  }
+}
+
+class _SpotMenuPreview extends StatelessWidget {
+  const _SpotMenuPreview({required this.menuItems, super.key});
+
+  final List<MapSpotMenuItem> menuItems;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cream.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.restaurant_menu_rounded,
+                size: 18,
+                color: _mapDark,
+              ),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text(
+                  '대표 메뉴',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              Text(
+                '${menuItems.first.verifiedOnLabel} 확인',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          for (var index = 0; index < menuItems.length; index++) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    menuItems[index].name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  menuItems[index].priceLabel,
+                  style: const TextStyle(
+                    color: _mapDark,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+            if (index < menuItems.length - 1) const SizedBox(height: 7),
+          ],
+          const SizedBox(height: 8),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '가격은 매장 상황에 따라 달라질 수 있어요.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
