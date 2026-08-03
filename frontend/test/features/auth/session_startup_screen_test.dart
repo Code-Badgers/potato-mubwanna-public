@@ -17,6 +17,7 @@ void main() {
       markOnboardingCompleted: () async {},
       readRefreshToken: () => refreshTokenCompleter.future,
       refreshSession: () async => false,
+      unregisterPushToken: () async {},
       clearLocalTokens: () async {},
       readInitialPushMessage: () async => null,
     );

@@ -23,6 +23,9 @@ void main() {
         events.add('refresh-session');
         return true;
       },
+      unregisterPushToken: () async {
+        events.add('unregister-push');
+      },
       clearLocalTokens: () async {
         events.add('clear-tokens');
       },
@@ -76,11 +79,29 @@ void main() {
 
   test('clears local tokens and opens login when session refresh fails',
       () async {
-    var clearCalls = 0;
+    final events = <String>[];
     final coordinator = _coordinator(
       hasCompletedOnboarding: false,
       refreshToken: 'expired-refresh-token',
       refreshSessionResult: false,
+      onUnregisterPushToken: () => events.add('unregister-push'),
+      onClearLocalTokens: () => events.add('clear-tokens'),
+    );
+
+    final route = await coordinator.resolveInitialRoute();
+
+    expect(route, '/login');
+    expect(events, ['unregister-push', 'clear-tokens']);
+  });
+
+  test('continues invalid session cleanup when push unregister fails',
+      () async {
+    var clearCalls = 0;
+    final coordinator = _coordinator(
+      hasCompletedOnboarding: true,
+      refreshToken: 'expired-refresh-token',
+      refreshSessionResult: false,
+      onUnregisterPushToken: () => throw StateError('push unavailable'),
       onClearLocalTokens: () => clearCalls++,
     );
 
@@ -129,6 +150,7 @@ SessionStartupCoordinator _coordinator({
   required String? refreshToken,
   bool refreshSessionResult = true,
   void Function()? onRefreshSession,
+  void Function()? onUnregisterPushToken,
   void Function()? onClearLocalTokens,
   void Function()? onReadInitialPushMessage,
 }) {
@@ -140,6 +162,9 @@ SessionStartupCoordinator _coordinator({
     refreshSession: () async {
       onRefreshSession?.call();
       return refreshSessionResult;
+    },
+    unregisterPushToken: () async {
+      onUnregisterPushToken?.call();
     },
     clearLocalTokens: () async {
       onClearLocalTokens?.call();
