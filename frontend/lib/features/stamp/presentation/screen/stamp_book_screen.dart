@@ -481,13 +481,17 @@ class _GangwonMapPainter extends CustomPainter {
       final path = _regionPath(region, mapRect);
       final acquired = stampsByCity[region.city]?.acquired ?? false;
       final selected = region.city == selectedCity;
+      final displayPath = selected ? _scaledPath(path, 1.035) : path;
       fillPaint.color = selected
           ? const Color(0xFFD8F2E2)
           : acquired
               ? const Color(0xFFE2F6E8)
               : const Color(0xFFF7FAF4);
-      canvas.drawPath(path, fillPaint);
-      canvas.drawPath(path, selected ? selectedLinePaint : thinLinePaint);
+      canvas.drawPath(displayPath, fillPaint);
+      canvas.drawPath(
+        displayPath,
+        selected ? selectedLinePaint : thinLinePaint,
+      );
 
       try {
         fullPath = fullPath.computeMetrics().isEmpty
@@ -534,48 +538,45 @@ Rect _gangwonMapRect(Size size) {
 }
 
 Path _regionPath(GangwonMapRegion region, Rect mapRect) {
-  final path = Path();
-  final polygon = _largestPolygon(region.polygons);
-  if (polygon == null) {
-    return path;
-  }
-  path.addPolygon(
-    [
-      for (final point in polygon)
-        Offset(
-          mapRect.left + point.dx * mapRect.width,
-          mapRect.top + point.dy * mapRect.height,
-        ),
-    ],
-    true,
-  );
-  return path;
-}
-
-List<Offset>? _largestPolygon(List<List<Offset>> polygons) {
-  List<Offset>? selected;
-  var selectedArea = 0.0;
-  for (final polygon in polygons) {
+  var regionPath = Path();
+  for (final polygon in region.polygons) {
     if (polygon.length < 3) {
       continue;
     }
-    final area = _polygonArea(polygon).abs();
-    if (area > selectedArea) {
-      selected = polygon;
-      selectedArea = area;
+    final polygonPath = Path()
+      ..addPolygon(
+        [
+          for (final point in polygon)
+            Offset(
+              mapRect.left + point.dx * mapRect.width,
+              mapRect.top + point.dy * mapRect.height,
+            ),
+        ],
+        true,
+      );
+
+    try {
+      regionPath = regionPath.computeMetrics().isEmpty
+          ? polygonPath
+          : Path.combine(PathOperation.union, regionPath, polygonPath);
+    } catch (_) {
+      regionPath.addPath(polygonPath, Offset.zero);
     }
   }
-  return selected;
+  return regionPath;
 }
 
-double _polygonArea(List<Offset> polygon) {
-  var area = 0.0;
-  for (var index = 0; index < polygon.length; index++) {
-    final current = polygon[index];
-    final next = polygon[(index + 1) % polygon.length];
-    area += current.dx * next.dy - next.dx * current.dy;
+Path _scaledPath(Path path, double scale) {
+  final bounds = path.getBounds();
+  if (bounds.isEmpty) {
+    return path;
   }
-  return area / 2;
+  final center = bounds.center;
+  final matrix = Matrix4.identity()
+    ..translateByDouble(center.dx, center.dy, 0, 1)
+    ..scaleByDouble(scale, scale, 1, 1)
+    ..translateByDouble(-center.dx, -center.dy, 0, 1);
+  return path.transform(matrix.storage);
 }
 
 String? _hitTestRegion(Offset position, Rect mapRect) {
