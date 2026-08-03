@@ -413,6 +413,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                     child: _MapPassportBadge(
                       acquiredCount: widget.progress.acquiredCount,
                       totalCount: widget.progress.totalCount,
+                      onTap: () => context.go('/main/stamps/cities'),
                     ),
                   ),
                 ],
@@ -644,6 +645,7 @@ class _SelectedRegionCard extends StatelessWidget {
         : '${region.city} 스탬프 투어 명소 · ${target!.categoryLabel}';
 
     return Container(
+      constraints: const BoxConstraints(minHeight: 178),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
@@ -754,47 +756,59 @@ class _MapPassportBadge extends StatelessWidget {
   const _MapPassportBadge({
     required this.acquiredCount,
     required this.totalCount,
+    required this.onTap,
   });
 
   final int acquiredCount;
   final int totalCount;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.auto_stories_rounded,
-              color: AppColors.primaryDark,
-              size: 17,
+    return Tooltip(
+      message: '스탬프 투어 보기',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.94),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: AppColors.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
-            Text(
-              '$acquiredCount/$totalCount',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.auto_stories_rounded,
+                    color: AppColors.primaryDark,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$acquiredCount/$totalCount',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -808,7 +822,8 @@ class _EmptyRegionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      constraints: const BoxConstraints(minHeight: 178),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),
@@ -821,47 +836,84 @@ class _EmptyRegionCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryTint,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.touch_app_rounded,
-              color: AppColors.primaryDark,
-              size: 23,
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryTint,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.touch_app_rounded,
+                  color: AppColors.primaryDark,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '여행할 지역을 골라보세요',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      '강원 18개 시군 스탬프 투어',
+                      style: TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '지도 위 명소를 선택하면 방문 인증으로 이어지는 스탬프 장소가 나타나요.',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
             ),
           ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '여행할 지역을 골라보세요',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  '지역을 선택하면 스탬프를 찍을 장소가 나타나요.',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.primaryTint,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Text(
+              '지도에서 깃발 선택',
+              style: TextStyle(
+                color: AppColors.primaryDark,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
             ),
           ),
         ],
