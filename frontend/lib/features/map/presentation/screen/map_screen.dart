@@ -13,6 +13,7 @@ import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import '../../domain/spot_recommendation.dart';
 import '../widget/kakao_map_view.dart';
+import '../widget/map_spot_selection_message.dart';
 
 typedef MapViewBuilder = Widget Function(
   List<MapSpot> spots,
@@ -167,8 +168,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _selectSpotById(String spotId) {
+    final normalizedSpotId = mapSpotIdFromSelectionMessage(spotId);
+    if (normalizedSpotId == null) {
+      return;
+    }
     setState(() {
-      _selectedSpotId = spotId;
+      _selectedSpotId = normalizedSpotId;
     });
   }
 
@@ -338,6 +343,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           )
                         else
                           _RouteRecommendationSheet(
+                            key: ValueKey('route-sheet-${selectedSpot.id}'),
                             selectedSpot: selectedSpot,
                             routeSpots: recommendedRouteSpots,
                             routeDistanceKm: recommendedRouteDistanceKm,
@@ -399,6 +405,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
 class _RouteRecommendationSheet extends StatelessWidget {
   const _RouteRecommendationSheet({
+    super.key,
     required this.selectedSpot,
     required this.routeSpots,
     required this.routeDistanceKm,
@@ -594,7 +601,6 @@ class _SelectedSpotSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (spot.isRare) const _RarePotatoLine() else const _NormalPotatoLine(),
         if (favoriteCount > 0) ...[
           const SizedBox(height: 10),
           _FavoriteRouteLine(count: favoriteCount),
@@ -1128,52 +1134,6 @@ class _CongestionBadge extends StatelessWidget {
           letterSpacing: 0,
         ),
       ),
-    );
-  }
-}
-
-class _RarePotatoLine extends StatelessWidget {
-  const _RarePotatoLine();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Icon(Icons.star_rounded, color: _rareGold, size: 19),
-        SizedBox(width: 6),
-        Text(
-          '희귀 감자 출현 가능',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NormalPotatoLine extends StatelessWidget {
-  const _NormalPotatoLine();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Icon(Icons.eco_rounded, color: _mapPrimary, size: 18),
-        SizedBox(width: 6),
-        Text(
-          '방문 인증 시 지역 감자 획득',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
     );
   }
 }
