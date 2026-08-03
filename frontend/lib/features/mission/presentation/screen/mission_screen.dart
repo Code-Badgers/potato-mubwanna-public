@@ -294,6 +294,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     final completedCount = missions
         .where((mission) => mission.status == MissionStatus.completed)
         .length;
+    final actionableCount = missions
+        .where((mission) =>
+            mission.active &&
+            mission.status != MissionStatus.locked &&
+            mission.status != MissionStatus.completed)
+        .length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -302,6 +308,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: _MissionHeader(
+                actionableCount: actionableCount,
                 completedCount: completedCount,
                 totalCount: missions.length,
               ),
@@ -534,10 +541,12 @@ class _MissionEmptyState extends StatelessWidget {
 
 class _MissionHeader extends StatelessWidget {
   const _MissionHeader({
+    required this.actionableCount,
     required this.completedCount,
     required this.totalCount,
   });
 
+  final int actionableCount;
   final int completedCount;
   final int totalCount;
 
@@ -550,25 +559,32 @@ class _MissionHeader extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF8EF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFD5EFDE)),
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 46,
-                  height: 46,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryTint,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.flag_rounded,
+                    Icons.task_alt_rounded,
                     color: _missionPrimary,
-                    size: 26,
+                    size: 28,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -577,17 +593,17 @@ class _MissionHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '점순이와 함께 도전해요',
+                        '오늘의 미션',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 18,
+                          fontSize: 21,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '완료 $completedCount / $totalCount',
+                        '$actionableCount개 도전 가능 · 완료 $completedCount/$totalCount',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
@@ -598,9 +614,24 @@ class _MissionHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.textSecondary,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryTint,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$completedCount/$totalCount',
+                    style: const TextStyle(
+                      color: AppColors.primaryDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
                 ),
               ],
             ),

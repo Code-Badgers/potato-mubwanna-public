@@ -64,7 +64,8 @@ void main() {
     await _pumpMissionScreen(tester);
 
     expect(find.text('미션'), findsNothing);
-    expect(find.text('점순이와 함께 도전해요'), findsOneWidget);
+    expect(find.text('오늘의 미션'), findsOneWidget);
+    expect(find.text('5개 도전 가능 · 완료 1/7'), findsOneWidget);
     expect(find.text('점순이'), findsNothing);
     expect(find.text('일일'), findsOneWidget);
     expect(find.text('주간'), findsOneWidget);
