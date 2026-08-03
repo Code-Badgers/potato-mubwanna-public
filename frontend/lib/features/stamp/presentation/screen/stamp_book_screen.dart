@@ -7,7 +7,6 @@ import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
 import '../model/gangwon_map_region.dart';
-import '../model/korea_context_map.dart';
 
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
@@ -328,6 +327,7 @@ class _GangwonStampMap extends StatefulWidget {
 class _GangwonStampMapState extends State<_GangwonStampMap>
     with SingleTickerProviderStateMixin {
   String? _selectedCity;
+  String? _travelFromCity;
   late final AnimationController _travelController;
 
   @override
@@ -346,7 +346,13 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
   }
 
   void _selectCity(String city) {
-    setState(() => _selectedCity = city);
+    if (_selectedCity == city) {
+      return;
+    }
+    setState(() {
+      _travelFromCity = _selectedCity;
+      _selectedCity = city;
+    });
     _travelController.forward(from: 0);
   }
 
@@ -419,9 +425,13 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                         child: AnimatedBuilder(
                           animation: _travelController,
                           builder: (context, _) {
+                            final start = _stampTravelStart(
+                              mapRect,
+                              fromCity: _travelFromCity,
+                            );
                             return CustomPaint(
                               painter: _StampTravelRoutePainter(
-                                start: _stampTravelStart(mapRect),
+                                start: start,
                                 end: _stampRegionAnchor(
                                   selectedRegion,
                                   mapRect,
@@ -455,7 +465,10 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                         child: AnimatedBuilder(
                           animation: _travelController,
                           builder: (context, _) {
-                            final start = _stampTravelStart(mapRect);
+                            final start = _stampTravelStart(
+                              mapRect,
+                              fromCity: _travelFromCity,
+                            );
                             final end = _stampRegionAnchor(
                               selectedRegion,
                               mapRect,
@@ -541,7 +554,6 @@ class _GangwonMapPainter extends CustomPainter {
     final mapRect = _gangwonMapRect(size);
     canvas.drawRect(
         Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
-    _drawKoreaContext(canvas, mapRect);
 
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
@@ -614,49 +626,17 @@ class _GangwonMapPainter extends CustomPainter {
   }
 }
 
-void _drawKoreaContext(Canvas canvas, Rect gangwonRect) {
-  final paths = [
-    for (final polygon in koreaContextPolygons)
-      Path()
-        ..addPolygon(
-          [
-            for (final point in polygon)
-              Offset(
-                gangwonRect.left + point.dx * gangwonRect.width,
-                gangwonRect.top + point.dy * gangwonRect.height,
-              ),
-          ],
-          true,
-        ),
-  ];
-
-  final shadowPaint = Paint()
-    ..color = const Color(0xFF839095).withValues(alpha: 0.12)
-    ..style = PaintingStyle.fill
-    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.8);
-  for (final path in paths) {
-    canvas.drawPath(path.shift(const Offset(6, 8)), shadowPaint);
+Offset _stampTravelStart(
+  Rect mapRect, {
+  String? fromCity,
+}) {
+  if (fromCity != null) {
+    final fromRegion = _findRegion(fromCity);
+    if (fromRegion != null) {
+      return _stampRegionAnchor(fromRegion, mapRect);
+    }
   }
 
-  final fillPaint = Paint()
-    ..color = const Color(0xFFF1F4F2).withValues(alpha: 0.74)
-    ..style = PaintingStyle.fill;
-  for (final path in paths) {
-    canvas.drawPath(path, fillPaint);
-  }
-
-  final linePaint = Paint()
-    ..color = const Color(0xFFB7C1BF).withValues(alpha: 0.48)
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.8
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
-  for (final path in paths) {
-    canvas.drawPath(path, linePaint);
-  }
-}
-
-Offset _stampTravelStart(Rect mapRect) {
   return Offset(
     mapRect.left + mapRect.width * 0.16,
     mapRect.top + mapRect.height * 0.86,
@@ -736,21 +716,8 @@ class _StampTravelCarMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.96),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.13),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const CustomPaint(
-        painter: _StampTravelCarPainter(),
-      ),
+    return const CustomPaint(
+      painter: _StampTravelCarPainter(),
     );
   }
 }
@@ -763,6 +730,9 @@ class _StampTravelCarPainter extends CustomPainter {
     final bodyPaint = Paint()
       ..color = AppColors.primary
       ..style = PaintingStyle.fill;
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.14)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
     final windowPaint = Paint()
       ..color = const Color(0xFFDDF2FA)
       ..style = PaintingStyle.fill;
@@ -787,6 +757,15 @@ class _StampTravelCarPainter extends CustomPainter {
         size.height * 0.22,
       ),
       const Radius.circular(5),
+    );
+    canvas.drawOval(
+      Rect.fromLTWH(
+        size.width * 0.18,
+        size.height * 0.68,
+        size.width * 0.64,
+        size.height * 0.16,
+      ),
+      shadowPaint,
     );
     canvas.drawRRect(body, bodyPaint);
     canvas.drawRRect(roof, bodyPaint);
