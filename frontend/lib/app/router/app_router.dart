@@ -86,6 +86,10 @@ final appRouter = GoRouter(
           builder: (context, state) => const StampBookScreen(),
         ),
         GoRoute(
+          path: '/main/stamps/cities',
+          builder: (context, state) => const CityStampGridScreen(),
+        ),
+        GoRoute(
           path: '/main/potatoes',
           builder: (context, state) => const PotatoCollectionScreen(),
         ),

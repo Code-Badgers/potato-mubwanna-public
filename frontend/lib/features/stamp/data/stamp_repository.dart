@@ -76,9 +76,8 @@ class StampRepository {
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(
-        message: response.message.isEmpty
-            ? '랠리북을 불러오지 못했습니다.'
-            : response.message,
+        message:
+            response.message.isEmpty ? '스탬프 투어를 불러오지 못했습니다.' : response.message,
         code: response.code,
         statusCode: statusCode,
       );

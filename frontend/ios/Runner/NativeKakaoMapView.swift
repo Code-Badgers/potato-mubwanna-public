@@ -23,11 +23,15 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private var isAuthenticated = false
   private var didPrepareEngine = false
   private let spotLayerID = "potatoSpotLayer"
+  private let currentLocationLayerID = "potatoCurrentLocationLayer"
+  private let currentLocationStyleID = "potatoCurrentLocationStyle"
+  private let currentLocationPoiID = "potatoCurrentLocation"
   private let routeLayerID = "potatoRouteLayer"
   private let routeStyleID = "potatoRoutePolylineStyle"
   private let routeShapeID = "potatoRoutePolyline"
-  private var spotStyleByPoiID: [String: (markerColor: String, isRare: Bool)] = [:]
+  private var spotStyleByPoiID: [String: (markerColor: String, isFavorite: Bool)] = [:]
   private var spotIDByPoiID: [String: String] = [:]
+  private var currentLocation: [AnyHashable: Any]?
   private var eventHandlers: [DisposableEventHandler] = []
   private var didRegisterRouteStyle = false
 
@@ -43,6 +47,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     zoomLevel = Self.intValue(params["zoomLevel"]) ?? 9
     spots = Self.spotMaps(from: params["spots"])
     routePolyline = Self.pointMaps(from: params["routePolyline"])
+    currentLocation = Self.pointMap(from: params["currentLocation"])
     container = NativeKakaoMapContainer(frame: frame)
     channel = FlutterMethodChannel(
       name: "potato_mubwanna/kakao_map_\(viewId)",
@@ -59,6 +64,12 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       if call.method == "updateRoutePolyline" {
         self?.routePolyline = Self.pointMaps(from: call.arguments)
         self?.renderRoutePolyline()
+        result(nil)
+        return
+      }
+      if call.method == "updateCurrentLocation" {
+        self?.currentLocation = Self.pointMap(from: call.arguments)
+        self?.renderCurrentLocation()
         result(nil)
         return
       }
@@ -117,6 +128,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
     addSpotPois()
     renderRoutePolyline()
+    renderCurrentLocation()
   }
 
   func poiDidTapped(kakaoMap: KakaoMap, layerID: String, poiID: String, position: MapPoint) {
@@ -237,22 +249,22 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         continue
       }
 
-      let spotID = "\(spot["id"] ?? UUID().uuidString)"
+      let spotID = Self.stringValue(spot["id"]) ?? UUID().uuidString
       let poiID = "potato-\(spotID)"
-      let isRare = Self.boolValue(spot["rare"]) ?? false
-      let markerColor = spot["markerColor"] as? String ?? (isRare ? "#F6C23E" : "#56C787")
+      let isFavorite = Self.boolValue(spot["favorite"]) ?? false
+      let markerColor = spot["markerColor"] as? String ?? (isFavorite ? "#F6C23E" : "#56C787")
       addPoiStyles(
         labelManager: labelManager,
         markerColor: markerColor,
-        isRare: isRare
+        isFavorite: isFavorite
       )
-      let styleID = styleIDFor(markerColor: markerColor, isRare: isRare, sizeKey: "medium")
+      let styleID = styleIDFor(markerColor: markerColor, isFavorite: isFavorite, sizeKey: "medium")
       let option = PoiOptions(
         styleID: styleID,
         poiID: poiID
       )
       option.clickable = true
-      spotStyleByPoiID[poiID] = (markerColor: markerColor, isRare: isRare)
+      spotStyleByPoiID[poiID] = (markerColor: markerColor, isFavorite: isFavorite)
       spotIDByPoiID[poiID] = spotID
       let poi = layer?.addPoi(
         option: option,
@@ -282,7 +294,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     spotStyleByPoiID.forEach { poiID, style in
       let styleID = styleIDFor(
         markerColor: style.markerColor,
-        isRare: style.isRare,
+        isFavorite: style.isFavorite,
         sizeKey: sizeKey
       )
       layer.getPoi(poiID: poiID)?.changeStyle(styleID: styleID, enableTransition: false)
@@ -328,6 +340,43 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     layer.addMapPolylineShape(options)?.show()
   }
 
+  private func renderCurrentLocation() {
+    guard let mapView = mapController?.getView("potatoMap") as? KakaoMap else {
+      return
+    }
+
+    let labelManager = mapView.getLabelManager()
+    let layer = labelManager.getLabelLayer(layerID: currentLocationLayerID) ?? labelManager.addLabelLayer(
+      option: LabelLayerOptions(
+        layerID: currentLocationLayerID,
+        competitionType: .none,
+        competitionUnit: .symbolFirst,
+        orderType: .rank,
+        zOrder: 20
+      )
+    )
+    layer?.clearAllItems()
+    layer?.visible = true
+
+    guard
+      let currentLocation,
+      let latitude = Self.doubleValue(currentLocation["latitude"]),
+      let longitude = Self.doubleValue(currentLocation["longitude"])
+    else {
+      mapView.refresh()
+      return
+    }
+
+    labelManager.addPoiStyle(makeCurrentLocationStyle())
+    let option = PoiOptions(styleID: currentLocationStyleID, poiID: currentLocationPoiID)
+    let poi = layer?.addPoi(
+      option: option,
+      at: MapPoint(longitude: longitude, latitude: latitude)
+    )
+    poi?.show()
+    mapView.refresh()
+  }
+
   private func registerRoutePolylineStyleIfNeeded(_ shapeManager: ShapeManager) {
     guard !didRegisterRouteStyle else {
       return
@@ -358,7 +407,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     return "small"
   }
 
-  private func addPoiStyles(labelManager: LabelManager, markerColor: String, isRare: Bool) {
+  private func addPoiStyles(labelManager: LabelManager, markerColor: String, isFavorite: Bool) {
     let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
     [
       ("small", CGSize(width: 30, height: 34)),
@@ -367,19 +416,20 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     ].forEach { sizeKey, size in
       labelManager.addPoiStyle(
         makePoiStyle(
-          styleID: styleIDFor(markerColor: markerColor, isRare: isRare, sizeKey: sizeKey),
+          styleID: styleIDFor(markerColor: markerColor, isFavorite: isFavorite, sizeKey: sizeKey),
           color: color,
+          isFavorite: isFavorite,
           size: size
         )
       )
     }
   }
 
-  private func styleIDFor(markerColor: String, isRare: Bool, sizeKey: String) -> String {
+  private func styleIDFor(markerColor: String, isFavorite: Bool, sizeKey: String) -> String {
     let colorKey = markerColor
       .replacingOccurrences(of: "#", with: "")
       .replacingOccurrences(of: " ", with: "")
-    return "potato\(colorKey)\(isRare ? "Rare" : "Normal")\(sizeKey)"
+    return "potato\(colorKey)\(isFavorite ? "Favorite" : "Normal")\(sizeKey)"
   }
 
   private func colorFromHex(_ hex: String) -> UIColor? {
@@ -400,10 +450,11 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private func makePoiStyle(
     styleID: String,
     color: UIColor,
+    isFavorite: Bool,
     size: CGSize
   ) -> PoiStyle {
     let iconStyle = PoiIconStyle(
-      symbol: makeMarkerImage(color: color, size: size),
+      symbol: makeMarkerImage(color: color, isFavorite: isFavorite, size: size),
       anchorPoint: CGPoint(x: 0.5, y: 1.0)
     )
     let perLevelStyle = PerLevelPoiStyle(iconStyle: iconStyle, padding: 0, level: 0)
@@ -412,6 +463,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   private func makeMarkerImage(
     color: UIColor,
+    isFavorite: Bool,
     size: CGSize
   ) -> UIImage? {
     let renderer = UIGraphicsImageRenderer(size: size)
@@ -442,7 +494,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         )
       ).fill()
 
-      UIColor.white.withAlphaComponent(0.94).setFill()
+      let bodyColor = isFavorite
+        ? UIColor(red: 1.0, green: 0.969, blue: 0.800, alpha: 0.97)
+        : UIColor.white.withAlphaComponent(0.94)
+      bodyColor.setFill()
       UIBezierPath(ovalIn: bodyRect).fill()
       color.setStroke()
       let bodyPath = UIBezierPath(ovalIn: bodyRect)
@@ -462,6 +517,33 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         height: emojiSize.height
       )
       emoji.draw(in: emojiRect, withAttributes: attributes)
+    }
+  }
+
+  private func makeCurrentLocationStyle() -> PoiStyle {
+    let iconStyle = PoiIconStyle(
+      symbol: makeCurrentLocationImage(size: CGSize(width: 30, height: 30)),
+      anchorPoint: CGPoint(x: 0.5, y: 0.5)
+    )
+    let perLevelStyle = PerLevelPoiStyle(iconStyle: iconStyle, padding: 0, level: 0)
+    return PoiStyle(styleID: currentLocationStyleID, styles: [perLevelStyle])
+  }
+
+  private func makeCurrentLocationImage(size: CGSize) -> UIImage? {
+    let renderer = UIGraphicsImageRenderer(size: size)
+    return renderer.image { _ in
+      UIColor(red: 0.184, green: 0.502, blue: 0.929, alpha: 0.18).setFill()
+      UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).fill()
+
+      UIColor.white.setFill()
+      UIBezierPath(
+        ovalIn: CGRect(x: 7, y: 7, width: size.width - 14, height: size.height - 14)
+      ).fill()
+
+      UIColor(red: 0.184, green: 0.502, blue: 0.929, alpha: 1).setFill()
+      UIBezierPath(
+        ovalIn: CGRect(x: 10, y: 10, width: size.width - 20, height: size.height - 20)
+      ).fill()
     }
   }
 
@@ -492,6 +574,27 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     return []
   }
 
+  private static func pointMap(from value: Any?) -> [AnyHashable: Any]? {
+    if let map = value as? [AnyHashable: Any] {
+      return map
+    }
+    if let map = value as? [String: Any] {
+      return Dictionary(uniqueKeysWithValues: map.map { (AnyHashable($0.key), $0.value) })
+    }
+    if let dictionary = value as? NSDictionary {
+      var result: [AnyHashable: Any] = [:]
+      dictionary.forEach { key, value in
+        if let hashableKey = key as? AnyHashable {
+          result[hashableKey] = value
+        } else if let stringKey = key as? String {
+          result[AnyHashable(stringKey)] = value
+        }
+      }
+      return result
+    }
+    return nil
+  }
+
   private static func doubleValue(_ value: Any?) -> Double? {
     if let double = value as? Double {
       return double
@@ -514,6 +617,16 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     }
     if let string = value as? String {
       return Int(string)
+    }
+    return nil
+  }
+
+  private static func stringValue(_ value: Any?) -> String? {
+    if let string = value as? String {
+      return string
+    }
+    if let number = value as? NSNumber {
+      return number.stringValue
     }
     return nil
   }

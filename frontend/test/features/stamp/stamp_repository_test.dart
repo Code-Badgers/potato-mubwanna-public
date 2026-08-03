@@ -159,7 +159,7 @@ void main() {
     );
   });
 
-  test('throws ApiException when a rallybook response fails', () async {
+  test('throws ApiException when a stamp tour response fails', () async {
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
       ..interceptors.add(
         InterceptorsWrapper(
@@ -170,7 +170,7 @@ void main() {
                 statusCode: 200,
                 data: {
                   'success': false,
-                  'message': '랠리북을 불러오지 못했습니다.',
+                  'message': '스탬프 투어를 불러오지 못했습니다.',
                   'data': null,
                 },
               ),
@@ -185,7 +185,7 @@ void main() {
         isA<ApiException>().having(
           (error) => error.message,
           'message',
-          '랠리북을 불러오지 못했습니다.',
+          '스탬프 투어를 불러오지 못했습니다.',
         ),
       ),
     );

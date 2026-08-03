@@ -138,7 +138,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('shows visit success sheet with acquired potato', (tester) async {
+  testWidgets('shows visit success sheet without potato acquisition copy', (
+    tester,
+  ) async {
     await _setMobileViewport(tester);
     final repository = _FakeVisitVerificationRepository(result: _visitResult);
 
@@ -161,9 +163,9 @@ void main() {
     expect(find.byKey(const ValueKey('visit-result-sheet')), findsOneWidget);
     expect(find.text('인증 성공'), findsOneWidget);
     expect(find.text('지역 스탬프 획득'), findsOneWidget);
-    expect(find.text('황금감자'), findsOneWidget);
-    expect(find.text('강원특별자치도 · 희귀도 영웅'), findsOneWidget);
-    expect(find.text('도감 보기'), findsOneWidget);
+    expect(find.text('황금감자'), findsNothing);
+    expect(find.text('강원특별자치도 · 희귀도 영웅'), findsNothing);
+    expect(find.text('도감 보기'), findsNothing);
     expect(find.text('다음 장소 추천'), findsOneWidget);
   });
 

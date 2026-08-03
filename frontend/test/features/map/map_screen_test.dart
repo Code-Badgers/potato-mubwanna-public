@@ -65,7 +65,8 @@ void main() {
                     top: 180,
                     child: TextButton(
                       key: ValueKey('marker-${spots[index].id}'),
-                      onPressed: () => onSpotSelected(spots[index].id),
+                      onPressed: () => onSpotSelected(
+                          'Optional(potato-${spots[index].id}.0)'),
                       child: Text('마커 ${spots[index].id}'),
                     ),
                   ),
@@ -138,10 +139,43 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('marker-2')));
     await tester.pump();
+    await tester.ensureVisible(find.text('상세보기'));
+    await tester.pump();
     await tester.tap(find.text('상세보기'));
     await tester.pumpAndSettle();
 
     expect(find.text('상세 2'), findsOneWidget);
+  });
+
+  testWidgets('keeps all category spots visible when a spot is bookmarked', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'2'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id).toSet(), {'1', '2', '3', '4'});
+    expect(find.text('내 동선 1곳'), findsOneWidget);
   });
 
   testWidgets('opens Kakao Map directions for the selected spot', (
@@ -170,6 +204,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('길찾기'));
+    await tester.pump();
     await tester.tap(find.text('길찾기'));
     await tester.pump();
 
@@ -243,6 +279,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('길찾기'));
+    await tester.pump();
     await tester.tap(find.text('길찾기'));
     await tester.pump();
 

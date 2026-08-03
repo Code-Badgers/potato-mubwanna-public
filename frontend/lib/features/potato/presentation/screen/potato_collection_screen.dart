@@ -414,71 +414,71 @@ class _RepresentativePotatoCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '대표 감자',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      potato?.name ?? '아직 대표 감자가 없어요',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (potato == null)
-                      const Text(
-                        '감자 스팟을 방문해 첫 감자를 모아보세요.',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          height: 1.35,
-                          letterSpacing: 0,
-                        ),
-                      )
-                    else
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          _RarityBadge(rarity: potato.rarity),
-                          _MetaChip(label: potato.region),
-                          _MetaChip(label: 'Lv.${potato.level}'),
-                        ],
-                      ),
-                  ],
+          Center(
+            child: _PotatoArtSlot(
+              item: potato,
+              locked: potato == null || !potato.acquired,
+              size: 204,
+              framed: false,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            potato?.name ?? '아직 대표 감자가 없어요',
+            textAlign: potato == null ? TextAlign.center : TextAlign.start,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (potato == null)
+            const Center(
+              child: Text(
+                '감자 스팟을 방문해 첫 감자를 모아보세요. 수집한 감자는 대표 감자로 세울 수 있어요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 1.45,
+                  letterSpacing: 0,
                 ),
               ),
-              const SizedBox(width: 16),
-              _PotatoArtSlot(
-                item: potato,
-                locked: potato == null || !potato.acquired,
-                size: 128,
-                framed: false,
+            )
+          else ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _RarityBadge(rarity: potato.rarity),
+                _MetaChip(label: potato.region),
+                _MetaChip(label: 'Lv.${potato.level}'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              potato.description.isEmpty
+                  ? '${potato.region}에서 만난 감자예요. 감자걸음을 쌓으면 더 단단하게 성장합니다.'
+                  : potato.description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 1.45,
+                letterSpacing: 0,
               ),
-            ],
-          ),
+            ),
+          ],
           const SizedBox(height: 16),
           Row(
             children: [
@@ -539,9 +539,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
-                  onPressed: acquiredCount == 0 || updating
-                      ? null
-                      : onChangeRepresentative,
+                  onPressed: updating ? null : onChangeRepresentative,
                   style: FilledButton.styleFrom(
                     backgroundColor: _potatoPrimary,
                     disabledBackgroundColor: const Color(0xFFBFE5CC),
@@ -890,24 +888,6 @@ class _TodayStepCardContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _StepSummaryTile(
-                  label: '이번 주',
-                  value: '${summary.weeklyDistanceKm.toStringAsFixed(1)} km',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _StepSummaryTile(
-                  label: '이번 달',
-                  value: '${summary.monthlyDistanceKm.toStringAsFixed(1)} km',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(999)),
             child: LinearProgressIndicator(
@@ -976,54 +956,6 @@ class _InlineErrorState extends StatelessWidget {
   }
 }
 
-class _StepSummaryTile extends StatelessWidget {
-  const _StepSummaryTile({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FBF5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _potatoLine),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _PotatoArtSlot extends StatelessWidget {
   const _PotatoArtSlot({
     required this.item,
@@ -1056,14 +988,22 @@ class _PotatoArtSlot extends StatelessWidget {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
           );
+    final alignedImage = locked
+        ? Transform.translate(
+            offset: Offset(size * 0.092, size * 0.033),
+            child: image,
+          )
+        : image;
 
     if (!framed) {
       return SizedBox(
         width: size,
         height: size,
-        child: Padding(
-          padding: EdgeInsets.all(size * 0.02),
-          child: image,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(size * 0.02),
+            child: alignedImage,
+          ),
         ),
       );
     }
@@ -1077,7 +1017,12 @@ class _PotatoArtSlot extends StatelessWidget {
         border: Border.all(color: locked ? _potatoLine : _potatoYellow),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Padding(padding: EdgeInsets.all(size * 0.12), child: image),
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.12),
+          child: alignedImage,
+        ),
+      ),
     );
   }
 }
@@ -1209,24 +1154,75 @@ class _RepresentativePotatoSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: acquiredItems.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 0.76,
+          if (acquiredItems.isEmpty)
+            const _RepresentativePotatoEmpty()
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: acquiredItems.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 0.76,
+              ),
+              itemBuilder: (context, index) {
+                final item = acquiredItems[index];
+                return _RepresentativePotatoOption(
+                  item: item,
+                  onShowDetail: () => onShowDetail(item),
+                  onSelect: () => onSelect(item),
+                );
+              },
             ),
-            itemBuilder: (context, index) {
-              final item = acquiredItems[index];
-              return _RepresentativePotatoOption(
-                item: item,
-                onShowDetail: () => onShowDetail(item),
-                onSelect: () => onSelect(item),
-              );
-            },
+        ],
+      ),
+    );
+  }
+}
+
+class _RepresentativePotatoEmpty extends StatelessWidget {
+  const _RepresentativePotatoEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _potatoPrimary.withValues(alpha: 0.24)),
+      ),
+      child: const Column(
+        children: [
+          Icon(
+            Icons.lock_open_rounded,
+            color: _potatoDark,
+            size: 30,
+          ),
+          SizedBox(height: 10),
+          Text(
+            '아직 변경할 감자가 없어요',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            '지도에서 감자 스팟을 방문하고 첫 감자를 수집하면 대표 감자를 선택할 수 있어요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              height: 1.45,
+              letterSpacing: 0,
+            ),
           ),
         ],
       ),

@@ -368,27 +368,31 @@ class _QuickActionGrid extends StatelessWidget {
       _QuickAction(
         icon: Icons.card_giftcard_rounded,
         label: '보상함',
+        key: const ValueKey('mypage-quick-action-coupons'),
         onTap: () => context.push('/coupons'),
       ),
       _QuickAction(
         icon: Icons.menu_book_rounded,
         label: '여행 기록',
+        key: const ValueKey('mypage-quick-action-travel-records'),
         onTap: () => context.push('/travel-records'),
       ),
       _QuickAction(
-        icon: Icons.eco_rounded,
-        label: '감자 도감',
-        onTap: () => context.go('/main/potato'),
+        icon: Icons.grid_view_rounded,
+        label: '스탬프 투어',
+        key: const ValueKey('mypage-quick-action-stamp-tour'),
+        onTap: () => context.go('/main/stamps/cities'),
       ),
     ];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var index = 0; index < actions.length; index++) ...[
             Expanded(child: _QuickActionCard(action: actions[index])),
-            if (index < actions.length - 1) const SizedBox(width: 12),
+            if (index < actions.length - 1) const SizedBox(width: 8),
           ],
         ],
       ),
@@ -407,11 +411,12 @@ class _QuickActionCard extends StatelessWidget {
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
+        key: action.key,
         onTap: action.onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          height: 96,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          height: 92,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.line),
@@ -426,8 +431,17 @@ class _QuickActionCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(action.icon, color: AppColors.primaryDark, size: 28),
-              const SizedBox(height: 10),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryTint,
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    Icon(action.icon, color: AppColors.primaryDark, size: 21),
+              ),
+              const SizedBox(height: 9),
               Text(
                 action.label,
                 maxLines: 1,
@@ -435,7 +449,7 @@ class _QuickActionCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
@@ -505,6 +519,7 @@ class _MenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
+      key: item.isSettings ? const ValueKey('mypage-menu-settings') : null,
       onTap: onTap,
       child: SizedBox(
         height: 64,
@@ -545,11 +560,13 @@ class _QuickAction {
   const _QuickAction({
     required this.icon,
     required this.label,
+    required this.key,
     this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final Key key;
   final VoidCallback? onTap;
 }
 

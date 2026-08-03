@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/config/app_environment.dart';
@@ -13,6 +15,7 @@ import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import '../../domain/spot_recommendation.dart';
 import '../widget/kakao_map_view.dart';
+import '../widget/map_spot_selection_message.dart';
 
 typedef MapViewBuilder = Widget Function(
   List<MapSpot> spots,
@@ -44,7 +47,7 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
   String? _selectedSpotId;
-  bool _showFavoriteRouteOnly = false;
+  FavoriteSpotRoutePoint? _currentLocation;
 
   static const _categories = [
     _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
@@ -64,9 +67,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return spots.where((spot) {
       final matchesCategory = selectedCategory == '전체' ||
           spot.matchesCategoryLabel(selectedCategory);
-      final matchesFavoriteRoute =
-          !_showFavoriteRouteOnly || favoriteSpotIds.contains(spot.id);
-      return matchesCategory && matchesFavoriteRoute;
+      return matchesCategory;
     }).toList();
   }
 
@@ -159,16 +160,49 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
-  void _toggleFavoriteRouteOnly() {
-    setState(() {
-      _showFavoriteRouteOnly = !_showFavoriteRouteOnly;
-      _selectedSpotId = null;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_loadCurrentLocation());
     });
   }
 
+  Future<void> _loadCurrentLocation() async {
+    if (kIsWeb) {
+      return;
+    }
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _currentLocation = FavoriteSpotRoutePoint(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+      });
+    } catch (_) {
+      // 현재 위치는 지도 보조 정보라 실패해도 감자 스팟 탐색 흐름은 유지한다.
+    }
+  }
+
   void _selectSpotById(String spotId) {
+    final normalizedSpotId = mapSpotIdFromSelectionMessage(spotId);
+    if (normalizedSpotId == null) {
+      return;
+    }
     setState(() {
-      _selectedSpotId = spotId;
+      _selectedSpotId = normalizedSpotId;
     });
   }
 
@@ -295,6 +329,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           child: _PotatoMapPreview(
                             spots: visibleSpots,
                             routePolyline: recommendedRoutePolyline,
+                            favoriteSpotIds: favoriteSpotIds,
+                            currentLocation: _currentLocation,
                             onSpotSelected: _selectSpotById,
                             mapViewBuilder: widget.mapViewBuilder,
                           ),
@@ -313,9 +349,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               ),
                               const SizedBox(height: 10),
                               _RouteModeChip(
-                                enabled: _showFavoriteRouteOnly,
                                 favoriteCount: favoriteSpotIds.length,
-                                onTap: _toggleFavoriteRouteOnly,
                               ),
                               if (recommendationSourceSpotId != null) ...[
                                 const SizedBox(height: 10),
@@ -337,6 +371,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           )
                         else
                           _RouteRecommendationSheet(
+                            key: ValueKey('route-sheet-${selectedSpot.id}'),
                             selectedSpot: selectedSpot,
                             routeSpots: recommendedRouteSpots,
                             routeDistanceKm: recommendedRouteDistanceKm,
@@ -398,6 +433,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
 class _RouteRecommendationSheet extends StatelessWidget {
   const _RouteRecommendationSheet({
+    super.key,
     required this.selectedSpot,
     required this.routeSpots,
     required this.routeDistanceKm,
@@ -573,6 +609,8 @@ class _SelectedSpotSummary extends StatelessWidget {
                       letterSpacing: 0,
                     ),
                   ),
+                  const SizedBox(height: 9),
+                  _CongestionBadge(label: spot.congestionLabel),
                 ],
               ),
             ),
@@ -588,12 +626,9 @@ class _SelectedSpotSummary extends StatelessWidget {
               ),
               tooltip: isFavorite ? '동선에서 제거' : '내 동선에 추가',
             ),
-            const SizedBox(width: 8),
-            _CongestionBadge(label: spot.congestionLabel),
           ],
         ),
         const SizedBox(height: 12),
-        if (spot.isRare) const _RarePotatoLine() else const _NormalPotatoLine(),
         if (favoriteCount > 0) ...[
           const SizedBox(height: 10),
           _FavoriteRouteLine(count: favoriteCount),
@@ -923,49 +958,39 @@ class _RouteConnector extends StatelessWidget {
 
 class _RouteModeChip extends StatelessWidget {
   const _RouteModeChip({
-    required this.enabled,
     required this.favoriteCount,
-    required this.onTap,
   });
 
-  final bool enabled;
   final int favoriteCount;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = enabled ? AppColors.cream : Colors.white;
-    final foregroundColor = enabled ? AppColors.textPrimary : _mapDark;
     return Material(
-      color: backgroundColor.withValues(alpha: 0.96),
+      color: Colors.white.withValues(alpha: 0.96),
       borderRadius: BorderRadius.circular(999),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                enabled ? Icons.route_rounded : Icons.bookmark_border_rounded,
-                size: 18,
-                color: enabled ? _rareGold : _mapDark,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.bookmark_border_rounded,
+              size: 18,
+              color: _mapDark,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              '내 동선 $favoriteCount곳',
+              style: const TextStyle(
+                color: _mapDark,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
               ),
-              const SizedBox(width: 7),
-              Text(
-                enabled ? '내 동선만 보기' : '내 동선 $favoriteCount곳',
-                style: TextStyle(
-                  color: foregroundColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -976,12 +1001,16 @@ class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
     required this.spots,
     required this.routePolyline,
+    required this.favoriteSpotIds,
+    required this.currentLocation,
     required this.onSpotSelected,
     this.mapViewBuilder,
   });
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final Set<String> favoriteSpotIds;
+  final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String> onSpotSelected;
   final MapViewBuilder? mapViewBuilder;
 
@@ -998,6 +1027,8 @@ class _PotatoMapPreview extends StatelessWidget {
                   KakaoMapView(
                     spots: spots,
                     routePolyline: routePolyline,
+                    favoriteSpotIds: favoriteSpotIds,
+                    currentLocation: currentLocation,
                     onSpotSelected: onSpotSelected,
                   ),
             ),
@@ -1124,52 +1155,6 @@ class _CongestionBadge extends StatelessWidget {
           letterSpacing: 0,
         ),
       ),
-    );
-  }
-}
-
-class _RarePotatoLine extends StatelessWidget {
-  const _RarePotatoLine();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Icon(Icons.star_rounded, color: _rareGold, size: 19),
-        SizedBox(width: 6),
-        Text(
-          '희귀 감자 출현 가능',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NormalPotatoLine extends StatelessWidget {
-  const _NormalPotatoLine();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Icon(Icons.eco_rounded, color: _mapPrimary, size: 18),
-        SizedBox(width: 6),
-        Text(
-          '방문 인증 시 지역 감자 획득',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
     );
   }
 }

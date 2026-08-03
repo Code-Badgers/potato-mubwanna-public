@@ -20,11 +20,15 @@ class KakaoMapView extends StatefulWidget {
     super.key,
     required this.spots,
     this.routePolyline = const [],
+    this.favoriteSpotIds = const {},
+    this.currentLocation,
     this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final Set<String> favoriteSpotIds;
+  final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String>? onSpotSelected;
 
   @override
@@ -119,7 +123,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   void didUpdateWidget(covariant KakaoMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.spots == widget.spots &&
-        oldWidget.routePolyline == widget.routePolyline) {
+        oldWidget.favoriteSpotIds == widget.favoriteSpotIds &&
+        oldWidget.routePolyline == widget.routePolyline &&
+        oldWidget.currentLocation == widget.currentLocation) {
       return;
     }
     _injectKakaoMapScript();
@@ -241,12 +247,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'id': spot.id,
               'lat': spot.latitude,
               'lng': spot.longitude,
-              'rare': spot.isRare,
-              'markerColor': spot.isRecommended
-                  ? spot.markerColorHex
-                  : spot.isRare
-                      ? '#F6C23E'
-                      : spot.markerColorHex,
+              'favorite': widget.favoriteSpotIds.contains(spot.id),
+              'markerColor': widget.favoriteSpotIds.contains(spot.id)
+                  ? '#F6C23E'
+                  : spot.markerColorHex,
             })
         .toList());
     final routePolyline = jsonEncode(widget.routePolyline
@@ -255,6 +259,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'lng': point.longitude,
             })
         .toList());
+    final currentLocation = jsonEncode(widget.currentLocation == null
+        ? null
+        : {
+            'lat': widget.currentLocation!.latitude,
+            'lng': widget.currentLocation!.longitude,
+          });
 
     final script = html.ScriptElement()
       ..type = 'text/javascript'
@@ -280,10 +290,14 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     try {
       const spots = $spots;
       const routePolyline = $routePolyline;
+      const currentLocation = $currentLocation;
       if (mapElement.__potatoRenderSpots) {
         mapElement.__potatoRenderSpots(spots);
         if (mapElement.__potatoRenderRoutePolyline) {
           mapElement.__potatoRenderRoutePolyline(routePolyline);
+        }
+        if (mapElement.__potatoRenderCurrentLocation) {
+          mapElement.__potatoRenderCurrentLocation(currentLocation);
         }
         return;
       }
@@ -311,6 +325,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       const markerElements = [];
       let markerOverlays = [];
       let routePolylineOverlay = null;
+      let currentLocationOverlay = null;
 
       function markerScale(level) {
         return Math.max(0.52, Math.min(0.88, 1.05 - ((level - 4) * 0.10)));
@@ -349,6 +364,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerElement.style.padding = '0';
           markerElement.style.transformOrigin = '50% 100%';
           markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
+          markerElement.dataset.defaultBodyBackground = spot.favorite
+            ? 'rgba(255, 247, 204, 0.97)'
+            : 'rgba(255, 255, 255, 0.92)';
           markerElement.style.transform = 'scale(1)';
 
           const markerBody = document.createElement('span');
@@ -358,7 +376,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerBody.style.width = '36px';
           markerBody.style.height = '36px';
           markerBody.style.borderRadius = '999px';
-          markerBody.style.background = 'rgba(255, 255, 255, 0.92)';
+          markerBody.style.background = markerElement.dataset.defaultBodyBackground;
           markerBody.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
           markerBody.style.boxShadow = '0 10px 22px rgba(32,35,26,0.18), inset 0 0 0 1px rgba(255,255,255,0.7)';
           markerBody.style.display = 'flex';
@@ -387,20 +405,33 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerBody.appendChild(markerEmoji);
           markerElement.appendChild(markerTip);
           markerElement.appendChild(markerBody);
-          markerElement.addEventListener('click', function () {
+          function selectSpot(event) {
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
             if (selectedMarkerElement) {
               selectedMarkerElement.children[0].style.background =
                 selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
               selectedMarkerElement.children[1].style.borderColor =
                 selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
+              selectedMarkerElement.children[1].style.background =
+                selectedMarkerElement.dataset.defaultBodyBackground || 'rgba(255, 255, 255, 0.92)';
             }
-            markerTip.style.background = '#F6C23E';
-            markerBody.style.borderColor = '#F6C23E';
+            const selectedColor = spot.favorite ? '#F6C23E' : '#509B64';
+            markerTip.style.background = selectedColor;
+            markerBody.style.borderColor = selectedColor;
+            markerBody.style.background = spot.favorite
+              ? 'rgba(255, 247, 204, 0.98)'
+              : 'rgba(255, 255, 255, 0.96)';
             selectedMarkerElement = markerElement;
             window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
               detail: { spotId: String(spot.id) }
             }));
-          });
+          }
+          markerElement.addEventListener('click', selectSpot);
+          markerElement.addEventListener('pointerup', selectSpot);
+          markerElement.addEventListener('touchend', selectSpot);
           markerElements.push(markerElement);
 
           const overlay = new window.kakao.maps.CustomOverlay({
@@ -435,10 +466,37 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         routePolylineOverlay.setMap(map);
       }
 
+      function renderCurrentLocation(location) {
+        if (currentLocationOverlay) {
+          currentLocationOverlay.setMap(null);
+          currentLocationOverlay = null;
+        }
+        if (!location) {
+          return;
+        }
+        const locationElement = document.createElement('span');
+        locationElement.style.display = 'block';
+        locationElement.style.width = '18px';
+        locationElement.style.height = '18px';
+        locationElement.style.borderRadius = '999px';
+        locationElement.style.background = '#2F80ED';
+        locationElement.style.border = '3px solid #FFFFFF';
+        locationElement.style.boxShadow = '0 0 0 8px rgba(47,128,237,0.18), 0 8px 18px rgba(32,35,26,0.18)';
+        currentLocationOverlay = new window.kakao.maps.CustomOverlay({
+          position: new window.kakao.maps.LatLng(location.lat, location.lng),
+          content: locationElement,
+          xAnchor: 0.5,
+          yAnchor: 0.5
+        });
+        currentLocationOverlay.setMap(map);
+      }
+
       mapElement.__potatoRenderSpots = renderSpots;
       mapElement.__potatoRenderRoutePolyline = renderRoutePolyline;
+      mapElement.__potatoRenderCurrentLocation = renderCurrentLocation;
       renderSpots(spots);
       renderRoutePolyline(routePolyline);
+      renderCurrentLocation(currentLocation);
 
       window.kakao.maps.event.addListener(map, 'zoom_changed', applyMarkerScale);
 

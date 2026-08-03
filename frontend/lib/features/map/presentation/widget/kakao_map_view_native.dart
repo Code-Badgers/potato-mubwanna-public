@@ -17,11 +17,15 @@ class KakaoMapView extends StatefulWidget {
     super.key,
     required this.spots,
     this.routePolyline = const [],
+    this.favoriteSpotIds = const {},
+    this.currentLocation,
     this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final Set<String> favoriteSpotIds;
+  final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String>? onSpotSelected;
 
   @override
@@ -37,12 +41,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
             'name': spot.name,
             'latitude': spot.latitude,
             'longitude': spot.longitude,
-            'rare': spot.isRare,
-            'markerColor': spot.isRecommended
-                ? spot.markerColorHex
-                : spot.isRare
-                    ? '#F6C23E'
-                    : spot.markerColorHex,
+            'favorite': widget.favoriteSpotIds.contains(spot.id),
+            'markerColor': widget.favoriteSpotIds.contains(spot.id)
+                ? '#F6C23E'
+                : spot.markerColorHex,
           })
       .toList();
 
@@ -53,12 +55,24 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           })
       .toList();
 
+  Map<String, Object>? get _currentLocationPayload {
+    final location = widget.currentLocation;
+    if (location == null) {
+      return null;
+    }
+    return {
+      'latitude': location.latitude,
+      'longitude': location.longitude,
+    };
+  }
+
   @override
   void didUpdateWidget(covariant KakaoMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
     final channel = _channel;
     if (channel != null) {
-      if (oldWidget.spots != widget.spots) {
+      if (oldWidget.spots != widget.spots ||
+          oldWidget.favoriteSpotIds != widget.favoriteSpotIds) {
         unawaited(channel.invokeMethod<void>('updateSpots', _spotPayload));
       }
       if (oldWidget.routePolyline != widget.routePolyline) {
@@ -66,6 +80,14 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           channel.invokeMethod<void>(
             'updateRoutePolyline',
             _routePolylinePayload,
+          ),
+        );
+      }
+      if (oldWidget.currentLocation != widget.currentLocation) {
+        unawaited(
+          channel.invokeMethod<void>(
+            'updateCurrentLocation',
+            _currentLocationPayload,
           ),
         );
       }
@@ -88,6 +110,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       'spots': _spotPayload,
       'routePolyline': _routePolylinePayload,
     };
+    final currentLocation = _currentLocationPayload;
+    if (currentLocation != null) {
+      creationParams['currentLocation'] = currentLocation;
+    }
 
     if (Platform.isAndroid) {
       return AndroidView(

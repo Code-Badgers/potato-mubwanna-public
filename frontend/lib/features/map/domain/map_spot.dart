@@ -88,9 +88,6 @@ class MapSpot {
   }
 
   String get markerColorHex {
-    if (isRecommended || isRare) {
-      return '#F6C23E';
-    }
     return '#56C787';
   }
 

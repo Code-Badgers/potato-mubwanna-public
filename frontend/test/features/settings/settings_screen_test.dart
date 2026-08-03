@@ -77,6 +77,48 @@ void main() {
     expect(find.text('허용됨'), findsNWidgets(2));
   });
 
+  testWidgets('requests location permission from settings action',
+      (tester) async {
+    final service = _FakePermissionService(
+      location: PermissionStatus.denied,
+      notification: PermissionStatus.granted,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: SettingsScreen(permissionService: service)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '허용하기'));
+    await tester.pumpAndSettle();
+
+    expect(service.locationRequestCalls, 1);
+    expect(find.text('허용됨'), findsNWidgets(2));
+  });
+
+  testWidgets('shows a guide when location permission remains denied',
+      (tester) async {
+    final service = _FakePermissionService(
+      location: PermissionStatus.denied,
+      notification: PermissionStatus.granted,
+      grantLocationOnRequest: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: SettingsScreen(permissionService: service)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '허용하기'));
+    await tester.pumpAndSettle();
+
+    expect(service.locationRequestCalls, 1);
+    expect(
+      find.text('위치 권한이 허용되지 않았습니다. 주변 탐색과 방문 인증이 제한됩니다.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('opens system settings for a permanently denied permission',
       (tester) async {
     final service = _FakePermissionService(
@@ -190,6 +232,7 @@ class _FakePermissionService extends PermissionService {
     this.supportsRuntimePermissions = true,
     required this.location,
     required this.notification,
+    this.grantLocationOnRequest = true,
   });
 
   @override
@@ -197,8 +240,10 @@ class _FakePermissionService extends PermissionService {
 
   PermissionStatus location;
   PermissionStatus notification;
+  bool grantLocationOnRequest;
   int locationStatusCalls = 0;
   int notificationStatusCalls = 0;
+  int locationRequestCalls = 0;
   int notificationRequestCalls = 0;
   int openSettingsCalls = 0;
 
@@ -212,6 +257,15 @@ class _FakePermissionService extends PermissionService {
   Future<PermissionStatus> notificationStatus() async {
     notificationStatusCalls++;
     return notification;
+  }
+
+  @override
+  Future<PermissionStatus> requestLocation() async {
+    locationRequestCalls++;
+    if (grantLocationOnRequest) {
+      location = PermissionStatus.granted;
+    }
+    return location;
   }
 
   @override

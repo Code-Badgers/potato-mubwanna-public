@@ -9,10 +9,7 @@ String? mapSpotIdFromSelectionMessage(Object? message) {
   if (spotId == null || spotId.isEmpty) {
     return null;
   }
-  if (spotId.startsWith('potato-')) {
-    return spotId.substring('potato-'.length);
-  }
-  return spotId;
+  return _normalizeSpotId(spotId);
 }
 
 String? _spotIdFromPayload(Map<Object?, Object?> payload) {
@@ -21,4 +18,18 @@ String? _spotIdFromPayload(Map<Object?, Object?> payload) {
       payload['id'] ??
       payload['poiID'];
   return value?.toString();
+}
+
+String _normalizeSpotId(String value) {
+  var spotId = value.trim();
+  if (spotId.startsWith('Optional(') && spotId.endsWith(')')) {
+    spotId = spotId.substring('Optional('.length, spotId.length - 1).trim();
+  }
+  if (spotId.startsWith('potato-')) {
+    spotId = spotId.substring('potato-'.length);
+  }
+  if (spotId.endsWith('.0')) {
+    spotId = spotId.substring(0, spotId.length - 2);
+  }
+  return spotId;
 }
