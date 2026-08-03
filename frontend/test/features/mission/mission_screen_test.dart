@@ -65,10 +65,14 @@ void main() {
     await _pumpMissionScreen(tester);
 
     expect(find.text('미션'), findsNothing);
+    expect(find.text('오늘의 미션'), findsNothing);
+    expect(find.text('0 / 4'), findsNothing);
     expect(find.text('점순이의 미션'), findsOneWidget);
-    expect(find.text('0 / 3'), findsOneWidget);
-    expect(find.text('점순이'), findsNothing);
+    expect(find.text('오늘의 일일 미션'), findsOneWidget);
     expect(find.textContaining('볼까요?'), findsWidgets);
+    expect(find.textContaining('코인'), findsNothing);
+    expect(find.textContaining('쿠폰'), findsNothing);
+    expect(find.textContaining('CP_'), findsNothing);
     expect(find.text('전체 미션 보기'), findsNothing);
     expect(find.text('일일'), findsNothing);
     expect(find.text('주간'), findsNothing);
@@ -80,9 +84,10 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
-    expect(find.text('사진 한 장 남겨볼까요?'), findsOneWidget);
     expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
+    expect(find.text('숨은 QR을 찾아볼까요?'), findsOneWidget);
 
+    expect(find.text('특별 미션 시작'), findsOneWidget);
     expect(find.text('속초 시장 QR 찾기'), findsNothing);
     expect(find.text('시군 2곳 방문하기'), findsNothing);
   });
@@ -93,16 +98,17 @@ void main() {
 
     await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
 
-    expect(find.text('미션 카드'), findsOneWidget);
-    expect(find.text('마을 안내'), findsOneWidget);
-    expect(find.text('도전 조건'), findsOneWidget);
-    expect(find.text('퀴즈 풀기'), findsOneWidget);
-    expect(find.textContaining('황금감자 성장 아이템'), findsOneWidget);
+    expect(find.text('미션 상세'), findsOneWidget);
+    expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('문제 미리보기'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('문제 미리보기'), findsOneWidget);
+    expect(find.byTooltip('저장'), findsNothing);
 
-    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('곤드레감자'));
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, '곤드레감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
@@ -124,16 +130,13 @@ void main() {
 
     await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
 
-    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('옥수수감자'));
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, '옥수수감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('정답이 틀렸습니다. 다시 풀어주세요.'), findsOneWidget);
     expect(find.text('미션 완료!'), findsNothing);
-    expect(repository.completeCallCount, 1);
+    expect(repository.completeCallCount, 0);
   });
 
   testWidgets('does not complete step mission before target progress',
@@ -178,11 +181,10 @@ void main() {
       repository: repository,
       inputService: inputService,
       uploadRepository: uploadRepository,
+      visitEntryMissionId: '1002',
     );
 
-    await _openMission(tester, '사진 한 장 남겨볼까요?');
-
-    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.tap(find.widgetWithText(FilledButton, '사진 찍기'));
     await tester.pumpAndSettle();
     expect(find.text('카메라로 촬영하기'), findsOneWidget);
     expect(find.text('갤러리에서 선택하기'), findsOneWidget);
@@ -223,11 +225,10 @@ void main() {
         ),
       ),
       uploadRepository: uploadRepository,
+      visitEntryMissionId: '1002',
     );
 
-    await _openMission(tester, '사진 한 장 남겨볼까요?');
-
-    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.tap(find.widgetWithText(FilledButton, '사진 찍기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('갤러리에서 선택하기'));
     await tester.pumpAndSettle();
@@ -246,11 +247,10 @@ void main() {
       inputService: _FakeMissionNativeInputService(
         photoError: const MissionInputException('카메라 권한이 필요합니다.'),
       ),
+      visitEntryMissionId: '1002',
     );
 
-    await _openMission(tester, '사진 한 장 남겨볼까요?');
-
-    await tester.tap(find.widgetWithText(FilledButton, '촬영 인증하기'));
+    await tester.tap(find.widgetWithText(FilledButton, '사진 찍기'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('카메라로 촬영하기'));
     await tester.pumpAndSettle();
@@ -292,10 +292,7 @@ void main() {
 
     await _openMission(tester, '가벼운 퀴즈 하나 풀어볼까요?');
 
-    await tester.tap(find.widgetWithText(FilledButton, '퀴즈 풀기'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('곤드레감자'));
-    await tester.pumpAndSettle();
+    await _tapVisibleText(tester, '곤드레감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
     await tester.pumpAndSettle();
 
@@ -311,12 +308,15 @@ void main() {
     await _pumpMissionScreen(
       tester,
       repository: repository,
-      visitEntryMissionId: 'weekly-cities',
+      inputService: _FakeMissionNativeInputService(
+        qrCode: _sokchoMissionQrPayload,
+      ),
+      visitEntryMissionId: '1003',
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, '미션 인증하기'));
+    await tester.tap(find.widgetWithText(FilledButton, 'QR 스캔하기'));
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, '미션 인증하기'));
+    await tester.tap(find.widgetWithText(FilledButton, '처리 중...'));
     await tester.pumpAndSettle();
 
     expect(repository.completeCallCount, 1);
@@ -344,7 +344,9 @@ void main() {
 
     expect(find.text('스탬프 1개 획득하기'), findsNothing);
     expect(find.text('[시즌 한정] 얼음나라 산천어 미션'), findsNothing);
-    expect(find.textContaining('볼까요?'), findsNWidgets(3));
+    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
+    expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
+    expect(find.text('숨은 QR을 찾아볼까요?'), findsOneWidget);
   });
 
   testWidgets('shows visit mission entry banner from spot verification',
@@ -363,8 +365,10 @@ void main() {
       find.text('정선 5일장에서 이어지는 미션을 확인하고 바로 도전해보세요.'),
       findsOneWidget,
     );
-    expect(find.text('점순이의 미션'), findsOneWidget);
-    expect(find.textContaining('볼까요?'), findsNWidgets(3));
+    expect(find.text('오늘의 미션'), findsNothing);
+    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
+    expect(find.text('가벼운 퀴즈 하나 풀어볼까요?'), findsOneWidget);
+    expect(find.text('숨은 QR을 찾아볼까요?'), findsOneWidget);
   });
 
   testWidgets('opens visit unlocked mission detail from mission id',
@@ -375,9 +379,9 @@ void main() {
       visitEntryMissionId: '1004',
     );
 
-    expect(find.text('미션 카드'), findsOneWidget);
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
-    expect(find.text('퀴즈 풀기'), findsOneWidget);
+    expect(find.text('미션 상세'), findsOneWidget);
+    expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '정답 제출하기'), findsOneWidget);
   });
 }
 
@@ -425,6 +429,18 @@ Future<void> _openMission(WidgetTester tester, String title) async {
   await tester.ensureVisible(find.text(title));
   await tester.pumpAndSettle();
   await tester.tap(find.text(title));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapVisibleText(WidgetTester tester, String text) async {
+  await tester.scrollUntilVisible(
+    find.text(text),
+    160,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(find.text(text));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(text));
   await tester.pumpAndSettle();
 }
 

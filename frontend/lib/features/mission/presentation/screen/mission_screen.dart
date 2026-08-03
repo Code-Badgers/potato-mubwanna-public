@@ -16,8 +16,17 @@ import '../../domain/mission_verification.dart';
 const _missionPrimary = Color(0xFF56C787);
 const _missionDark = Color(0xFF6A4A2A);
 const _missionGold = Color(0xFFF6C23E);
-const _missionCream = Color(0xFFFFF8EA);
 const _missionLine = Color(0xFFE8E2D8);
+const _featuredJumsooniAssets = [
+  'assets/characters/jumsooni/jumsooni_neutral.png',
+  'assets/characters/jumsooni/jumsooni_wave_hand.png',
+  'assets/characters/jumsooni/jumsooni_point.png',
+  'assets/characters/jumsooni/jumsooni_potato_hold.png',
+  'assets/characters/jumsooni/jumsooni_cheer.png',
+  'assets/characters/jumsooni/jumsooni_thinking.png',
+  'assets/characters/jumsooni/jumsooni_surprised.png',
+  'assets/characters/jumsooni/jumsooni_thumb.png',
+];
 
 class MissionScreen extends ConsumerStatefulWidget {
   const MissionScreen({
@@ -95,7 +104,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
   Future<void> _startMission(MissionChallenge mission) async {
     final payload = await switch (mission.type) {
-      MissionType.quiz => _showQuizChallenge(mission),
+      MissionType.quiz => Future<MissionVerificationPayload?>.value(null),
       MissionType.visitAndStep => _verifyStepMission(mission),
       MissionType.photo || MissionType.photoOcr => _showPhotoChallenge(mission),
       MissionType.qrScan => _scanQrMission(mission),
@@ -107,27 +116,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       return;
     }
     await _completeMission(mission, payload);
-  }
-
-  Future<MissionVerificationPayload?> _showQuizChallenge(
-    MissionChallenge mission,
-  ) async {
-    final selectedAnswer = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _MissionQuizSheet(
-        mission: mission,
-        options: _verificationService.quizOptions(mission),
-      ),
-    );
-    if (selectedAnswer == null) {
-      return null;
-    }
-    return MissionVerificationPayload(
-      type: mission.type,
-      answer: selectedAnswer,
-    );
   }
 
   Future<MissionVerificationPayload?> _verifyStepMission(
@@ -237,7 +225,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       return _MissionDetailView(
         mission: selectedMission,
         onBack: _closeMissionDetail,
+        isCompleting: _isCompleting,
         onComplete: _isCompleting ? null : () => _startMission(selectedMission),
+        onSubmitQuiz: _isCompleting
+            ? null
+            : (answer) => _completeMission(
+                  selectedMission,
+                  MissionVerificationPayload(
+                    type: selectedMission.type,
+                    answer: answer,
+                  ),
+                ),
       );
     }
 
@@ -281,22 +279,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Widget _buildMissionList(List<MissionChallenge> missions) {
-    final todayMissions = _todayMissions(missions);
-    final completedCount = todayMissions
-        .where((mission) => mission.status == MissionStatus.completed)
-        .length;
+    final featuredMission = _featuredMission(missions);
+    final todayMissions = _todayMissions(
+      missions,
+      excludedMissionId: featuredMission?.id,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
-              child: _MissionHeader(
-                completedCount: completedCount,
-                totalCount: todayMissions.length,
-              ),
-            ),
             if (widget.visitEntrySpotName != null)
               SliverToBoxAdapter(
                 child: _VisitMissionEntryBanner(
@@ -305,6 +298,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               ),
             SliverToBoxAdapter(
               child: _MissionGentleStart(
+                featuredMission: featuredMission,
                 missions: todayMissions,
                 onMissionTap: _showMissionDetail,
               ),
@@ -316,12 +310,33 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 }
 
-List<MissionChallenge> _todayMissions(List<MissionChallenge> missions) {
+MissionChallenge? _featuredMission(List<MissionChallenge> missions) {
   final candidates = missions
       .where((mission) =>
           mission.active &&
           mission.status != MissionStatus.locked &&
           mission.status != MissionStatus.completed)
+      .toList()
+    ..sort(_compareMissionPriority);
+  for (final mission in candidates) {
+    if (mission.type == MissionType.photo ||
+        mission.type == MissionType.photoOcr) {
+      return mission;
+    }
+  }
+  return candidates.isEmpty ? null : candidates.first;
+}
+
+List<MissionChallenge> _todayMissions(
+  List<MissionChallenge> missions, {
+  String? excludedMissionId,
+}) {
+  final candidates = missions
+      .where((mission) =>
+          mission.active &&
+          mission.status != MissionStatus.locked &&
+          mission.status != MissionStatus.completed &&
+          mission.id != excludedMissionId)
       .toList()
     ..sort(_compareMissionPriority);
   final selected = <MissionChallenge>[];
@@ -552,88 +567,38 @@ class _MissionEmptyState extends StatelessWidget {
   }
 }
 
-class _MissionHeader extends StatelessWidget {
-  const _MissionHeader({
-    required this.completedCount,
-    required this.totalCount,
-  });
-
-  final int completedCount;
-  final int totalCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Text(
-              '점순이의 미션',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 23,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-          _TodayMissionCountBadge(
-            completedCount: completedCount,
-            totalCount: totalCount,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TodayMissionCountBadge extends StatelessWidget {
-  const _TodayMissionCountBadge({
-    required this.completedCount,
-    required this.totalCount,
-  });
-
-  final int completedCount;
-  final int totalCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$completedCount / $totalCount',
-        style: const TextStyle(
-          color: AppColors.primaryDark,
-          fontSize: 14,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
-      ),
-    );
-  }
-}
-
 class _MissionGentleStart extends StatelessWidget {
   const _MissionGentleStart({
+    required this.featuredMission,
     required this.missions,
     required this.onMissionTap,
   });
 
+  final MissionChallenge? featuredMission;
   final List<MissionChallenge> missions;
   final ValueChanged<String> onMissionTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (featuredMission != null) ...[
+            _MissionFeaturedCard(
+              mission: featuredMission!,
+              onTap: () => onMissionTap(featuredMission!.id),
+            ),
+            const SizedBox(height: 24),
+          ],
+          _MissionSectionTitle(
+            completedCount: missions
+                .where((mission) => mission.status == MissionStatus.completed)
+                .length,
+            totalCount: missions.length,
+          ),
+          const SizedBox(height: 12),
           if (missions.isEmpty)
             const _MissionEmptyState()
           else
@@ -646,19 +611,201 @@ class _MissionGentleStart extends StatelessWidget {
               const SizedBox(height: 10),
             ],
           const SizedBox(height: 4),
-          const Center(
-            child: Text(
-              '내일 새로운 미션이 도착해요',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
+          const _MissionTomorrowCard(),
         ],
       ),
+    );
+  }
+}
+
+class _MissionFeaturedCard extends StatelessWidget {
+  const _MissionFeaturedCard({
+    required this.mission,
+    required this.onTap,
+  });
+
+  final MissionChallenge mission;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(8),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -12,
+                bottom: 64,
+                child: IgnorePointer(
+                  child: Image.asset(
+                    _featuredJumsooniAsset(mission),
+                    width: 154,
+                    height: 198,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      _SpecialLabel(),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '점순이의 미션',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  const _SpeechBubble(
+                    text: '오늘은 가까운 명소에서\n감자 추억을 하나 만들어볼까요?',
+                  ),
+                  const SizedBox(height: 86),
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _missionPrimary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '특별 미션 시작',
+                          style: TextStyle(
+                            color: AppColors.surface,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.surface,
+                          size: 26,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _featuredJumsooniAsset(MissionChallenge mission) {
+  final seed = mission.id.codeUnits.fold<int>(0, (sum, code) => sum + code);
+  return _featuredJumsooniAssets[seed % _featuredJumsooniAssets.length];
+}
+
+class _SpecialLabel extends StatelessWidget {
+  const _SpecialLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+      clipper: const _BookmarkLabelClipper(),
+      child: Container(
+        width: 48,
+        height: 44,
+        alignment: const Alignment(0, -0.25),
+        color: const Color(0xFFE86B4F),
+        child: const Text(
+          '특별',
+          style: TextStyle(
+            color: AppColors.surface,
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookmarkLabelClipper extends CustomClipper<Path> {
+  const _BookmarkLabelClipper();
+
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width / 2, size.height - 8)
+      ..lineTo(0, size.height)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
+    return false;
+  }
+}
+
+class _MissionSectionTitle extends StatelessWidget {
+  const _MissionSectionTitle({
+    required this.completedCount,
+    required this.totalCount,
+  });
+
+  final int completedCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Text(
+          '오늘의 일일 미션',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '$completedCount / $totalCount',
+          style: const TextStyle(
+            color: _missionPrimary,
+            fontSize: 21,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -677,82 +824,45 @@ class _MissionCompactTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = mission.active && mission.status != MissionStatus.locked;
-    final actionLabel = _compactActionLabel(mission);
 
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(8),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Container(
-          padding: const EdgeInsets.all(13),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(
             color: mission.status == MissionStatus.completed
                 ? AppColors.primaryTint
                 : AppColors.surface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.line),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  _MissionNumberBadge(index: index),
-                  const SizedBox(width: 10),
-                  _MissionTypeIcon(type: mission.type, enabled: enabled),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
+              _MissionTypeCircle(type: mission.type, enabled: enabled),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       _gentleMissionLine(mission),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: enabled
                             ? AppColors.textPrimary
                             : AppColors.textSecondary,
-                        fontSize: 15,
-                        height: 1.24,
+                        fontSize: 16,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: mission.progressRatio,
-                  minHeight: 6,
-                  color: enabled ? _missionPrimary : _missionLine,
-                  backgroundColor: const Color(0xFFF0EEE8),
-                ),
-              ),
-              const SizedBox(height: 7),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      mission.progressLabel,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ),
-                  _RewardPill(mission: mission),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
+                    const SizedBox(height: 5),
+                    Text(
                       mission.spotName.isEmpty
                           ? mission.cityName
                           : '${mission.cityName} · ${mission.spotName}',
@@ -765,28 +875,44 @@ class _MissionCompactTile extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: enabled ? _missionPrimary : _missionLine,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      actionLabel,
-                      style: const TextStyle(
-                        color: AppColors.surface,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
+                    if (mission.target > 1) ...[
+                      const SizedBox(height: 9),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: mission.progressRatio,
+                          minHeight: 6,
+                          color: enabled ? _missionPrimary : _missionLine,
+                          backgroundColor: const Color(0xFFF0EEE8),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                      const SizedBox(height: 6),
+                      Text(
+                        mission.progressLabel,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTint,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: _missionPrimary,
+                  size: 26,
+                ),
               ),
             ],
           ),
@@ -796,45 +922,90 @@ class _MissionCompactTile extends StatelessWidget {
   }
 }
 
-class _MissionNumberBadge extends StatelessWidget {
-  const _MissionNumberBadge({required this.index});
+class _MissionTypeCircle extends StatelessWidget {
+  const _MissionTypeCircle({
+    required this.type,
+    required this.enabled,
+  });
 
-  final int index;
+  final MissionType type;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 26,
-      height: 26,
+      width: 52,
+      height: 52,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: _missionCream,
+      decoration: BoxDecoration(
+        color: enabled ? AppColors.primaryTint : const Color(0xFFF0EEE8),
         shape: BoxShape.circle,
       ),
-      child: Text(
-        '${index + 1}',
-        style: const TextStyle(
-          color: _missionDark,
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
+      child: Icon(
+        type.icon,
+        color: enabled ? _missionPrimary : AppColors.textSecondary,
+        size: 28,
       ),
     );
   }
 }
 
-String _compactActionLabel(MissionChallenge mission) {
-  if (mission.status == MissionStatus.completed) {
-    return '완료';
+class _MissionTomorrowCard extends StatelessWidget {
+  const _MissionTomorrowCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFDF7),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.eco_rounded,
+            color: _missionGold,
+            size: 26,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '매일 가볍게 여행 미션을 이어가보세요!',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '내일 새로운 미션이 찾아옵니다.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
-  return switch (mission.type) {
-    MissionType.photo || MissionType.photoOcr => '사진 찍기',
-    MissionType.qrScan => '스캔하기',
-    MissionType.quiz => '퀴즈 풀기',
-    MissionType.visitAndStep => '이어하기',
-    _ => '시작하기',
-  };
+}
+
+String _compactRewardLabel(MissionChallenge mission) {
+  final value = RegExp(r'\d+').firstMatch(mission.rewardLabel)?.group(0);
+  return value == null ? mission.rewardType.label : '코인 $value';
 }
 
 String _gentleMissionLine(MissionChallenge mission) {
@@ -847,61 +1018,164 @@ String _gentleMissionLine(MissionChallenge mission) {
   };
 }
 
-class _MissionDetailView extends StatelessWidget {
+class _MissionDetailView extends StatefulWidget {
   const _MissionDetailView({
     required this.mission,
     required this.onBack,
+    required this.isCompleting,
     required this.onComplete,
+    required this.onSubmitQuiz,
   });
 
   final MissionChallenge mission;
   final VoidCallback onBack;
+  final bool isCompleting;
   final VoidCallback? onComplete;
+  final Future<void> Function(String answer)? onSubmitQuiz;
+
+  @override
+  State<_MissionDetailView> createState() => _MissionDetailViewState();
+}
+
+class _MissionDetailViewState extends State<_MissionDetailView> {
+  static const _verificationService = MissionVerificationService();
+
+  late List<String> _quizOptions;
+  String? _selectedAnswer;
+  String? _quizFeedback;
+  bool _quizCorrect = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _quizOptions = _verificationService.quizOptions(widget.mission);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MissionDetailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.mission.id != widget.mission.id) {
+      _quizOptions = _verificationService.quizOptions(widget.mission);
+      _selectedAnswer = null;
+      _quizFeedback = null;
+      _quizCorrect = false;
+    }
+  }
+
+  Future<void> _submitQuiz() async {
+    final answer = _selectedAnswer;
+    if (answer == null || widget.onSubmitQuiz == null || widget.isCompleting) {
+      return;
+    }
+    final result = _verificationService.verifyQuizAnswer(
+      mission: widget.mission,
+      selectedAnswer: answer,
+    );
+    if (!result.canComplete) {
+      setState(() {
+        _quizCorrect = false;
+        _quizFeedback = result.message;
+      });
+      return;
+    }
+    setState(() {
+      _quizCorrect = true;
+      _quizFeedback = '정답입니다! 미션 완료를 진행할게요.';
+    });
+    await widget.onSubmitQuiz!(answer);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final mission = widget.mission;
     final isCompleted = mission.status == MissionStatus.completed;
     final canComplete = mission.active &&
         mission.status != MissionStatus.locked &&
-        !isCompleted;
+        !isCompleted &&
+        !widget.isCompleting;
+    final isQuiz = mission.type == MissionType.quiz;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: _MissionDetailHero(
-                mission: mission,
-                onBack: onBack,
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate.fixed([
-                  _MissionPlayCard(mission: mission),
-                  const SizedBox(height: 14),
-                  FilledButton.icon(
-                    onPressed: canComplete ? onComplete : null,
-                    icon: Icon(_actionIcon(mission.type)),
-                    label: Text(_actionLabel(mission)),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(54),
-                      backgroundColor: _missionDark,
-                      foregroundColor: AppColors.surface,
-                      disabledBackgroundColor: _missionLine,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
+        child: Column(
+          children: [
+            _MissionDetailTopBar(onBack: widget.onBack),
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _MissionDetailScene(mission: mission),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate.fixed([
+                        _MissionDetailSummaryCard(mission: mission),
+                        const SizedBox(height: 14),
+                        _MissionHowToCard(mission: mission),
+                        const SizedBox(height: 18),
+                        _MissionRewardSection(mission: mission),
+                        if (isQuiz) ...[
+                          const SizedBox(height: 18),
+                          _MissionInlineQuiz(
+                            mission: mission,
+                            options: _quizOptions,
+                            selectedAnswer: _selectedAnswer,
+                            feedback: _quizFeedback,
+                            correct: _quizCorrect,
+                            onChanged: (answer) => setState(() {
+                              _selectedAnswer = answer;
+                              _quizFeedback = null;
+                              _quizCorrect = false;
+                            }),
+                          ),
+                        ],
+                        if (!isQuiz &&
+                            mission.type == MissionType.photoOcr) ...[
+                          const SizedBox(height: 18),
+                          const _MissionNoticeCard(
+                            title: '주의사항',
+                            body: '다른 사람의 사진은 사용할 수 없어요. 장소가 잘 보이도록 찍어주세요.',
+                          ),
+                        ],
+                      ]),
                     ),
                   ),
-                ]),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+              child: FilledButton(
+                onPressed: isQuiz
+                    ? (_selectedAnswer == null || !canComplete
+                        ? null
+                        : _submitQuiz)
+                    : (canComplete ? widget.onComplete : null),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(56),
+                  backgroundColor: _missionPrimary,
+                  foregroundColor: AppColors.surface,
+                  disabledBackgroundColor: _missionLine,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                child: Text(
+                  widget.isCompleting
+                      ? '처리 중...'
+                      : isCompleted
+                          ? '완료된 미션'
+                          : isQuiz
+                              ? '정답 제출하기'
+                              : _detailActionLabel(mission),
+                ),
               ),
             ),
           ],
@@ -909,205 +1183,366 @@ class _MissionDetailView extends StatelessWidget {
       ),
     );
   }
-
-  static IconData _actionIcon(MissionType type) {
-    return switch (type) {
-      MissionType.photo => Icons.camera_alt_rounded,
-      MissionType.photoOcr => Icons.document_scanner_rounded,
-      MissionType.qrScan => Icons.qr_code_scanner_rounded,
-      MissionType.quiz => Icons.quiz_rounded,
-      MissionType.visitAndStep => Icons.directions_walk_rounded,
-      _ => Icons.location_on_rounded,
-    };
-  }
-
-  static String _actionLabel(MissionChallenge mission) {
-    if (mission.status == MissionStatus.completed) {
-      return '완료된 미션';
-    }
-    return switch (mission.type) {
-      MissionType.photo => '사진 인증하기',
-      MissionType.photoOcr => '촬영 인증하기',
-      MissionType.qrScan => 'QR 스캔하기',
-      MissionType.quiz => '퀴즈 풀기',
-      MissionType.visitAndStep => '걸음 인증하기',
-      _ => '미션 인증하기',
-    };
-  }
 }
 
-class _MissionDetailHero extends StatelessWidget {
-  const _MissionDetailHero({
-    required this.mission,
-    required this.onBack,
-  });
+class _MissionDetailTopBar extends StatelessWidget {
+  const _MissionDetailTopBar({required this.onBack});
 
-  final MissionChallenge mission;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 6, 20, 16),
-      decoration: const BoxDecoration(
-        color: _missionCream,
-        border: Border(bottom: BorderSide(color: _missionLine)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+      child: Row(
         children: [
-          Row(
-            children: [
-              IconButton(
-                tooltip: '뒤로 가기',
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back_rounded),
-              ),
-              const Expanded(
-                child: Text(
-                  '미션 카드',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 48),
-            ],
+          IconButton(
+            tooltip: '뒤로 가기',
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded),
           ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE6F7EC),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    mission.type.icon,
-                    color: _missionPrimary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        mission.spotName,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        mission.title,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 21,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MissionPlayCard extends StatelessWidget {
-  const _MissionPlayCard({required this.mission});
-
-  final MissionChallenge mission;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _MissionPlayRow(
-            icon: Icons.chat_bubble_rounded,
-            title: '마을 안내',
-            body: mission.dialogue,
-          ),
-          const SizedBox(height: 14),
-          _MissionPlayRow(
-            icon: Icons.flag_rounded,
-            title: '도전 조건',
-            body: mission.conditionLabel,
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: mission.progressRatio,
-              minHeight: 6,
-              color: _missionPrimary,
-              backgroundColor: const Color(0xFFF0EEE8),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
+          const Expanded(
             child: Text(
-              mission.progressLabel,
-              style: const TextStyle(
+              '미션 상세',
+              textAlign: TextAlign.center,
+              style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 12,
+                fontSize: 18,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _missionCream,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _missionLine),
+          const SizedBox(width: 48),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionDetailScene extends StatelessWidget {
+  const _MissionDetailScene({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      child: Container(
+        height: 250,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8EA),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned(
+              right: 16,
+              top: 26,
+              child: _SpeechBubble(text: _detailSpeech(mission)),
             ),
-            child: Row(
-              children: [
-                _RewardIcon(type: mission.rewardType),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '${mission.rewardType.label} · ${mission.rewardLabel}',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ],
+            Positioned(
+              left: 8,
+              bottom: -4,
+              child: Image.asset(
+                _detailJumsooniAsset(mission),
+                width: 158,
+                height: 208,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SpeechBubble extends StatelessWidget {
+  const _SpeechBubble({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 14,
+          height: 1.45,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionDetailSummaryCard extends StatelessWidget {
+  const _MissionDetailSummaryCard({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _MissionKindBadge(label: '일일 미션'),
+          const SizedBox(height: 12),
+          Text(
+            _detailTitle(mission),
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _MissionMetaRow(
+            icon: Icons.location_on_outlined,
+            text: _spotLine(mission),
+          ),
+          const _MissionMetaDivider(),
+          _MissionMetaRow(icon: mission.type.icon, text: mission.type.label),
+          const _MissionMetaDivider(),
+          const _MissionMetaRow(
+              icon: Icons.schedule_rounded, text: '오늘 23:59까지'),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionHowToCard extends StatelessWidget {
+  const _MissionHowToCard({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = _detailSteps(mission);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF9F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFD8F0DF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '미션 진행 방법',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final entry in steps.indexed) ...[
+            _MissionStepLine(index: entry.$1 + 1, text: entry.$2),
+            if (entry.$1 != steps.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionRewardSection extends StatelessWidget {
+  const _MissionRewardSection({required this.mission});
+
+  final MissionChallenge mission;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '보상',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            const Expanded(
+              child: _RewardSmallCard(
+                icon: Icons.eco_rounded,
+                label: '감자 1개',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _RewardSmallCard(
+                icon: _rewardIconData(mission.rewardType),
+                label: _compactRewardLabel(mission),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MissionInlineQuiz extends StatelessWidget {
+  const _MissionInlineQuiz({
+    required this.mission,
+    required this.options,
+    required this.selectedAnswer,
+    required this.feedback,
+    required this.correct,
+    required this.onChanged,
+  });
+
+  final MissionChallenge mission;
+  final List<String> options;
+  final String? selectedAnswer;
+  final String? feedback;
+  final bool correct;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '문제 미리보기',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '강원도에서 가장 많이 재배되는 감자 품종은 무엇일까요?',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              height: 1.35,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 14),
+          for (final entry in options.indexed) ...[
+            _MissionQuizOption(
+              label: entry.$2,
+              prefix: String.fromCharCode(65 + entry.$1),
+              selected: selectedAnswer == entry.$2,
+              onTap: () => onChanged(entry.$2),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (feedback != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              feedback!,
+              style: TextStyle(
+                color: correct ? _missionPrimary : AppColors.error,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionKindBadge extends StatelessWidget {
+  const _MissionKindBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.primaryDark,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionMetaRow extends StatelessWidget {
+  const _MissionMetaRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textSecondary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
             ),
           ),
         ],
@@ -1116,16 +1551,20 @@ class _MissionPlayCard extends StatelessWidget {
   }
 }
 
-class _MissionPlayRow extends StatelessWidget {
-  const _MissionPlayRow({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
+class _MissionMetaDivider extends StatelessWidget {
+  const _MissionMetaDivider();
 
-  final IconData icon;
-  final String title;
-  final String body;
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(height: 1, color: AppColors.line);
+  }
+}
+
+class _MissionStepLine extends StatelessWidget {
+  const _MissionStepLine({required this.index, required this.text});
+
+  final int index;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
@@ -1133,40 +1572,34 @@ class _MissionPlayRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: 20,
+          height: 20,
+          alignment: Alignment.center,
           decoration: const BoxDecoration(
-            color: AppColors.primaryTint,
+            color: Color(0xFFCDEDD8),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: _missionPrimary, size: 16),
+          child: Text(
+            '$index',
+            style: const TextStyle(
+              color: AppColors.primaryDark,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                body,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  height: 1.4,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
           ),
         ),
       ],
@@ -1174,74 +1607,235 @@ class _MissionPlayRow extends StatelessWidget {
   }
 }
 
-class _MissionQuizSheet extends StatefulWidget {
-  const _MissionQuizSheet({
-    required this.mission,
-    required this.options,
-  });
+class _RewardSmallCard extends StatelessWidget {
+  const _RewardSmallCard({required this.icon, required this.label});
 
-  final MissionChallenge mission;
-  final List<String> options;
-
-  @override
-  State<_MissionQuizSheet> createState() => _MissionQuizSheetState();
-}
-
-class _MissionQuizSheetState extends State<_MissionQuizSheet> {
-  String? _selectedAnswer;
+  final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return _MissionActionSheet(
-      title: '퀴즈 풀기',
-      subtitle: widget.mission.title,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
         children: [
-          const Text(
-            '정선 향토 음식 미션에서 찾는 감자는 무엇일까요?',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              height: 1.35,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 16),
-          for (final answer in widget.options) ...[
-            _MissionChoiceButton(
-              label: answer,
-              selected: _selectedAnswer == answer,
-              onTap: () => setState(() => _selectedAnswer = answer),
-            ),
-            const SizedBox(height: 8),
-          ],
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _selectedAnswer == null
-                ? null
-                : () => Navigator.of(context).pop(_selectedAnswer),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-              backgroundColor: _missionPrimary,
-              foregroundColor: AppColors.surface,
-              disabledBackgroundColor: _missionLine,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
+          Icon(icon, color: _missionGold, size: 24),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
               ),
             ),
-            child: const Text('정답 제출하기'),
           ),
         ],
       ),
     );
   }
+}
+
+class _MissionNoticeCard extends StatelessWidget {
+  const _MissionNoticeCard({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EA),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFF1DBA9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionQuizOption extends StatelessWidget {
+  const _MissionQuizOption({
+    required this.label,
+    required this.prefix,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String prefix;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppColors.primaryTint : AppColors.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? _missionPrimary : AppColors.line,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                      color: selected ? _missionPrimary : AppColors.line),
+                ),
+                child: Text(
+                  prefix,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _detailJumsooniAsset(MissionChallenge mission) {
+  return switch (mission.type) {
+    MissionType.photo ||
+    MissionType.photoOcr =>
+      'assets/characters/jumsooni/jumsooni_wave_hand.png',
+    MissionType.quiz => 'assets/characters/jumsooni/jumsooni_thinking.png',
+    MissionType.visitAndStep => 'assets/characters/jumsooni/jumsooni_point.png',
+    _ => 'assets/characters/jumsooni/jumsooni_thumb.png',
+  };
+}
+
+String _detailSpeech(MissionChallenge mission) {
+  return switch (mission.type) {
+    MissionType.photo || MissionType.photoOcr => '멋진 풍경이나 감자 사진을 한 장 남겨주세요!',
+    MissionType.quiz => '강원도의 감자에 대해 퀴즈 하나 풀어볼까요?',
+    MissionType.visitAndStep => '${mission.spotName}에 들러서 미션을 해줄 수 있나요?',
+    MissionType.qrScan => '숨겨진 QR을 찾아서 인증해볼까요?',
+    _ => '가까운 명소에서 감자 추억을 만들어볼까요?',
+  };
+}
+
+String _detailTitle(MissionChallenge mission) {
+  return switch (mission.type) {
+    MissionType.photo || MissionType.photoOcr => '사진으로 추억 남기기',
+    MissionType.quiz => '강원도 감자 퀴즈',
+    MissionType.visitAndStep ||
+    MissionType.visit ||
+    MissionType.stamp =>
+      '${mission.spotName} 방문하기',
+    MissionType.qrScan => '숨은 QR 찾기',
+    _ => mission.title,
+  };
+}
+
+String _spotLine(MissionChallenge mission) {
+  return mission.spotName.isEmpty
+      ? mission.cityName
+      : '${mission.cityName} · ${mission.spotName}';
+}
+
+List<String> _detailSteps(MissionChallenge mission) {
+  return switch (mission.type) {
+    MissionType.photo || MissionType.photoOcr => [
+        '${mission.spotName}에 방문해요.',
+        '풍경이나 감자 사진을 찍어봐요.',
+        '사진을 제출하면 완료돼요.'
+      ],
+    MissionType.quiz => [
+        '문제를 천천히 읽어봐요.',
+        '정답이라고 생각하는 답을 선택해요.',
+        '정답 제출 시 미션 완료!'
+      ],
+    MissionType.visitAndStep => [
+        '근처 여행길을 천천히 걸어요.',
+        '목표 걸음 수를 채워요.',
+        '걸음 인증 버튼을 눌러요.'
+      ],
+    MissionType.qrScan => [
+        '장소에 숨겨진 QR을 찾아요.',
+        'QR 코드를 스캔해요.',
+        '스캔에 성공하면 완료돼요.'
+      ],
+    _ => ['장소 근처로 이동해요.', '인증 버튼을 눌러요.', '인증에 성공하면 완료돼요.'],
+  };
+}
+
+String _detailActionLabel(MissionChallenge mission) {
+  return switch (mission.type) {
+    MissionType.photo => '사진 찍기',
+    MissionType.photoOcr => '사진 찍기',
+    MissionType.qrScan => 'QR 스캔하기',
+    MissionType.visitAndStep => '걸음 인증하기',
+    _ => '위치 확인하기',
+  };
 }
 
 class _MissionPhotoSheet extends StatefulWidget {
@@ -1485,63 +2079,6 @@ class _MissionActionSheet extends StatelessWidget {
                 child,
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MissionChoiceButton extends StatelessWidget {
-  const _MissionChoiceButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? const Color(0xFFE1F7EA) : AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? _missionPrimary : _missionLine,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                selected
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color: selected ? _missionPrimary : AppColors.textSecondary,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -1811,98 +2348,6 @@ class _MissionRewardDialog extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _MissionTypeIcon extends StatelessWidget {
-  const _MissionTypeIcon({
-    required this.type,
-    required this.enabled,
-  });
-
-  final MissionType type;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: enabled ? const Color(0xFFE6F7EC) : const Color(0xFFF0EEE8),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        type.icon,
-        color: enabled ? _missionPrimary : AppColors.textSecondary,
-        size: 22,
-      ),
-    );
-  }
-}
-
-class _RewardPill extends StatelessWidget {
-  const _RewardPill({required this.mission});
-
-  final MissionChallenge mission;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 96),
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-      decoration: BoxDecoration(
-        color: _missionCream,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFFFE3A3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _rewardIconData(mission.rewardType),
-            size: 14,
-            color: _missionGold,
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              mission.rewardType.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _missionDark,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RewardIcon extends StatelessWidget {
-  const _RewardIcon({required this.type});
-
-  final MissionRewardType type;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 46,
-      height: 46,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFF2C7),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        _rewardIconData(type),
-        color: _missionGold,
       ),
     );
   }
