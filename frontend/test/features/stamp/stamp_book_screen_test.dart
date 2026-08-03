@@ -30,7 +30,8 @@ void main() {
     expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
     expect(find.text('안목해변'), findsOneWidget);
     expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
-    expect(find.text('지역을 선택하면 스탬프를 찍을 장소가 나타나요.'), findsOneWidget);
+    expect(find.text('강원 18개 시군 스탬프 투어'), findsOneWidget);
+    expect(find.text('지도에서 깃발 선택'), findsOneWidget);
     expect(find.text('스탬프 찍기'), findsNothing);
 
     await tester.tap(find.text('정선 5일장'));
@@ -81,6 +82,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('상세 101'), findsOneWidget);
+  });
+
+  testWidgets('opens city stamp cards from the map progress badge', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, __) => const StampBookScreen()),
+        GoRoute(
+          path: '/main/stamps/cities',
+          builder: (_, __) => const Text('시군별 스탬프 카드'),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          stampBookProvider.overrideWith((ref) async => _stampBook()),
+          stampNextTargetsProvider.overrideWith((ref) async => _nextTargets),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('8/18'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('시군별 스탬프 카드'), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
+    expect(find.text('8/18'), findsOneWidget);
   });
 
   testWidgets('renders city stamp card grid', (tester) async {
