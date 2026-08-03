@@ -187,6 +187,7 @@ Response:
       "cityName": "정선군",
       "address": "강원특별자치도 정선군...",
       "imageUrl": "https://...",
+      "uploadedImageUrl": "/mission-uploads/completions/31/image",
       "visitedAt": "2026-07-27T12:00:00Z"
     }
   ]
@@ -196,6 +197,10 @@ Response:
 - `data`는 `visitedAt` 내림차순으로 정렬한다.
 - 방문 기록이 없으면 빈 배열을 반환한다.
 - 방문 기록은 방문 인증 시 저장된 `user_visits`를 기준으로 한다.
+- `imageUrl`은 관광지 대표 이미지이며 기존 계약을 유지한다.
+- `uploadedImageUrl`은 같은 사용자의 같은 관광지에 연결된 사진 미션 완료 기록 중 가장 최근 증빙 이미지 조회 경로다.
+- 업로드 이미지가 없거나 사진 미션 완료 기록과 관광지가 연결되지 않으면 `uploadedImageUrl=null`을 반환한다.
+- `uploadedImageUrl`은 인증이 필요한 API 상대 경로이며 공개 정적 파일 URL로 사용하지 않는다.
 
 ### 2.4 내 푸시 토큰 등록/갱신
 
@@ -1130,6 +1135,31 @@ Environment:
 | --- | --- | --- |
 | `MISSION_UPLOAD_STORAGE_TYPE` | `local` | 업로드 저장소 타입. 현재 구현 기준은 `local` |
 | `MISSION_UPLOAD_LOCAL_DIR` | `local-runtime/mission-uploads` | 로컬 개발용 이미지 저장 루트 디렉터리 |
+
+### 6.5 완료한 미션 증빙 이미지 조회
+
+```http
+GET /api/mission-uploads/completions/{userMissionId}/image
+Authorization: Bearer {accessToken}
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream
+
+<image bytes>
+```
+
+처리 규칙:
+
+- PHOTO 또는 PHOTO_OCR 미션 검증 성공 시 서버 발급 `uploadKey`를 해당 `user_missions` 완료 기록에 저장한다.
+- 미션의 `spotName`, `cityName`과 정확히 일치하는 활성 관광지가 있을 때만 완료 기록에 `touristSpotId`를 연결한다.
+- 요청 사용자가 소유한 완료 기록이고 저장된 증빙 이미지가 있을 때만 파일 bytes를 반환한다.
+- 존재하지 않는 완료 기록, 다른 사용자의 완료 기록, 증빙 이미지가 없는 기록은 모두 `404 Not Found`로 응답해 식별자 열거를 막는다.
+- 인증 정보가 없거나 JWT 사용자를 확인할 수 없으면 `401 Unauthorized`를 반환한다.
+- 일반 미션과 기존 완료 기록은 증빙 이미지 및 관광지 관계가 없어도 기존 동작을 유지한다.
 
 ---
 

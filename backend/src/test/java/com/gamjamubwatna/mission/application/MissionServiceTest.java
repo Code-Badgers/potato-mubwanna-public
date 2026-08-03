@@ -36,6 +36,10 @@ import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.reward.domain.RewardHistory;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
+import com.gamjamubwatna.spot.domain.SpotCategory;
+import com.gamjamubwatna.spot.domain.TouristSpot;
+import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -79,6 +83,9 @@ class MissionServiceTest {
     @Mock
     private MissionEvidenceValidator missionEvidenceValidator;
 
+    @Mock
+    private TouristSpotRepository touristSpotRepository;
+
     private FakeMissionPhotoStorage missionPhotoStorage;
     private MissionPhotoTextReader missionPhotoTextReader;
     private MissionService missionService;
@@ -98,6 +105,7 @@ class MissionServiceTest {
             missionEvidenceValidator,
             missionPhotoStorage,
             missionPhotoTextReader,
+            touristSpotRepository,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -362,7 +370,11 @@ class MissionServiceTest {
 
         assertThat(result.verified()).isTrue();
         assertThat(result.completed()).isTrue();
-        verify(userMissionRepository).save(any(UserMission.class));
+        ArgumentCaptor<UserMission> completionCaptor = ArgumentCaptor.forClass(UserMission.class);
+        verify(userMissionRepository).save(completionCaptor.capture());
+        assertThat(completionCaptor.getValue().getEvidenceUploadKey()).isNull();
+        assertThat(completionCaptor.getValue().getTouristSpot()).isNull();
+        verifyNoInteractions(touristSpotRepository);
     }
 
     @Test
@@ -504,9 +516,41 @@ class MissionServiceTest {
     }
 
     @Test
+    void linksVerifiedPhotoMissionEvidenceToMatchingTouristSpot() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        TouristSpot touristSpot = spot(20L, mission.getSpotName(), mission.getCityName());
+        String uploadKey = "mission-uploads/1/1/test-photo.jpg";
+        missionPhotoStorage.put(uploadKey, new byte[] {1, 2, 3});
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
+            mission.getSpotName(),
+            mission.getCityName()
+        )).thenReturn(Optional.of(touristSpot));
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MissionVerifyResponse result = missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO, null, null, uploadKey, null)
+        );
+
+        assertThat(result.verified()).isTrue();
+        ArgumentCaptor<UserMission> completionCaptor = ArgumentCaptor.forClass(UserMission.class);
+        verify(userMissionRepository).save(completionCaptor.capture());
+        assertThat(completionCaptor.getValue().getEvidenceUploadKey()).isEqualTo(uploadKey);
+        assertThat(completionCaptor.getValue().getTouristSpot()).isSameAs(touristSpot);
+    }
+
+    @Test
     void verifiesPhotoOcrMissionWhenRecognizedTextContainsExpectedKeyword() {
         User user = user(1L);
         Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
+        TouristSpot touristSpot = spot(20L, mission.getSpotName(), mission.getCityName());
         String uploadKey = "mission-uploads/1/1/test-receipt.jpg";
         missionPhotoStorage.put(uploadKey, "안목 커피거리 영수증 하지감자".getBytes());
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -514,6 +558,10 @@ class MissionServiceTest {
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(missionVerificationPolicyRepository.findByMissionId(1L))
             .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
+            mission.getSpotName(),
+            mission.getCityName()
+        )).thenReturn(Optional.of(touristSpot));
         when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         MissionVerifyResponse result = missionService.verifyMission(
@@ -524,6 +572,10 @@ class MissionServiceTest {
 
         assertThat(result.verified()).isTrue();
         assertThat(result.completed()).isTrue();
+        ArgumentCaptor<UserMission> completionCaptor = ArgumentCaptor.forClass(UserMission.class);
+        verify(userMissionRepository).save(completionCaptor.capture());
+        assertThat(completionCaptor.getValue().getEvidenceUploadKey()).isEqualTo(uploadKey);
+        assertThat(completionCaptor.getValue().getTouristSpot()).isSameAs(touristSpot);
     }
 
     @Test
@@ -789,8 +841,27 @@ class MissionServiceTest {
             missionEvidenceValidator,
             missionPhotoStorage,
             missionPhotoTextReader,
+            touristSpotRepository,
             Clock.fixed(now, ZoneOffset.UTC)
         );
+    }
+
+    private TouristSpot spot(Long id, String name, String cityName) {
+        TouristSpot spot = new TouristSpot(
+            "spot-" + id,
+            12,
+            name,
+            SpotCategory.POTATO_TOUR,
+            new BigDecimal("37.3801000"),
+            new BigDecimal("128.6609000"),
+            "강원특별자치도 " + cityName,
+            cityName,
+            null,
+            "감자",
+            Instant.parse("2026-07-01T00:00:00Z")
+        );
+        ReflectionTestUtils.setField(spot, "id", id);
+        return spot;
     }
 
     private MissionVerificationPolicy quizPolicy(Mission mission, String expectedAnswer) {

@@ -13,6 +13,11 @@ public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> 
 
     Optional<TouristSpot> findByNameAndAddress(String name, String address);
 
+    Optional<TouristSpot> findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
+        String name,
+        String cityName
+    );
+
     Optional<TouristSpot> findByIdAndActiveTrue(Long id);
 
     @Query("""

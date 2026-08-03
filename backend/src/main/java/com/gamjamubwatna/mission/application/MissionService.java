@@ -24,6 +24,8 @@ import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.reward.domain.RewardHistory;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
+import com.gamjamubwatna.spot.domain.TouristSpot;
+import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -50,6 +52,7 @@ public class MissionService {
     private final MissionEvidenceValidator missionEvidenceValidator;
     private final MissionPhotoStorage missionPhotoStorage;
     private final MissionPhotoTextReader missionPhotoTextReader;
+    private final TouristSpotRepository touristSpotRepository;
     private final Clock clock;
 
     @Autowired
@@ -63,7 +66,8 @@ public class MissionService {
         UserRepository userRepository,
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
-        MissionPhotoTextReader missionPhotoTextReader
+        MissionPhotoTextReader missionPhotoTextReader,
+        TouristSpotRepository touristSpotRepository
     ) {
         this(
             missionRepository,
@@ -76,6 +80,7 @@ public class MissionService {
             missionEvidenceValidator,
             missionPhotoStorage,
             missionPhotoTextReader,
+            touristSpotRepository,
             Clock.systemUTC()
         );
     }
@@ -91,6 +96,7 @@ public class MissionService {
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
         MissionPhotoTextReader missionPhotoTextReader,
+        TouristSpotRepository touristSpotRepository,
         Clock clock
     ) {
         this.missionRepository = missionRepository;
@@ -103,6 +109,7 @@ public class MissionService {
         this.missionEvidenceValidator = missionEvidenceValidator;
         this.missionPhotoStorage = missionPhotoStorage;
         this.missionPhotoTextReader = missionPhotoTextReader;
+        this.touristSpotRepository = touristSpotRepository;
         this.clock = clock;
     }
 
@@ -173,13 +180,21 @@ public class MissionService {
         Instant completedAt = Instant.now(clock);
         MissionPeriod period = MissionPeriod.current(mission, completedAt);
         validateCompletionTarget(userId, mission, period);
-        validateMissionInput(userId, mission, request, period);
+        String evidenceUploadKey = validateMissionInput(userId, mission, request, period);
+        TouristSpot evidenceSpot = evidenceUploadKey == null
+            ? null
+            : touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
+                mission.getSpotName(),
+                mission.getCityName()
+            ).orElse(null);
 
         UserMission userMission = userMissionRepository.save(new UserMission(
             user,
             mission,
             completedAt,
-            period.key()
+            period.key(),
+            evidenceUploadKey,
+            evidenceSpot
         ));
         saveMissionRewardHistory(user, mission, period, completedAt);
 
@@ -246,7 +261,7 @@ public class MissionService {
         }
     }
 
-    private void validateMissionInput(
+    private String validateMissionInput(
         Long userId,
         Mission mission,
         MissionVerifyRequest request,
@@ -259,30 +274,44 @@ public class MissionService {
             throw new MissionVerificationException("미션 타입이 일치하지 않습니다.");
         }
 
-        switch (mission.getType()) {
-            case QUIZ -> validateQuiz(verificationPolicy(mission), request.answer());
-            case VISIT_AND_STEP -> missionEvidenceValidator.validate(
-                userId,
-                mission,
-                verificationPolicy(mission),
-                period
-            );
-            case PHOTO -> validatePhoto(
-                userId,
-                mission,
-                verificationPolicy(mission),
-                request.uploadKey()
-            );
+        return switch (mission.getType()) {
+            case QUIZ -> {
+                validateQuiz(verificationPolicy(mission), request.answer());
+                yield null;
+            }
+            case VISIT_AND_STEP -> {
+                missionEvidenceValidator.validate(
+                    userId,
+                    mission,
+                    verificationPolicy(mission),
+                    period
+                );
+                yield null;
+            }
+            case PHOTO -> {
+                StoredMissionPhotoFile photoFile = validatePhoto(
+                    userId,
+                    mission,
+                    verificationPolicy(mission),
+                    request.uploadKey()
+                );
+                yield photoFile == null ? null : photoFile.uploadKey();
+            }
             case PHOTO_OCR -> validatePhotoOcr(
                 userId,
                 mission,
                 verificationPolicy(mission),
                 request.uploadKey()
-            );
-            case QR_SCAN -> validateQrCode(verificationPolicy(mission), request.qrCode());
-            case VISIT, STAMP, COLLECTION ->
+            ).uploadKey();
+            case QR_SCAN -> {
+                validateQrCode(verificationPolicy(mission), request.qrCode());
+                yield null;
+            }
+            case VISIT, STAMP, COLLECTION -> {
                 missionEvidenceValidator.validate(userId, mission, null, period);
-        }
+                yield null;
+            }
+        };
     }
 
     private MissionItemResponse missionItem(
@@ -417,7 +446,7 @@ public class MissionService {
         return null;
     }
 
-    private void validatePhotoOcr(
+    private StoredMissionPhotoFile validatePhotoOcr(
         Long userId,
         Mission mission,
         MissionVerificationPolicy policy,
@@ -435,6 +464,7 @@ public class MissionService {
         if (recognizedText == null || !recognizedText.contains(expectedKeyword)) {
             throw new MissionVerificationException("인증 이미지에서 미션 키워드를 찾지 못했습니다.");
         }
+        return photoFile;
     }
 
     private void validateQrCode(MissionVerificationPolicy policy, String qrCode) {

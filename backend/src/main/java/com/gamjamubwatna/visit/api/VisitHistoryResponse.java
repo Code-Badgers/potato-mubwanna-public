@@ -12,10 +12,11 @@ public record VisitHistoryResponse(
     String cityName,
     String address,
     String imageUrl,
+    String uploadedImageUrl,
     Instant visitedAt
 ) {
 
-    public static VisitHistoryResponse from(UserVisit visit) {
+    public static VisitHistoryResponse from(UserVisit visit, String uploadedImageUrl) {
         TouristSpot spot = visit.getTouristSpot();
         return new VisitHistoryResponse(
             visit.getId(),
@@ -25,6 +26,7 @@ public record VisitHistoryResponse(
             spot.getCityName(),
             spot.getAddress(),
             spot.getImageUrl(),
+            uploadedImageUrl,
             visit.getVisitedAt()
         );
     }
