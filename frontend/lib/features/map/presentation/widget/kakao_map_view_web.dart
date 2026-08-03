@@ -350,6 +350,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerElement.style.padding = '0';
           markerElement.style.transformOrigin = '50% 100%';
           markerElement.dataset.defaultBorderColor = spot.markerColor || '#F6C23E';
+          markerElement.dataset.defaultBodyBackground = spot.favorite
+            ? 'rgba(255, 247, 204, 0.97)'
+            : 'rgba(255, 255, 255, 0.92)';
           markerElement.style.transform = 'scale(1)';
 
           const markerBody = document.createElement('span');
@@ -359,7 +362,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerBody.style.width = '36px';
           markerBody.style.height = '36px';
           markerBody.style.borderRadius = '999px';
-          markerBody.style.background = 'rgba(255, 255, 255, 0.92)';
+          markerBody.style.background = markerElement.dataset.defaultBodyBackground;
           markerBody.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
           markerBody.style.boxShadow = '0 10px 22px rgba(32,35,26,0.18), inset 0 0 0 1px rgba(255,255,255,0.7)';
           markerBody.style.display = 'flex';
@@ -388,21 +391,33 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerBody.appendChild(markerEmoji);
           markerElement.appendChild(markerTip);
           markerElement.appendChild(markerBody);
-          markerElement.addEventListener('click', function () {
+          function selectSpot(event) {
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
             if (selectedMarkerElement) {
               selectedMarkerElement.children[0].style.background =
                 selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
               selectedMarkerElement.children[1].style.borderColor =
                 selectedMarkerElement.dataset.defaultBorderColor || '#56C787';
+              selectedMarkerElement.children[1].style.background =
+                selectedMarkerElement.dataset.defaultBodyBackground || 'rgba(255, 255, 255, 0.92)';
             }
             const selectedColor = spot.favorite ? '#F6C23E' : '#509B64';
             markerTip.style.background = selectedColor;
             markerBody.style.borderColor = selectedColor;
+            markerBody.style.background = spot.favorite
+              ? 'rgba(255, 247, 204, 0.98)'
+              : 'rgba(255, 255, 255, 0.96)';
             selectedMarkerElement = markerElement;
             window.dispatchEvent(new CustomEvent('potato-map-spot-selected-$mapElementId'.replace(/"/g, ''), {
               detail: { spotId: String(spot.id) }
             }));
-          });
+          }
+          markerElement.addEventListener('click', selectSpot);
+          markerElement.addEventListener('pointerup', selectSpot);
+          markerElement.addEventListener('touchend', selectSpot);
           markerElements.push(markerElement);
 
           const overlay = new window.kakao.maps.CustomOverlay({

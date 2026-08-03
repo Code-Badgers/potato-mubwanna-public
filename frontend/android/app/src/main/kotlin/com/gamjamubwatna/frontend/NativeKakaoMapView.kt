@@ -171,7 +171,7 @@ class NativeKakaoMapView(
             val styles = styleCache.getOrPut(styleKey) {
                 val labelStyles = LabelStyles.from(
                     "potato_$styleKey",
-                    LabelStyle.from(markerBitmap(parseColor(markerColor)))
+                    LabelStyle.from(markerBitmap(parseColor(markerColor), isFavorite))
                         .setAnchorPoint(0.5f, 1.0f),
                 )
                 labelManager.addLabelStyles(labelStyles) ?: labelStyles
@@ -236,13 +236,17 @@ class NativeKakaoMapView(
         routeLayer.showAllPolyline()
     }
 
-    private fun markerBitmap(strokeColor: Int): Bitmap {
+    private fun markerBitmap(strokeColor: Int, isFavorite: Boolean): Bitmap {
         val width = 46
         val height = 52
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(240, 255, 255, 255)
+            color = if (isFavorite) {
+                Color.argb(247, 255, 247, 204)
+            } else {
+                Color.argb(240, 255, 255, 255)
+            }
             style = Paint.Style.FILL
         }
         val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

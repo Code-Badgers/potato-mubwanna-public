@@ -25,22 +25,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('랠리북'), findsNothing);
-    expect(find.text('수집률'), findsOneWidget);
-    expect(find.text('8 / 18'), findsOneWidget);
+    expect(find.text('8/18'), findsOneWidget);
     expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
-    expect(find.text('다음 목표'), findsOneWidget);
-    expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('평창 감자 체험장'), findsOneWidget);
-    expect(find.text('시군별 스탬프'), findsOneWidget);
-    expect(find.text('강릉시'), findsOneWidget);
-    expect(find.text('정선군'), findsOneWidget);
+    expect(find.text('다음 스탬프 추천'), findsOneWidget);
+    expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsOneWidget);
+    expect(find.text('강릉'), findsOneWidget);
+    expect(find.text('강릉 스탬프'), findsNothing);
+
+    await tester.tap(find.text('강릉'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('강릉 스탬프'), findsOneWidget);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -850));
     await tester.pumpAndSettle();
 
-    expect(find.text('철원군'), findsOneWidget);
-    expect(find.text('12개 달성 시 지역쿠폰 지급'), findsOneWidget);
-    expect(find.text('앞으로 4개만 더 모으면 받을 수 있어요.'), findsOneWidget);
+    expect(find.text('투어 진행률'), findsOneWidget);
+    expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
   });
 
   testWidgets('opens the selected next target detail', (tester) async {
@@ -75,6 +76,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('상세 101'), findsOneWidget);
+  });
+
+  testWidgets('renders city stamp card grid', (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          stampBookProvider.overrideWith((ref) async => _stampBook()),
+        ],
+        child: const MaterialApp(home: CityStampGridScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('시군별 스탬프'), findsOneWidget);
+    expect(find.text('강원 18개 시군 수집률'), findsOneWidget);
+    expect(find.text('8 / 18'), findsOneWidget);
+    expect(find.text('강릉시'), findsOneWidget);
+    expect(find.text('정선군'), findsOneWidget);
+    expect(find.text('완료'), findsWidgets);
+    expect(find.text('미획득'), findsWidgets);
   });
 
   testWidgets('keeps rallybook visible when next target loading fails', (
@@ -171,7 +197,7 @@ void main() {
       find.byKey(const ValueKey('stamp-reward-claim-button')),
       findsNothing,
     );
-    expect(find.text('12개 달성 시 지역쿠폰 지급'), findsOneWidget);
+    expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
   });
 
   testWidgets('shows the lowest claimable reward before completion copy', (
@@ -190,9 +216,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('6개 달성 보상을 받을 수 있어요'), findsOneWidget);
-
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
     await tester.pumpAndSettle();
 
     expect(find.text('받을 수 있는 보상'), findsOneWidget);

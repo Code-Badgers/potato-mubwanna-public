@@ -69,6 +69,211 @@ class StampBookScreen extends ConsumerWidget {
   }
 }
 
+class CityStampGridScreen extends ConsumerWidget {
+  const CityStampGridScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stampBook = ref.watch(stampBookProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: stampBook.when(
+          data: (value) => value == null
+              ? const _SignedOutState()
+              : _CityStampGridBody(progress: value.progress),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => _StampBookStatusBody(
+            child: _StampBookError(
+              onRetry: () => ref.invalidate(stampBookProvider),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CityStampGridBody extends StatelessWidget {
+  const _CityStampGridBody({required this.progress});
+
+  final StampProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalCount = progress.totalCount == 0 ? 18 : progress.totalCount;
+    final acquiredCount = progress.acquiredCount.clamp(0, totalCount);
+    final ratio = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Row(
+              children: [
+                IconButton.filledTonal(
+                  onPressed: () => context.go('/main/mypage'),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  tooltip: '마이페이지로 돌아가기',
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.surface,
+                    foregroundColor: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    '시군별 스탬프',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '강원 18개 시군 수집률',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$acquiredCount / $totalCount',
+                      style: const TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    minHeight: 10,
+                    value: ratio.clamp(0, 1),
+                    backgroundColor: AppColors.line,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+          sliver: SliverGrid.builder(
+            itemCount: progress.stamps.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1,
+            ),
+            itemBuilder: (context, index) => _CityStampTile(
+              stamp: progress.stamps[index],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CityStampTile extends StatelessWidget {
+  const _CityStampTile({required this.stamp});
+
+  final RallybookStamp stamp;
+
+  @override
+  Widget build(BuildContext context) {
+    final acquired = stamp.acquired;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: acquired ? AppColors.primaryTint : AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: acquired ? AppColors.primary : AppColors.line,
+          width: acquired ? 1.6 : 1,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: acquired ? AppColors.primary : AppColors.background,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              acquired ? Icons.check_rounded : Icons.lock_outline_rounded,
+              color: acquired ? Colors.white : AppColors.textSecondary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            stamp.cityName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: acquired ? AppColors.textPrimary : AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            acquired ? '완료' : '미획득',
+            style: TextStyle(
+              color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StampBookStatusBody extends StatelessWidget {
   const _StampBookStatusBody({required this.child});
 
@@ -197,18 +402,13 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
       for (final stamp in widget.progress.stamps)
         _normalizeCityName(stamp.cityName): stamp,
     };
-    final nearbyCity = widget.nextTargets.maybeWhen(
-      data: (targets) => targets == null || targets.isEmpty
-          ? _firstIncompleteCity(stampsByCity)
-          : _normalizeCityName(targets.first.cityName),
-      orElse: () => _firstIncompleteCity(stampsByCity),
-    );
-    final selectedCity = _selectedCity ?? nearbyCity;
-    final selectedRegion = _findRegion(selectedCity) ?? gangwonMapRegions.first;
-    final selectedStamp = stampsByCity[selectedRegion.city];
+    final selectedRegion =
+        _selectedCity == null ? null : _findRegion(_selectedCity!);
+    final selectedStamp =
+        selectedRegion == null ? null : stampsByCity[selectedRegion.city];
     final selectedTarget = widget.nextTargets.maybeWhen(
       data: (targets) {
-        if (targets == null || targets.isEmpty) {
+        if (selectedRegion == null || targets == null || targets.isEmpty) {
           return null;
         }
         for (final target in targets) {
@@ -225,8 +425,8 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
       margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
       height: 540,
       decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFEAF7FF),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.line),
       ),
       clipBehavior: Clip.antiAlias,
@@ -250,8 +450,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                 child: CustomPaint(
                   painter: _GangwonMapPainter(
                     stampsByCity: stampsByCity,
-                    selectedCity: selectedRegion.city,
-                    nearbyCity: nearbyCity,
+                    selectedCity: selectedRegion?.city,
                   ),
                   child: const SizedBox.expand(),
                 ),
@@ -266,8 +465,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                     child: _StampMapNode(
                       region: region,
                       stamp: stampsByCity[region.city],
-                      nearby: nearbyCity == region.city,
-                      selected: selectedRegion.city == region.city,
+                      selected: selectedRegion?.city == region.city,
                     ),
                   ),
                 ),
@@ -283,14 +481,16 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                 left: 16,
                 right: 16,
                 bottom: 16,
-                child: _SelectedRegionCard(
-                  region: selectedRegion,
-                  stamp: selectedStamp,
-                  target: selectedTarget,
-                  onTargetTap: selectedTarget == null
-                      ? null
-                      : () => widget.onTargetTap(selectedTarget),
-                ),
+                child: selectedRegion == null
+                    ? const _RegionPromptCard()
+                    : _SelectedRegionCard(
+                        region: selectedRegion,
+                        stamp: selectedStamp,
+                        target: selectedTarget,
+                        onTargetTap: selectedTarget == null
+                            ? null
+                            : () => widget.onTargetTap(selectedTarget),
+                      ),
               ),
             ],
           );
@@ -304,51 +504,37 @@ class _GangwonMapPainter extends CustomPainter {
   const _GangwonMapPainter({
     required this.stampsByCity,
     required this.selectedCity,
-    required this.nearbyCity,
   });
 
   final Map<String, RallybookStamp> stampsByCity;
-  final String selectedCity;
-  final String nearbyCity;
+  final String? selectedCity;
 
   @override
   void paint(Canvas canvas, Size size) {
     final mapRect = _gangwonMapRect(size);
-    final seaPaint = Paint()..color = const Color(0xFFDFF4F7);
     canvas.drawRect(
-      Rect.fromLTRB(
-        mapRect.left + mapRect.width * 0.76,
-        0,
-        size.width,
-        size.height,
-      ),
-      seaPaint,
-    );
-    _drawWaves(canvas, mapRect);
+        Offset.zero & size, Paint()..color = const Color(0xFFEAF7FF));
 
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
     final thinLinePaint = Paint()
-      ..color = const Color(0xFFB8CB9B)
+      ..color = const Color(0xFFB6D6C0)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.8;
+      ..strokeWidth = 0.9;
     final selectedLinePaint = Paint()
       ..color = AppColors.primaryDark
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2;
+      ..strokeWidth = 2.4;
 
     for (final region in gangwonMapRegions) {
       final path = _regionPath(region, mapRect);
       final acquired = stampsByCity[region.city]?.acquired ?? false;
-      final nearby = region.city == nearbyCity;
       final selected = region.city == selectedCity;
       fillPaint.color = selected
-          ? const Color(0xFFD6F1DE)
-          : nearby
-              ? const Color(0xFFFFF1BF)
-              : acquired
-                  ? AppColors.primaryTint
-                  : const Color(0xFFF1F6E7);
+          ? const Color(0xFFD8F2E2)
+          : acquired
+              ? const Color(0xFFE2F6E8)
+              : const Color(0xFFF7FAF4);
       canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, selected ? selectedLinePaint : thinLinePaint);
 
@@ -362,35 +548,16 @@ class _GangwonMapPainter extends CustomPainter {
     }
 
     final outerPaint = Paint()
-      ..color = AppColors.primaryDark.withValues(alpha: 0.42)
+      ..color = AppColors.primaryDark.withValues(alpha: 0.58)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.4;
+      ..strokeWidth = 4.2;
     canvas.drawPath(fullPath, outerPaint);
-  }
-
-  void _drawWaves(Canvas canvas, Rect mapRect) {
-    final wavePaint = Paint()
-      ..color = const Color(0xFF91CED7)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    for (final yRatio in [0.18, 0.35, 0.52, 0.69, 0.86]) {
-      final path = Path();
-      final y = mapRect.top + mapRect.height * yRatio;
-      final startX = mapRect.left + mapRect.width * 0.78;
-      path.moveTo(startX, y);
-      for (var i = 0; i <= 7; i++) {
-        final x = startX + i * 34;
-        path.quadraticBezierTo(x + 17, y + 7, x + 34, y);
-      }
-      canvas.drawPath(path, wavePaint);
-    }
   }
 
   @override
   bool shouldRepaint(covariant _GangwonMapPainter oldDelegate) {
     return oldDelegate.stampsByCity != stampsByCity ||
-        oldDelegate.selectedCity != selectedCity ||
-        oldDelegate.nearbyCity != nearbyCity;
+        oldDelegate.selectedCity != selectedCity;
   }
 }
 
@@ -451,6 +618,50 @@ GangwonMapRegion? _findRegion(String city) {
     }
   }
   return null;
+}
+
+class _RegionPromptCard extends StatelessWidget {
+  const _RegionPromptCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.touch_app_rounded,
+            color: AppColors.primaryDark,
+            size: 26,
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '지도의 시군을 눌러 스탬프 상태를 확인해보세요.',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SelectedRegionCard extends StatelessWidget {
@@ -578,13 +789,11 @@ class _StampMapNode extends StatelessWidget {
   const _StampMapNode({
     required this.region,
     required this.stamp,
-    required this.nearby,
     required this.selected,
   });
 
   final GangwonMapRegion region;
   final RallybookStamp? stamp;
-  final bool nearby;
   final bool selected;
 
   @override
@@ -596,26 +805,24 @@ class _StampMapNode extends StatelessWidget {
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          width: selected || nearby ? 48 : 38,
-          height: selected || nearby ? 48 : 38,
+          width: selected ? 48 : 38,
+          height: selected ? 48 : 38,
           decoration: BoxDecoration(
             color: AppColors.surface,
             shape: BoxShape.circle,
             border: Border.all(
-              color: selected || nearby
+              color: selected
                   ? AppColors.secondary
                   : acquired
                       ? AppColors.primary
                       : const Color(0xFFCDBF9F),
-              width: selected || nearby ? 4 : 2.5,
+              width: selected ? 4 : 2.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: (selected || nearby
-                        ? AppColors.secondary
-                        : AppColors.primary)
-                    .withValues(alpha: selected || nearby ? 0.28 : 0.1),
-                blurRadius: selected || nearby ? 16 : 7,
+                color: (selected ? AppColors.secondary : AppColors.primary)
+                    .withValues(alpha: selected ? 0.28 : 0.1),
+                blurRadius: selected ? 16 : 7,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -890,6 +1097,7 @@ class _NextStampHintCard extends StatelessWidget {
           }
           final target = targets.first;
           return InkWell(
+            key: ValueKey('stamp-next-target-${target.spotId}'),
             onTap: () => onTargetTap(target),
             borderRadius: BorderRadius.circular(8),
             child: Row(
@@ -938,15 +1146,6 @@ class _NextStampHintCard extends StatelessWidget {
 
 String _normalizeCityName(String value) {
   return value.replaceAll(RegExp(r'(특별자치도|시|군|구)$'), '').trim();
-}
-
-String _firstIncompleteCity(Map<String, RallybookStamp> stampsByCity) {
-  for (final region in gangwonMapRegions) {
-    if (stampsByCity[region.city]?.acquired != true) {
-      return region.city;
-    }
-  }
-  return '';
 }
 
 class _NextTargetStatus extends StatelessWidget {

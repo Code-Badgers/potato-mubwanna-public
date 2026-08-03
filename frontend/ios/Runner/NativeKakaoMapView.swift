@@ -369,6 +369,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         makePoiStyle(
           styleID: styleIDFor(markerColor: markerColor, isFavorite: isFavorite, sizeKey: sizeKey),
           color: color,
+          isFavorite: isFavorite,
           size: size
         )
       )
@@ -400,10 +401,11 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private func makePoiStyle(
     styleID: String,
     color: UIColor,
+    isFavorite: Bool,
     size: CGSize
   ) -> PoiStyle {
     let iconStyle = PoiIconStyle(
-      symbol: makeMarkerImage(color: color, size: size),
+      symbol: makeMarkerImage(color: color, isFavorite: isFavorite, size: size),
       anchorPoint: CGPoint(x: 0.5, y: 1.0)
     )
     let perLevelStyle = PerLevelPoiStyle(iconStyle: iconStyle, padding: 0, level: 0)
@@ -412,6 +414,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   private func makeMarkerImage(
     color: UIColor,
+    isFavorite: Bool,
     size: CGSize
   ) -> UIImage? {
     let renderer = UIGraphicsImageRenderer(size: size)
@@ -442,7 +445,10 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         )
       ).fill()
 
-      UIColor.white.withAlphaComponent(0.94).setFill()
+      let bodyColor = isFavorite
+        ? UIColor(red: 1.0, green: 0.969, blue: 0.800, alpha: 0.97)
+        : UIColor.white.withAlphaComponent(0.94)
+      bodyColor.setFill()
       UIBezierPath(ovalIn: bodyRect).fill()
       color.setStroke()
       let bodyPath = UIBezierPath(ovalIn: bodyRect)

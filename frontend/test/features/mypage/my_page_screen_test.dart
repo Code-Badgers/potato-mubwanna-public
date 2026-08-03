@@ -99,6 +99,7 @@ void main() {
     expect(find.text('보상함'), findsOneWidget);
     expect(find.text('여행 기록'), findsOneWidget);
     expect(find.text('감자 도감'), findsOneWidget);
+    expect(find.text('스탬프 투어'), findsOneWidget);
     expect(find.text('내 미션'), findsNothing);
 
     expect(find.text('강원 감자 여행'), findsNothing);
@@ -145,6 +146,11 @@ void main() {
 
   testWidgets('clips account menu ink responses to the menu shape',
       (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: _myPageProviderOverrides(),
@@ -154,13 +160,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    final settingsMenu = find.byKey(const ValueKey('mypage-menu-settings'));
+    await tester.scrollUntilVisible(
+      settingsMenu,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
 
     expect(
       find.byWidgetPredicate(
-        (widget) =>
-            widget is Material &&
-            widget.color == const Color(0xFFFFFFFF) &&
-            widget.clipBehavior == Clip.antiAlias,
+        (widget) => widget is Material && widget.clipBehavior == Clip.antiAlias,
       ),
       findsOneWidget,
     );
@@ -273,6 +283,51 @@ void main() {
     expect(find.text('여행 기록'), findsOneWidget);
   });
 
+  testWidgets('opens city stamp cards from the My Page quick action',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = GoRouter(
+      initialLocation: '/main/mypage',
+      routes: [
+        GoRoute(
+          path: '/main/mypage',
+          builder: (_, __) => const MyPageScreen(),
+        ),
+        GoRoute(
+          path: '/main/stamps/cities',
+          builder: (_, __) => const Scaffold(
+            body: Center(child: Text('city stamp cards')),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final stampTourAction =
+        find.byKey(const ValueKey('mypage-quick-action-stamp-tour'));
+    await tester.scrollUntilVisible(
+      stampTourAction,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(stampTourAction);
+    await tester.pumpAndSettle();
+
+    expect(find.text('city stamp cards'), findsOneWidget);
+  });
+
   testWidgets('opens settings from My Page account menu', (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
@@ -303,8 +358,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final settingsMenu = find.text('설정');
-    await tester.scrollUntilVisible(settingsMenu, 200);
+    final settingsMenu = find.byKey(const ValueKey('mypage-menu-settings'));
+    await tester.scrollUntilVisible(
+      settingsMenu,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(settingsMenu);
     await tester.pumpAndSettle();
 

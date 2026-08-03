@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
-import '../../../stamp/application/stamp_book_controller.dart';
-import '../../../stamp/domain/stamp_book.dart';
 import '../../application/user_activity_summary_controller.dart';
 import '../../application/user_profile_controller.dart';
 import '../../domain/user_activity_summary.dart';
@@ -31,7 +29,6 @@ class MyPageScreen extends ConsumerWidget {
 
     final activitySummaryState = ref.watch(userActivitySummaryProvider);
     final profileState = ref.watch(userProfileProvider);
-    final stampBookState = ref.watch(stampBookProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -45,12 +42,6 @@ class MyPageScreen extends ConsumerWidget {
               child: _TravelStats(
                 summaryState: activitySummaryState,
                 onRetry: () => ref.invalidate(userActivitySummaryProvider),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: _CityStampSummary(
-                stampBookState: stampBookState,
-                onRetry: () => ref.invalidate(stampBookProvider),
               ),
             ),
             const SliverToBoxAdapter(child: _QuickActionGrid()),
@@ -305,250 +296,6 @@ class _TravelStatRow extends StatelessWidget {
   }
 }
 
-class _CityStampSummary extends StatelessWidget {
-  const _CityStampSummary({
-    required this.stampBookState,
-    required this.onRetry,
-  });
-
-  final AsyncValue<StampBook?> stampBookState;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: stampBookState.when(
-        data: (stampBook) {
-          final progress = stampBook?.progress;
-          if (progress == null) {
-            return const _CityStampEmpty();
-          }
-          return _CityStampProgress(progress: progress);
-        },
-        loading: () => const _CityStampLoading(),
-        error: (_, __) => _CityStampError(onRetry: onRetry),
-      ),
-    );
-  }
-}
-
-class _CityStampProgress extends StatelessWidget {
-  const _CityStampProgress({required this.progress});
-
-  final StampProgress progress;
-
-  @override
-  Widget build(BuildContext context) {
-    final totalCount = progress.totalCount == 0 ? 18 : progress.totalCount;
-    final acquiredCount = progress.acquiredCount.clamp(0, totalCount);
-    final ratio = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
-    final percent = (ratio * 100).round();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryTint,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.verified_rounded,
-                color: AppColors.primaryDark,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '시군별 스탬프',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    '강원 18개 시군 수집 현황',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '$percent%',
-              style: const TextStyle(
-                color: AppColors.primaryDark,
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            minHeight: 9,
-            value: ratio.clamp(0, 1),
-            backgroundColor: const Color(0xFFEFE9DC),
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          '$acquiredCount / $totalCount개 수집',
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 7,
-          runSpacing: 8,
-          children: [
-            for (final stamp in progress.stamps) _CityStampChip(stamp: stamp),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _CityStampChip extends StatelessWidget {
-  const _CityStampChip({required this.stamp});
-
-  final RallybookStamp stamp;
-
-  @override
-  Widget build(BuildContext context) {
-    final acquired = stamp.acquired;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: acquired ? AppColors.primaryTint : AppColors.background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: acquired ? AppColors.primary : AppColors.line,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            acquired
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_unchecked,
-            color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
-            size: 15,
-          ),
-          const SizedBox(width: 5),
-          Text(
-            stamp.cityName,
-            style: TextStyle(
-              color: acquired ? AppColors.textPrimary : AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CityStampLoading extends StatelessWidget {
-  const _CityStampLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 92,
-      child: Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
-class _CityStampEmpty extends StatelessWidget {
-  const _CityStampEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      '스탬프 수집 현황을 준비하고 있어요.',
-      style: TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0,
-      ),
-    );
-  }
-}
-
-class _CityStampError extends StatelessWidget {
-  const _CityStampError({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(
-          child: Text(
-            '시군별 스탬프를 불러오지 못했어요.',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-        TextButton(
-          onPressed: onRetry,
-          child: const Text('다시 시도'),
-        ),
-      ],
-    );
-  }
-}
-
 class _StatItem extends StatelessWidget {
   const _StatItem({
     required this.label,
@@ -621,29 +368,44 @@ class _QuickActionGrid extends StatelessWidget {
       _QuickAction(
         icon: Icons.card_giftcard_rounded,
         label: '보상함',
+        key: const ValueKey('mypage-quick-action-coupons'),
         onTap: () => context.push('/coupons'),
       ),
       _QuickAction(
         icon: Icons.menu_book_rounded,
         label: '여행 기록',
+        key: const ValueKey('mypage-quick-action-travel-records'),
         onTap: () => context.push('/travel-records'),
       ),
       _QuickAction(
         icon: Icons.eco_rounded,
         label: '감자 도감',
-        onTap: () => context.go('/main/potato'),
+        key: const ValueKey('mypage-quick-action-potatoes'),
+        onTap: () => context.go('/main/potatoes'),
+      ),
+      _QuickAction(
+        icon: Icons.grid_view_rounded,
+        label: '스탬프 투어',
+        key: const ValueKey('mypage-quick-action-stamp-tour'),
+        onTap: () => context.go('/main/stamps/cities'),
       ),
     ];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: Row(
-        children: [
-          for (var index = 0; index < actions.length; index++) ...[
-            Expanded(child: _QuickActionCard(action: actions[index])),
-            if (index < actions.length - 1) const SizedBox(width: 12),
-          ],
-        ],
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: actions.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.7,
+        ),
+        itemBuilder: (context, index) => _QuickActionCard(
+          action: actions[index],
+        ),
       ),
     );
   }
@@ -660,6 +422,7 @@ class _QuickActionCard extends StatelessWidget {
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
+        key: action.key,
         onTap: action.onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
@@ -758,6 +521,7 @@ class _MenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
+      key: item.isSettings ? const ValueKey('mypage-menu-settings') : null,
       onTap: onTap,
       child: SizedBox(
         height: 64,
@@ -798,11 +562,13 @@ class _QuickAction {
   const _QuickAction({
     required this.icon,
     required this.label,
+    required this.key,
     this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final Key key;
   final VoidCallback? onTap;
 }
 
