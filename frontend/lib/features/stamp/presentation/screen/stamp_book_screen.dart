@@ -413,7 +413,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                     child: _MapPassportBadge(
                       acquiredCount: widget.progress.acquiredCount,
                       totalCount: widget.progress.totalCount,
-                      onTap: () => context.go('/main/stamps/cities'),
+                      onTap: () => context.push('/main/stamps/cities'),
                     ),
                   ),
                 ],
@@ -767,46 +767,43 @@ class _MapPassportBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: '스탬프 투어 보기',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(999),
-          child: Ink(
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.line),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.line),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.auto_stories_rounded,
+                  color: AppColors.primaryDark,
+                  size: 17,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '$acquiredCount/$totalCount',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
                 ),
               ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.auto_stories_rounded,
-                    color: AppColors.primaryDark,
-                    size: 17,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$acquiredCount/$totalCount',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),

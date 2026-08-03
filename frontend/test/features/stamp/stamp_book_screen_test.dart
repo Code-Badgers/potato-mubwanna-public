@@ -118,6 +118,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('시군별 스탬프 카드'), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
+    expect(find.text('8/18'), findsOneWidget);
   });
 
   testWidgets('renders city stamp card grid', (tester) async {
