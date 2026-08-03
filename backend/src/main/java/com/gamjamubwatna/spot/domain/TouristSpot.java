@@ -64,6 +64,9 @@ public class TouristSpot {
     @Column(name = "stamp_enabled", nullable = false)
     private Boolean stampEnabled;
 
+    @Column(name = "rallybook_featured", nullable = false)
+    private Boolean rallybookFeatured;
+
     @Column(name = "active", nullable = false)
     private Boolean active;
 
@@ -133,6 +136,7 @@ public class TouristSpot {
         this.congestionLevel = CongestionLevel.NORMAL;
         this.verificationRadiusMeter = 100;
         this.stampEnabled = true;
+        this.rallybookFeatured = false;
         this.active = true;
         this.createdAt = now;
         this.updatedAt = now;
@@ -239,5 +243,9 @@ public class TouristSpot {
 
     public Boolean getStampEnabled() {
         return stampEnabled;
+    }
+
+    public Boolean getRallybookFeatured() {
+        return rallybookFeatured;
     }
 }

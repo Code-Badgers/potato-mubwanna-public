@@ -10,6 +10,7 @@ import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.stamp.api.RallybookSpotResponse;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
 import com.gamjamubwatna.stamp.api.StampNextTargetResponse;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
@@ -126,6 +127,36 @@ class StampQueryServiceTest {
             .extracting(StampNextTargetResponse::cityName)
             .containsExactly("시군 2", "시군 4", "시군 5");
         assertThat(result.getFirst().spotName()).isEqualTo("가 관광지");
+    }
+
+    @Test
+    void returnsEveryRallybookSpotInStampCityOrder() {
+        List<Stamp> stamps = List.of(
+            stamp(1L, "춘천시", "호반감자", 1),
+            stamp(2L, "강릉시", "하지감자", 2)
+        );
+        TouristSpot gangneung = touristSpot(31L, "강릉시", "경포대");
+        TouristSpot chuncheonLater = touristSpot(12L, "춘천시", "소양강 스카이워크");
+        TouristSpot chuncheonFirst = touristSpot(11L, "춘천시", "남이섬");
+
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(stampRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(stamps);
+        when(touristSpotRepository.findActiveRallybookSpots()).thenReturn(List.of(
+            gangneung,
+            chuncheonLater,
+            chuncheonFirst
+        ));
+
+        List<RallybookSpotResponse> result = stampQueryService.getRallybookSpots(1L);
+
+        assertThat(result)
+            .extracting(RallybookSpotResponse::spotName)
+            .containsExactly("남이섬", "소양강 스카이워크", "경포대");
+        assertThat(result)
+            .allSatisfy(spot -> {
+                assertThat(spot.latitude()).isEqualByComparingTo("37.0");
+                assertThat(spot.longitude()).isEqualByComparingTo("128.0");
+            });
     }
 
     @ParameterizedTest

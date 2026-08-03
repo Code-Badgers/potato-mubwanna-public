@@ -102,10 +102,21 @@ class TouristSpotMigrationTest {
                     .isBetween(new BigDecimal("127.0"), new BigDecimal("129.5"));
                 assertThat(spot.getImageUrl()).startsWith("https://tong.visitkorea.or.kr/");
                 assertThat(spot.getStampEnabled()).isTrue();
+                assertThat(spot.getRallybookFeatured()).isTrue();
             });
 
         assertThat(spots.stream().map(TouristSpot::getCityName).collect(Collectors.toSet()))
             .containsExactlyInAnyOrderElementsOf(GANGWON_CITIES);
+    }
+
+    @Test
+    void selectsOnlyTheOfficialAttractionsForTheRallybook() {
+        List<TouristSpot> spots = touristSpotRepository.findActiveRallybookSpots();
+
+        assertThat(spots)
+            .hasSize(OFFICIAL_ATTRACTIONS.size())
+            .extracting(TouristSpot::getContentId)
+            .containsExactlyInAnyOrderElementsOf(OFFICIAL_ATTRACTIONS.values());
     }
 
     @Test

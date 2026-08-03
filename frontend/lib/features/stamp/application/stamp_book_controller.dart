@@ -33,6 +33,18 @@ final stampNextTargetsProvider =
   return ref.watch(stampRepositoryProvider).fetchNextTargets();
 });
 
+final stampRallybookSpotsProvider =
+    FutureProvider.autoDispose<List<RallybookSpot>?>((ref) async {
+  final authStatus = ref.watch(
+    authControllerProvider.select((state) => state.status),
+  );
+  if (authStatus != AuthStatus.authenticated) {
+    return null;
+  }
+
+  return ref.watch(stampRepositoryProvider).fetchRallybookSpots();
+});
+
 final stampRewardClaimProvider = StateNotifierProvider.autoDispose<
     StampRewardClaimController, AsyncValue<StampRewardClaimResult?>>(
   (ref) => StampRewardClaimController(

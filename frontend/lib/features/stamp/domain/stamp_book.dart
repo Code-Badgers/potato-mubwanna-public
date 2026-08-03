@@ -81,17 +81,7 @@ class StampNextTarget {
   final String address;
   final String? imageUrl;
 
-  String get categoryLabel => switch (category) {
-    'POTATO_TOUR' => '관광',
-    'POTATO_EXPERIENCE' => '체험',
-    'POTATO_RESTAURANT' => '맛집',
-    'POTATO_CAFE' => '카페',
-    'POTATO_SNACK' => '간식',
-    'POTATO_MARKET' => '시장',
-    'POTATO_BREWERY' => '바 & 페어링',
-    'POTATO_SHOP' => '쇼핑',
-    _ => '감자 스팟',
-  };
+  String get categoryLabel => _stampSpotCategoryLabel(category);
 
   static StampNextTarget fromJson(Map<String, dynamic> json) {
     return StampNextTarget(
@@ -104,6 +94,55 @@ class StampNextTarget {
     );
   }
 }
+
+class RallybookSpot {
+  const RallybookSpot({
+    required this.spotId,
+    required this.spotName,
+    required this.cityName,
+    required this.category,
+    required this.latitude,
+    required this.longitude,
+    required this.address,
+    required this.imageUrl,
+  });
+
+  final int spotId;
+  final String spotName;
+  final String cityName;
+  final String category;
+  final double latitude;
+  final double longitude;
+  final String address;
+  final String? imageUrl;
+
+  String get categoryLabel => _stampSpotCategoryLabel(category);
+
+  static RallybookSpot fromJson(Map<String, dynamic> json) {
+    return RallybookSpot(
+      spotId: (json['spotId'] as num?)?.toInt() ?? 0,
+      spotName: json['spotName'] as String? ?? '',
+      cityName: json['cityName'] as String? ?? '',
+      category: json['category'] as String? ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+      address: json['address'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String?,
+    );
+  }
+}
+
+String _stampSpotCategoryLabel(String category) => switch (category) {
+      'POTATO_TOUR' => '관광',
+      'POTATO_EXPERIENCE' => '체험',
+      'POTATO_RESTAURANT' => '맛집',
+      'POTATO_CAFE' => '카페',
+      'POTATO_SNACK' => '간식',
+      'POTATO_MARKET' => '시장',
+      'POTATO_BREWERY' => '바 & 페어링',
+      'POTATO_SHOP' => '쇼핑',
+      _ => '감자 스팟',
+    };
 
 class NextStampReward {
   const NextStampReward({

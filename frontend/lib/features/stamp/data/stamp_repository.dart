@@ -56,6 +56,32 @@ class StampRepository {
     return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
+  Future<List<RallybookSpot>> fetchRallybookSpots() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiPaths.stampRallybookSpots,
+    );
+    final apiResponse = ApiResponse<List<RallybookSpot>>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      (json) {
+        final values = json as List<dynamic>? ?? const [];
+        return values
+            .whereType<Map<String, dynamic>>()
+            .map(RallybookSpot.fromJson)
+            .where(
+              (spot) =>
+                  spot.spotId > 0 &&
+                  spot.latitude >= -90 &&
+                  spot.latitude <= 90 &&
+                  spot.longitude >= -180 &&
+                  spot.longitude <= 180,
+            )
+            .toList(growable: false);
+      },
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
   Future<StampRewardClaimResult> claimReward(
     StampRewardClaimRequest request,
   ) async {

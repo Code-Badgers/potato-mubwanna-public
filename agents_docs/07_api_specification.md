@@ -614,7 +614,45 @@ Response:
 - 최대 3곳을 반환하며, 후보가 없거나 18개 시군 랠리를 완주한 경우 빈 배열을 반환한다.
 - 인증 정보가 없거나 JWT 사용자를 찾을 수 없으면 `401 Unauthorized`를 반환한다.
 
-### 4.4 보상 가능 여부 확인
+### 4.4 랠리북 관광지 카탈로그 조회
+
+강원 18개 시군 랠리북에 노출하도록 선별한 관광지와 공식 좌표를 조회한다.
+
+```http
+GET /api/stamps/rallybook-spots
+Authorization: Bearer {accessToken}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": [
+    {
+      "spotId": 101,
+      "spotName": "남이섬",
+      "cityName": "춘천시",
+      "category": "POTATO_TOUR",
+      "latitude": 37.7962651,
+      "longitude": 127.5254892,
+      "address": "강원특별자치도 춘천시 남이섬길 1 남이섬",
+      "imageUrl": "https://..."
+    }
+  ]
+}
+```
+
+처리 규칙:
+
+- `active=true`, `stampEnabled=true`, `rallybookFeatured=true`인 관광지만 반환한다.
+- 시군 스탬프 `displayOrder`, 관광지 이름, 관광지 ID 순으로 정렬한다.
+- 좌표는 `tourist_spots`에 저장된 한국관광공사 TourAPI 공식 위도·경도를 그대로 반환한다.
+- 정선 5일장과 아리랑시장은 같은 공식 TourAPI 콘텐츠이므로 한 관광지로 반환한다.
+- 인증 정보가 없거나 JWT 사용자를 찾을 수 없으면 `401 Unauthorized`를 반환한다.
+
+### 4.5 보상 가능 여부 확인
 
 ```http
 GET /api/stamps/rewards/check
@@ -643,7 +681,7 @@ Response:
 - `claimable`은 `claimableTargetCount`가 있을 때 `true`다.
 - 18개를 모두 획득해 `completed=true`여도 미수령 보상이 있으면 `claimable=true`일 수 있다.
 
-### 4.5 스탬프 보상 수령
+### 4.6 스탬프 보상 수령
 
 ```http
 POST /api/stamps/rewards/claim

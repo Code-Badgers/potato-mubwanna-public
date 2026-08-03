@@ -17,6 +17,7 @@ import com.gamjamubwatna.stamp.application.StampRewardConfigurationException;
 import com.gamjamubwatna.stamp.application.StampRewardConflictException;
 import com.gamjamubwatna.stamp.application.StampRewardInvalidTargetException;
 import com.gamjamubwatna.stamp.application.StampRewardService;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -101,6 +102,31 @@ class StampControllerTest {
             .andExpect(jsonPath("$.data[0].spotName").value("정선 5일장"))
             .andExpect(jsonPath("$.data[0].cityName").value("정선군"))
             .andExpect(jsonPath("$.data[0].category").value("POTATO_MARKET"));
+    }
+
+    @Test
+    void returnsRallybookSpotsWithOfficialCoordinates() throws Exception {
+        when(stampQueryService.getRallybookSpots(eq(1L))).thenReturn(List.of(
+            new RallybookSpotResponse(
+                101L,
+                "남이섬",
+                "춘천시",
+                com.gamjamubwatna.spot.domain.SpotCategory.POTATO_TOUR,
+                new BigDecimal("37.7962651"),
+                new BigDecimal("127.5254892"),
+                "강원특별자치도 춘천시 남이섬길 1 남이섬",
+                "https://example.com/101.jpg"
+            )
+        ));
+
+        mockMvc.perform(get("/stamps/rallybook-spots").with(user("user:1")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data[0].spotId").value(101))
+            .andExpect(jsonPath("$.data[0].spotName").value("남이섬"))
+            .andExpect(jsonPath("$.data[0].cityName").value("춘천시"))
+            .andExpect(jsonPath("$.data[0].latitude").value(37.7962651))
+            .andExpect(jsonPath("$.data[0].longitude").value(127.5254892));
     }
 
     @Test

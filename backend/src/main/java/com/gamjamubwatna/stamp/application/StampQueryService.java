@@ -5,6 +5,7 @@ import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.stamp.api.RallybookSpotResponse;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
 import com.gamjamubwatna.stamp.api.StampItemResponse;
 import com.gamjamubwatna.stamp.api.StampNextTargetResponse;
@@ -14,6 +15,7 @@ import com.gamjamubwatna.stamp.domain.StampRepository;
 import com.gamjamubwatna.stamp.domain.StampRewardPolicy;
 import com.gamjamubwatna.stamp.domain.UserStamp;
 import com.gamjamubwatna.stamp.domain.UserStampRepository;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,6 +119,28 @@ public class StampQueryService {
             .filter(java.util.Objects::nonNull)
             .limit(NEXT_TARGET_LIMIT)
             .map(StampNextTargetResponse::from)
+            .toList();
+    }
+
+    public List<RallybookSpotResponse> getRallybookSpots(Long userId) {
+        validateUser(userId);
+        Map<String, Integer> cityDisplayOrders = stampRepository
+            .findAllByOrderByDisplayOrderAsc()
+            .stream()
+            .collect(Collectors.toMap(Stamp::getCityName, Stamp::getDisplayOrder));
+
+        return touristSpotRepository.findActiveRallybookSpots()
+            .stream()
+            .sorted(
+                Comparator
+                    .comparingInt((TouristSpot spot) -> cityDisplayOrders.getOrDefault(
+                        spot.getCityName(),
+                        Integer.MAX_VALUE
+                    ))
+                    .thenComparing(TouristSpot::getName)
+                    .thenComparing(TouristSpot::getId)
+            )
+            .map(RallybookSpotResponse::from)
             .toList();
     }
 

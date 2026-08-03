@@ -56,6 +56,16 @@ class StampControllerSecurityTest {
     }
 
     @Test
+    void rejectsRallybookSpotRequestWithoutBearerToken() throws Exception {
+        mockMvc.perform(get("/stamps/rallybook-spots"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+
+        verifyNoInteractions(stampQueryService);
+    }
+
+    @Test
     void rejectsRewardClaimRequestWithoutBearerToken() throws Exception {
         mockMvc.perform(post("/stamps/rewards/claim")
                 .contentType("application/json")
