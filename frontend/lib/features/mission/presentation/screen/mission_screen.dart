@@ -667,7 +667,7 @@ class _MissionFilterBar extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: 48,
+      height: 44,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
@@ -702,16 +702,16 @@ class _MissionFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: selected ? _missionDark : AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(999),
         child: Container(
-          constraints: const BoxConstraints(minWidth: 72),
-          padding: const EdgeInsets.symmetric(horizontal: 18),
+          constraints: const BoxConstraints(minWidth: 68),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: selected ? _missionDark : _missionLine,
             ),
@@ -743,19 +743,27 @@ class _MissionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = mission.active && mission.status != MissionStatus.locked;
+    final showProgress = mission.target > 1;
 
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        child: Padding(
+        child: Container(
           padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: enabled ? AppColors.line : const Color(0xFFEDEAE3),
+            ),
+            borderRadius: BorderRadius.circular(22),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _MissionTypeIcon(type: mission.type, enabled: enabled),
                   const SizedBox(width: 12),
@@ -778,7 +786,9 @@ class _MissionCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${mission.cityName} · ${mission.spotName}',
+                          mission.spotName.isEmpty
+                              ? mission.cityName
+                              : '${mission.cityName} · ${mission.spotName}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -791,45 +801,44 @@ class _MissionCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  if (mission.isNew) const _NewBadge(),
+                  const SizedBox(width: 10),
                   _MissionStatusBadge(status: mission.status),
-                  _RewardPill(mission: mission),
                 ],
               ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: mission.progressRatio,
-                  minHeight: 7,
-                  color: enabled ? _missionPrimary : _missionLine,
-                  backgroundColor: const Color(0xFFF0EEE8),
+              const SizedBox(height: 14),
+              Text(
+                mission.conditionLabel,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
                 ),
               ),
-              const SizedBox(height: 8),
+              if (showProgress) ...[
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: mission.progressRatio,
+                    minHeight: 7,
+                    color: enabled ? _missionPrimary : _missionLine,
+                    backgroundColor: const Color(0xFFF0EEE8),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      mission.conditionLabel,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
+                  _RewardPill(mission: mission),
+                  if (mission.isNew) ...[
+                    const SizedBox(width: 8),
+                    const _NewBadge(),
+                  ],
+                  const Spacer(),
                   Text(
                     mission.progressLabel,
                     style: const TextStyle(
@@ -838,6 +847,12 @@ class _MissionCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0,
                     ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
                   ),
                 ],
               ),
