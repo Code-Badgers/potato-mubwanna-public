@@ -17,6 +17,7 @@ final sessionStartupCoordinatorProvider =
     markOnboardingCompleted: onboardingStatusStore.markOnboardingCompleted,
     readRefreshToken: tokenStorage.readRefreshToken,
     refreshSession: ref.watch(authControllerProvider.notifier).refreshSession,
+    unregisterPushToken: pushNotificationService.unregister,
     clearLocalTokens: tokenStorage.clearTokens,
     readInitialPushMessage: pushNotificationService.getInitialMessage,
   );
@@ -29,6 +30,7 @@ class SessionStartupCoordinator {
     required Future<void> Function() markOnboardingCompleted,
     required Future<String?> Function() readRefreshToken,
     required Future<bool> Function() refreshSession,
+    required Future<void> Function() unregisterPushToken,
     required Future<void> Function() clearLocalTokens,
     required Future<PushMessage?> Function() readInitialPushMessage,
   })  : _hasKakaoAuthorizationCallback = hasKakaoAuthorizationCallback,
@@ -36,6 +38,7 @@ class SessionStartupCoordinator {
         _markOnboardingCompleted = markOnboardingCompleted,
         _readRefreshToken = readRefreshToken,
         _refreshSession = refreshSession,
+        _unregisterPushToken = unregisterPushToken,
         _clearLocalTokens = clearLocalTokens,
         _readInitialPushMessage = readInitialPushMessage;
 
@@ -44,6 +47,7 @@ class SessionStartupCoordinator {
   final Future<void> Function() _markOnboardingCompleted;
   final Future<String?> Function() _readRefreshToken;
   final Future<bool> Function() _refreshSession;
+  final Future<void> Function() _unregisterPushToken;
   final Future<void> Function() _clearLocalTokens;
   final Future<PushMessage?> Function() _readInitialPushMessage;
 
@@ -69,6 +73,7 @@ class SessionStartupCoordinator {
     await _recordCompletedOnboarding();
     final hasRestoredSession = await _restoreSession();
     if (!hasRestoredSession) {
+      await _unregisterStalePushToken();
       await _clearInvalidLocalTokens();
       return '/login';
     }
@@ -108,6 +113,15 @@ class SessionStartupCoordinator {
       return await _refreshSession();
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> _unregisterStalePushToken() async {
+    try {
+      // 인증 토큰이 남아 있을 때 서버의 이전 사용자 푸시 등록도 함께 해제한다.
+      await _unregisterPushToken();
+    } catch (_) {
+      // 외부 푸시 해제 실패가 만료된 세션의 로컬 정리와 로그인 진입을 막지 않게 한다.
     }
   }
 
