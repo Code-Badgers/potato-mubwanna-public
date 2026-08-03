@@ -439,6 +439,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             potato?.name ?? '아직 대표 감자가 없어요',
+            textAlign: potato == null ? TextAlign.center : TextAlign.start,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -450,14 +451,17 @@ class _RepresentativePotatoCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (potato == null)
-            const Text(
-              '감자 스팟을 방문해 첫 감자를 모아보세요. 수집한 감자는 대표 감자로 세울 수 있어요.',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                height: 1.45,
-                letterSpacing: 0,
+            const Center(
+              child: Text(
+                '감자 스팟을 방문해 첫 감자를 모아보세요. 수집한 감자는 대표 감자로 세울 수 있어요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 1.45,
+                  letterSpacing: 0,
+                ),
               ),
             )
           else ...[
@@ -1066,9 +1070,11 @@ class _PotatoArtSlot extends StatelessWidget {
       return SizedBox(
         width: size,
         height: size,
-        child: Padding(
-          padding: EdgeInsets.all(size * 0.02),
-          child: image,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(size * 0.02),
+            child: image,
+          ),
         ),
       );
     }
@@ -1082,7 +1088,9 @@ class _PotatoArtSlot extends StatelessWidget {
         border: Border.all(color: locked ? _potatoLine : _potatoYellow),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Padding(padding: EdgeInsets.all(size * 0.12), child: image),
+      child: Center(
+        child: Padding(padding: EdgeInsets.all(size * 0.12), child: image),
+      ),
     );
   }
 }
