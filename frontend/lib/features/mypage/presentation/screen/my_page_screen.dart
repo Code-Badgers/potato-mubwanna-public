@@ -393,19 +393,14 @@ class _QuickActionGrid extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: actions.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.7,
-        ),
-        itemBuilder: (context, index) => _QuickActionCard(
-          action: actions[index],
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < actions.length; index++) ...[
+            Expanded(child: _QuickActionCard(action: actions[index])),
+            if (index < actions.length - 1) const SizedBox(width: 8),
+          ],
+        ],
       ),
     );
   }
@@ -426,8 +421,8 @@ class _QuickActionCard extends StatelessWidget {
         onTap: action.onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          height: 96,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          height: 92,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.line),
@@ -442,8 +437,17 @@ class _QuickActionCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(action.icon, color: AppColors.primaryDark, size: 28),
-              const SizedBox(height: 10),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryTint,
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    Icon(action.icon, color: AppColors.primaryDark, size: 21),
+              ),
+              const SizedBox(height: 9),
               Text(
                 action.label,
                 maxLines: 1,
@@ -451,7 +455,7 @@ class _QuickActionCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),

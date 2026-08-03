@@ -42,6 +42,7 @@ class NativeKakaoMapView(
     private val spotIdByLabelId = mutableMapOf<String, String>()
     private var kakaoMap: KakaoMap? = null
     private var routePolyline = pointMaps(params["routePolyline"])
+    private var currentLocation = pointMap(params["currentLocation"])
     private val routeLayerId = "potatoRouteLayer"
 
     init {
@@ -58,12 +59,20 @@ class NativeKakaoMapView(
                 when (call.method) {
                     "updateSpots" -> {
                         val nextSpots = spotMaps(call.arguments)
-                        kakaoMap?.let { addSpotLabels(it, nextSpots) }
+                        kakaoMap?.let {
+                            addSpotLabels(it, nextSpots)
+                            renderCurrentLocation(it)
+                        }
                         result.success(null)
                     }
                     "updateRoutePolyline" -> {
                         routePolyline = pointMaps(call.arguments)
                         kakaoMap?.let { renderRoutePolyline(it) }
+                        result.success(null)
+                    }
+                    "updateCurrentLocation" -> {
+                        currentLocation = pointMap(call.arguments)
+                        kakaoMap?.let { renderCurrentLocation(it) }
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -94,9 +103,9 @@ class NativeKakaoMapView(
                             this@NativeKakaoMapView.kakaoMap = kakaoMap
                             addSpotLabels(kakaoMap, spots)
                             renderRoutePolyline(kakaoMap)
+                            renderCurrentLocation(kakaoMap)
                             kakaoMap.setOnLabelClickListener { _, _, label ->
-                                val spotId = spotIdByLabelId[label.labelId]
-                                    ?: label.labelId.removePrefix("potato-")
+                                val spotId = spotIdByLabelId[label.labelId] ?: return@setOnLabelClickListener false
                                 channel.invokeMethod("spotSelected", mapOf("spotId" to spotId))
                                 true
                             }
@@ -236,6 +245,25 @@ class NativeKakaoMapView(
         routeLayer.showAllPolyline()
     }
 
+    private fun renderCurrentLocation(kakaoMap: KakaoMap) {
+        val location = currentLocation ?: return
+        val latitude = (location["latitude"] as? Number)?.toDouble() ?: return
+        val longitude = (location["longitude"] as? Number)?.toDouble() ?: return
+        val labelManager = kakaoMap.labelManager ?: return
+        val layer = labelManager.layer ?: return
+        val styles = LabelStyles.from(
+            "potatoCurrentLocationStyle",
+            LabelStyle.from(currentLocationBitmap()).setAnchorPoint(0.5f, 0.5f),
+        )
+        val registeredStyles = labelManager.addLabelStyles(styles) ?: styles
+        layer.addLabel(
+            LabelOptions.from(
+                "potato-current-location",
+                LatLng.from(latitude, longitude),
+            ).setStyles(registeredStyles),
+        )?.show()
+    }
+
     private fun markerBitmap(strokeColor: Int, isFavorite: Boolean): Bitmap {
         val width = 46
         val height = 52
@@ -284,6 +312,28 @@ class NativeKakaoMapView(
         return bitmap
     }
 
+    private fun currentLocationBitmap(): Bitmap {
+        val size = 30
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(46, 47, 128, 237)
+            style = Paint.Style.FILL
+        }
+        val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.FILL
+        }
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(47, 128, 237)
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(size / 2f, size / 2f, 15f, haloPaint)
+        canvas.drawCircle(size / 2f, size / 2f, 8f, whitePaint)
+        canvas.drawCircle(size / 2f, size / 2f, 5f, dotPaint)
+        return bitmap
+    }
+
     private fun parseColor(hex: String): Int {
         return runCatching { Color.parseColor(hex) }.getOrDefault(0xFF56C787.toInt())
     }
@@ -294,6 +344,10 @@ class NativeKakaoMapView(
 
     private fun pointMaps(value: Any?): List<Map<*, *>> {
         return (value as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
+    }
+
+    private fun pointMap(value: Any?): Map<*, *>? {
+        return value as? Map<*, *>
     }
 
     companion object {

@@ -21,12 +21,14 @@ class KakaoMapView extends StatefulWidget {
     required this.spots,
     this.routePolyline = const [],
     this.favoriteSpotIds = const {},
+    this.currentLocation,
     this.onSpotSelected,
   });
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
   final Set<String> favoriteSpotIds;
+  final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String>? onSpotSelected;
 
   @override
@@ -122,7 +124,8 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.spots == widget.spots &&
         oldWidget.favoriteSpotIds == widget.favoriteSpotIds &&
-        oldWidget.routePolyline == widget.routePolyline) {
+        oldWidget.routePolyline == widget.routePolyline &&
+        oldWidget.currentLocation == widget.currentLocation) {
       return;
     }
     _injectKakaoMapScript();
@@ -256,6 +259,12 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'lng': point.longitude,
             })
         .toList());
+    final currentLocation = jsonEncode(widget.currentLocation == null
+        ? null
+        : {
+            'lat': widget.currentLocation!.latitude,
+            'lng': widget.currentLocation!.longitude,
+          });
 
     final script = html.ScriptElement()
       ..type = 'text/javascript'
@@ -281,10 +290,14 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     try {
       const spots = $spots;
       const routePolyline = $routePolyline;
+      const currentLocation = $currentLocation;
       if (mapElement.__potatoRenderSpots) {
         mapElement.__potatoRenderSpots(spots);
         if (mapElement.__potatoRenderRoutePolyline) {
           mapElement.__potatoRenderRoutePolyline(routePolyline);
+        }
+        if (mapElement.__potatoRenderCurrentLocation) {
+          mapElement.__potatoRenderCurrentLocation(currentLocation);
         }
         return;
       }
@@ -312,6 +325,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       const markerElements = [];
       let markerOverlays = [];
       let routePolylineOverlay = null;
+      let currentLocationOverlay = null;
 
       function markerScale(level) {
         return Math.max(0.52, Math.min(0.88, 1.05 - ((level - 4) * 0.10)));
@@ -452,10 +466,37 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         routePolylineOverlay.setMap(map);
       }
 
+      function renderCurrentLocation(location) {
+        if (currentLocationOverlay) {
+          currentLocationOverlay.setMap(null);
+          currentLocationOverlay = null;
+        }
+        if (!location) {
+          return;
+        }
+        const locationElement = document.createElement('span');
+        locationElement.style.display = 'block';
+        locationElement.style.width = '18px';
+        locationElement.style.height = '18px';
+        locationElement.style.borderRadius = '999px';
+        locationElement.style.background = '#2F80ED';
+        locationElement.style.border = '3px solid #FFFFFF';
+        locationElement.style.boxShadow = '0 0 0 8px rgba(47,128,237,0.18), 0 8px 18px rgba(32,35,26,0.18)';
+        currentLocationOverlay = new window.kakao.maps.CustomOverlay({
+          position: new window.kakao.maps.LatLng(location.lat, location.lng),
+          content: locationElement,
+          xAnchor: 0.5,
+          yAnchor: 0.5
+        });
+        currentLocationOverlay.setMap(map);
+      }
+
       mapElement.__potatoRenderSpots = renderSpots;
       mapElement.__potatoRenderRoutePolyline = renderRoutePolyline;
+      mapElement.__potatoRenderCurrentLocation = renderCurrentLocation;
       renderSpots(spots);
       renderRoutePolyline(routePolyline);
+      renderCurrentLocation(currentLocation);
 
       window.kakao.maps.event.addListener(map, 'zoom_changed', applyMarkerScale);
 

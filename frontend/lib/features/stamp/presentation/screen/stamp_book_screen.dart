@@ -15,7 +15,6 @@ class StampBookScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stampBook = ref.watch(stampBookProvider);
     final nextTargets = ref.watch(stampNextTargetsProvider);
-    final claimState = ref.watch(stampRewardClaimProvider);
     ref.listen(stampRewardClaimProvider, (_, next) {
       next.whenOrNull(
         data: (result) {
@@ -48,10 +47,6 @@ class StampBookScreen extends ConsumerWidget {
               : _StampBookBody(
                   stampBook: value,
                   nextTargets: nextTargets,
-                  isClaiming: claimState.isLoading,
-                  onClaim: (targetCount) => ref
-                      .read(stampRewardClaimProvider.notifier)
-                      .claim(targetCount),
                 ),
           loading: () => const _StampBookStatusBody(
             child: Center(child: CircularProgressIndicator()),
@@ -291,20 +286,14 @@ class _StampBookBody extends StatelessWidget {
   const _StampBookBody({
     required this.stampBook,
     required this.nextTargets,
-    required this.isClaiming,
-    required this.onClaim,
   });
 
   final StampBook stampBook;
   final AsyncValue<List<StampNextTarget>?> nextTargets;
-  final bool isClaiming;
-  final ValueChanged<int> onClaim;
 
   @override
   Widget build(BuildContext context) {
     final progress = stampBook.progress;
-    final reward = stampBook.nextReward;
-
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
@@ -312,15 +301,6 @@ class _StampBookBody extends StatelessWidget {
             progress: progress,
             nextTargets: nextTargets,
             onTargetTap: (target) => context.push('/spots/${target.spotId}'),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: _RallyProgressCard(
-            acquiredCount: progress.acquiredCount,
-            totalCount: progress.totalCount,
-            reward: reward,
-            isClaiming: isClaiming,
-            onClaim: onClaim,
           ),
         ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -372,81 +352,77 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
       orElse: () => null,
     );
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      height: 520,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF7FF),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.line),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final size = constraints.biggest;
-          final mapRect = _gangwonMapRect(size);
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          height: 470,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF7FF),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.line),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final size = constraints.biggest;
+              final mapRect = _gangwonMapRect(size);
 
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (details) {
-                  final city = _hitTestRegion(details.localPosition, mapRect);
-                  if (city == null) {
-                    return;
-                  }
-                  setState(() => _selectedCity = city);
-                },
-                child: CustomPaint(
-                  painter: _GangwonMapPainter(
-                    stampsByCity: stampsByCity,
-                    selectedCity: selectedRegion?.city,
-                  ),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-              for (final region in gangwonMapRegions)
-                Positioned(
-                  left: mapRect.left + region.anchor.dx * mapRect.width - 32,
-                  top: mapRect.top + region.anchor.dy * mapRect.height - 27,
-                  width: 64,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedCity = region.city),
-                    child: _StampMapNode(
-                      region: region,
-                      stamp: stampsByCity[region.city],
-                      selected: selectedRegion?.city == region.city,
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) {
+                      final city =
+                          _hitTestRegion(details.localPosition, mapRect);
+                      if (city == null) {
+                        return;
+                      }
+                      setState(() => _selectedCity = city);
+                    },
+                    child: CustomPaint(
+                      painter: _GangwonMapPainter(
+                        stampsByCity: stampsByCity,
+                        selectedCity: selectedRegion?.city,
+                      ),
+                      child: const SizedBox.expand(),
                     ),
                   ),
-                ),
-              Positioned(
-                top: 14,
-                right: 14,
-                child: _MapPassportBadge(
-                  acquiredCount: widget.progress.acquiredCount,
-                  totalCount: widget.progress.totalCount,
-                ),
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: selectedRegion == null
-                    ? const SizedBox.shrink()
-                    : _SelectedRegionCard(
-                        region: selectedRegion,
-                        stamp: selectedStamp,
-                        target: selectedTarget,
-                        onTargetTap: selectedTarget == null
-                            ? null
-                            : () => widget.onTargetTap(selectedTarget),
+                  for (final region in gangwonMapRegions)
+                    Positioned(
+                      left:
+                          mapRect.left + region.anchor.dx * mapRect.width - 32,
+                      top: mapRect.top + region.anchor.dy * mapRect.height - 27,
+                      width: 64,
+                      child: GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedCity = region.city),
+                        child: _StampMapNode(
+                          region: region,
+                          stamp: stampsByCity[region.city],
+                          selected: selectedRegion?.city == region.city,
+                        ),
                       ),
-              ),
-            ],
-          );
-        },
-      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        if (selectedRegion != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: _SelectedRegionCard(
+              region: selectedRegion,
+              stamp: selectedStamp,
+              target: selectedTarget,
+              onTargetTap: selectedTarget == null
+                  ? null
+                  : () => widget.onTargetTap(selectedTarget),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -518,7 +494,7 @@ class _GangwonMapPainter extends CustomPainter {
 
 Rect _gangwonMapRect(Size size) {
   const mapAspectRatio = 1000 / 1180;
-  final available = Rect.fromLTWH(10, 46, size.width - 20, size.height - 92);
+  final available = Rect.fromLTWH(10, 34, size.width - 20, size.height - 68);
   if (available.width / available.height > mapAspectRatio) {
     final width = available.height * mapAspectRatio;
     return Rect.fromLTWH(
@@ -796,198 +772,6 @@ class _StampMapNode extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _MapPassportBadge extends StatelessWidget {
-  const _MapPassportBadge({
-    required this.acquiredCount,
-    required this.totalCount,
-  });
-
-  final int acquiredCount;
-  final int totalCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.auto_stories_rounded,
-              color: AppColors.primaryDark, size: 18),
-          const SizedBox(width: 6),
-          Text(
-            '$acquiredCount/$totalCount',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RallyProgressCard extends StatelessWidget {
-  const _RallyProgressCard({
-    required this.acquiredCount,
-    required this.totalCount,
-    required this.reward,
-    required this.isClaiming,
-    required this.onClaim,
-  });
-
-  final int acquiredCount;
-  final int totalCount;
-  final NextStampReward reward;
-  final bool isClaiming;
-  final ValueChanged<int> onClaim;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
-    final targetCount = reward.nextTargetCount;
-    final claimableTargetCount = reward.claimableTargetCount;
-    final title = reward.canClaim ? '받을 수 있는 보상' : '투어 진행률';
-    final message = reward.canClaim && claimableTargetCount != null
-        ? '$claimableTargetCount개 달성 보상이 준비됐어요.'
-        : reward.completed || targetCount == null
-            ? '18개 시군 랠리를 모두 완주했어요.'
-            : '$targetCount개 달성까지 ${reward.remainingCount}개 남았어요';
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryTint,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_rounded,
-                    color: AppColors.primaryDark, size: 32),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        minHeight: 10,
-                        value: progress.clamp(0, 1),
-                        backgroundColor: const Color(0xFFEFE9DC),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      message,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$acquiredCount',
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' / $totalCount',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (reward.canClaim && claimableTargetCount != null) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                key: const ValueKey('stamp-reward-claim-button'),
-                onPressed:
-                    isClaiming ? null : () => onClaim(claimableTargetCount),
-                child: isClaiming
-                    ? const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          SizedBox(width: 8),
-                          Text('보상 받는 중...'),
-                        ],
-                      )
-                    : Text('$claimableTargetCount개 보상 받기'),
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

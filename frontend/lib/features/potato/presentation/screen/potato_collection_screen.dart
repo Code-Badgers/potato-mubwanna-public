@@ -888,24 +888,6 @@ class _TodayStepCardContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _StepSummaryTile(
-                  label: '이번 주',
-                  value: '${summary.weeklyDistanceKm.toStringAsFixed(1)} km',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _StepSummaryTile(
-                  label: '이번 달',
-                  value: '${summary.monthlyDistanceKm.toStringAsFixed(1)} km',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(999)),
             child: LinearProgressIndicator(
@@ -974,54 +956,6 @@ class _InlineErrorState extends StatelessWidget {
   }
 }
 
-class _StepSummaryTile extends StatelessWidget {
-  const _StepSummaryTile({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FBF5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _potatoLine),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _PotatoArtSlot extends StatelessWidget {
   const _PotatoArtSlot({
     required this.item,
@@ -1054,6 +988,12 @@ class _PotatoArtSlot extends StatelessWidget {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
           );
+    final alignedImage = locked
+        ? Transform.translate(
+            offset: Offset(size * 0.092, size * 0.033),
+            child: image,
+          )
+        : image;
 
     if (!framed) {
       return SizedBox(
@@ -1062,7 +1002,7 @@ class _PotatoArtSlot extends StatelessWidget {
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(size * 0.02),
-            child: image,
+            child: alignedImage,
           ),
         ),
       );
@@ -1078,7 +1018,10 @@ class _PotatoArtSlot extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Center(
-        child: Padding(padding: EdgeInsets.all(size * 0.12), child: image),
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.12),
+          child: alignedImage,
+        ),
       ),
     );
   }

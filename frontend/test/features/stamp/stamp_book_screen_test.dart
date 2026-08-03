@@ -1,13 +1,10 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller.dart';
-import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
 import 'package:potato_mubwanna/features/stamp/presentation/screen/stamp_book_screen.dart';
 
@@ -27,8 +24,8 @@ void main() {
     expect(find.text('랠리북'), findsNothing);
     expect(find.text('스탬프 투어'), findsNothing);
     expect(find.text('강원도 지도 위에 도장을 모아보세요'), findsNothing);
-    expect(find.text('8/18'), findsOneWidget);
-    expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
+    expect(find.text('8/18'), findsNothing);
+    expect(find.text('12개 달성까지 4개 남았어요'), findsNothing);
     expect(find.text('다음 스탬프 추천'), findsNothing);
     expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
     expect(find.text('강릉'), findsOneWidget);
@@ -42,12 +39,7 @@ void main() {
     expect(find.text('대표 스팟 보기'), findsNothing);
     expect(find.text('오디오 준비중'), findsNothing);
     expect(find.text('스탬프 찍기'), findsOneWidget);
-
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -850));
-    await tester.pumpAndSettle();
-
-    expect(find.text('투어 진행률'), findsOneWidget);
-    expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
+    expect(find.text('투어 진행률'), findsNothing);
   });
 
   testWidgets('opens the selected stamp spot detail', (tester) async {
@@ -126,7 +118,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('8 / 18'), findsOneWidget);
+    expect(find.text('강릉'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stamp-next-target-error')),
       findsNothing,
@@ -161,134 +153,6 @@ void main() {
     expect(find.text('랠리북'), findsNothing);
     expect(find.text('랠리북을 불러오지 못했습니다.'), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
-  });
-
-  testWidgets('shows completion copy after all city stamps are acquired', (
-    tester,
-  ) async {
-    await _pumpScreen(
-      tester,
-      override: stampBookProvider.overrideWith(
-        (ref) async => _stampBook(acquiredCount: 18, completed: true),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -850));
-    await tester.pumpAndSettle();
-
-    expect(find.text('18개 시군 랠리를 모두 완주했어요.'), findsOneWidget);
-  });
-
-  testWidgets('hides the claim button for a legacy reward status', (
-    tester,
-  ) async {
-    final legacyReward = NextStampReward.fromJson(const {
-      'acquiredCount': 8,
-      'nextTargetCount': 12,
-      'remainingCount': 4,
-      'completed': false,
-    });
-    await _pumpScreen(
-      tester,
-      override: stampBookProvider.overrideWith(
-        (ref) async => _stampBook(reward: legacyReward),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const ValueKey('stamp-reward-claim-button')),
-      findsNothing,
-    );
-    expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
-  });
-
-  testWidgets('shows the lowest claimable reward before completion copy', (
-    tester,
-  ) async {
-    await _pumpScreen(
-      tester,
-      override: stampBookProvider.overrideWith(
-        (ref) async => _stampBook(
-          acquiredCount: 18,
-          completed: true,
-          claimable: true,
-          claimableTargetCount: 6,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
-    await tester.pumpAndSettle();
-
-    expect(find.text('받을 수 있는 보상'), findsOneWidget);
-    expect(find.text('6개 달성 보상이 준비됐어요.'), findsOneWidget);
-    expect(find.text('6개 보상 받기'), findsOneWidget);
-    expect(find.text('18개 시군 랠리를 모두 완주했어요.'), findsNothing);
-  });
-
-  testWidgets(
-    'disables reward claim while pending and shows success feedback',
-    (tester) async {
-      final completer = Completer<StampRewardClaimResult>();
-      final repository = _PendingClaimStampRepository(completer);
-      await _pumpScreen(
-        tester,
-        override: stampBookProvider.overrideWith(
-          (ref) async => _stampBook(claimable: true, claimableTargetCount: 6),
-        ),
-        additionalOverrides: [
-          stampRepositoryProvider.overrideWithValue(repository),
-        ],
-      );
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
-      await tester.pumpAndSettle();
-
-      final claimButton = find.byKey(
-        const ValueKey('stamp-reward-claim-button'),
-      );
-      await tester.tap(claimButton);
-      await tester.pump();
-
-      expect(repository.claimCount, 1);
-      expect(repository.requestedTargetCount, 6);
-      expect(find.text('보상 받는 중...'), findsOneWidget);
-      expect(tester.widget<FilledButton>(claimButton).onPressed, isNull);
-
-      completer.complete(_claimResult);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('보상 수령이 완료됐어요. 쿠폰함에서 확인해 주세요.'), findsOneWidget);
-    },
-  );
-
-  testWidgets('shows the Korean API error when reward claim fails', (
-    tester,
-  ) async {
-    await _pumpScreen(
-      tester,
-      override: stampBookProvider.overrideWith(
-        (ref) async => _stampBook(claimable: true, claimableTargetCount: 6),
-      ),
-      additionalOverrides: [
-        stampRepositoryProvider.overrideWithValue(
-          _FailingClaimStampRepository(),
-        ),
-      ],
-    );
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('stamp-reward-claim-button')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('이미 수령한 스탬프 보상입니다.'), findsOneWidget);
   });
 
   testWidgets('prompts signed-out users to log in', (tester) async {
@@ -349,10 +213,6 @@ const _nextTargets = <StampNextTarget>[
 
 StampBook _stampBook({
   int acquiredCount = 8,
-  bool completed = false,
-  bool claimable = false,
-  int? claimableTargetCount,
-  NextStampReward? reward,
 }) {
   const cityNames = [
     '강릉시',
@@ -393,48 +253,13 @@ StampBook _stampBook({
           ),
       ],
     ),
-    nextReward: reward ??
-        NextStampReward(
-          acquiredCount: acquiredCount,
-          nextTargetCount: completed ? null : 12,
-          remainingCount: completed ? 0 : 4,
-          completed: completed,
-          claimable: claimable,
-          claimableTargetCount: claimableTargetCount,
-        ),
+    nextReward: NextStampReward(
+      acquiredCount: acquiredCount,
+      nextTargetCount: 12,
+      remainingCount: 4,
+      completed: false,
+      claimable: false,
+      claimableTargetCount: null,
+    ),
   );
 }
-
-class _PendingClaimStampRepository extends StampRepository {
-  _PendingClaimStampRepository(this.completer) : super(dio: Dio());
-
-  final Completer<StampRewardClaimResult> completer;
-  int claimCount = 0;
-  int? requestedTargetCount;
-
-  @override
-  Future<StampRewardClaimResult> claimReward(
-    StampRewardClaimRequest request,
-  ) async {
-    claimCount += 1;
-    requestedTargetCount = request.targetCount;
-    return completer.future;
-  }
-}
-
-class _FailingClaimStampRepository extends StampRepository {
-  _FailingClaimStampRepository() : super(dio: Dio());
-
-  @override
-  Future<StampRewardClaimResult> claimReward(StampRewardClaimRequest request) {
-    throw const ApiException(message: '이미 수령한 스탬프 보상입니다.', statusCode: 409);
-  }
-}
-
-final _claimResult = StampRewardClaimResult(
-  targetCount: 6,
-  rewardHistoryId: 10,
-  userCouponId: 21,
-  couponName: '강원 감자 제휴점 3,000원 할인권',
-  expiresAt: DateTime.parse('2026-08-16T00:00:00Z'),
-);
