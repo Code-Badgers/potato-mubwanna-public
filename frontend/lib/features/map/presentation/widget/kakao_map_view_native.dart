@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import 'map_spot_selection_message.dart';
+import 'map_view_render_data.dart';
 
 const _kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
 const _nativeKakaoMapViewType = 'potato_mubwanna/kakao_map';
@@ -71,11 +72,18 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     super.didUpdateWidget(oldWidget);
     final channel = _channel;
     if (channel != null) {
-      if (oldWidget.spots != widget.spots ||
-          oldWidget.favoriteSpotIds != widget.favoriteSpotIds) {
+      if (!hasSameMapSpotRenderData(
+        oldWidget.spots,
+        oldWidget.favoriteSpotIds,
+        widget.spots,
+        widget.favoriteSpotIds,
+      )) {
         unawaited(channel.invokeMethod<void>('updateSpots', _spotPayload));
       }
-      if (oldWidget.routePolyline != widget.routePolyline) {
+      if (!hasSameRoutePolyline(
+        oldWidget.routePolyline,
+        widget.routePolyline,
+      )) {
         unawaited(
           channel.invokeMethod<void>(
             'updateRoutePolyline',
@@ -83,7 +91,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           ),
         );
       }
-      if (oldWidget.currentLocation != widget.currentLocation) {
+      if (!hasSameMapPoint(
+        oldWidget.currentLocation,
+        widget.currentLocation,
+      )) {
         unawaited(
           channel.invokeMethod<void>(
             'updateCurrentLocation',

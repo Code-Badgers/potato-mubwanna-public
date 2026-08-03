@@ -85,6 +85,12 @@ void main() {
 
     expect(find.text('감자 카페'), findsOneWidget);
     expect(find.text('정선 5일장'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('marker-3')));
+    await tester.pump();
+
+    expect(find.text('감자 체험장'), findsOneWidget);
+    expect(find.text('감자 카페'), findsNothing);
   });
 
   testWidgets('opens detail for the currently selected map marker', (
