@@ -12,7 +12,7 @@ import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
 import 'package:potato_mubwanna/features/stamp/presentation/screen/stamp_book_screen.dart';
 
 void main() {
-  testWidgets('renders API rallybook progress, city stamps, and next reward', (
+  testWidgets('renders a map-first stamp tour and selected city card', (
     tester,
   ) async {
     await _pumpScreen(
@@ -25,17 +25,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('랠리북'), findsNothing);
+    expect(find.text('스탬프 투어'), findsNothing);
+    expect(find.text('강원도 지도 위에 도장을 모아보세요'), findsNothing);
     expect(find.text('8/18'), findsOneWidget);
     expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
-    expect(find.text('다음 스탬프 추천'), findsOneWidget);
-    expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsOneWidget);
+    expect(find.text('다음 스탬프 추천'), findsNothing);
+    expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
     expect(find.text('강릉'), findsOneWidget);
-    expect(find.text('강릉 스탬프'), findsNothing);
+    expect(find.text('스탬프 찍기'), findsNothing);
 
-    await tester.tap(find.text('강릉'));
+    await tester.tap(find.text('정선'));
     await tester.pumpAndSettle();
 
-    expect(find.text('강릉 스탬프'), findsOneWidget);
+    expect(find.text('스탬프 완료'), findsOneWidget);
+    expect(find.text('정선 5일장 / 아리랑시장'), findsOneWidget);
+    expect(find.text('대표 스팟 보기'), findsNothing);
+    expect(find.text('오디오 준비중'), findsNothing);
+    expect(find.text('스탬프 찍기'), findsOneWidget);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -850));
     await tester.pumpAndSettle();
@@ -44,7 +50,7 @@ void main() {
     expect(find.text('12개 달성까지 4개 남았어요'), findsOneWidget);
   });
 
-  testWidgets('opens the selected next target detail', (tester) async {
+  testWidgets('opens the selected stamp spot detail', (tester) async {
     final router = GoRouter(
       initialLocation: '/',
       routes: [
@@ -72,7 +78,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('stamp-next-target-101')));
+    await tester.tap(find.text('정선'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('스탬프 찍기'));
     await tester.pumpAndSettle();
 
     expect(find.text('상세 101'), findsOneWidget);
@@ -120,11 +129,7 @@ void main() {
     expect(find.text('8 / 18'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stamp-next-target-error')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('stamp-next-target-retry')),
-      findsOneWidget,
+      findsNothing,
     );
   });
 

@@ -52,8 +52,6 @@ class StampBookScreen extends ConsumerWidget {
                   onClaim: (targetCount) => ref
                       .read(stampRewardClaimProvider.notifier)
                       .claim(targetCount),
-                  onRetryTargets: () =>
-                      ref.invalidate(stampNextTargetsProvider),
                 ),
           loading: () => const _StampBookStatusBody(
             child: Center(child: CircularProgressIndicator()),
@@ -283,7 +281,6 @@ class _StampBookStatusBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        const SliverToBoxAdapter(child: _StampHeader()),
         SliverFillRemaining(hasScrollBody: false, child: child),
       ],
     );
@@ -296,14 +293,12 @@ class _StampBookBody extends StatelessWidget {
     required this.nextTargets,
     required this.isClaiming,
     required this.onClaim,
-    required this.onRetryTargets,
   });
 
   final StampBook stampBook;
   final AsyncValue<List<StampNextTarget>?> nextTargets;
   final bool isClaiming;
   final ValueChanged<int> onClaim;
-  final VoidCallback onRetryTargets;
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +307,6 @@ class _StampBookBody extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        const SliverToBoxAdapter(child: _StampHeader()),
         SliverToBoxAdapter(
           child: _GangwonStampMap(
             progress: progress,
@@ -329,51 +323,8 @@ class _StampBookBody extends StatelessWidget {
             onClaim: onClaim,
           ),
         ),
-        SliverToBoxAdapter(
-          child: _NextStampHintCard(
-            state: nextTargets,
-            completed: reward.completed,
-            onRetry: onRetryTargets,
-            onTargetTap: (target) => context.push('/spots/${target.spotId}'),
-          ),
-        ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
-    );
-  }
-}
-
-class _StampHeader extends StatelessWidget {
-  const _StampHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 22, 20, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '스탬프 투어',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 34,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            '강원도 지도 위에 도장을 모아보세요',
-            style: TextStyle(
-              color: AppColors.primaryDark,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -416,14 +367,14 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
             return target;
           }
         }
-        return targets.first;
+        return null;
       },
       orElse: () => null,
     );
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-      height: 540,
+      margin: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      height: 520,
       decoration: BoxDecoration(
         color: const Color(0xFFEAF7FF),
         borderRadius: BorderRadius.circular(24),
@@ -482,7 +433,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                 right: 16,
                 bottom: 16,
                 child: selectedRegion == null
-                    ? const _RegionPromptCard()
+                    ? const SizedBox.shrink()
                     : _SelectedRegionCard(
                         region: selectedRegion,
                         stamp: selectedStamp,
@@ -584,22 +535,47 @@ Rect _gangwonMapRect(Size size) {
 
 Path _regionPath(GangwonMapRegion region, Rect mapRect) {
   final path = Path();
-  for (final polygon in region.polygons) {
+  final polygon = _largestPolygon(region.polygons);
+  if (polygon == null) {
+    return path;
+  }
+  path.addPolygon(
+    [
+      for (final point in polygon)
+        Offset(
+          mapRect.left + point.dx * mapRect.width,
+          mapRect.top + point.dy * mapRect.height,
+        ),
+    ],
+    true,
+  );
+  return path;
+}
+
+List<Offset>? _largestPolygon(List<List<Offset>> polygons) {
+  List<Offset>? selected;
+  var selectedArea = 0.0;
+  for (final polygon in polygons) {
     if (polygon.length < 3) {
       continue;
     }
-    path.addPolygon(
-      [
-        for (final point in polygon)
-          Offset(
-            mapRect.left + point.dx * mapRect.width,
-            mapRect.top + point.dy * mapRect.height,
-          ),
-      ],
-      true,
-    );
+    final area = _polygonArea(polygon).abs();
+    if (area > selectedArea) {
+      selected = polygon;
+      selectedArea = area;
+    }
   }
-  return path;
+  return selected;
+}
+
+double _polygonArea(List<Offset> polygon) {
+  var area = 0.0;
+  for (var index = 0; index < polygon.length; index++) {
+    final current = polygon[index];
+    final next = polygon[(index + 1) % polygon.length];
+    area += current.dx * next.dy - next.dx * current.dy;
+  }
+  return area / 2;
 }
 
 String? _hitTestRegion(Offset position, Rect mapRect) {
@@ -620,50 +596,6 @@ GangwonMapRegion? _findRegion(String city) {
   return null;
 }
 
-class _RegionPromptCard extends StatelessWidget {
-  const _RegionPromptCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: const Row(
-        children: [
-          Icon(
-            Icons.touch_app_rounded,
-            color: AppColors.primaryDark,
-            size: 26,
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '지도의 시군을 눌러 스탬프 상태를 확인해보세요.',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SelectedRegionCard extends StatelessWidget {
   const _SelectedRegionCard({
     required this.region,
@@ -680,60 +612,59 @@ class _SelectedRegionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
-    final statusText = acquired ? '도장 완료' : '도장 필요';
+    final canOpenStamp = target != null;
+    final statusText = acquired ? '스탬프 완료' : '방문 인증 필요';
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surface.withValues(alpha: 0.97),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.line),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: acquired ? AppColors.primaryTint : AppColors.cream,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: acquired ? AppColors.primary : AppColors.secondary,
-                width: 2,
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: acquired ? AppColors.primaryTint : AppColors.cream,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  acquired ? Icons.check_rounded : Icons.location_on_rounded,
+                  color: acquired ? AppColors.primaryDark : AppColors.brown,
+                  size: 24,
+                ),
               ),
-            ),
-            child: Icon(
-              acquired ? Icons.check_rounded : Icons.location_on_rounded,
-              color: acquired ? AppColors.primaryDark : AppColors.brown,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${region.city} 스탬프',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
+                    Text(
+                      region.city,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
                       ),
                     ),
+                    const SizedBox(height: 3),
                     Text(
                       statusText,
                       style: TextStyle(
@@ -746,37 +677,45 @@ class _SelectedRegionCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  region.landmarks,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            region.landmarks,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: canOpenStamp ? onTargetTap : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.line,
+                disabledForegroundColor: AppColors.textSecondary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: onTargetTap,
-                        child: Text(target == null ? '대표 스팟 준비중' : '대표 스팟 보기'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: OutlinedButton(
-                        onPressed: null,
-                        child: Text('오디오 준비중'),
-                      ),
-                    ),
-                  ],
+              ),
+              child: Text(
+                canOpenStamp ? '스탬프 찍기' : '스탬프 준비중',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -1052,161 +991,8 @@ class _RallyProgressCard extends StatelessWidget {
   }
 }
 
-class _NextStampHintCard extends StatelessWidget {
-  const _NextStampHintCard({
-    required this.state,
-    required this.completed,
-    required this.onRetry,
-    required this.onTargetTap,
-  });
-
-  final AsyncValue<List<StampNextTarget>?> state;
-  final bool completed;
-  final VoidCallback onRetry;
-  final ValueChanged<StampNextTarget> onTargetTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: state.when(
-        loading: () => const _NextTargetStatus(
-          key: ValueKey('stamp-next-target-loading'),
-          icon: Icons.hourglass_top_rounded,
-          message: '다음 도장을 찾고 있어요.',
-        ),
-        error: (_, __) => _NextTargetError(onRetry: onRetry),
-        data: (targets) {
-          if (targets == null) {
-            return const SizedBox.shrink();
-          }
-          if (targets.isEmpty) {
-            return _NextTargetStatus(
-              key: const ValueKey('stamp-next-target-empty'),
-              icon: completed
-                  ? Icons.emoji_events_rounded
-                  : Icons.location_off_rounded,
-              message: completed ? '모든 지역 스탬프를 모았어요.' : '추천 가능한 스탬프 관광지가 없어요.',
-            );
-          }
-          final target = targets.first;
-          return InkWell(
-            key: ValueKey('stamp-next-target-${target.spotId}'),
-            onTap: () => onTargetTap(target),
-            borderRadius: BorderRadius.circular(8),
-            child: Row(
-              children: [
-                const Icon(Icons.explore_rounded,
-                    color: AppColors.primaryDark, size: 24),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '다음 스탬프 추천',
-                        style: TextStyle(
-                          color: AppColors.primaryDark,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${target.spotName} · ${target.cityName}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppColors.primaryDark),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
 String _normalizeCityName(String value) {
   return value.replaceAll(RegExp(r'(특별자치도|시|군|구)$'), '').trim();
-}
-
-class _NextTargetStatus extends StatelessWidget {
-  const _NextTargetStatus({
-    super.key,
-    required this.icon,
-    required this.message,
-  });
-
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primaryDark, size: 20),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            message,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NextTargetError extends StatelessWidget {
-  const _NextTargetError({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      key: const ValueKey('stamp-next-target-error'),
-      children: [
-        const Expanded(
-          child: Text(
-            '다음 목표를 불러오지 못했어요.',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        TextButton(
-          key: const ValueKey('stamp-next-target-retry'),
-          onPressed: onRetry,
-          child: const Text('다시 시도'),
-        ),
-      ],
-    );
-  }
 }
 
 class _StampBookError extends StatelessWidget {
@@ -1250,22 +1036,15 @@ class _SignedOutState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        _StampHeader(),
-        Expanded(
-          child: Center(
-            child: Text(
-              '로그인 후 랠리북을 확인할 수 있어요.',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+    return const Center(
+      child: Text(
+        '로그인 후 랠리북을 확인할 수 있어요.',
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
         ),
-      ],
+      ),
     );
   }
 }
