@@ -9,10 +9,16 @@ class MapSpot {
     required this.cityName,
     required this.congestionLevel,
     required this.stampEnabled,
+    this.menuItems = const [],
     this.isRecommended = false,
   });
 
   factory MapSpot.fromJson(Map<String, dynamic> json) {
+    final menuItems = (json['menuItems'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(MapSpotMenuItem.fromJson)
+        .where((item) => item.name.isNotEmpty && item.hasPrice)
+        .toList(growable: false);
     return MapSpot(
       id: json['id'].toString(),
       name: json['name'] as String? ?? '이름 없는 감자 스팟',
@@ -23,6 +29,7 @@ class MapSpot {
       cityName: json['cityName'] as String? ?? '',
       congestionLevel: json['congestionLevel'] as String? ?? 'NORMAL',
       stampEnabled: json['stampEnabled'] as bool? ?? true,
+      menuItems: menuItems,
     );
   }
 
@@ -35,6 +42,7 @@ class MapSpot {
   final String cityName;
   final String congestionLevel;
   final bool stampEnabled;
+  final List<MapSpotMenuItem> menuItems;
   final bool isRecommended;
 
   MapSpot asRecommended() {
@@ -48,6 +56,7 @@ class MapSpot {
       cityName: cityName,
       congestionLevel: congestionLevel,
       stampEnabled: stampEnabled,
+      menuItems: menuItems,
       isRecommended: true,
     );
   }
@@ -106,4 +115,42 @@ class MapSpot {
     }
     return 0;
   }
+}
+
+class MapSpotMenuItem {
+  const MapSpotMenuItem({
+    required this.name,
+    required this.priceWon,
+    required this.priceNote,
+    required this.verifiedOn,
+  });
+
+  factory MapSpotMenuItem.fromJson(Map<String, dynamic> json) {
+    return MapSpotMenuItem(
+      name: json['name'] as String? ?? '',
+      priceWon: (json['priceWon'] as num?)?.toInt(),
+      priceNote: json['priceNote'] as String?,
+      verifiedOn: json['verifiedOn'] as String? ?? '',
+    );
+  }
+
+  final String name;
+  final int? priceWon;
+  final String? priceNote;
+  final String verifiedOn;
+
+  bool get hasPrice => priceWon != null || (priceNote?.isNotEmpty ?? false);
+
+  String get priceLabel {
+    if (priceWon != null) {
+      final formatted = priceWon!.toString().replaceAllMapped(
+            RegExp(r'(?=(\d{3})+(?!\d))'),
+            (_) => ',',
+          );
+      return '$formatted원';
+    }
+    return priceNote ?? '';
+  }
+
+  String get verifiedOnLabel => verifiedOn.replaceAll('-', '.');
 }
