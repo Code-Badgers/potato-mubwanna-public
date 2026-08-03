@@ -35,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   PermissionStatus? _locationStatus;
   PermissionStatus? _notificationStatus;
   String? _errorMessage;
+  String? _permissionMessage;
 
   @override
   void initState() {
@@ -112,7 +113,19 @@ class _SettingsScreenState extends State<SettingsScreen>
       return;
     }
 
-    await widget.permissionService.requestLocation();
+    final requestedStatus = await widget.permissionService.requestLocation();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _locationStatus = requestedStatus;
+      _permissionMessage = _permissionMessageFor(
+        requestedStatus,
+        deniedMessage: '위치 권한이 허용되지 않았습니다. 주변 탐색과 방문 인증이 제한됩니다.',
+        settingsMessage: '위치 권한이 차단되어 있습니다. iPhone 설정에서 감자무봤나 위치 권한을 허용해주세요.',
+      );
+    });
     await _loadStatuses();
   }
 
@@ -123,8 +136,35 @@ class _SettingsScreenState extends State<SettingsScreen>
       return;
     }
 
-    await widget.permissionService.requestNotification();
+    final requestedStatus =
+        await widget.permissionService.requestNotification();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _notificationStatus = requestedStatus;
+      _permissionMessage = _permissionMessageFor(
+        requestedStatus,
+        deniedMessage: '알림 권한이 허용되지 않았습니다. 미션과 쿠폰 알림을 받을 수 없습니다.',
+        settingsMessage: '알림 권한이 차단되어 있습니다. 설정에서 알림 권한을 허용해주세요.',
+      );
+    });
     await _loadStatuses();
+  }
+
+  String? _permissionMessageFor(
+    PermissionStatus status, {
+    required String deniedMessage,
+    required String settingsMessage,
+  }) {
+    if (status.isGranted || status.isProvisional) {
+      return null;
+    }
+    if (status.isPermanentlyDenied || status.isRestricted) {
+      return settingsMessage;
+    }
+    return deniedMessage;
   }
 
   @override
@@ -166,6 +206,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             child: _SettingsIntro(
                               locationStatus: _locationStatus!,
                               notificationStatus: _notificationStatus!,
+                              permissionMessage: _permissionMessage,
                               onLocationAction: _manageLocationPermission,
                               onNotificationAction:
                                   _manageNotificationPermission,
@@ -315,12 +356,14 @@ class _SettingsIntro extends StatelessWidget {
   const _SettingsIntro({
     required this.locationStatus,
     required this.notificationStatus,
+    required this.permissionMessage,
     required this.onLocationAction,
     required this.onNotificationAction,
   });
 
   final PermissionStatus locationStatus;
   final PermissionStatus notificationStatus;
+  final String? permissionMessage;
   final VoidCallback onLocationAction;
   final VoidCallback onNotificationAction;
 
@@ -331,6 +374,10 @@ class _SettingsIntro extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (permissionMessage != null) ...[
+            _PermissionMessage(message: permissionMessage!),
+            const SizedBox(height: 12),
+          ],
           _PermissionRow(
             icon: Icons.location_on_outlined,
             title: '위치 권한',
@@ -347,6 +394,35 @@ class _SettingsIntro extends StatelessWidget {
             onAction: onNotificationAction,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PermissionMessage extends StatelessWidget {
+  const _PermissionMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          height: 1.35,
+          letterSpacing: 0,
+        ),
       ),
     );
   }
