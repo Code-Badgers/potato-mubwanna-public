@@ -21,7 +21,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('대표 감자'), findsOneWidget);
+    expect(find.text('대표 감자'), findsNothing);
     expect(find.text('곤드레감자'), findsWidgets);
     expect(find.text('2 / 3'), findsOneWidget);
     expect(find.text('오늘의 감자걸음'), findsOneWidget);

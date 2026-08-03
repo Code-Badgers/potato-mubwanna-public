@@ -518,7 +518,7 @@ class _GangwonMapPainter extends CustomPainter {
 
 Rect _gangwonMapRect(Size size) {
   const mapAspectRatio = 1000 / 1180;
-  final available = Rect.fromLTWH(8, 2, size.width - 16, size.height - 112);
+  final available = Rect.fromLTWH(10, 46, size.width - 20, size.height - 92);
   if (available.width / available.height > mapAspectRatio) {
     final width = available.height * mapAspectRatio;
     return Rect.fromLTWH(
