@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,7 +82,7 @@ class AudioGuideServiceTest {
             story("22", "정선   5일장", "ko", "https://example.com/right.mp3"),
             story("23", "정선 5일장", "en", "https://example.com/english.mp3")
         ));
-        when(audioGuideRepository.save(any(AudioGuide.class))).thenAnswer(invocation -> {
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenAnswer(invocation -> {
             AudioGuide guide = invocation.getArgument(0);
             ReflectionTestUtils.setField(guide, "id", 8L);
             return guide;
@@ -93,7 +94,7 @@ class AudioGuideServiceTest {
         assertThat(response.audioUrl()).isEqualTo("https://example.com/right.mp3");
         assertThat(response.script()).isEqualTo("정선 5일장은...");
         assertThat(response.characterScript()).isNull();
-        verify(audioGuideRepository).save(any(AudioGuide.class));
+        verify(audioGuideRepository).saveAndFlush(any(AudioGuide.class));
     }
 
     @Test
@@ -105,7 +106,7 @@ class AudioGuideServiceTest {
         when(odiiApiClient.searchStories("오죽헌")).thenReturn(List.of(
             story("21", "강릉 오죽헌(초등 교과연계)", "ko", "https://example.com/audio.mp3")
         ));
-        when(audioGuideRepository.save(any(AudioGuide.class))).thenAnswer(invocation -> {
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenAnswer(invocation -> {
             AudioGuide guide = invocation.getArgument(0);
             ReflectionTestUtils.setField(guide, "id", 9L);
             return guide;
@@ -126,7 +127,7 @@ class AudioGuideServiceTest {
         when(odiiApiClient.searchStories("정선 5일장")).thenReturn(List.of(
             story("21", "정선오일장", "ko", "https://example.com/audio.mp3")
         ));
-        when(audioGuideRepository.save(any(AudioGuide.class))).thenAnswer(invocation -> {
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenAnswer(invocation -> {
             AudioGuide guide = invocation.getArgument(0);
             ReflectionTestUtils.setField(guide, "id", 10L);
             return guide;
@@ -136,6 +137,47 @@ class AudioGuideServiceTest {
 
         assertThat(response.id()).isEqualTo(10L);
         assertThat(response.audioUrl()).isEqualTo("https://example.com/audio.mp3");
+    }
+
+    @Test
+    void returnsCacheSavedByConcurrentWinnerAfterDuplicateSave() {
+        TouristSpot spot = spot("정선 5일장");
+        AudioGuide winner = guide(spot);
+        ReflectionTestUtils.setField(winner, "id", 11L);
+        DataIntegrityViolationException duplicate = new DataIntegrityViolationException(
+            "duplicate audio cache"
+        );
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty())
+            .thenReturn(Optional.of(winner));
+        when(odiiApiClient.searchStories("정선 5일장")).thenReturn(List.of(
+            story("21", "정선 5일장", "ko", "https://example.com/audio.mp3")
+        ));
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenThrow(duplicate);
+
+        var response = audioGuideService.getAudioGuide(1L);
+
+        assertThat(response.id()).isEqualTo(11L);
+        assertThat(response.audioUrl()).isEqualTo("https://example.com/audio.mp3");
+    }
+
+    @Test
+    void rethrowsSaveFailureWhenConcurrentCacheDoesNotExist() {
+        TouristSpot spot = spot("정선 5일장");
+        DataIntegrityViolationException failure = new DataIntegrityViolationException(
+            "audio cache insert failed"
+        );
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty());
+        when(odiiApiClient.searchStories("정선 5일장")).thenReturn(List.of(
+            story("21", "정선 5일장", "ko", "https://example.com/audio.mp3")
+        ));
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenThrow(failure);
+
+        assertThatThrownBy(() -> audioGuideService.getAudioGuide(1L))
+            .isSameAs(failure);
     }
 
     @Test
