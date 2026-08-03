@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -421,6 +423,11 @@ class _GangwonStampMapState extends State<_GangwonStampMap> {
                   ? null
                   : () => widget.onTargetTap(selectedTarget),
             ),
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: _EmptyRegionCard(),
           ),
       ],
     );
@@ -519,6 +526,9 @@ Path _regionPath(GangwonMapRegion region, Rect mapRect) {
     if (polygon.length < 3) {
       continue;
     }
+    if (_isTinyMapFragment(polygon)) {
+      continue;
+    }
     final polygonPath = Path()
       ..addPolygon(
         [
@@ -540,6 +550,24 @@ Path _regionPath(GangwonMapRegion region, Rect mapRect) {
     }
   }
   return regionPath;
+}
+
+bool _isTinyMapFragment(List<Offset> polygon) {
+  var minX = double.infinity;
+  var maxX = double.negativeInfinity;
+  var minY = double.infinity;
+  var maxY = double.negativeInfinity;
+
+  for (final point in polygon) {
+    minX = math.min(minX, point.dx);
+    maxX = math.max(maxX, point.dx);
+    minY = math.min(minY, point.dy);
+    maxY = math.max(maxY, point.dy);
+  }
+
+  // GeoJSON 세부 경계에는 여행 지도에서 의미가 약한 작은 분리 조각이 많다.
+  // 작은 파편은 제외해 시군 외곽이 더 깨끗하게 보이도록 한다.
+  return (maxX - minX) * (maxY - minY) < 0.00025;
 }
 
 Path _scaledPath(Path path, double scale) {
@@ -693,6 +721,75 @@ class _SelectedRegionCard extends StatelessWidget {
                   letterSpacing: 0,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyRegionCard extends StatelessWidget {
+  const _EmptyRegionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppColors.primaryTint,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.touch_app_rounded,
+              color: AppColors.primaryDark,
+              size: 23,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '여행할 지역을 골라보세요',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  '지역을 선택하면 스탬프를 찍을 장소가 나타나요.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

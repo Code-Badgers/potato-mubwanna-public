@@ -29,11 +29,14 @@ void main() {
     expect(find.text('다음 스탬프 추천'), findsNothing);
     expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
     expect(find.text('강릉'), findsOneWidget);
+    expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
+    expect(find.text('지역을 선택하면 스탬프를 찍을 장소가 나타나요.'), findsOneWidget);
     expect(find.text('스탬프 찍기'), findsNothing);
 
     await tester.tap(find.text('정선'));
     await tester.pumpAndSettle();
 
+    expect(find.text('여행할 지역을 골라보세요'), findsNothing);
     expect(find.text('스탬프 완료'), findsOneWidget);
     expect(find.text('정선 5일장 / 아리랑시장'), findsOneWidget);
     expect(find.text('대표 스팟 보기'), findsNothing);
