@@ -98,6 +98,48 @@ void main() {
     expect(find.text('대표 메뉴'), findsNothing);
   });
 
+  testWidgets('recreates the map around the first spot after filtering', (
+    tester,
+  ) async {
+    var mountCount = 0;
+    final mountedSpotIds = <List<String>>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) => _MapMountProbe(
+              spotIds: spots.map((spot) => spot.id).toList(),
+              onMounted: (spotIds) {
+                mountCount += 1;
+                mountedSpotIds.add(spotIds);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(mountCount, 1);
+    expect(mountedSpotIds.single, ['1', '2', '3', '4']);
+
+    await tester.tap(find.text('카페'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('감자 카페'), findsOneWidget);
+    expect(mountCount, 2);
+    expect(mountedSpotIds.last, ['2']);
+  });
+
   testWidgets('opens detail for the currently selected map marker', (
     tester,
   ) async {
@@ -509,6 +551,27 @@ void main() {
     expect(find.text('다시 시도'), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
   });
+}
+
+class _MapMountProbe extends StatefulWidget {
+  const _MapMountProbe({required this.spotIds, required this.onMounted});
+
+  final List<String> spotIds;
+  final ValueChanged<List<String>> onMounted;
+
+  @override
+  State<_MapMountProbe> createState() => _MapMountProbeState();
+}
+
+class _MapMountProbeState extends State<_MapMountProbe> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onMounted(widget.spotIds);
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.expand();
 }
 
 FavoriteSpotController _favoriteController([Set<String> spotIds = const {}]) {

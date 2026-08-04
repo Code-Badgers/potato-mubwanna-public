@@ -327,6 +327,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       children: [
                         Positioned.fill(
                           child: _PotatoMapPreview(
+                            key: ValueKey(
+                              'map-category-${_categories[_selectedCategoryIndex].label}',
+                            ),
                             spots: visibleSpots,
                             routePolyline: recommendedRoutePolyline,
                             favoriteSpotIds: favoriteSpotIds,
@@ -1108,6 +1111,7 @@ class _RouteModeChip extends StatelessWidget {
 
 class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
+    super.key,
     required this.spots,
     required this.routePolyline,
     required this.favoriteSpotIds,
