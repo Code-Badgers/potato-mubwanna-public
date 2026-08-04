@@ -7,8 +7,6 @@ import 'kakao_login_result.dart';
 class KakaoLoginService {
   const KakaoLoginService();
 
-  static const _profileConsentScopes = ['profile_nickname', 'account_email'];
-
   Future<void> preload() async {}
 
   Future<KakaoLoginResult> login() async {
@@ -18,9 +16,7 @@ class KakaoLoginService {
       );
     }
 
-    final token = await _requestProfileScopesIfNeeded(
-      await _loginWithAvailableMethod(),
-    );
+    final token = await _loginWithAvailableMethod();
     return KakaoAccessTokenLoginResult(token.accessToken);
   }
 
@@ -38,21 +34,5 @@ class KakaoLoginService {
     }
 
     return UserApi.instance.loginWithKakaoAccount();
-  }
-
-  Future<OAuthToken> _requestProfileScopesIfNeeded(OAuthToken token) async {
-    final grantedScopes = token.scopes ?? const <String>[];
-    final missingScopes = _profileConsentScopes
-        .where((scope) => !grantedScopes.contains(scope))
-        .toList(growable: false);
-    if (missingScopes.isEmpty) {
-      return token;
-    }
-
-    try {
-      return await UserApi.instance.loginWithNewScopes(missingScopes);
-    } catch (_) {
-      return token;
-    }
   }
 }
