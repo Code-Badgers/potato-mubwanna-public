@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class VisitPotatoAcquisitionService {
 
+    private static final String PROVINCE_REGION = "강원특별자치도";
+
     private final PotatoRepository potatoRepository;
     private final UserPotatoRepository userPotatoRepository;
     private final CongestionRarityPolicy congestionRarityPolicy;
@@ -43,7 +45,12 @@ public class VisitPotatoAcquisitionService {
             ownedPotatoIds.add(ownedPotato.getPotato().getId());
         }
 
-        Potato potato = selectPotato(spot, ownedPotatoIds);
+        Optional<Potato> selectedPotato = selectPotato(spot, ownedPotatoIds);
+        if (selectedPotato.isEmpty()) {
+            return new PotatoAcquisitionResult(false, null);
+        }
+
+        Potato potato = selectedPotato.get();
         boolean alreadyOwned = ownedPotatoIds.contains(potato.getId());
 
         if (!alreadyOwned) {
@@ -57,17 +64,16 @@ public class VisitPotatoAcquisitionService {
         );
     }
 
-    private Potato selectPotato(TouristSpot spot, Set<Long> ownedPotatoIds) {
+    private Optional<Potato> selectPotato(TouristSpot spot, Set<Long> ownedPotatoIds) {
         List<Potato> activePotatoes = potatoRepository.findByActiveTrueOrderByDisplayOrderAsc();
         List<PotatoRarity> rarityOrder =
             congestionRarityPolicy.visitAcquisitionCandidates(spot.getCongestionLevel());
 
-        // 지역 획득 힌트와 실제 보상을 맞추되, 지역 안에서는 기존 혼잡도별 희귀도 순서를 유지한다.
+        // 다른 시군의 미션 전용 감자는 방문 대체 보상으로 사용하지 않는다.
         return findCandidate(activePotatoes, rarityOrder, ownedPotatoIds, spot.getCityName(), true)
             .or(() -> findCandidate(activePotatoes, rarityOrder, ownedPotatoIds, spot.getCityName(), false))
-            .or(() -> findCandidate(activePotatoes, rarityOrder, ownedPotatoIds, null, true))
-            .or(() -> findCandidate(activePotatoes, rarityOrder, ownedPotatoIds, null, false))
-            .orElseThrow(() -> new PotatoRepresentativeException("방문 인증으로 지급할 감자를 찾을 수 없습니다."));
+            .or(() -> findCandidate(activePotatoes, rarityOrder, ownedPotatoIds, PROVINCE_REGION, true))
+            .or(() -> findCandidate(activePotatoes, rarityOrder, ownedPotatoIds, PROVINCE_REGION, false));
     }
 
     private Optional<Potato> findCandidate(
