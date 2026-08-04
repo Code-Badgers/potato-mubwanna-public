@@ -371,6 +371,7 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
   Widget build(BuildContext context) {
     final result = widget.result;
     final spot = widget.spot;
+    final potato = result.acquiredPotato;
     final unlockedMission = result.unlockedMission;
     return SafeArea(
       child: Container(
@@ -455,6 +456,10 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
               label: result.stampIssued ? '지역 스탬프 획득' : '이미 획득한 지역 스탬프',
               color: const Color(0xFFD8A232),
             ),
+            if (potato != null) ...[
+              const SizedBox(height: 10),
+              _PotatoAcquisitionCard(potato: potato),
+            ],
             if (result.missionAvailable) ...[
               const SizedBox(height: 10),
               if (unlockedMission == null)
@@ -494,6 +499,26 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
                 ),
                 icon: const Icon(Icons.flag_rounded),
                 label: const Text('점순이 미션 보기'),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (potato != null) ...[
+              FilledButton.icon(
+                key: const ValueKey('visit-result-potato-book'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.go('/main/potatoes');
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF56C787),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: const Icon(Icons.eco_rounded),
+                label: const Text('도감 보기'),
               ),
               const SizedBox(height: 8),
             ],
@@ -621,6 +646,75 @@ class _VisitResultLine extends StatelessWidget {
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PotatoAcquisitionCard extends StatelessWidget {
+  const _PotatoAcquisitionCard({required this.potato});
+
+  final VisitAcquiredPotato potato;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EA),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFEEDB9D)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE9A6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.eco_rounded,
+              color: Color(0xFF76561A),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  potato.alreadyOwned ? '이미 보유한 감자예요' : '감자 획득',
+                  style: const TextStyle(
+                    color: Color(0xFF76561A),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  potato.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${potato.region} · 희귀도 ${potato.rarityLabel}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
