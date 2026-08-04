@@ -51,6 +51,10 @@ void main() {
     expect(find.text('여행할 지역을 골라보세요'), findsNothing);
     expect(find.text('정선 5일장'), findsWidgets);
     expect(find.text('정선 · 스탬프 완료'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('attraction-stamp-정선 5일장')),
+      findsOneWidget,
+    );
     expect(find.text('대표 스팟 보기'), findsNothing);
     expect(find.text('오디오 준비중'), findsNothing);
     expect(find.text('스탬프 준비중'), findsNothing);
@@ -81,6 +85,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('소양강 스카이워크'), findsWidgets);
     expect(find.text('남이섬'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('attraction-stamp-소양강 스카이워크')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('opens the selected stamp spot detail', (tester) async {

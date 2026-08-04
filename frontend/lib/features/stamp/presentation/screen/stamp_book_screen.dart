@@ -9,6 +9,7 @@ import '../../domain/stamp_book.dart';
 import '../model/gangwon_context_region.dart';
 import '../model/gangwon_map_projection.dart';
 import '../model/gangwon_map_region.dart';
+import '../widget/attraction_stamp_image.dart';
 
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
@@ -1000,10 +1001,14 @@ class _SelectedRegionCard extends StatelessWidget {
                   color: acquired ? AppColors.primaryTint : AppColors.cream,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  acquired ? Icons.check_rounded : Icons.location_on_rounded,
-                  color: acquired ? AppColors.primaryDark : AppColors.brown,
-                  size: 24,
+                child: AttractionStampImage(
+                  spotName: spot.spotName,
+                  size: 38,
+                  fallback: Icon(
+                    acquired ? Icons.check_rounded : Icons.location_on_rounded,
+                    color: acquired ? AppColors.primaryDark : AppColors.brown,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1286,8 +1291,8 @@ class _RallybookSpotMapNode extends StatelessWidget {
                 color: selected
                     ? AppColors.secondary
                     : acquired
-                        ? AppColors.primary
-                        : AppColors.surface,
+                    ? AppColors.primary
+                    : AppColors.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: AppColors.surface,
