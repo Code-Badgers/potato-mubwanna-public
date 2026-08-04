@@ -139,7 +139,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('shows visit success sheet without potato acquisition copy', (
+  testWidgets('shows visit success sheet with potato acquisition copy', (
     tester,
   ) async {
     await _setMobileViewport(tester);
@@ -186,11 +186,80 @@ void main() {
     );
     expect(find.text('인증 성공'), findsOneWidget);
     expect(find.text('지역 스탬프 획득'), findsOneWidget);
-    expect(find.text('황금감자'), findsNothing);
-    expect(find.text('강원특별자치도 · 희귀도 영웅'), findsNothing);
-    expect(find.text('도감 보기'), findsNothing);
+    expect(find.text('감자 획득'), findsOneWidget);
+    expect(find.text('황금감자'), findsOneWidget);
+    expect(find.text('강원특별자치도 · 희귀도 영웅'), findsOneWidget);
+    expect(find.text('도감 보기'), findsOneWidget);
     expect(find.text('다음 장소 추천'), findsOneWidget);
     expect(heavyImpactCount, 1);
+  });
+
+  testWidgets('opens potato collection from a visit result', (tester) async {
+    await _setMobileViewport(tester);
+    final router = GoRouter(
+      initialLocation: '/spots/1',
+      routes: [
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (context, state) => const SpotDetailScreen(spotId: '1'),
+        ),
+        GoRoute(
+          path: '/main/potatoes',
+          builder: (context, state) => const Scaffold(body: Text('감자 도감')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider('1').overrideWith((ref) async => _spot),
+          audioGuideProvider('1').overrideWith((ref) async => _guide),
+          audioPlaybackEngineFactoryProvider.overrideWithValue(
+            () => _FakeAudioPlaybackEngine(),
+          ),
+          visitVerificationRepositoryProvider.overrideWithValue(
+            _FakeVisitVerificationRepository(result: _visitResult),
+          ),
+          locationServiceProvider.overrideWithValue(_FakeLocationService()),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-result-potato-book')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('감자 도감'), findsOneWidget);
+  });
+
+  testWidgets('distinguishes an already owned potato in visit result', (
+    tester,
+  ) async {
+    await _setMobileViewport(tester);
+    await tester.pumpWidget(
+      _app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => _spot,
+        audioOverride: (ref) async => _guide,
+        visitRepository: _FakeVisitVerificationRepository(
+          result: _alreadyOwnedVisitResult,
+        ),
+        locationService: _FakeLocationService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이미 보유한 감자예요'), findsOneWidget);
+    expect(find.text('감자 획득'), findsNothing);
+    expect(find.text('황금감자'), findsOneWidget);
   });
 
   testWidgets('passes the verified spot to the recommendation map', (
@@ -507,6 +576,24 @@ const _visitResultWithMission = VisitVerificationResult(
     rewardType: 'ITEM',
     rewardLabel: '황금감자 성장 아이템',
   ),
+);
+
+const _alreadyOwnedVisitResult = VisitVerificationResult(
+  spotId: '1',
+  verified: true,
+  distanceMeters: 23.5,
+  verificationRadiusMeter: 100,
+  stampIssued: false,
+  potatoAcquired: false,
+  acquiredPotato: VisitAcquiredPotato(
+    id: '3',
+    code: 'POTATO_GOLDEN_GANGWON',
+    name: '황금감자',
+    region: '강원특별자치도',
+    rarity: 'EPIC',
+    alreadyOwned: true,
+  ),
+  missionAvailable: false,
 );
 
 class _FakeVisitVerificationRepository extends VisitVerificationRepository {
