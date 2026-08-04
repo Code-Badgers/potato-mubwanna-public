@@ -32,6 +32,12 @@ android {
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
+    packagingOptions {
+        jniLibs {
+            excludes += ['lib/armeabi-v7a/**', 'lib/x86_64/**']
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -48,6 +54,11 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+        ndk {
+            // Kakao Maps SDK v2 ships ARM binaries only. Keeping the APK ARM64-only
+            // also lets ARM translation capable emulators select the correct ABI.
+            abiFilters 'arm64-v8a'
+        }
         manifestPlaceholders = [
             kakaoRedirectScheme: "kakao${kakaoNativeAppKey}",
         ]
