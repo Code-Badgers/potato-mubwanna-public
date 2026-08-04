@@ -35,7 +35,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     _IntroStep(
       title: '수집하고 보상받기',
-      description: '스탬프, 감자 캐릭터, 점순이 미션을\n짧은 루프로 즐겨요.',
+      description: '스탬프를 모으고 감자 미션을 완료해\n강원 지역 쿠폰을 받아보세요.',
       icon: Icons.emoji_events_outlined,
     ),
   ];
