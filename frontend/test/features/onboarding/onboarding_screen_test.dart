@@ -33,6 +33,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('수집하고 보상받기'), findsOneWidget);
+    expect(
+      find.text('스탬프를 모으고 감자 미션을 완료해\n강원 지역 쿠폰을 받아보세요.'),
+      findsOneWidget,
+    );
     expect(find.text('카카오 로그인하러 가기'), findsOneWidget);
   });
 
