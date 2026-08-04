@@ -184,7 +184,7 @@ class TouristSpotMigrationTest {
     }
 
     @Test
-    void seedsVerifiedMenuPricesOnlyForSupportedCuratedSpots() {
+    void seedsOfficiallySourcedMenusOnlyForSupportedCuratedSpots() {
         Map<String, TouristSpot> spotsByName = curatedSpots().stream()
             .collect(Collectors.toMap(TouristSpot::getName, spot -> spot));
         List<Long> curatedSpotIds = spotsByName.values().stream()
@@ -195,18 +195,34 @@ class TouristSpotMigrationTest {
             .findActiveByTouristSpotIds(curatedSpotIds);
 
         assertThat(menuItems)
-            .hasSize(11)
+            .hasSize(9)
             .allSatisfy(item -> {
-                assertThat(item.getVerifiedOn()).isEqualTo(LocalDate.of(2026, 8, 3));
-                assertThat(item.getSourceUrl()).startsWith("https://place.map.kakao.com/");
+                assertThat(item.getVerifiedOn()).isEqualTo(LocalDate.of(2026, 8, 4));
+                assertThat(item.getSourceUrl())
+                    .doesNotStartWith("https://place.map.kakao.com/");
             });
         assertThat(menuItems)
-            .extracting(SpotMenuItem::getName, SpotMenuItem::getPriceWon)
+            .extracting(
+                SpotMenuItem::getName,
+                SpotMenuItem::getPriceWon,
+                SpotMenuItem::getPriceNote
+            )
             .contains(
-                tuple("감자빵", 3300),
-                tuple("감자적", 6000),
-                tuple("컵~길감자", 3100),
-                tuple("감자 맥주", 6000)
+                tuple("원조 감자빵 10개입 (공식몰)", 33000, null),
+                tuple("감자적", 6000, null),
+                tuple("컵길감자", 3100, null),
+                tuple("감자둥둥섬", null, "매장 가격 확인")
+            );
+        assertThat(menuItems)
+            .extracting(SpotMenuItem::getName)
+            .doesNotContain("감자 선장의 해물 보따리", "아메리카노");
+        assertThat(menuItems)
+            .extracting(SpotMenuItem::getSourceUrl)
+            .containsOnly(
+                "https://gamzabatt.com/all/?idx=1",
+                "https://app.catchtable.co.kr/ct/shop/gamjageok1",
+                "https://www.instagram.com/gil_potato/reel/DQJBIyqkYU8/",
+                "https://pf.kakao.com/_xbxfxgAs"
             );
         assertThat(menuItems)
             .extracting(SpotMenuItem::getTouristSpotId)
