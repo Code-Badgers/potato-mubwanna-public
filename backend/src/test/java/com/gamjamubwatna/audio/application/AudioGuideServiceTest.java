@@ -99,7 +99,7 @@ class AudioGuideServiceTest {
 
     @Test
     void selectsQualifiedOdiiTitleContainingSpotName() {
-        TouristSpot spot = spot("오죽헌");
+        TouristSpot spot = spot("오죽헌", "강릉시");
         when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
         when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
             .thenReturn(Optional.empty());
@@ -116,6 +116,44 @@ class AudioGuideServiceTest {
 
         assertThat(response.id()).isEqualTo(9L);
         assertThat(response.audioUrl()).isEqualTo("https://example.com/audio.mp3");
+    }
+
+    @Test
+    void rejectsSameNameAudioGuideFromAnotherRegion() {
+        TouristSpot spot = spot("통일전망대", "고성군");
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty());
+        when(odiiApiClient.searchStories("통일전망대")).thenReturn(List.of(
+            story("21", "오두산 통일전망대", "ko", "https://example.com/paju.mp3")
+        ));
+
+        assertThatThrownBy(() -> audioGuideService.getAudioGuide(1L))
+            .isInstanceOf(AudioGuideNotFoundException.class)
+            .hasMessage("이 관광지의 오디오 가이드를 찾을 수 없습니다.");
+        verify(audioGuideRepository, never()).saveAndFlush(any(AudioGuide.class));
+    }
+
+    @Test
+    void selectsRegionalAudioGuideAmongAmbiguousPartialMatches() {
+        TouristSpot spot = spot("낙산사", "양양군");
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty());
+        when(odiiApiClient.searchStories("낙산사")).thenReturn(List.of(
+            story("21", "낙산사권역_낙산해수욕장", "ko", "https://example.com/beach.mp3"),
+            story("22", "양양, 낙산사 (나레이션 - 김윤주)", "ko", "https://example.com/temple.mp3")
+        ));
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenAnswer(invocation -> {
+            AudioGuide guide = invocation.getArgument(0);
+            ReflectionTestUtils.setField(guide, "id", 12L);
+            return guide;
+        });
+
+        var response = audioGuideService.getAudioGuide(1L);
+
+        assertThat(response.id()).isEqualTo(12L);
+        assertThat(response.audioUrl()).isEqualTo("https://example.com/temple.mp3");
     }
 
     @Test
@@ -218,6 +256,10 @@ class AudioGuideServiceTest {
     }
 
     private TouristSpot spot(String name) {
+        return spot(name, "정선군");
+    }
+
+    private TouristSpot spot(String name, String cityName) {
         TouristSpot spot = new TouristSpot(
             "12345",
             12,
@@ -226,7 +268,7 @@ class AudioGuideServiceTest {
             new BigDecimal("37.3801000"),
             new BigDecimal("128.6609000"),
             "강원특별자치도 정선군",
-            "정선군",
+            cityName,
             null,
             "감자",
             NOW

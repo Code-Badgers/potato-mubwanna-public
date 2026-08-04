@@ -60,8 +60,8 @@ public class AudioGuideService {
             OdiiStory story = odiiApiClient.searchStories(spot.getName()).stream()
                 .filter(this::isKorean)
                 .filter(item -> item.audioUrl() != null && !item.audioUrl().isBlank())
-                .filter(item -> matchScore(item.title(), spot.getName()) < Integer.MAX_VALUE)
-                .min(Comparator.comparingInt(item -> matchScore(item.title(), spot.getName())))
+                .filter(item -> matchScore(item.title(), spot) < Integer.MAX_VALUE)
+                .min(Comparator.comparingInt(item -> matchScore(item.title(), spot)))
                 .orElseThrow(() -> new AudioGuideNotFoundException("이 관광지의 오디오 가이드를 찾을 수 없습니다."));
 
             AudioGuide audioGuide = new AudioGuide(
@@ -113,22 +113,29 @@ public class AudioGuideService {
         return value;
     }
 
-    private int matchScore(String storyTitle, String spotName) {
+    private int matchScore(String storyTitle, TouristSpot spot) {
         String normalizedStoryTitle = normalized(storyTitle);
-        String normalizedSpotName = normalized(spotName);
+        String normalizedSpotName = normalized(spot.getName());
         if (normalizedStoryTitle.isEmpty() || normalizedSpotName.length() < 3) {
             return Integer.MAX_VALUE;
         }
         if (normalizedStoryTitle.equals(normalizedSpotName)) {
             return 0;
         }
-        if (normalizedStoryTitle.contains(normalizedSpotName)) {
+        // 동명 관광지가 다른 지역에 많아 부분 일치는 시·군명이 함께 확인될 때만 허용한다.
+        String normalizedCityName = normalizedCityName(spot.getCityName());
+        if (
+            normalizedStoryTitle.contains(normalizedSpotName)
+                && normalizedCityName.length() >= 2
+                && normalizedStoryTitle.contains(normalizedCityName)
+        ) {
             return 1;
         }
-        if (normalizedSpotName.contains(normalizedStoryTitle)) {
-            return 2;
-        }
         return Integer.MAX_VALUE;
+    }
+
+    private String normalizedCityName(String value) {
+        return normalized(value).replaceFirst("[시군]$", "");
     }
 
     private String normalized(String value) {
