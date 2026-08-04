@@ -144,6 +144,45 @@ class VisitPotatoAcquisitionServiceTest {
         verify(userPotatoRepository, never()).save(any(UserPotato.class));
     }
 
+    @Test
+    void givesProvinceWidePotatoInsteadOfAnotherCitiesPotato() {
+        User user = user();
+        Potato peace = potato(5L, "평화감자", "고성군", PotatoRarity.RARE);
+        Potato rareSeed = potato(15L, "희귀 감자 씨앗", "강원특별자치도", PotatoRarity.RARE);
+        when(potatoRepository.findByActiveTrueOrderByDisplayOrderAsc())
+            .thenReturn(List.of(peace, rareSeed));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of());
+
+        PotatoAcquisitionResult result = service.acquireForVisit(
+            user,
+            spot("낙산사", "양양군", CongestionLevel.NORMAL),
+            Instant.parse("2026-08-04T00:00:00Z")
+        );
+
+        assertThat(result.newlyAcquired()).isTrue();
+        assertThat(result.potato().name()).isEqualTo("희귀 감자 씨앗");
+        assertThat(result.potato().region()).isEqualTo("강원특별자치도");
+        verify(userPotatoRepository).save(any(UserPotato.class));
+    }
+
+    @Test
+    void givesNoPotatoInsteadOfAnotherCitiesPotatoWhenNoEligibleCandidateExists() {
+        User user = user();
+        Potato haji = potato(1L, "하지감자", "강릉시", PotatoRarity.COMMON);
+        when(potatoRepository.findByActiveTrueOrderByDisplayOrderAsc()).thenReturn(List.of(haji));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of());
+
+        PotatoAcquisitionResult result = service.acquireForVisit(
+            user,
+            spot("낙산사", "양양군", CongestionLevel.HIGH),
+            Instant.parse("2026-08-04T00:00:00Z")
+        );
+
+        assertThat(result.newlyAcquired()).isFalse();
+        assertThat(result.potato()).isNull();
+        verify(userPotatoRepository, never()).save(any(UserPotato.class));
+    }
+
     private User user() {
         User user = new User(
             AuthProvider.KAKAO,
