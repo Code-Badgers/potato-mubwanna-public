@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -143,6 +144,23 @@ void main() {
   ) async {
     await _setMobileViewport(tester);
     final repository = _FakeVisitVerificationRepository(result: _visitResult);
+    var heavyImpactCount = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'HapticFeedback.vibrate' &&
+            call.arguments == 'HapticFeedbackType.heavyImpact') {
+          heavyImpactCount += 1;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
 
     await tester.pumpWidget(
       _app(
@@ -161,12 +179,18 @@ void main() {
     expect(repository.lastRequest?.spotId, '1');
     expect(repository.lastRequest?.latitude, 37.3801);
     expect(find.byKey(const ValueKey('visit-result-sheet')), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-stamp-impact')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('attraction-stamp-정선 5일장')),
+      findsOneWidget,
+    );
     expect(find.text('인증 성공'), findsOneWidget);
     expect(find.text('지역 스탬프 획득'), findsOneWidget);
     expect(find.text('황금감자'), findsNothing);
     expect(find.text('강원특별자치도 · 희귀도 영웅'), findsNothing);
     expect(find.text('도감 보기'), findsNothing);
     expect(find.text('다음 장소 추천'), findsOneWidget);
+    expect(heavyImpactCount, 1);
   });
 
   testWidgets('passes the verified spot to the recommendation map', (

@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -10,6 +11,7 @@ import '../../../audio/application/audio_guide_controller.dart';
 import '../../../audio/application/audio_playback_controller.dart';
 import '../../../audio/data/audio_guide_repository.dart';
 import '../../../audio/domain/audio_guide.dart';
+import '../../../stamp/presentation/widget/attraction_stamp_image.dart';
 import '../../application/spot_detail_controller.dart';
 import '../../domain/spot_detail.dart';
 import '../../domain/visit_verification.dart';
@@ -284,7 +286,7 @@ void _showVisitResultSheet(
   );
 }
 
-class _VisitResultSheet extends StatelessWidget {
+class _VisitResultSheet extends StatefulWidget {
   const _VisitResultSheet({
     required this.result,
     required this.spot,
@@ -294,7 +296,81 @@ class _VisitResultSheet extends StatelessWidget {
   final SpotDetail spot;
 
   @override
+  State<_VisitResultSheet> createState() => _VisitResultSheetState();
+}
+
+class _VisitResultSheetState extends State<_VisitResultSheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _stampController;
+  late final Animation<double> _stampScale;
+  late final Animation<double> _stampTurns;
+  late final Animation<double> _impactScale;
+  late final Animation<double> _impactOpacity;
+  bool _didHapticImpact = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _stampController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 720),
+    );
+    _stampScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.65,
+          end: 0.82,
+        ).chain(CurveTween(curve: Curves.easeInCubic)),
+        weight: 46,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 0.82,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 54,
+      ),
+    ]).animate(_stampController);
+    _stampTurns = Tween<double>(begin: -0.035, end: 0).animate(
+      CurvedAnimation(parent: _stampController, curve: Curves.easeOutBack),
+    );
+    _impactScale = Tween<double>(begin: 0.75, end: 1.35).animate(
+      CurvedAnimation(
+        parent: _stampController,
+        curve: const Interval(0.38, 0.82, curve: Curves.easeOut),
+      ),
+    );
+    _impactOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: ConstantTween(0), weight: 38),
+      TweenSequenceItem(tween: Tween(begin: 0.55, end: 0), weight: 44),
+      TweenSequenceItem(tween: ConstantTween(0), weight: 18),
+    ]).animate(_stampController);
+    _stampController.addListener(_triggerHapticAtImpact);
+    if (widget.result.stampIssued) {
+      _stampController.forward();
+    }
+  }
+
+  void _triggerHapticAtImpact() {
+    if (_didHapticImpact || _stampController.value < 0.42) {
+      return;
+    }
+    _didHapticImpact = true;
+    HapticFeedback.heavyImpact();
+  }
+
+  @override
+  void dispose() {
+    _stampController
+      ..removeListener(_triggerHapticAtImpact)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final result = widget.result;
+    final spot = widget.spot;
     final unlockedMission = result.unlockedMission;
     return SafeArea(
       child: Container(
@@ -310,11 +386,58 @@ class _VisitResultSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.celebration_rounded,
-              color: Color(0xFF56C787),
-              size: 44,
-            ),
+            if (result.stampIssued)
+              SizedBox(
+                key: const ValueKey('visit-stamp-impact'),
+                height: 112,
+                child: AnimatedBuilder(
+                  animation: _stampController,
+                  builder: (context, child) => Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Opacity(
+                        opacity: _impactOpacity.value,
+                        child: Transform.scale(
+                          scale: _impactScale.value,
+                          child: Container(
+                            width: 92,
+                            height: 92,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF56C787),
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Transform.rotate(
+                        angle: _stampTurns.value * 6.283185307179586,
+                        child: Transform.scale(
+                          scale: _stampScale.value,
+                          child: child,
+                        ),
+                      ),
+                    ],
+                  ),
+                  child: AttractionStampImage(
+                    spotName: spot.name,
+                    size: 104,
+                    fallback: const Icon(
+                      Icons.workspace_premium_rounded,
+                      color: Color(0xFF367A50),
+                      size: 72,
+                    ),
+                  ),
+                ),
+              )
+            else
+              const Icon(
+                Icons.celebration_rounded,
+                color: Color(0xFF56C787),
+                size: 44,
+              ),
             const SizedBox(height: 12),
             const Text(
               '인증 성공',
