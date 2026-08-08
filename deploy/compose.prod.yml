@@ -39,7 +39,7 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    image: potato-mubwanna-backend:latest
+    image: ${BACKEND_IMAGE:-potato-mubwanna-backend:latest}
     restart: unless-stopped
     environment:
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65.0 -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8
