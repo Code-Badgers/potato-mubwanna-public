@@ -85,7 +85,7 @@ Future<void> initializeAndroidBackgroundStepSync() async {
     backgroundStepSyncTaskName,
     frequency: const Duration(hours: 1),
     constraints: Constraints(networkType: NetworkType.connected),
-    existingWorkPolicy: ExistingWorkPolicy.update,
+    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     backoffPolicy: BackoffPolicy.exponential,
     backoffPolicyDelay: const Duration(minutes: 15),
     tag: backgroundStepSyncTag,
