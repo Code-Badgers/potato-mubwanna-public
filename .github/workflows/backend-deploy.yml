@@ -61,7 +61,7 @@ jobs:
       - name: Run backend tests and validate Compose
         shell: bash
         run: |
-          ./backend/gradlew test build --no-daemon
+          ./backend/gradlew -p backend test build --no-daemon
           docker compose --env-file deploy/.env.example -f deploy/compose.prod.yml config --quiet
           bash deploy/tests/deploy-backend-test.sh
 
