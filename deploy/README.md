@@ -36,6 +36,13 @@ docker compose --env-file .env -f compose.prod.yml logs --tail=200 backend
 docker compose --env-file .env -f compose.prod.yml up -d --build
 ```
 
+GitHub Actions 기반 ECR/SSM 배포를 설정한 환경은 `AWS_CD_SETUP.md`를 따른다. CD가 기록한 `BACKEND_IMAGE` 값을 유지한 채 서버에서 재기동하려면 `--build` 대신 다음 명령을 사용한다.
+
+```bash
+docker compose --env-file .env -f compose.prod.yml pull backend
+docker compose --env-file .env -f compose.prod.yml up -d --no-build
+```
+
 ## 중지와 롤백
 
 ```bash
@@ -50,4 +57,4 @@ docker compose --env-file .env -f compose.prod.yml down
 - 도메인을 고정 IP에 연결하고 443번 TLS를 적용한다.
 - Firebase Admin을 활성화할 경우 서비스 계정 파일을 저장소 밖에 두고 읽기 전용으로 마운트한다.
 - EC2 외부 스냅샷 또는 PostgreSQL 백업을 구성한다.
-- GitHub Actions에서 이미지 빌드, 배포, 헬스체크, 실패 시 롤백을 자동화한다.
+- `AWS_CD_SETUP.md`에 따라 ECR, GitHub OIDC, SSM, production environment 최초 설정을 완료한다.
