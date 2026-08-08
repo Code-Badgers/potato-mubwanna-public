@@ -112,7 +112,7 @@ jobs:
             --arg image_uri "${IMAGE_URI}" \
             --arg build_image "${BUILD_IMAGE}" \
             '{commands: [
-              "set -euo pipefail",
+              "set -eu",
               "cd /opt/potato-mubwanna",
               "sudo -u ubuntu git fetch --prune --tags origin main",
               ("sudo -u ubuntu git checkout --detach " + $git_sha),
