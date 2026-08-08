@@ -27,6 +27,32 @@ if (kakaoNativeAppKey == null) {
     kakaoNativeAppKey = System.getenv('KAKAO_NATIVE_APP_KEY') ?: ''
 }
 
+def releaseKeystorePath = System.getenv('ANDROID_KEYSTORE_PATH') ?: ''
+def releaseKeystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD') ?: ''
+def releaseKeyAlias = System.getenv('ANDROID_KEY_ALIAS') ?: ''
+def releaseKeyPassword = System.getenv('ANDROID_KEY_PASSWORD') ?: ''
+def isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase().contains('release')
+}
+def missingReleaseConfiguration = [
+    'KAKAO_NATIVE_APP_KEY': kakaoNativeAppKey,
+    'ANDROID_KEYSTORE_PATH': releaseKeystorePath,
+    'ANDROID_KEYSTORE_PASSWORD': releaseKeystorePassword,
+    'ANDROID_KEY_ALIAS': releaseKeyAlias,
+    'ANDROID_KEY_PASSWORD': releaseKeyPassword,
+].findAll { _, value -> value.trim().isEmpty() }.keySet()
+
+if (isReleaseTaskRequested && !missingReleaseConfiguration.isEmpty()) {
+    throw new GradleException(
+        "Release build configuration is missing: ${missingReleaseConfiguration.join(', ')}"
+    )
+}
+
+def releaseKeystoreFile = releaseKeystorePath.isEmpty() ? null : file(releaseKeystorePath)
+if (isReleaseTaskRequested && releaseKeystoreFile != null && !releaseKeystoreFile.exists()) {
+    throw new GradleException('ANDROID_KEYSTORE_PATH does not point to an existing file.')
+}
+
 android {
     namespace "com.gamjamubwatna.frontend"
     compileSdkVersion flutter.compileSdkVersion
@@ -64,11 +90,20 @@ android {
         ]
     }
 
+    signingConfigs {
+        release {
+            if (releaseKeystoreFile != null) {
+                storeFile releaseKeystoreFile
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 }

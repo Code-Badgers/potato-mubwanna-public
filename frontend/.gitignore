@@ -13,4 +13,6 @@ coverage/
 !.env.example
 firebase_options.dart
 android/app/google-services.json
+android/*.jks
+android/*.keystore
 ios/Runner/GoogleService-Info.plist
