@@ -122,3 +122,4 @@ AWS RDS
 AWS S3
 GitHub Actions
 Nginx
+Caddy
