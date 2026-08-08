@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       existing_image_tag:
-        description: Existing ECR image tag to deploy for rollback; leave empty to build the selected ref
+        description: Existing EC2-local image tag to deploy for rollback; leave empty to build the selected ref
         required: false
         type: string
   push:
@@ -21,14 +21,13 @@ permissions:
 
 jobs:
   deploy:
-    name: Publish image and deploy with SSM
+    name: Build on EC2 and deploy with SSM
     runs-on: ubuntu-latest
     timeout-minutes: 35
     environment: production
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
-      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
       EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
 
     steps:
@@ -49,7 +48,6 @@ jobs:
         run: |
           : "${AWS_REGION:?Set production variable AWS_REGION}"
           : "${AWS_ROLE_ARN:?Set production variable AWS_ROLE_ARN}"
-          : "${ECR_REPOSITORY:?Set production variable ECR_REPOSITORY}"
           : "${EC2_INSTANCE_ID:?Set production variable EC2_INSTANCE_ID}"
 
           case "${GITHUB_REF}" in
@@ -74,7 +72,7 @@ jobs:
           role-session-name: github-actions-backend-deploy
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Resolve immutable image URI
+      - name: Resolve local image tag
         id: image
         shell: bash
         env:
@@ -82,14 +80,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          account_id="$(aws sts get-caller-identity --query Account --output text)"
-          registry="${account_id}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           image_tag="sha-${GITHUB_SHA:0:12}"
           build_image=true
 
           if [[ -n "${REQUESTED_IMAGE_TAG:-}" ]]; then
             if [[ ! "${REQUESTED_IMAGE_TAG}" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$ ]]; then
-              echo "Invalid ECR image tag: ${REQUESTED_IMAGE_TAG}" >&2
+              echo "Invalid local image tag: ${REQUESTED_IMAGE_TAG}" >&2
               exit 1
             fi
             image_tag="${REQUESTED_IMAGE_TAG}"
@@ -97,100 +93,30 @@ jobs:
           fi
 
           {
-            echo "registry=${registry}"
             echo "image_tag=${image_tag}"
-            echo "image_uri=${registry}/${ECR_REPOSITORY}:${image_tag}"
+            echo "image_uri=potato-mubwanna-backend:${image_tag}"
             echo "build_image=${build_image}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Build and publish missing image tags
-        if: steps.image.outputs.build_image == 'true'
-        shell: bash
-        env:
-          ECR_REGISTRY: ${{ steps.image.outputs.registry }}
-          IMAGE_TAG: ${{ steps.image.outputs.image_tag }}
-          IMAGE_URI: ${{ steps.image.outputs.image_uri }}
-        run: |
-          set -euo pipefail
-
-          image_exists() {
-            aws ecr describe-images \
-              --repository-name "${ECR_REPOSITORY}" \
-              --image-ids "imageTag=$1" \
-              --region "${AWS_REGION}" \
-              --no-cli-pager > /dev/null 2>&1
-          }
-
-          image_digest() {
-            aws ecr describe-images \
-              --repository-name "${ECR_REPOSITORY}" \
-              --image-ids "imageTag=$1" \
-              --query 'imageDetails[0].imageDigest' \
-              --output text \
-              --region "${AWS_REGION}" \
-              --no-cli-pager
-          }
-
-          login_to_ecr() {
-            aws ecr get-login-password --region "${AWS_REGION}" \
-              | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
-          }
-
-          if image_exists "${IMAGE_TAG}"; then
-            echo "Immutable image ${IMAGE_TAG} already exists; reusing it."
-          else
-            login_to_ecr
-            docker build --file backend/Dockerfile --tag "${IMAGE_URI}" backend
-            docker push "${IMAGE_URI}"
-          fi
-
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            release_uri="${ECR_REGISTRY}/${ECR_REPOSITORY}:${GITHUB_REF_NAME}"
-            if image_exists "${GITHUB_REF_NAME}"; then
-              if [[ "$(image_digest "${IMAGE_TAG}")" != "$(image_digest "${GITHUB_REF_NAME}")" ]]; then
-                echo "Release tag ${GITHUB_REF_NAME} already points to a different image." >&2
-                exit 1
-              fi
-              echo "Release image ${GITHUB_REF_NAME} already exists with the expected digest."
-            else
-              login_to_ecr
-              docker image inspect "${IMAGE_URI}" > /dev/null 2>&1 || docker pull "${IMAGE_URI}"
-              docker tag "${IMAGE_URI}" "${release_uri}"
-              docker push "${release_uri}"
-            fi
-          fi
-
-      - name: Verify image exists in ECR
-        env:
-          IMAGE_TAG: ${{ steps.image.outputs.image_tag }}
-        run: >-
-          aws ecr describe-images
-          --repository-name "${ECR_REPOSITORY}"
-          --image-ids imageTag="${IMAGE_TAG}"
-          --region "${AWS_REGION}"
-          --no-cli-pager
-          > /dev/null
-
-      - name: Deploy immutable image through SSM
+      - name: Build and deploy through SSM
         id: deploy
         shell: bash
         env:
-          ECR_REGISTRY: ${{ steps.image.outputs.registry }}
           IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+          BUILD_IMAGE: ${{ steps.image.outputs.build_image }}
         run: |
           set -euo pipefail
 
           jq -n \
             --arg git_sha "${GITHUB_SHA}" \
             --arg image_uri "${IMAGE_URI}" \
-            --arg region "${AWS_REGION}" \
-            --arg registry "${ECR_REGISTRY}" \
+            --arg build_image "${BUILD_IMAGE}" \
             '{commands: [
               "set -euo pipefail",
               "cd /opt/potato-mubwanna",
               "sudo -u ubuntu git fetch --prune --tags origin main",
               ("sudo -u ubuntu git checkout --detach " + $git_sha),
-              ("bash deploy/deploy-backend.sh '" + $image_uri + "' '" + $region + "' '" + $registry + "'")
+              ("bash deploy/deploy-backend.sh '" + $image_uri + "' '" + $build_image + "'")
             ]}' > ssm-parameters.json
 
           command_id="$(aws ssm send-command \
