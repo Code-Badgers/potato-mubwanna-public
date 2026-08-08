@@ -116,7 +116,7 @@ jobs:
               "cd /opt/potato-mubwanna",
               "sudo -u ubuntu git fetch --prune --tags origin main",
               ("sudo -u ubuntu git checkout --detach " + $git_sha),
-              ("bash deploy/deploy-backend.sh '" + $image_uri + "' '" + $build_image + "'")
+              ("bash deploy/deploy-backend.sh " + $image_uri + " " + $build_image)
             ]}' > ssm-parameters.json
 
           command_id="$(aws ssm send-command \
