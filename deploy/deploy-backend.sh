@@ -2,15 +2,15 @@
 
 set -Eeuo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <image-uri> <aws-region> <ecr-registry>" >&2
+if [[ $# -ne 2 ]]; then
+  echo "Usage: $0 <local-image> <build-image:true|false>" >&2
   exit 2
 fi
 
 image_uri="$1"
-aws_region="$2"
-ecr_registry="$3"
+build_image="$2"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repository_dir="$(cd "${script_dir}/.." && pwd)"
 env_file="${script_dir}/.env"
 compose_file="${script_dir}/compose.prod.yml"
 health_url="http://127.0.0.1/health"
@@ -21,8 +21,13 @@ if [[ ! -f "${env_file}" ]]; then
   exit 1
 fi
 
-if [[ "${image_uri}" == *$'\n'* || "${image_uri}" == *$'\r'* ]]; then
-  echo "Image URI must be a single line." >&2
+if [[ ! "${image_uri}" =~ ^potato-mubwanna-backend:[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$ ]]; then
+  echo "Invalid local backend image: ${image_uri}" >&2
+  exit 2
+fi
+
+if [[ "${build_image}" != true && "${build_image}" != false ]]; then
+  echo "build-image must be true or false." >&2
   exit 2
 fi
 
@@ -44,7 +49,7 @@ rollback_on_error() {
     echo "Deployment failed; restoring the previous backend image."
     set +e
     set_backend_image "${previous_image}"
-    "${compose[@]}" pull backend \
+    docker image inspect "${previous_image}" > /dev/null 2>&1 \
       && "${compose[@]}" up -d --no-build \
       && curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors "${health_url}"
     local rollback_status=$?
@@ -60,15 +65,27 @@ rollback_on_error() {
 
 trap rollback_on_error ERR
 
-aws ecr get-login-password --region "${aws_region}" \
-  | docker login --username AWS --password-stdin "${ecr_registry}"
+if [[ "${build_image}" == true ]]; then
+  docker build \
+    --file "${repository_dir}/backend/Dockerfile" \
+    --tag "${image_uri}" \
+    "${repository_dir}/backend"
+else
+  docker image inspect "${image_uri}" > /dev/null
+fi
 
 deployment_started=true
 set_backend_image "${image_uri}"
-"${compose[@]}" pull backend
 "${compose[@]}" up -d --no-build
 curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors "${health_url}"
 "${compose[@]}" ps
+
+while IFS= read -r candidate_image; do
+  if [[ -n "${candidate_image}" && "${candidate_image}" != "${image_uri}" && "${candidate_image}" != "${previous_image}" ]]; then
+    docker image rm "${candidate_image}" > /dev/null 2>&1 || true
+  fi
+done < <(docker image ls potato-mubwanna-backend --format '{{.Repository}}:{{.Tag}}')
+docker image prune --force > /dev/null || true
 
 trap - ERR
 echo "Backend deployment completed successfully."
