@@ -1,0 +1,111 @@
+name: potato-mubwanna
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-potato_mubwanna}
+      POSTGRES_USER: ${DB_USERNAME:-potato}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    mem_limit: 512m
+    networks:
+      - internal
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: 128m
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: potato-mubwanna-backend:latest
+    restart: unless-stopped
+    environment:
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65.0 -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-potato_mubwanna}
+      DB_USERNAME: ${DB_USERNAME:-potato}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_ACCESS_TOKEN_TTL_SECONDS: ${JWT_ACCESS_TOKEN_TTL_SECONDS:-3600}
+      JWT_REFRESH_TOKEN_TTL_SECONDS: ${JWT_REFRESH_TOKEN_TTL_SECONDS:-1209600}
+      COUPON_QR_SECRET: ${COUPON_QR_SECRET:?COUPON_QR_SECRET is required}
+      COUPON_QR_TTL_SECONDS: ${COUPON_QR_TTL_SECONDS:-300}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
+      TOUR_API_SERVICE_KEY: ${TOUR_API_SERVICE_KEY:-}
+      ODII_API_SERVICE_KEY: ${ODII_API_SERVICE_KEY:-}
+      RELATED_TOURISM_API_SERVICE_KEY: ${RELATED_TOURISM_API_SERVICE_KEY:-}
+      CONGESTION_API_SERVICE_KEY: ${CONGESTION_API_SERVICE_KEY:-}
+      TOUR_API_IMPORT_ON_STARTUP: ${TOUR_API_IMPORT_ON_STARTUP:-false}
+      CONGESTION_API_SYNC_ON_STARTUP: ${CONGESTION_API_SYNC_ON_STARTUP:-false}
+      MISSION_UPLOAD_STORAGE_TYPE: local
+      MISSION_UPLOAD_LOCAL_DIR: /app/data/mission-uploads
+      FIREBASE_ADMIN_ENABLED: ${FIREBASE_ADMIN_ENABLED:-false}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      PUSH_TOKEN_STALE_DAYS: ${PUSH_TOKEN_STALE_DAYS:-60}
+    volumes:
+      - mission_uploads:/app/data/mission-uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/api/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    mem_limit: 768m
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    mem_limit: 64m
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  redis_data:
+  mission_uploads:
+
+networks:
+  internal:
+    driver: bridge
