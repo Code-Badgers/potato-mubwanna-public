@@ -54,6 +54,7 @@ jobs:
         run: |
           docker compose --env-file .env.example -f compose.prod.yml config --quiet
           bash tests/deploy-backend-test.sh
+          bash tests/caddy-config-test.sh
 
       - name: Build backend container image
         run: docker build --file backend/Dockerfile --tag potato-mubwanna-backend:ci backend

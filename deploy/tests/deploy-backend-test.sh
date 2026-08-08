@@ -32,6 +32,7 @@ docker() {
 }
 
 curl() {
+  printf 'curl %s\n' "$*" >> "${TEST_DOCKER_LOG}"
   return 0
 }
 
@@ -41,6 +42,7 @@ bash "${test_root}/deploy-backend.sh" \
   potato-mubwanna-backend:next true
 grep -q '^BACKEND_IMAGE=potato-mubwanna-backend:next$' "${test_root}/.env"
 grep -q '^build .*--tag potato-mubwanna-backend:next ' "${TEST_DOCKER_LOG}"
+grep -q 'https://potato-mubwanna.duckdns.org/health' "${TEST_DOCKER_LOG}"
 
 sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=potato-mubwanna-backend:previous|' "${test_root}/.env"
 if bash "${test_root}/deploy-backend.sh" \

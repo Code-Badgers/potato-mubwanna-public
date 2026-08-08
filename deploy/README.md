@@ -1,7 +1,7 @@
 # EC2 MVP Deployment
 
-이 구성은 Ubuntu 24.04 EC2 한 대에서 PostGIS, Redis, Spring Boot, Nginx를 Docker Compose로 실행한다.
-외부에는 Nginx의 80번 포트만 공개하며 데이터베이스, Redis, 백엔드 8080 포트는 Docker 내부 네트워크에서만 접근한다.
+이 구성은 Ubuntu 24.04 EC2 한 대에서 PostGIS, Redis, Spring Boot, Nginx, Caddy를 Docker Compose로 실행한다.
+Caddy만 외부 80/443 포트를 사용하고 Nginx, 데이터베이스, Redis, 백엔드는 Docker 내부 네트워크에서만 접근한다. Caddy는 `PUBLIC_DOMAIN`의 TLS 인증서 발급과 갱신, HTTP에서 HTTPS로의 전환을 자동으로 처리한다.
 
 ## 사전 조건
 
@@ -16,17 +16,17 @@ cp deploy/.env.example deploy/.env
 chmod 600 deploy/.env
 ```
 
-`deploy/.env`의 비밀번호와 서명 키를 임의의 긴 값으로 교체하고 필요한 외부 API 키를 입력한다. 실제 값은 Git에 커밋하지 않는다.
+`deploy/.env`의 `PUBLIC_DOMAIN`을 운영 도메인으로 설정하고 비밀번호와 서명 키를 임의의 긴 값으로 교체한다. 필요한 외부 API 키의 실제 값은 Git에 커밋하지 않는다.
 
 ```bash
 cd deploy
 docker compose --env-file .env -f compose.prod.yml config
 docker compose --env-file .env -f compose.prod.yml up -d --build
 docker compose --env-file .env -f compose.prod.yml ps
-curl --fail http://localhost/health
+curl --fail https://<PUBLIC_DOMAIN>/health
 ```
 
-정상 상태이면 외부에서 `http://<server-ip>/health`가 `UP` 응답을 반환한다.
+정상 상태이면 외부에서 `https://<PUBLIC_DOMAIN>/health`가 유효한 인증서로 `UP` 응답을 반환한다.
 
 ## 로그와 재배포
 
@@ -53,7 +53,6 @@ docker compose --env-file .env -f compose.prod.yml down
 
 ## 운영 전 남은 작업
 
-- 도메인을 고정 IP에 연결하고 443번 TLS를 적용한다.
 - Firebase Admin을 활성화할 경우 서비스 계정 파일을 저장소 밖에 두고 읽기 전용으로 마운트한다.
 - EC2 외부 스냅샷 또는 PostgreSQL 백업을 구성한다.
 - `AWS_CD_SETUP.md`에 따라 GitHub OIDC, SSM, production environment 최초 설정을 완료한다.

@@ -13,13 +13,19 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repository_dir="$(cd "${script_dir}/.." && pwd)"
 env_file="${script_dir}/.env"
 compose_file="${script_dir}/compose.prod.yml"
-health_url="http://127.0.0.1/health"
 compose=(docker compose --env-file "${env_file}" -f "${compose_file}")
 
 if [[ ! -f "${env_file}" ]]; then
   echo "Missing production environment file: ${env_file}" >&2
   exit 1
 fi
+
+public_domain="$(sed -n 's/^PUBLIC_DOMAIN=//p' "${env_file}" | tail -n 1)"
+if [[ ! "${public_domain}" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$ || "${public_domain}" != *.* ]]; then
+  echo "Invalid or missing PUBLIC_DOMAIN in ${env_file}." >&2
+  exit 1
+fi
+health_url="https://${public_domain}/health"
 
 if [[ ! "${image_uri}" =~ ^potato-mubwanna-backend:[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$ ]]; then
   echo "Invalid local backend image: ${image_uri}" >&2
