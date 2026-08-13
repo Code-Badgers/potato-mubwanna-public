@@ -1396,7 +1396,7 @@ class _SelectedRegionCard extends StatelessWidget {
 
     return Container(
       height: 194,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -1469,7 +1469,7 @@ class _SelectedRegionCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     Text(
                       spot.spotName,
                       maxLines: 1,
@@ -1497,7 +1497,7 @@ class _SelectedRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 7),
           Text(
             '이 명소에서 인증하면 ${region.city} 스탬프를 받을 수 있어요',
             maxLines: 2,
@@ -1510,10 +1510,10 @@ class _SelectedRegionCard extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
-            height: 42,
+            height: 40,
             child: FilledButton(
               onPressed: onSpotTap,
               style: FilledButton.styleFrom(
@@ -1560,8 +1560,8 @@ class _SpotPreviewMedallion extends StatelessWidget {
     final asset = _stampImageForSpot(spot.spotName);
 
     return Container(
-      width: 74,
-      height: 74,
+      width: 68,
+      height: 68,
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: AppColors.surface,
