@@ -377,7 +377,7 @@ class _PotatoCollectionBody extends StatelessWidget {
           ),
         ),
         const SliverToBoxAdapter(child: _TodayStepCard()),
-        const SliverToBoxAdapter(child: SizedBox(height: 28)),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
       ],
     );
   }
@@ -416,7 +416,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,7 +425,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
             child: _PotatoArtSlot(
               item: potato,
               locked: potato == null || !potato.acquired,
-              size: 244,
+              size: 270,
               framed: false,
             ),
           ),
@@ -947,7 +947,7 @@ class _TodayStepCardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       decoration: _cardDecoration(),
       child: child,
     );
