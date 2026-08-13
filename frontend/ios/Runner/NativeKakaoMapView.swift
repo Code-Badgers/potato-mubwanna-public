@@ -410,9 +410,9 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private func addPoiStyles(labelManager: LabelManager, markerColor: String, isFavorite: Bool) {
     let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
     [
-      ("small", CGSize(width: 30, height: 34)),
-      ("medium", CGSize(width: 38, height: 43)),
-      ("large", CGSize(width: 46, height: 52)),
+      ("small", CGSize(width: 45, height: 51)),
+      ("medium", CGSize(width: 57, height: 65)),
+      ("large", CGSize(width: 69, height: 78)),
     ].forEach { sizeKey, size in
       labelManager.addPoiStyle(
         makePoiStyle(

@@ -266,8 +266,8 @@ class NativeKakaoMapView(
     }
 
     private fun markerBitmap(strokeColor: Int, isFavorite: Boolean): Bitmap {
-        val width = 46
-        val height = 52
+        val width = 69
+        val height = 78
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -293,23 +293,26 @@ class NativeKakaoMapView(
         }
         val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = Paint.Align.CENTER
-            textSize = 23f
+            textSize = 34.5f
         }
 
-        canvas.drawOval(RectF(9f, height - 5f, width - 9f, height - 2f), shadowPaint)
+        canvas.drawOval(
+            RectF(13.5f, height - 7.5f, width - 13.5f, height - 3f),
+            shadowPaint,
+        )
 
         val pointer = Path().apply {
-            moveTo(width / 2f - 5f, 35f)
-            lineTo(width / 2f + 5f, 35f)
-            lineTo(width / 2f, height - 3f)
+            moveTo(width / 2f - 7.5f, 52.5f)
+            lineTo(width / 2f + 7.5f, 52.5f)
+            lineTo(width / 2f, height - 4.5f)
             close()
         }
         canvas.drawPath(pointer, pinPaint)
 
-        val bodyRect = RectF(4f, 1f, width - 4f, 39f)
+        val bodyRect = RectF(6f, 1.5f, width - 6f, 58.5f)
         canvas.drawOval(bodyRect, fillPaint)
         canvas.drawOval(bodyRect, strokePaint)
-        canvas.drawText("🥔", width / 2f, bodyRect.centerY() + 8f, emojiPaint)
+        canvas.drawText("🥔", width / 2f, bodyRect.centerY() + 12f, emojiPaint)
         return bitmap
     }
 
