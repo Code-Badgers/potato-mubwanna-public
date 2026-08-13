@@ -431,14 +431,14 @@ class _RepresentativePotatoCard extends StatelessWidget {
           const SizedBox(height: 10),
           Center(
             child: Text(
-              potato?.name ?? '초보 감자',
+              potato?.name ?? '새싹 감자',
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
+                color: AppColors.brown,
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
                 letterSpacing: 0,
               ),
             ),
@@ -973,13 +973,6 @@ class _PotatoArtSlot extends StatelessWidget {
             child: Opacity(opacity: 0.32, child: image),
           )
         : image;
-    final alignedImage = locked && potato == null
-        ? Transform.translate(
-            offset: Offset(size * 0.092, size * 0.033),
-            child: visualImage,
-          )
-        : visualImage;
-
     if (!framed) {
       return SizedBox(
         width: size,
@@ -987,7 +980,7 @@ class _PotatoArtSlot extends StatelessWidget {
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(size * 0.02),
-            child: alignedImage,
+            child: visualImage,
           ),
         ),
       );
@@ -1005,7 +998,7 @@ class _PotatoArtSlot extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: EdgeInsets.all(size * 0.12),
-          child: alignedImage,
+          child: visualImage,
         ),
       ),
     );
