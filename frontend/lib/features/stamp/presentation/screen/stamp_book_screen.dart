@@ -568,13 +568,13 @@ class _StampTourHero extends StatelessWidget {
     final acquiredCount = progress.acquiredCount.clamp(0, totalCount);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
       child: SizedBox(
-        height: 108,
+        height: 68,
         child: Stack(
           children: [
             Positioned(
-              top: 8,
+              top: 2,
               left: 0,
               right: 0,
               child: Row(
@@ -598,21 +598,6 @@ class _StampTourHero extends StatelessWidget {
                     onTap: () => context.push('/main/stamps/cities'),
                   ),
                 ],
-              ),
-            ),
-            const Positioned(
-              left: 0,
-              bottom: 4,
-              width: 248,
-              child: Text(
-                '강원 곳곳을 여행하고\n특별한 도장을 모아보세요',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                  height: 1.35,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                ),
               ),
             ),
           ],
