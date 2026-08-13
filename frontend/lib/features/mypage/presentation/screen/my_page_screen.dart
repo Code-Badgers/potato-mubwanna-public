@@ -536,7 +536,7 @@ class _PotatoAlbumContentState extends State<_PotatoAlbumContent> {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 260,
+          height: 330,
           child: PageView.builder(
             key: const ValueKey('mypage-potato-card-album'),
             controller: _pageController,
@@ -558,7 +558,9 @@ class _PotatoAlbumContentState extends State<_PotatoAlbumContent> {
                   padding: EdgeInsets.symmetric(
                     horizontal: cards.length > 1 ? 7 : 0,
                   ),
-                  child: _MyPotatoCollectionCard(item: cards[index]),
+                  child: Center(
+                    child: _MyPotatoCollectionCard(item: cards[index]),
+                  ),
                 ),
               );
             },
@@ -568,7 +570,7 @@ class _PotatoAlbumContentState extends State<_PotatoAlbumContent> {
           const SizedBox(height: 10),
           const Center(
             child: Text(
-              '좌우로 넘겨 카드 보기',
+              '좌우로 넘겨 도감 보기',
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
@@ -599,6 +601,8 @@ class _MyPotatoCollectionCard extends StatelessWidget {
             : '${acquiredAt.year}.${acquiredAt.month.toString().padLeft(2, '0')}.${acquiredAt.day.toString().padLeft(2, '0')} 수집';
 
     return Container(
+      width: 232,
+      height: 330,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         gradient: _rarityGradient(item.rarity),
@@ -654,7 +658,7 @@ class _MyPotatoCollectionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  item.name.trim().isEmpty ? '감자 카드' : item.name.trim(),
+                  item.name.trim().isEmpty ? '감자 도감' : item.name.trim(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -682,7 +686,7 @@ class _MyPotatoCollectionCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   item.description.trim().isEmpty
-                      ? '강원 여행길에서 만난 감자 카드예요.'
+                      ? '강원 여행길에서 만난 감자 도감이에요.'
                       : item.description.trim(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -741,7 +745,7 @@ class _PotatoAlbumEmpty extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '내 감자 카드',
+            '내 감자 도감',
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
@@ -751,7 +755,7 @@ class _PotatoAlbumEmpty extends StatelessWidget {
           ),
           SizedBox(height: 10),
           Text(
-            '아직 수집한 카드가 없어요. 감자 스팟을 방문하면 이곳에 카드가 채워져요.',
+            '아직 수집한 감자가 없어요. 감자 스팟을 방문하면 이곳에 도감이 채워져요.',
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
@@ -791,7 +795,7 @@ class _PotatoAlbumError extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '내 감자 카드',
+          '내 감자 도감',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
@@ -801,7 +805,7 @@ class _PotatoAlbumError extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         const Text(
-          '감자 카드를 불러오지 못했어요.',
+          '감자 도감을 불러오지 못했어요.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 13,
@@ -835,7 +839,7 @@ class _QuickActionGrid extends StatelessWidget {
     final actions = [
       _QuickAction(
         icon: Icons.style_rounded,
-        label: '감자 카드',
+        label: '감자 도감',
         key: const ValueKey('mypage-quick-action-potato-cards'),
         onTap: () => _showPotatoCardAlbumSheet(context),
       ),
