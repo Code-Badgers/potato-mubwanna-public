@@ -1104,22 +1104,30 @@ class _MapProgressBadge extends StatelessWidget {
         onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.94),
+            color: AppColors.surface.withValues(alpha: 0.78),
             borderRadius: BorderRadius.circular(AppDimens.pillRadius),
-            border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
-            boxShadow: AppShadows.softCard,
+            border: Border.all(
+              color: AppColors.surface.withValues(alpha: 0.92),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.textPrimary.withValues(alpha: 0.07),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
                   Icons.local_activity_rounded,
                   color: AppColors.primaryDark,
-                  size: 17,
+                  size: 16,
                 ),
-                const SizedBox(width: 7),
+                const SizedBox(width: 6),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1128,7 +1136,7 @@ class _MapProgressBadge extends StatelessWidget {
                       '스탬프 $stampCount/$totalStampCount',
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
@@ -1137,7 +1145,7 @@ class _MapProgressBadge extends StatelessWidget {
                       '지역 $regionCount/$totalRegionCount',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
@@ -1219,13 +1227,13 @@ class _EmptyRegionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            '명소에서 인증하면 관광지 스탬프가 쌓이고, 지역 랠리북도 함께 채워져요.',
-            maxLines: 2,
+            '명소에서 인증하면 관광지 스탬프가 쌓여요.\n지역 랠리북도 함께 채워집니다.',
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
-              height: 1.3,
+              height: 1.42,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
