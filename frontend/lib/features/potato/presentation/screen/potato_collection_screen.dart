@@ -17,6 +17,8 @@ const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
 const _potatoCardRadius = AppDimens.cardRadius;
 const _defaultPotatoSpeech = '아직은 작아도, 여행길은 잘 따라갈게요';
+const _potatoCareBackgroundPath =
+    'assets/characters/potatoes/potato_care_garden_background.png';
 const _defaultPotatoCard = _PotatoCardSkeletonData(
   name: '새싹 감자',
   rarity: PotatoRarity.common,
@@ -467,133 +469,474 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
     final progress =
         widget.totalCount == 0 ? 0.0 : widget.acquiredCount / widget.totalCount;
     final careMessage = _careMessage;
+    final level = potato?.level ?? 1;
+    final health = (62 + level * 4).clamp(62, 96);
+    final moisture = (58 + widget.acquiredCount * 3).clamp(58, 94);
+    final mood = careMessage == null ? 82 : 94;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
-      decoration: _cardDecoration(),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 18),
+      decoration: _cardDecoration(color: const Color(0xFFFFFCF2)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: SizedBox(
-              width: 294,
-              height: 278,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
+          _PotatoCareStage(
+            potato: potato,
+            speech: careMessage ??
+                (potato == null || !potato.acquired
+                    ? _defaultPotatoSpeech
+                    : _potatoSpeechFor(potato)),
+            onOpenCollection: widget.onChangeRepresentative,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _MetaChip(label: 'Lv. $level'),
+                    if (potato != null) _RarityBadge(rarity: potato.rarity),
+                    if (potato != null) _MetaChip(label: potato.region),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _PotatoCareStats(
+                  health: health,
+                  moisture: moisture,
+                  mood: mood,
+                ),
+                const SizedBox(height: 14),
+                _PotatoCareBar(
+                  onCare: _reactToCare,
+                  enabled: potato == null || potato.acquired,
+                ),
+                const SizedBox(height: 16),
+                _PotatoGrowthPanel(
+                  potato: potato,
+                  progress: progress.clamp(0, 1),
+                  acquiredCount: widget.acquiredCount,
+                  totalCount: widget.totalCount,
+                  updating: widget.updating,
+                  onShowDetail: widget.onShowDetail,
+                  onChangeRepresentative: widget.onChangeRepresentative,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PotatoCareStage extends StatelessWidget {
+  const _PotatoCareStage({
+    required this.potato,
+    required this.speech,
+    required this.onOpenCollection,
+  });
+
+  final PotatoCollectionItem? potato;
+  final String speech;
+  final VoidCallback onOpenCollection;
+
+  @override
+  Widget build(BuildContext context) {
+    final potatoName = potato?.name ?? '새싹 감자';
+    final subtitle = potato == null ? '첫 여행을 기다리는 단계' : '강원 여행을 함께하는 대표 감자';
+
+    return SizedBox(
+      height: 376,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(_potatoCardRadius),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                _potatoCareBackgroundPath,
+                fit: BoxFit.cover,
+                alignment: Alignment.bottomCenter,
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.84),
+                      Colors.white.withValues(alpha: 0.06),
+                      const Color(0xFFFFFCF2).withValues(alpha: 0.58),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 20,
+              top: 34,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Positioned(
-                    top: 18,
-                    child: _PotatoArtSlot(
-                      item: potato,
-                      locked: potato == null || !potato.acquired,
-                      size: 264,
-                      framed: false,
+                  Text(
+                    potatoName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
                     ),
                   ),
-                  Positioned(
-                    top: 0,
-                    child: _PotatoSpeechBubble(
-                      message: careMessage ??
-                          (potato == null || !potato.acquired
-                              ? _defaultPotatoSpeech
-                              : _potatoSpeechFor(potato)),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    child: Text(
-                      potato?.name ?? '새싹 감자',
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          _PotatoCareBar(
-            onCare: _reactToCare,
-            enabled: potato == null || potato.acquired,
-          ),
-          const SizedBox(height: 10),
-          if (potato != null) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _RarityBadge(rarity: potato.rarity),
-                _MetaChip(label: potato.region),
-                _MetaChip(label: 'Lv.${potato.level}'),
-              ],
+            Positioned(
+              right: 20,
+              top: 58,
+              child: _PotatoCollectionShortcut(onTap: onOpenCollection),
             ),
-            const SizedBox(height: 12),
-            Text(
-              potato.description.isEmpty
-                  ? '${potato.region}에서 만난 감자예요. 감자걸음을 쌓으면 더 단단하게 성장합니다.'
-                  : potato.description,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                height: 1.45,
-                letterSpacing: 0,
+            Positioned(
+              top: 18,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _PotatoSpeechBubble(message: speech),
+              ),
+            ),
+            Positioned(
+              left: 42,
+              right: 18,
+              bottom: -6,
+              child: SizedBox(
+                height: 286,
+                child: _PotatoArtSlot(
+                  item: potato,
+                  locked: potato?.acquired != true,
+                  size: 286,
+                  framed: false,
+                ),
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 10,
-                    value: progress.clamp(0, 1),
-                    backgroundColor: const Color(0xFFE7EFE9),
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(_potatoPrimary),
-                  ),
-                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PotatoCollectionShortcut extends StatelessWidget {
+  const _PotatoCollectionShortcut({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Ink(
+          width: 74,
+          height: 74,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.84),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.textPrimary.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
-              const SizedBox(width: 10),
+            ],
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.style_outlined,
+                color: AppColors.textPrimary,
+                size: 22,
+              ),
+              SizedBox(height: 4),
               Text(
-                '${widget.acquiredCount} / ${widget.totalCount}',
-                style: const TextStyle(
+                '도감',
+                style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 14,
+                  fontSize: 11,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PotatoCareStats extends StatelessWidget {
+  const _PotatoCareStats({
+    required this.health,
+    required this.moisture,
+    required this.mood,
+  });
+
+  final int health;
+  final int moisture;
+  final int mood;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _PotatoStatMeter(
+              icon: Icons.eco_rounded,
+              label: '포만감',
+              value: health,
+              color: _potatoPrimary,
+            ),
+          ),
+          _PotatoStatDivider(),
+          Expanded(
+            child: _PotatoStatMeter(
+              icon: Icons.water_drop_rounded,
+              label: '수분',
+              value: moisture,
+              color: const Color(0xFF51AEEB),
+            ),
+          ),
+          _PotatoStatDivider(),
+          Expanded(
+            child: _PotatoStatMeter(
+              icon: Icons.sentiment_satisfied_rounded,
+              label: '기분',
+              value: mood,
+              color: const Color(0xFFF5C84B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PotatoStatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 42,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      color: _potatoLine.withValues(alpha: 0.72),
+    );
+  }
+}
+
+class _PotatoStatMeter extends StatelessWidget {
+  const _PotatoStatMeter({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (value / 100).clamp(0, 1).toDouble();
+    return Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 5),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 5,
+                  value: progress,
+                  backgroundColor: const Color(0xFFE8E5DA),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$value / 100',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PotatoGrowthPanel extends StatelessWidget {
+  const _PotatoGrowthPanel({
+    required this.potato,
+    required this.progress,
+    required this.acquiredCount,
+    required this.totalCount,
+    required this.updating,
+    required this.onShowDetail,
+    required this.onChangeRepresentative,
+  });
+
+  final PotatoCollectionItem? potato;
+  final double progress;
+  final int acquiredCount;
+  final int totalCount;
+  final bool updating;
+  final VoidCallback? onShowDetail;
+  final VoidCallback onChangeRepresentative;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  '다음 성장까지',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              Text(
+                '$acquiredCount / $totalCount',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            potato == null
+                ? '첫 감자 카드를 만나면 성장 기록이 채워져요'
+                : '감자걸음과 여행 기록으로 더 단단하게 자라요',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 9,
+              value: progress,
+              backgroundColor: const Color(0xFFE8E5DA),
+              valueColor: const AlwaysStoppedAnimation<Color>(_potatoPrimary),
+            ),
+          ),
           const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: widget.onShowDetail,
+                  onPressed: onShowDetail,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _potatoDark,
                     side: BorderSide(
                       color: _potatoPrimary.withValues(alpha: 0.55),
                     ),
-                    minimumSize: const Size.fromHeight(48),
+                    minimumSize: const Size.fromHeight(46),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(_potatoCardRadius),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                   icon: const Icon(Icons.info_outline_rounded, size: 18),
@@ -610,18 +953,17 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
-                  onPressed:
-                      widget.updating ? null : widget.onChangeRepresentative,
+                  onPressed: updating ? null : onChangeRepresentative,
                   style: FilledButton.styleFrom(
                     backgroundColor: _potatoPrimary,
                     disabledBackgroundColor: const Color(0xFFBFE5CC),
                     foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(48),
+                    minimumSize: const Size.fromHeight(46),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(_potatoCardRadius),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  child: widget.updating
+                  child: updating
                       ? const SizedBox(
                           width: 20,
                           height: 20,
