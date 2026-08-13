@@ -537,9 +537,8 @@ class _StampBookBody extends StatelessWidget {
     final progress = stampBook.progress;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final mapHeight = (constraints.maxHeight - 370).clamp(318.0, 368.0);
+        final mapHeight = (constraints.maxHeight - 322).clamp(356.0, 420.0);
         return CustomScrollView(
-          physics: const NeverScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: _StampTourHero(progress: progress)),
             SliverToBoxAdapter(
@@ -569,9 +568,9 @@ class _StampTourHero extends StatelessWidget {
     final acquiredCount = progress.acquiredCount.clamp(0, totalCount);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
       child: SizedBox(
-        height: 154,
+        height: 108,
         child: Stack(
           children: [
             Positioned(
@@ -586,8 +585,8 @@ class _StampTourHero extends StatelessWidget {
                       '강원도\n스탬프 투어',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 37,
-                        height: 1.08,
+                        fontSize: 28,
+                        height: 1.06,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
@@ -604,13 +603,13 @@ class _StampTourHero extends StatelessWidget {
             const Positioned(
               left: 0,
               bottom: 4,
-              width: 250,
+              width: 248,
               child: Text(
-                '강원 곳곳을 여행하고\n특별한 도장을 모아보세요 🌱',
+                '강원 곳곳을 여행하고\n특별한 도장을 모아보세요',
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 15,
-                  height: 1.48,
+                  fontSize: 13,
+                  height: 1.35,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0,
                 ),
@@ -784,7 +783,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
     return Column(
       children: [
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 2, 16, 14),
+          margin: const EdgeInsets.fromLTRB(16, 2, 16, 10),
           height: widget.mapHeight,
           decoration: BoxDecoration(
             color: const Color(0xFFDDF2FA),
@@ -1316,6 +1315,7 @@ class _SelectedRegionCard extends StatelessWidget {
     final statusText = acquired ? '도장 획득' : '방문 인증 대기';
 
     return Container(
+      height: 178,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
@@ -1430,48 +1430,10 @@ class _SelectedRegionCard extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          if (citySpots.length > 1) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 34,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: citySpots.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 7),
-                itemBuilder: (context, index) {
-                  final citySpot = citySpots[index];
-                  final selected = citySpot.spotId == spot.spotId;
-                  return ChoiceChip(
-                    key: ValueKey('rallybook-city-spot-${citySpot.spotId}'),
-                    label: Text(citySpot.spotName),
-                    selected: selected,
-                    onSelected: (_) => onSpotSelect(citySpot),
-                    selectedColor: AppColors.primaryTint,
-                    backgroundColor: AppColors.background,
-                    side: BorderSide(
-                      color: selected
-                          ? AppColors.primary.withValues(alpha: 0.36)
-                          : Colors.transparent,
-                    ),
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? AppColors.primaryDark
-                          : AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  );
-                },
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
+          const Spacer(),
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 46,
             child: FilledButton(
               onPressed: onSpotTap,
               style: FilledButton.styleFrom(
@@ -1657,6 +1619,7 @@ class _EmptyRegionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      height: 178,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
         color: AppColors.surface,
