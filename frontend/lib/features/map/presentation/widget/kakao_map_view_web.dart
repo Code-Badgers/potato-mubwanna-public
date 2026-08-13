@@ -339,7 +339,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       let currentLocationOverlay = null;
 
       function markerScale(level) {
-        return Math.max(0.52, Math.min(0.88, 1.05 - ((level - 4) * 0.10)));
+        return Math.max(0.52, Math.min(0.9, 1.08 - ((level - 4) * 0.10)));
       }
 
       function applyMarkerScale() {
@@ -364,8 +364,8 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerElement.title = spot.name;
           markerElement.setAttribute('aria-label', spot.name);
           markerElement.textContent = '';
-          markerElement.style.width = '42px';
-          markerElement.style.height = '48px';
+          markerElement.style.width = '63px';
+          markerElement.style.height = '72px';
           markerElement.style.border = '0';
           markerElement.style.borderRadius = '999px';
           markerElement.style.background = 'transparent';
@@ -382,10 +382,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
           const markerBody = document.createElement('span');
           markerBody.style.position = 'absolute';
-          markerBody.style.left = '3px';
+          markerBody.style.left = '5px';
           markerBody.style.top = '0';
-          markerBody.style.width = '36px';
-          markerBody.style.height = '36px';
+          markerBody.style.width = '54px';
+          markerBody.style.height = '54px';
           markerBody.style.borderRadius = '999px';
           markerBody.style.background = markerElement.dataset.defaultBodyBackground;
           markerBody.style.border = '2px solid ' + (spot.markerColor || '#F6C23E');
@@ -398,16 +398,16 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
           const markerEmoji = document.createElement('span');
           markerEmoji.textContent = '🥔';
-          markerEmoji.style.fontSize = '22px';
+          markerEmoji.style.fontSize = '33px';
           markerEmoji.style.lineHeight = '1';
           markerEmoji.style.transform = 'translateY(1px)';
 
           const markerTip = document.createElement('span');
           markerTip.style.position = 'absolute';
-          markerTip.style.left = '16px';
-          markerTip.style.top = '31px';
-          markerTip.style.width = '10px';
-          markerTip.style.height = '10px';
+          markerTip.style.left = '24px';
+          markerTip.style.top = '47px';
+          markerTip.style.width = '15px';
+          markerTip.style.height = '15px';
           markerTip.style.background = spot.markerColor || '#F6C23E';
           markerTip.style.borderRadius = '2px';
           markerTip.style.transform = 'rotate(45deg)';

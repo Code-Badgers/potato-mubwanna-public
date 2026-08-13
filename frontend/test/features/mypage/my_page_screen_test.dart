@@ -19,6 +19,7 @@ import 'package:potato_mubwanna/features/mypage/application/user_profile_control
 import 'package:potato_mubwanna/features/mypage/domain/user_activity_summary.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
+import 'package:potato_mubwanna/features/notice/presentation/screen/notice_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
 import 'package:potato_mubwanna/features/travel_record/domain/travel_record.dart';
@@ -106,7 +107,7 @@ void main() {
     expect(find.text('기록을 확인해보세요!'), findsNothing);
     expect(find.text('설정'), findsOneWidget);
     expect(find.text('공지사항'), findsOneWidget);
-    expect(find.text('고객센터'), findsOneWidget);
+    expect(find.text('고객센터'), findsNothing);
     expect(find.text('로그아웃'), findsNothing);
     expect(find.text('회원 탈퇴'), findsNothing);
   });
@@ -175,7 +176,7 @@ void main() {
       findsOneWidget,
     );
 
-    for (final label in ['설정', '공지사항', '고객센터']) {
+    for (final label in ['설정', '공지사항']) {
       expect(
         find.ancestor(
           of: find.text(label),
@@ -187,7 +188,7 @@ void main() {
       );
     }
 
-    for (final label in ['설정', '공지사항', '고객센터']) {
+    for (final label in ['설정', '공지사항']) {
       expect(
         find.ancestor(
           of: find.text(label),
@@ -369,6 +370,50 @@ void main() {
 
     expect(find.text('설정'), findsOneWidget);
     expect(find.text('권한 관리'), findsNothing);
+  });
+
+  testWidgets('opens notices from My Page account menu and hides support',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = GoRouter(
+      initialLocation: '/main/mypage',
+      routes: [
+        GoRoute(
+          path: '/main/mypage',
+          builder: (_, __) => const MyPageScreen(),
+        ),
+        GoRoute(
+          path: '/notices',
+          builder: (_, __) => const NoticeScreen(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('고객센터'), findsNothing);
+
+    final noticeMenu = find.byKey(const ValueKey('mypage-menu-notices'));
+    await tester.scrollUntilVisible(
+      noticeMenu,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(noticeMenu);
+    await tester.pumpAndSettle();
+
+    expect(find.text('감자 스팟은 계속 다듬고 있어요'), findsOneWidget);
+    expect(find.text('방문 인증은 현장 위치를 기준으로 해요'), findsOneWidget);
   });
 }
 
