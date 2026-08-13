@@ -426,7 +426,7 @@ class _PotatoHeader extends StatelessWidget {
   }
 }
 
-class _RepresentativePotatoCard extends StatelessWidget {
+class _RepresentativePotatoCard extends StatefulWidget {
   const _RepresentativePotatoCard({
     required this.item,
     required this.acquiredCount,
@@ -444,9 +444,29 @@ class _RepresentativePotatoCard extends StatelessWidget {
   final VoidCallback onChangeRepresentative;
 
   @override
+  State<_RepresentativePotatoCard> createState() =>
+      _RepresentativePotatoCardState();
+}
+
+class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
+  String? _careMessage;
+
+  void _reactToCare(_PotatoCareAction action) {
+    setState(() {
+      _careMessage = switch (action) {
+        _PotatoCareAction.pat => '기분이 조금 좋아졌어요',
+        _PotatoCareAction.water => '좋아요, 오늘도 단단하게 자라볼게요',
+        _PotatoCareAction.walk => '산책길은 내가 따라갈게요',
+      };
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final potato = item;
-    final progress = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
+    final potato = widget.item;
+    final progress =
+        widget.totalCount == 0 ? 0.0 : widget.acquiredCount / widget.totalCount;
+    final careMessage = _careMessage;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -475,9 +495,10 @@ class _RepresentativePotatoCard extends StatelessWidget {
                   Positioned(
                     top: 0,
                     child: _PotatoSpeechBubble(
-                      message: potato == null || !potato.acquired
-                          ? _defaultPotatoSpeech
-                          : _potatoSpeechFor(potato),
+                      message: careMessage ??
+                          (potato == null || !potato.acquired
+                              ? _defaultPotatoSpeech
+                              : _potatoSpeechFor(potato)),
                     ),
                   ),
                   Positioned(
@@ -498,6 +519,11 @@ class _RepresentativePotatoCard extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          _PotatoCareBar(
+            onCare: _reactToCare,
+            enabled: potato == null || potato.acquired,
           ),
           const SizedBox(height: 10),
           if (potato != null) ...[
@@ -544,7 +570,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                '$acquiredCount / $totalCount',
+                '${widget.acquiredCount} / ${widget.totalCount}',
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 14,
@@ -559,7 +585,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: onShowDetail,
+                  onPressed: widget.onShowDetail,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _potatoDark,
                     side: BorderSide(
@@ -584,7 +610,8 @@ class _RepresentativePotatoCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
-                  onPressed: updating ? null : onChangeRepresentative,
+                  onPressed:
+                      widget.updating ? null : widget.onChangeRepresentative,
                   style: FilledButton.styleFrom(
                     backgroundColor: _potatoPrimary,
                     disabledBackgroundColor: const Color(0xFFBFE5CC),
@@ -594,7 +621,7 @@ class _RepresentativePotatoCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(_potatoCardRadius),
                     ),
                   ),
-                  child: updating
+                  child: widget.updating
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -616,6 +643,114 @@ class _RepresentativePotatoCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+enum _PotatoCareAction {
+  pat,
+  water,
+  walk,
+}
+
+class _PotatoCareBar extends StatelessWidget {
+  const _PotatoCareBar({
+    required this.onCare,
+    required this.enabled,
+  });
+
+  final ValueChanged<_PotatoCareAction> onCare;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _PotatoCareButton(
+            icon: Icons.favorite_rounded,
+            label: '쓰다듬기',
+            enabled: enabled,
+            onPressed: () => onCare(_PotatoCareAction.pat),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _PotatoCareButton(
+            icon: Icons.water_drop_rounded,
+            label: '물 주기',
+            enabled: enabled,
+            onPressed: () => onCare(_PotatoCareAction.water),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _PotatoCareButton(
+            icon: Icons.directions_walk_rounded,
+            label: '산책',
+            enabled: enabled,
+            onPressed: () => onCare(_PotatoCareAction.walk),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PotatoCareButton extends StatelessWidget {
+  const _PotatoCareButton({
+    required this.icon,
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: enabled ? onPressed : null,
+        child: Ink(
+          height: 38,
+          decoration: BoxDecoration(
+            color: enabled
+                ? AppColors.primaryTint.withValues(alpha: 0.72)
+                : const Color(0xFFF1F0EC),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: enabled ? _potatoDark : AppColors.textSecondary,
+                size: 16,
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: enabled ? _potatoDark : AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
