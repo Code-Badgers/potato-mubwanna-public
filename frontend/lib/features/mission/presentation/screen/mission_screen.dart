@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -20,7 +21,7 @@ const _missionPrimary = Color(0xFF56C787);
 const _missionDark = Color(0xFF6A4A2A);
 const _missionGold = Color(0xFFF6C23E);
 const _missionLine = Color(0xFFE8E2D8);
-const _missionCardRadius = 20.0;
+const _missionCardRadius = AppDimens.cardRadius;
 const _featuredJumsooniAssets = [
   'assets/characters/jumsooni/jumsooni_neutral.png',
   'assets/characters/jumsooni/jumsooni_wave_hand.png',
@@ -644,14 +645,8 @@ class _MissionFeaturedCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(_missionCardRadius),
-            border: Border.all(color: AppColors.line),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
+            boxShadow: AppShadows.softCard,
           ),
           child: Stack(
             children: [
