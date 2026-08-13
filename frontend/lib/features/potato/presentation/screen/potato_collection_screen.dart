@@ -15,6 +15,7 @@ const _potatoDark = Color(0xFF509B64);
 const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
 const _potatoCardRadius = AppDimens.cardRadius;
+const _defaultPotatoSpeech = '아직은 작아도, 여행길은 잘 따라갈게요';
 
 String _formatInt(int value) {
   return value.toString().replaceAllMapped(
@@ -359,25 +360,35 @@ class _PotatoCollectionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final representative = collection.representativePotato;
 
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        const SliverToBoxAdapter(child: _PotatoHeader()),
-        SliverToBoxAdapter(
-          child: _RepresentativePotatoCard(
-            item: representative,
-            acquiredCount: collection.acquiredCount,
-            totalCount: collection.totalCount,
-            updating: updatingRepresentative,
-            onShowDetail: representative == null
-                ? null
-                : () => onShowDetail(representative),
-            onChangeRepresentative: onChangeRepresentative,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 28, 0, 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  _RepresentativePotatoCard(
+                    item: representative,
+                    acquiredCount: collection.acquiredCount,
+                    totalCount: collection.totalCount,
+                    updating: updatingRepresentative,
+                    onShowDetail: representative == null
+                        ? null
+                        : () => onShowDetail(representative),
+                    onChangeRepresentative: onChangeRepresentative,
+                  ),
+                  const SizedBox(height: 8),
+                  const _TodayStepCard(),
+                ],
+              ),
+            ),
           ),
-        ),
-        const SliverToBoxAdapter(child: _TodayStepCard()),
-        const SliverToBoxAdapter(child: SizedBox(height: 28)),
-      ],
+        );
+      },
     );
   }
 }
@@ -415,34 +426,56 @@ class _RepresentativePotatoCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: _PotatoArtSlot(
-              item: potato,
-              locked: potato == null || !potato.acquired,
-              size: 244,
-              framed: false,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Center(
-            child: Text(
-              potato?.name ?? '초보 감자',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
+            child: SizedBox(
+              width: 294,
+              height: 278,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    top: 18,
+                    child: _PotatoArtSlot(
+                      item: potato,
+                      locked: potato == null || !potato.acquired,
+                      size: 264,
+                      framed: false,
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    child: _PotatoSpeechBubble(
+                      message: potato == null || !potato.acquired
+                          ? _defaultPotatoSpeech
+                          : _potatoSpeechFor(potato),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    child: Text(
+                      potato?.name ?? '새싹 감자',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+          const SizedBox(height: 10),
           if (potato != null) ...[
             const SizedBox(height: 8),
             Wrap(
@@ -562,6 +595,49 @@ class _RepresentativePotatoCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PotatoSpeechBubble extends StatelessWidget {
+  const _PotatoSpeechBubble({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 260),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _potatoLine),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -794,6 +870,8 @@ class _TodayStepCardContent extends StatelessWidget {
     final ratio = summary.stepRatio;
     final percent = (ratio * 100).round();
     final remainingDistance = summary.remainingDistanceKmForRepresentative;
+    final stepLabel =
+        '${_formatInt(summary.todaySteps)} / ${_formatInt(summary.dailyStepGoal)}걸음';
     final remainingLabel = remainingDistance <= 0
         ? '오늘 성장 목표를 달성했어요'
         : '성장까지 약 ${remainingDistance.toStringAsFixed(1)}km 남았어요';
@@ -805,18 +883,18 @@ class _TodayStepCardContent extends StatelessWidget {
           const Text(
             '오늘의 감자걸음',
             style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              color: AppColors.textSecondary,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
               SizedBox(
-                width: 104,
-                height: 104,
+                width: 96,
+                height: 96,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -831,8 +909,8 @@ class _TodayStepCardContent extends StatelessWidget {
                       child: Text(
                         '$percent%',
                         style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 20,
+                          color: _potatoDark,
+                          fontSize: 18,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
@@ -847,21 +925,23 @@ class _TodayStepCardContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_formatInt(summary.todaySteps)} 걸음',
+                      stepLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 27,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 7),
                     Text(
-                      '/${_formatInt(summary.dailyStepGoal)} 걸음',
+                      '오늘 목표까지 $percent%',
                       style: const TextStyle(
-                        color: _potatoDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0,
                       ),
                     ),
@@ -895,7 +975,7 @@ class _TodayStepCardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       decoration: _cardDecoration(),
       child: child,
     );
@@ -973,13 +1053,6 @@ class _PotatoArtSlot extends StatelessWidget {
             child: Opacity(opacity: 0.32, child: image),
           )
         : image;
-    final alignedImage = locked && potato == null
-        ? Transform.translate(
-            offset: Offset(size * 0.092, size * 0.033),
-            child: visualImage,
-          )
-        : visualImage;
-
     if (!framed) {
       return SizedBox(
         width: size,
@@ -987,7 +1060,7 @@ class _PotatoArtSlot extends StatelessWidget {
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(size * 0.02),
-            child: alignedImage,
+            child: visualImage,
           ),
         ),
       );
@@ -1005,7 +1078,7 @@ class _PotatoArtSlot extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: EdgeInsets.all(size * 0.12),
-          child: alignedImage,
+          child: visualImage,
         ),
       ),
     );
@@ -1427,5 +1500,17 @@ Color _rarityColor(PotatoRarity rarity) {
     PotatoRarity.rare => const Color(0xFF8D74C9),
     PotatoRarity.epic => const Color(0xFFE98A2A),
     PotatoRarity.legendary => const Color(0xFFF6A800),
+  };
+}
+
+String _potatoSpeechFor(PotatoCollectionItem potato) {
+  if (potato.region.trim().isNotEmpty) {
+    return '${potato.region} 바람은 좀 다르네요';
+  }
+  return switch (potato.rarity) {
+    PotatoRarity.common => '오늘도 한 걸음만 더 가봐요',
+    PotatoRarity.rare => '나, 아무 데서나 만나는 감자 아니에요',
+    PotatoRarity.epic => '이 정도면 꽤 멀리 온 거예요',
+    PotatoRarity.legendary => '강원도 길을 제법 아는 얼굴이네요',
   };
 }

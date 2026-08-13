@@ -7,10 +7,11 @@ import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
-import '../model/gangwon_context_region.dart';
 import '../model/gangwon_map_projection.dart';
 import '../model/gangwon_map_region.dart';
-import '../widget/attraction_stamp_image.dart';
+
+const _stampTourLockedAsset = 'assets/stamps/stamp_tour_locked.png';
+const _stampTourCompletedAsset = 'assets/stamps/stamp_tour_completed.png';
 
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
@@ -102,6 +103,11 @@ class _CityStampGridBody extends StatelessWidget {
     final totalCount = progress.totalCount == 0 ? 18 : progress.totalCount;
     final acquiredCount = progress.acquiredCount.clamp(0, totalCount);
     final ratio = totalCount == 0 ? 0.0 : acquiredCount / totalCount;
+    final pages = <List<RallybookStamp>>[];
+    for (var index = 0; index < progress.stamps.length; index += 3) {
+      final end = (index + 3).clamp(0, progress.stamps.length);
+      pages.add(progress.stamps.sublist(index, end));
+    }
 
     return CustomScrollView(
       slivers: [
@@ -111,9 +117,15 @@ class _CityStampGridBody extends StatelessWidget {
             child: Row(
               children: [
                 IconButton.filledTonal(
-                  onPressed: () => context.go('/main/mypage'),
+                  onPressed: () {
+                    if (Navigator.of(context).canPop()) {
+                      context.pop();
+                      return;
+                    }
+                    context.go('/main/mypage');
+                  },
                   icon: const Icon(Icons.arrow_back_rounded),
-                  tooltip: '마이페이지로 돌아가기',
+                  tooltip: '이전 화면으로 돌아가기',
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.surface,
                     foregroundColor: AppColors.textPrimary,
@@ -122,10 +134,10 @@ class _CityStampGridBody extends StatelessWidget {
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    '시군별 스탬프',
+                    '강원 여행 패스포트',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 28,
+                      fontSize: 25,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0,
                     ),
@@ -137,36 +149,85 @@ class _CityStampGridBody extends StatelessWidget {
         ),
         SliverToBoxAdapter(
           child: Container(
-            margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-            padding: const EdgeInsets.all(18),
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.line),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFFCF4),
+                  Color(0xFFEAF8F0),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+              boxShadow: AppShadows.softCard,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withValues(alpha: 0.74),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.confirmation_number_rounded,
+                        color: AppColors.primaryDark,
+                        size: 23,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '강원 여행 패스포트',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            '명소에서 인증하면 여행 도장이 찍혀요',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              height: 1.35,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withValues(alpha: 0.82),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                       child: Text(
-                        '강원 18개 시군 수집률',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
+                        '$acquiredCount / $totalCount',
+                        style: const TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 15,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
-                      ),
-                    ),
-                    Text(
-                      '$acquiredCount / $totalCount',
-                      style: const TextStyle(
-                        color: AppColors.primaryDark,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
                       ),
                     ),
                   ],
@@ -187,24 +248,211 @@ class _CityStampGridBody extends StatelessWidget {
             ),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-          sliver: SliverGrid.builder(
-            itemCount: progress.stamps.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1,
-            ),
-            itemBuilder: (context, index) => _CityStampTile(
-              stamp: progress.stamps[index],
-            ),
+        SliverToBoxAdapter(
+          child: _PassportPageBook(
+            pages: pages,
+            acquiredCount: acquiredCount,
+            totalCount: totalCount,
           ),
         ),
       ],
     );
   }
+}
+
+class _PassportPageBook extends StatelessWidget {
+  const _PassportPageBook({
+    required this.pages,
+    required this.acquiredCount,
+    required this.totalCount,
+  });
+
+  final List<List<RallybookStamp>> pages;
+  final int acquiredCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (pages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 500,
+      child: PageView.builder(
+        controller: PageController(viewportFraction: 0.9),
+        itemCount: pages.length,
+        itemBuilder: (context, index) => Padding(
+          padding: const EdgeInsets.fromLTRB(0, 2, 12, 32),
+          child: _PassportSpread(
+            stamps: pages[index],
+            pageNumber: index + 1,
+            pageCount: pages.length,
+            acquiredCount: acquiredCount,
+            totalCount: totalCount,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PassportSpread extends StatelessWidget {
+  const _PassportSpread({
+    required this.stamps,
+    required this.pageNumber,
+    required this.pageCount,
+    required this.acquiredCount,
+    required this.totalCount,
+  });
+
+  final List<RallybookStamp> stamps;
+  final int pageNumber;
+  final int pageCount;
+  final int acquiredCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E8),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadows.floating,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: CustomPaint(
+          painter: const _PassportPaperPainter(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'GANGWON PASSPORT',
+                        style: TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$pageNumber / $pageCount',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$acquiredCount / $totalCount 여행 도장',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '도장을 모으면 강원 여행 패스포트가 채워져요',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Expanded(
+                  child: Column(
+                    children: [
+                      for (var index = 0; index < stamps.length; index++) ...[
+                        Expanded(child: _CityStampTile(stamp: stamps[index])),
+                        if (index < stamps.length - 1)
+                          const SizedBox(height: 12),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.swipe_rounded,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    SizedBox(width: 5),
+                    Text(
+                      '좌우로 넘겨 다음 페이지 보기',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PassportPaperPainter extends CustomPainter {
+  const _PassportPaperPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final spinePaint = Paint()
+      ..color = AppColors.brown.withValues(alpha: 0.08)
+      ..strokeWidth = 2;
+    canvas.drawLine(
+      Offset(size.width * 0.5, 0),
+      Offset(size.width * 0.5, size.height),
+      spinePaint,
+    );
+
+    final postmarkPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = AppColors.primaryDark.withValues(alpha: 0.12);
+    canvas.drawCircle(Offset(size.width - 52, 54), 25, postmarkPaint);
+    canvas.drawCircle(Offset(size.width - 52, 54), 15, postmarkPaint);
+
+    final stripePaint = Paint()
+      ..color = AppColors.brown.withValues(alpha: 0.08)
+      ..strokeWidth = 4;
+    for (var x = -size.height; x < size.width; x += 22) {
+      canvas.drawLine(
+        Offset(x.toDouble(), size.height),
+        Offset(x + 14, size.height - 14),
+        stripePaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PassportPaperPainter oldDelegate) => false;
 }
 
 class _CityStampTile extends StatelessWidget {
@@ -215,60 +463,155 @@ class _CityStampTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp.acquired;
+    final icon = _passportIconFor(stamp.cityName);
+    final landmark = _passportLandmarkFor(stamp.cityName, stamp.stampName);
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: acquired ? AppColors.primaryTint : AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: acquired
+            ? AppColors.surface.withValues(alpha: 0.54)
+            : AppColors.surface.withValues(alpha: 0.36),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
         border: Border.all(
-          color: acquired ? AppColors.primary : AppColors.line,
-          width: acquired ? 1.6 : 1,
+          color: acquired
+              ? AppColors.primary.withValues(alpha: 0.22)
+              : AppColors.line.withValues(alpha: 0.44),
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: acquired ? AppColors.primary : AppColors.background,
+              color: acquired
+                  ? AppColors.primaryTint
+                  : AppColors.background.withValues(alpha: 0.94),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              acquired ? Icons.check_rounded : Icons.lock_outline_rounded,
-              color: acquired ? Colors.white : AppColors.textSecondary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(height: 9),
-          Text(
-            stamp.cityName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: acquired ? AppColors.textPrimary : AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            acquired ? '완료' : '미획득',
-            style: TextStyle(
+              acquired ? icon : Icons.radio_button_unchecked_rounded,
               color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+              size: acquired ? 24 : 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stamp.cityName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: acquired
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  acquired ? landmark : '명소 방문 전',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: acquired
+                        ? AppColors.primaryDark
+                        : AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Transform.rotate(
+            angle: acquired ? -0.16 : 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: acquired
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : AppColors.line.withValues(alpha: 0.34),
+                borderRadius: BorderRadius.circular(999),
+                border: acquired
+                    ? Border.all(
+                        color: AppColors.primaryDark.withValues(alpha: 0.22),
+                      )
+                    : null,
+              ),
+              child: Text(
+                acquired ? 'STAMPED' : 'BLANK',
+                style: TextStyle(
+                  color: acquired
+                      ? AppColors.primaryDark
+                      : AppColors.textSecondary,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+IconData _passportIconFor(String cityName) {
+  final city = _normalizeCityName(cityName);
+  return switch (city) {
+    '강릉' || '속초' || '동해' || '삼척' || '고성' || '양양' => Icons.waves_rounded,
+    '춘천' || '화천' || '양구' || '인제' || '홍천' => Icons.forest_rounded,
+    '평창' || '정선' || '태백' || '영월' => Icons.terrain_rounded,
+    '원주' => Icons.museum_rounded,
+    '철원' => Icons.landscape_rounded,
+    '횡성' => Icons.park_rounded,
+    _ => Icons.place_rounded,
+  };
+}
+
+String _passportLandmarkFor(String cityName, String stampName) {
+  final normalizedStamp = stampName.trim();
+  if (normalizedStamp.isNotEmpty) {
+    return normalizedStamp;
+  }
+
+  final city = _normalizeCityName(cityName);
+  return switch (city) {
+    '춘천' => '남이섬 스탬프',
+    '원주' => '뮤지엄 산 스탬프',
+    '강릉' => '안목해변 스탬프',
+    '동해' => '묵호등대 스탬프',
+    '태백' => '황지연못 스탬프',
+    '속초' => '속초시장 스탬프',
+    '삼척' => '환선굴 스탬프',
+    '홍천' => '수타사 스탬프',
+    '횡성' => '횡성호수길 스탬프',
+    '영월' => '청령포 스탬프',
+    '평창' => '양떼목장 스탬프',
+    '정선' => '정선 5일장 스탬프',
+    '철원' => '고석정 스탬프',
+    '화천' => '산천어축제 스탬프',
+    '양구' => '두타연 스탬프',
+    '인제' => '자작나무숲 스탬프',
+    '고성' => '통일전망대 스탬프',
+    '양양' => '서피비치 스탬프',
+    _ => '여행 스탬프',
+  };
 }
 
 class _StampBookStatusBody extends StatelessWidget {
@@ -390,6 +733,11 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
           .putIfAbsent(_normalizeCityName(spot.cityName), () => [])
           .add(spot);
     }
+    final totalSpotCount = rallybookSpots.isEmpty ? 29 : rallybookSpots.length;
+    final acquiredRegionCount = widget.progress.acquiredCount.clamp(
+      0,
+      widget.progress.totalCount == 0 ? 18 : widget.progress.totalCount,
+    );
     final selectedSpot = _selectedSpotId == null
         ? null
         : _findSpotById(rallybookSpots, _selectedSpotId!);
@@ -406,7 +754,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
       children: [
         Container(
           margin: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          height: 470,
+          height: 438,
           decoration: BoxDecoration(
             color: const Color(0xFFDDF2FA),
             borderRadius: BorderRadius.circular(AppDimens.sheetRadius),
@@ -527,9 +875,13 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                   Positioned(
                     top: 14,
                     right: 14,
-                    child: _MapPassportBadge(
-                      acquiredCount: widget.progress.acquiredCount,
-                      totalCount: widget.progress.totalCount,
+                    child: _MapProgressBadge(
+                      stampCount: acquiredRegionCount,
+                      totalStampCount: totalSpotCount,
+                      regionCount: acquiredRegionCount,
+                      totalRegionCount: widget.progress.totalCount == 0
+                          ? 18
+                          : widget.progress.totalCount,
                       onTap: () => context.push('/main/stamps/cities'),
                     ),
                   ),
@@ -574,20 +926,6 @@ class _GangwonMapPainter extends CustomPainter {
     final mapRect = _gangwonMapRect(size);
     canvas.drawRect(
         Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
-
-    final contextFillPaint = Paint()
-      ..color = const Color(0xFFE9EFF0).withValues(alpha: 0.82)
-      ..style = PaintingStyle.fill;
-    final contextLinePaint = Paint()
-      ..color = const Color(0xFFC5D3D6).withValues(alpha: 0.78)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..strokeJoin = StrokeJoin.round;
-    for (final region in gangwonContextRegions) {
-      final path = _contextRegionPath(region, mapRect);
-      canvas.drawPath(path, contextFillPaint);
-      canvas.drawPath(path, contextLinePaint);
-    }
 
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
@@ -897,20 +1235,6 @@ Path _regionPath(GangwonMapRegion region, Rect mapRect) {
   return regionPath;
 }
 
-Path _contextRegionPath(GangwonContextRegion region, Rect mapRect) {
-  return Path()
-    ..addPolygon(
-      [
-        for (final point in region.polygon)
-          Offset(
-            mapRect.left + point.dx * mapRect.width,
-            mapRect.top + point.dy * mapRect.height,
-          ),
-      ],
-      true,
-    );
-}
-
 Path _scaledPath(Path path, double scale) {
   final bounds = path.getBounds();
   if (bounds.isEmpty) {
@@ -971,11 +1295,11 @@ class _SelectedRegionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
-    final statusText = acquired ? '스탬프 완료' : '방문 인증 필요';
+    final statusText = acquired ? '도장 획득' : '방문 인증 대기';
 
     return Container(
-      height: 232,
-      padding: const EdgeInsets.all(16),
+      height: 214,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -989,24 +1313,12 @@ class _SelectedRegionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: acquired ? AppColors.primaryTint : AppColors.cream,
-                  shape: BoxShape.circle,
-                ),
-                child: AttractionStampImage(
-                  spotName: spot.spotName,
-                  size: 38,
-                  fallback: Icon(
-                    acquired ? Icons.check_rounded : Icons.location_on_rounded,
-                    color: acquired ? AppColors.primaryDark : AppColors.brown,
-                    size: 24,
-                  ),
-                ),
+              _TourStampImage(
+                acquired: acquired,
+                size: 42,
+                fallbackSize: 22,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1022,7 +1334,7 @@ class _SelectedRegionCard extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       '${region.city} · $statusText',
                       style: TextStyle(
@@ -1038,22 +1350,22 @@ class _SelectedRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            '${spot.categoryLabel} · ${spot.address}',
+            '이 명소에서 인증하면 ${region.city} 여행 도장을 받을 수 있어요',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.35,
+              fontSize: 12,
+              height: 1.3,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
           SizedBox(
-            height: 34,
+            height: 32,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: citySpots.length,
@@ -1075,10 +1387,10 @@ class _SelectedRegionCard extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 44,
             child: FilledButton(
               onPressed: onSpotTap,
               style: FilledButton.styleFrom(
@@ -1089,7 +1401,7 @@ class _SelectedRegionCard extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                '스탬프 찍기',
+                '방문 인증하기',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
@@ -1104,50 +1416,77 @@ class _SelectedRegionCard extends StatelessWidget {
   }
 }
 
-class _MapPassportBadge extends StatelessWidget {
-  const _MapPassportBadge({
-    required this.acquiredCount,
-    required this.totalCount,
+class _MapProgressBadge extends StatelessWidget {
+  const _MapProgressBadge({
+    required this.stampCount,
+    required this.totalStampCount,
+    required this.regionCount,
+    required this.totalRegionCount,
     required this.onTap,
   });
 
-  final int acquiredCount;
-  final int totalCount;
+  final int stampCount;
+  final int totalStampCount;
+  final int regionCount;
+  final int totalRegionCount;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: '스탬프 투어 보기',
+      message: '강원 여행 패스포트 보기',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.94),
+            color: AppColors.surface.withValues(alpha: 0.78),
             borderRadius: BorderRadius.circular(AppDimens.pillRadius),
-            border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
-            boxShadow: AppShadows.softCard,
+            border: Border.all(
+              color: AppColors.surface.withValues(alpha: 0.92),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.textPrimary.withValues(alpha: 0.07),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.auto_stories_rounded,
+                  Icons.local_activity_rounded,
                   color: AppColors.primaryDark,
-                  size: 17,
+                  size: 16,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  '$acquiredCount/$totalCount',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '여행 도장 $regionCount/$totalRegionCount',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const Text(
+                      '패스포트 보기',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1165,8 +1504,8 @@ class _EmptyRegionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 186,
-      padding: const EdgeInsets.all(16),
+      height: 168,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -1193,13 +1532,13 @@ class _EmptyRegionCard extends StatelessWidget {
                   size: 23,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '여행할 지역을 골라보세요',
+                      '오늘 찍을 도장을 골라보세요',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 20,
@@ -1207,9 +1546,9 @@ class _EmptyRegionCard extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    SizedBox(height: 2),
                     Text(
-                      '강원 18개 시군 스탬프 투어',
+                      '강원 여행 패스포트',
                       style: TextStyle(
                         color: AppColors.primaryDark,
                         fontSize: 12,
@@ -1222,20 +1561,50 @@ class _EmptyRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Text(
-            '지도 위 명소를 선택하면 방문 인증으로 이어지는 스탬프 장소가 나타나요.',
-            maxLines: 2,
+            '명소에서 인증하면 여행 도장이 찍혀요.\n패스포트 페이지가 하나씩 채워집니다.',
+            maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.35,
+              fontSize: 12,
+              height: 1.42,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TourStampImage extends StatelessWidget {
+  const _TourStampImage({
+    required this.acquired,
+    required this.size,
+    required this.fallbackSize,
+  });
+
+  final bool acquired;
+  final double size;
+  final double fallbackSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetPath =
+        acquired ? _stampTourCompletedAsset : _stampTourLockedAsset;
+    return Image.asset(
+      assetPath,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      semanticLabel: acquired ? '획득한 관광지 스탬프' : '잠긴 관광지 스탬프',
+      errorBuilder: (_, __, ___) => Icon(
+        acquired ? Icons.verified_rounded : Icons.lock_rounded,
+        color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
+        size: fallbackSize,
       ),
     );
   }
@@ -1255,6 +1624,16 @@ class _RallybookSpotMapNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
+    final stampColor = acquired
+        ? AppColors.primary
+        : selected
+            ? AppColors.secondary
+            : const Color(0xFFC9BFA8);
+    final fillColor = acquired
+        ? AppColors.primaryTint
+        : selected
+            ? const Color(0xFFFFF4CF)
+            : AppColors.surface.withValues(alpha: 0.96);
 
     return Semantics(
       label: spot.spotName,
@@ -1268,35 +1647,45 @@ class _RallybookSpotMapNode extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: selected ? 34 : 26,
-              height: selected ? 34 : 26,
+              width: selected ? 38 : 30,
+              height: selected ? 38 : 30,
               decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.secondary
-                    : acquired
-                    ? AppColors.primary
-                    : AppColors.surface,
+                color: fillColor,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.surface,
-                  width: selected ? 3 : 2,
+                  color: stampColor,
+                  width: selected ? 3 : 2.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: selected ? 0.18 : 0.1,
+                    color: stampColor.withValues(
+                      alpha: selected ? 0.24 : 0.12,
                     ),
                     blurRadius: selected ? 12 : 5,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Icon(
-                acquired ? Icons.check_rounded : Icons.flag_rounded,
-                color: acquired || selected
-                    ? Colors.white
-                    : const Color(0xFF9A8C72),
-                size: acquired ? 18 : 14,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: selected ? 19 : 15,
+                    height: selected ? 19 : 15,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: stampColor.withValues(alpha: 0.62),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    acquired ? Icons.check_rounded : Icons.flag_rounded,
+                    color: stampColor,
+                    size: acquired ? 18 : 14,
+                  ),
+                ],
               ),
             ),
             if (selected) ...[
