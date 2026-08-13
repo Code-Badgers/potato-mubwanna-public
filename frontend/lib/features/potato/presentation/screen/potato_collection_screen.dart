@@ -393,7 +393,7 @@ class _PotatoCollectionBody extends StatelessWidget {
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 28, 0, 12),
+              padding: const EdgeInsets.fromLTRB(0, 16, 0, 12),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -556,6 +556,8 @@ class _PotatoGrowthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final percent = (progress * 100).round();
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
@@ -563,8 +565,7 @@ class _PotatoGrowthCard extends StatelessWidget {
       child: _PotatoGrowthPanel(
         potato: potato,
         progress: progress,
-        acquiredCount: acquiredCount,
-        totalCount: totalCount,
+        progressLabel: '$percent%',
         updating: updating,
         onShowDetail: onShowDetail,
         onChangeRepresentative: onChangeRepresentative,
@@ -587,10 +588,11 @@ class _PotatoCareStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final potatoName = potato?.name ?? '새싹 감자';
-    final subtitle = potato == null ? '첫 여행을 기다리는 단계' : '강원 여행을 함께하는 대표 감자';
+    final subtitle =
+        potato == null ? '첫 여행을 기다리는 단계\n작은 산책부터 천천히 자라요' : '강원 여행을 함께하는 대표 감자';
 
     return SizedBox(
-      height: 328,
+      height: 318,
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(_potatoCardRadius),
@@ -621,7 +623,7 @@ class _PotatoCareStage extends StatelessWidget {
             ),
             Positioned(
               left: 20,
-              top: 28,
+              top: 24,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -639,11 +641,13 @@ class _PotatoCareStage extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
+                    maxLines: 2,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
+                      height: 1.36,
                     ),
                   ),
                 ],
@@ -651,11 +655,11 @@ class _PotatoCareStage extends StatelessWidget {
             ),
             Positioned(
               right: 20,
-              top: 30,
+              top: 26,
               child: _PotatoLevelBadge(level: level),
             ),
             Positioned(
-              top: 100,
+              top: 112,
               left: 20,
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -665,7 +669,7 @@ class _PotatoCareStage extends StatelessWidget {
             Positioned(
               left: 28,
               right: 28,
-              bottom: -22,
+              bottom: -28,
               child: SizedBox(
                 height: 258,
                 child: _PotatoArtSlot(
@@ -865,8 +869,7 @@ class _PotatoGrowthPanel extends StatelessWidget {
   const _PotatoGrowthPanel({
     required this.potato,
     required this.progress,
-    required this.acquiredCount,
-    required this.totalCount,
+    required this.progressLabel,
     required this.updating,
     required this.onShowDetail,
     required this.onChangeRepresentative,
@@ -874,8 +877,7 @@ class _PotatoGrowthPanel extends StatelessWidget {
 
   final PotatoCollectionItem? potato;
   final double progress;
-  final int acquiredCount;
-  final int totalCount;
+  final String progressLabel;
   final bool updating;
   final VoidCallback? onShowDetail;
   final VoidCallback onChangeRepresentative;
@@ -891,7 +893,7 @@ class _PotatoGrowthPanel extends StatelessWidget {
             children: [
               const Expanded(
                 child: Text(
-                  '다음 성장까지',
+                  '성장 경험치',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 18,
@@ -901,28 +903,15 @@ class _PotatoGrowthPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                '$acquiredCount / $totalCount',
+                progressLabel,
                 style: const TextStyle(
-                  color: AppColors.textPrimary,
+                  color: _potatoDark,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            potato == null
-                ? '첫 감자 카드를 만나면 성장 기록이 채워져요'
-                : '감자걸음과 여행 기록으로 더 단단하게 자라요',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-              height: 1.35,
-            ),
           ),
           const SizedBox(height: 12),
           ClipRRect(
