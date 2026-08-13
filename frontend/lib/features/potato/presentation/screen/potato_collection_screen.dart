@@ -869,6 +869,8 @@ class _TodayStepCardContent extends StatelessWidget {
     final ratio = summary.stepRatio;
     final percent = (ratio * 100).round();
     final remainingDistance = summary.remainingDistanceKmForRepresentative;
+    final stepLabel =
+        '${_formatInt(summary.todaySteps)} / ${_formatInt(summary.dailyStepGoal)}걸음';
     final remainingLabel = remainingDistance <= 0
         ? '오늘 성장 목표를 달성했어요'
         : '성장까지 약 ${remainingDistance.toStringAsFixed(1)}km 남았어요';
@@ -880,18 +882,18 @@ class _TodayStepCardContent extends StatelessWidget {
           const Text(
             '오늘의 감자걸음',
             style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              color: AppColors.textSecondary,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
               SizedBox(
-                width: 104,
-                height: 104,
+                width: 96,
+                height: 96,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -906,8 +908,8 @@ class _TodayStepCardContent extends StatelessWidget {
                       child: Text(
                         '$percent%',
                         style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 20,
+                          color: _potatoDark,
+                          fontSize: 18,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
@@ -922,21 +924,23 @@ class _TodayStepCardContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_formatInt(summary.todaySteps)} 걸음',
+                      stepLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 27,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 7),
                     Text(
-                      '/${_formatInt(summary.dailyStepGoal)} 걸음',
+                      '오늘 목표까지 $percent%',
                       style: const TextStyle(
-                        color: _potatoDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0,
                       ),
                     ),
