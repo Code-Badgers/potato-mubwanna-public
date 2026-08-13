@@ -586,7 +586,7 @@ class _MissionGentleStart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -640,7 +640,7 @@ class _MissionFeaturedCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 206),
+          constraints: const BoxConstraints(minHeight: 224),
           padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -658,7 +658,7 @@ class _MissionFeaturedCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 56),
                   const Text(
                     '점순이의 미션',
                     maxLines: 1,
@@ -681,7 +681,7 @@ class _MissionFeaturedCard extends StatelessWidget {
               ),
               Positioned(
                 right: -2,
-                bottom: -42,
+                bottom: -34,
                 child: IgnorePointer(
                   child: Image.asset(
                     _featuredJumsooniAsset(mission),
@@ -967,11 +967,11 @@ String _compactRewardLabel(MissionChallenge mission) {
 
 String _gentleMissionLine(MissionChallenge mission) {
   return switch (mission.type) {
-    MissionType.visitAndStep => '감자가 기다리고 있어요',
-    MissionType.photo || MissionType.photoOcr => '사진 한 장 남겨요',
-    MissionType.qrScan => '숨은 표식을 찾아봐요',
-    MissionType.quiz => '이 정도는 알아야죠',
-    _ => '내가 골라둔 곳이에요',
+    MissionType.visitAndStep => '천천히 걸어볼까요?',
+    MissionType.photo || MissionType.photoOcr => '사진 한 장 남겨볼까요?',
+    MissionType.qrScan => '작은 표식을 찾아봐요',
+    MissionType.quiz => '강원도 이야기 풀어볼까요?',
+    _ => '가볍게 들러볼까요?',
   };
 }
 
