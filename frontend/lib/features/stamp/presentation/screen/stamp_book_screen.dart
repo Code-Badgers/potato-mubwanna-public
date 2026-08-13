@@ -7,7 +7,6 @@ import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
-import '../model/gangwon_context_region.dart';
 import '../model/gangwon_map_projection.dart';
 import '../model/gangwon_map_region.dart';
 
@@ -413,7 +412,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
       children: [
         Container(
           margin: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          height: 470,
+          height: 392,
           decoration: BoxDecoration(
             color: const Color(0xFFDDF2FA),
             borderRadius: BorderRadius.circular(AppDimens.sheetRadius),
@@ -585,20 +584,6 @@ class _GangwonMapPainter extends CustomPainter {
     final mapRect = _gangwonMapRect(size);
     canvas.drawRect(
         Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
-
-    final contextFillPaint = Paint()
-      ..color = const Color(0xFFE9EFF0).withValues(alpha: 0.82)
-      ..style = PaintingStyle.fill;
-    final contextLinePaint = Paint()
-      ..color = const Color(0xFFC5D3D6).withValues(alpha: 0.78)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..strokeJoin = StrokeJoin.round;
-    for (final region in gangwonContextRegions) {
-      final path = _contextRegionPath(region, mapRect);
-      canvas.drawPath(path, contextFillPaint);
-      canvas.drawPath(path, contextLinePaint);
-    }
 
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
@@ -908,20 +893,6 @@ Path _regionPath(GangwonMapRegion region, Rect mapRect) {
   return regionPath;
 }
 
-Path _contextRegionPath(GangwonContextRegion region, Rect mapRect) {
-  return Path()
-    ..addPolygon(
-      [
-        for (final point in region.polygon)
-          Offset(
-            mapRect.left + point.dx * mapRect.width,
-            mapRect.top + point.dy * mapRect.height,
-          ),
-      ],
-      true,
-    );
-}
-
 Path _scaledPath(Path path, double scale) {
   final bounds = path.getBounds();
   if (bounds.isEmpty) {
@@ -985,8 +956,8 @@ class _SelectedRegionCard extends StatelessWidget {
     final statusText = acquired ? '지역 기록 완료' : '관광지 스탬프 대기';
 
     return Container(
-      height: 232,
-      padding: const EdgeInsets.all(16),
+      height: 202,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -1002,10 +973,10 @@ class _SelectedRegionCard extends StatelessWidget {
             children: [
               _TourStampImage(
                 acquired: acquired,
-                size: 46,
-                fallbackSize: 24,
+                size: 42,
+                fallbackSize: 22,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1021,7 +992,7 @@ class _SelectedRegionCard extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       '${region.city} · $statusText',
                       style: TextStyle(
@@ -1037,22 +1008,22 @@ class _SelectedRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             '이곳에서 인증하면 ${region.city} 여행 기록이 채워져요',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.35,
+              fontSize: 12,
+              height: 1.3,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
           SizedBox(
-            height: 34,
+            height: 32,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: citySpots.length,
@@ -1074,10 +1045,10 @@ class _SelectedRegionCard extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 44,
             child: FilledButton(
               onPressed: onSpotTap,
               style: FilledButton.styleFrom(
@@ -1183,8 +1154,8 @@ class _EmptyRegionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 186,
-      padding: const EdgeInsets.all(16),
+      height: 156,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -1211,7 +1182,7 @@ class _EmptyRegionCard extends StatelessWidget {
                   size: 23,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1225,7 +1196,7 @@ class _EmptyRegionCard extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    SizedBox(height: 2),
                     Text(
                       '강원 대표 명소 스탬프 랠리',
                       style: TextStyle(
@@ -1240,15 +1211,15 @@ class _EmptyRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Text(
             '명소에서 인증하면 관광지 스탬프가 쌓이고, 지역 랠리북도 함께 채워져요.',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.35,
+              fontSize: 12,
+              height: 1.3,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
