@@ -12,11 +12,11 @@ void main() {
   test('maps reward-only potato codes to available fallback assets', () {
     expect(
       potatoLocalAssetPath('POTATO_COMMON_SEED'),
-      'assets/characters/potatoes/variety_sumi.png',
+      'assets/characters/potatoes/food_rest_stop_whole_potato.png',
     );
     expect(
       potatoLocalAssetPath('POTATO_GOLDEN_HONGCHEON'),
-      'assets/characters/potatoes/variety_daepung.png',
+      'assets/characters/potatoes/food_potato_pancake.png',
     );
     expect(
       potatoLocalAssetPath('POTATO_HOBAN_CHUNCHEON'),
@@ -24,7 +24,7 @@ void main() {
     );
     expect(
       potatoLocalAssetPath('POTATO_RARE_SEED'),
-      'assets/characters/potatoes/variety_chubaek.png',
+      'assets/characters/potatoes/food_tornado_potato.png',
     );
   });
 
