@@ -15,6 +15,7 @@ const _potatoDark = Color(0xFF509B64);
 const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
 const _potatoCardRadius = AppDimens.cardRadius;
+const _defaultPotatoSpeech = '아직은 작아도, 여행길은 잘 따라갈게요';
 
 String _formatInt(int value) {
   return value.toString().replaceAllMapped(
@@ -436,11 +437,19 @@ class _RepresentativePotatoCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: AppColors.brown,
-                fontSize: 23,
+                color: AppColors.textSecondary,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0,
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: _PotatoSpeechBubble(
+              message: potato == null || !potato.acquired
+                  ? _defaultPotatoSpeech
+                  : _potatoSpeechFor(potato),
             ),
           ),
           if (potato != null) ...[
@@ -562,6 +571,49 @@ class _RepresentativePotatoCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PotatoSpeechBubble extends StatelessWidget {
+  const _PotatoSpeechBubble({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 260),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _potatoLine),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1420,5 +1472,17 @@ Color _rarityColor(PotatoRarity rarity) {
     PotatoRarity.rare => const Color(0xFF8D74C9),
     PotatoRarity.epic => const Color(0xFFE98A2A),
     PotatoRarity.legendary => const Color(0xFFF6A800),
+  };
+}
+
+String _potatoSpeechFor(PotatoCollectionItem potato) {
+  if (potato.region.trim().isNotEmpty) {
+    return '${potato.region} 바람은 좀 다르네요';
+  }
+  return switch (potato.rarity) {
+    PotatoRarity.common => '오늘도 한 걸음만 더 가봐요',
+    PotatoRarity.rare => '나, 아무 데서나 만나는 감자 아니에요',
+    PotatoRarity.epic => '이 정도면 꽤 멀리 온 거예요',
+    PotatoRarity.legendary => '강원도 길을 제법 아는 얼굴이네요',
   };
 }
