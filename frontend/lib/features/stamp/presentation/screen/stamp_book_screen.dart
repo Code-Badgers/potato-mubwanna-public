@@ -122,7 +122,7 @@ class _CityStampGridBody extends StatelessWidget {
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    '시군별 스탬프',
+                    '지역별 랠리북',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 28,
@@ -151,7 +151,7 @@ class _CityStampGridBody extends StatelessWidget {
                   children: [
                     const Expanded(
                       child: Text(
-                        '강원 18개 시군 수집률',
+                        '지역 세트 진행률',
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 18,
@@ -257,7 +257,7 @@ class _CityStampTile extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            acquired ? '완료' : '미획득',
+            acquired ? '지역 완료' : '명소 대기',
             style: TextStyle(
               color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
               fontSize: 11,
@@ -390,6 +390,11 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
           .putIfAbsent(_normalizeCityName(spot.cityName), () => [])
           .add(spot);
     }
+    final totalSpotCount = rallybookSpots.isEmpty ? 29 : rallybookSpots.length;
+    final acquiredRegionCount = widget.progress.acquiredCount.clamp(
+      0,
+      widget.progress.totalCount == 0 ? 18 : widget.progress.totalCount,
+    );
     final selectedSpot = _selectedSpotId == null
         ? null
         : _findSpotById(rallybookSpots, _selectedSpotId!);
@@ -527,9 +532,13 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                   Positioned(
                     top: 14,
                     right: 14,
-                    child: _MapPassportBadge(
-                      acquiredCount: widget.progress.acquiredCount,
-                      totalCount: widget.progress.totalCount,
+                    child: _MapProgressBadge(
+                      stampCount: acquiredRegionCount,
+                      totalStampCount: totalSpotCount,
+                      regionCount: acquiredRegionCount,
+                      totalRegionCount: widget.progress.totalCount == 0
+                          ? 18
+                          : widget.progress.totalCount,
                       onTap: () => context.push('/main/stamps/cities'),
                     ),
                   ),
@@ -971,7 +980,7 @@ class _SelectedRegionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
-    final statusText = acquired ? '스탬프 완료' : '방문 인증 필요';
+    final statusText = acquired ? '지역 기록 완료' : '관광지 스탬프 대기';
 
     return Container(
       height: 232,
@@ -1040,7 +1049,7 @@ class _SelectedRegionCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '${spot.categoryLabel} · ${spot.address}',
+            '이곳에서 인증하면 ${region.city} 여행 기록이 채워져요',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -1089,7 +1098,7 @@ class _SelectedRegionCard extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                '스탬프 찍기',
+                '방문 인증하기',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
@@ -1104,21 +1113,25 @@ class _SelectedRegionCard extends StatelessWidget {
   }
 }
 
-class _MapPassportBadge extends StatelessWidget {
-  const _MapPassportBadge({
-    required this.acquiredCount,
-    required this.totalCount,
+class _MapProgressBadge extends StatelessWidget {
+  const _MapProgressBadge({
+    required this.stampCount,
+    required this.totalStampCount,
+    required this.regionCount,
+    required this.totalRegionCount,
     required this.onTap,
   });
 
-  final int acquiredCount;
-  final int totalCount;
+  final int stampCount;
+  final int totalStampCount;
+  final int regionCount;
+  final int totalRegionCount;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: '스탬프 투어 보기',
+      message: '지역별 랠리북 보기',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -1135,19 +1148,34 @@ class _MapPassportBadge extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.auto_stories_rounded,
+                  Icons.local_activity_rounded,
                   color: AppColors.primaryDark,
                   size: 17,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  '$acquiredCount/$totalCount',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
+                const SizedBox(width: 7),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '스탬프 $stampCount/$totalStampCount',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    Text(
+                      '지역 $regionCount/$totalRegionCount',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1199,7 +1227,7 @@ class _EmptyRegionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '여행할 지역을 골라보세요',
+                      '오늘 찍을 스탬프를 골라보세요',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 20,
@@ -1209,7 +1237,7 @@ class _EmptyRegionCard extends StatelessWidget {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      '강원 18개 시군 스탬프 투어',
+                      '강원 대표 명소 스탬프 랠리',
                       style: TextStyle(
                         color: AppColors.primaryDark,
                         fontSize: 12,
@@ -1224,7 +1252,7 @@ class _EmptyRegionCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            '지도 위 명소를 선택하면 방문 인증으로 이어지는 스탬프 장소가 나타나요.',
+            '명소에서 인증하면 관광지 스탬프가 쌓이고, 지역 랠리북도 함께 채워져요.',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
