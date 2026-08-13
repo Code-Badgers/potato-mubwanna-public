@@ -401,6 +401,11 @@ class _PotatoCollectionBody extends StatelessWidget {
                     item: representative,
                     acquiredCount: collection.acquiredCount,
                     totalCount: collection.totalCount,
+                    growthProgress: collection.totalCount == 0
+                        ? 0.0
+                        : (collection.acquiredCount / collection.totalCount)
+                            .clamp(0, 1)
+                            .toDouble(),
                     updating: updatingRepresentative,
                     onShowDetail: representative == null
                         ? onShowDefaultDetail
@@ -408,13 +413,7 @@ class _PotatoCollectionBody extends StatelessWidget {
                     onChangeRepresentative: onChangeRepresentative,
                   ),
                   const SizedBox(height: 8),
-                  _TodayStepCard(
-                    growthProgress: collection.totalCount == 0
-                        ? 0.0
-                        : (collection.acquiredCount / collection.totalCount)
-                            .clamp(0, 1)
-                            .toDouble(),
-                  ),
+                  const _TodayStepCard(),
                 ],
               ),
             ),
@@ -439,6 +438,7 @@ class _RepresentativePotatoCard extends StatefulWidget {
     required this.item,
     required this.acquiredCount,
     required this.totalCount,
+    required this.growthProgress,
     required this.updating,
     required this.onShowDetail,
     required this.onChangeRepresentative,
@@ -447,6 +447,7 @@ class _RepresentativePotatoCard extends StatefulWidget {
   final PotatoCollectionItem? item;
   final int acquiredCount;
   final int totalCount;
+  final double growthProgress;
   final bool updating;
   final VoidCallback? onShowDetail;
   final VoidCallback onChangeRepresentative;
@@ -477,6 +478,8 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
     final health = (62 + level * 4).clamp(62, 96);
     final moisture = (58 + widget.acquiredCount * 3).clamp(58, 94);
     final mood = careMessage == null ? 82 : 94;
+    final growthRatio = widget.growthProgress.clamp(0, 1).toDouble();
+    final growthPercent = (growthRatio * 100).round();
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -512,6 +515,12 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   health: health,
                   moisture: moisture,
                   mood: mood,
+                ),
+                const SizedBox(height: 12),
+                _PotatoProgressLine(
+                  label: '성장 경험치',
+                  valueLabel: '$growthPercent%',
+                  value: growthRatio,
                 ),
                 const SizedBox(height: 12),
                 _PotatoCareBar(
@@ -1052,9 +1061,7 @@ class _PotatoSpeechBubble extends StatelessWidget {
 }
 
 class _TodayStepCard extends ConsumerWidget {
-  const _TodayStepCard({required this.growthProgress});
-
-  final double growthProgress;
+  const _TodayStepCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1070,7 +1077,6 @@ class _TodayStepCard extends ConsumerWidget {
               monthlyDistanceKm: 0,
               remainingDistanceKmForRepresentative: 0,
             ),
-        growthProgress: growthProgress,
       ),
       loading: () => const _TodayStepCardShell(
         child: SizedBox(
@@ -1669,20 +1675,14 @@ class _GrowthProgress extends StatelessWidget {
 }
 
 class _TodayStepCardContent extends StatelessWidget {
-  const _TodayStepCardContent({
-    required this.summary,
-    required this.growthProgress,
-  });
+  const _TodayStepCardContent({required this.summary});
 
   final PotatoGrowthSummary summary;
-  final double growthProgress;
 
   @override
   Widget build(BuildContext context) {
     final ratio = summary.stepRatio;
     final percent = (ratio * 100).round();
-    final growthRatio = growthProgress.clamp(0, 1).toDouble();
-    final growthPercent = (growthRatio * 100).round();
     final remainingDistance = summary.remainingDistanceKmForRepresentative;
     final stepLabel =
         '${_formatInt(summary.todaySteps)} / ${_formatInt(summary.dailyStepGoal)}걸음';
@@ -1773,12 +1773,6 @@ class _TodayStepCardContent extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 18),
-          _PotatoProgressLine(
-            label: '성장 경험치',
-            valueLabel: '$growthPercent%',
-            value: growthRatio,
           ),
         ],
       ),
