@@ -34,4 +34,15 @@ void main() {
       potatoDefaultAssetPath,
     );
   });
+
+  test('maps new character asset codes directly when backend adopts them', () {
+    expect(
+      potatoLocalAssetPath('FOOD_POTATO_BEOMBEOK'),
+      'assets/characters/potatoes/food_potato_beombeok.png',
+    );
+    expect(
+      potatoLocalAssetPath('VARIETY_DAESEO_ATLANTIC'),
+      'assets/characters/potatoes/variety_daeseo_atlantic.png',
+    );
+  });
 }

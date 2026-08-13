@@ -19,9 +19,37 @@ const _potatoAssetByCode = <String, String>{
   'POTATO_DURUMI_SEED': 'variety_chudong',
 };
 
+const _availablePotatoAssetNames = <String>{
+  'default_beginner_potato',
+  'food_rest_stop_whole_potato',
+  'food_gangneung_potato_bread',
+  'food_potato_pancake',
+  'food_potato_ongsimi',
+  'food_tornado_potato',
+  'food_potato_beombeok',
+  'food_potato_chip',
+  'food_potato_rice_cake',
+  'food_potato_croquette',
+  'food_potato_soup',
+  'variety_sumi',
+  'variety_dubaek',
+  'variety_daeseo_atlantic',
+  'variety_jopung',
+  'variety_daeji',
+  'variety_bangul',
+  'variety_chubaek',
+  'variety_chudong',
+  'variety_yeokgang',
+  'variety_daepung',
+};
+
 String potatoLocalAssetPath(String code) {
   final normalizedCode = code.trim().toUpperCase();
-  final assetName = _potatoAssetByCode[normalizedCode];
+  final directAssetName = normalizedCode.toLowerCase();
+  final assetName = _potatoAssetByCode[normalizedCode] ??
+      (_availablePotatoAssetNames.contains(directAssetName)
+          ? directAssetName
+          : null);
   if (assetName == null) {
     return potatoDefaultAssetPath;
   }
