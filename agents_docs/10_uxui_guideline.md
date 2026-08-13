@@ -122,12 +122,27 @@ Button       15 / SemiBold
 ### 4.4 카드 스타일
 
 ```txt
-border-radius: 20px
-background: #FFFFFF
-border: 1px solid #E8E2D8
+기본 카드
+border-radius: 22px
+background: #FFFFFF / alpha 0.94
+border: 1px solid rgba(232,226,216,0.82)
 shadow: soft, low elevation
 padding: 16px
+
+작은 액션 카드
+border-radius: 18px
+background: #FFFFFF / alpha 0.90
+border: 1px solid rgba(232,226,216,0.84)
+
+지도 / 바텀시트성 큰 표면
+border-radius: 28px
+
+Pill / Badge
+border-radius: 999px
 ```
+
+구현 기준은 Flutter 공통 토큰 `AppDimens`, `AppShadows`, `AppDecorations`를 우선 사용한다.
+화면별로 임의의 radius, shadow, border alpha를 새로 만들지 않고, 특수한 지도/캐릭터 연출이 필요한 경우에만 예외로 둔다.
 
 ### 4.5 버튼 스타일
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/potato_collection_controller.dart';
 import '../../domain/potato_collection.dart';
@@ -13,7 +14,7 @@ const _potatoPrimary = Color(0xFF56C787);
 const _potatoDark = Color(0xFF509B64);
 const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
-const _potatoCardRadius = 20.0;
+const _potatoCardRadius = AppDimens.cardRadius;
 
 String _formatInt(int value) {
   return value.toString().replaceAllMapped(
@@ -1413,16 +1414,10 @@ class _PotatoErrorState extends StatelessWidget {
 
 BoxDecoration _cardDecoration({Color color = AppColors.surface}) {
   return BoxDecoration(
-    color: color,
+    color: color.withValues(alpha: 0.94),
     borderRadius: BorderRadius.circular(_potatoCardRadius),
-    border: Border.all(color: _potatoLine),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.05),
-        blurRadius: 18,
-        offset: const Offset(0, 8),
-      ),
-    ],
+    border: Border.all(color: _potatoLine.withValues(alpha: 0.82)),
+    boxShadow: AppShadows.softCard,
   );
 }
 

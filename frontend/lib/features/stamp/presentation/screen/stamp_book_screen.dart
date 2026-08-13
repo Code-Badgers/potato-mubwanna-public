@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
@@ -408,7 +409,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
           height: 470,
           decoration: BoxDecoration(
             color: const Color(0xFFDDF2FA),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppDimens.sheetRadius),
             border: Border.all(color: const Color(0xFFC7E7F0)),
           ),
           clipBehavior: Clip.antiAlias,
@@ -977,15 +978,9 @@ class _SelectedRegionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
+        boxShadow: AppShadows.floating,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1090,7 +1085,7 @@ class _SelectedRegionCard extends StatelessWidget {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppDimens.buttonRadius),
                 ),
               ),
               child: const Text(
@@ -1130,15 +1125,9 @@ class _MapPassportBadge extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.surface.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.line),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+            border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
+            boxShadow: AppShadows.softCard,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -1180,15 +1169,9 @@ class _EmptyRegionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 9),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
+        boxShadow: AppShadows.softCard,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
