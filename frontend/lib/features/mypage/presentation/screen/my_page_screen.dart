@@ -46,7 +46,10 @@ class MyPageScreen extends ConsumerWidget {
             ),
             const SliverToBoxAdapter(child: _QuickActionGrid()),
             SliverToBoxAdapter(
-              child: _AccountMenu(onSettings: () => context.push('/settings')),
+              child: _AccountMenu(
+                onSettings: () => context.push('/settings'),
+                onNotices: () => context.push('/notices'),
+              ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
@@ -459,18 +462,23 @@ class _QuickActionCard extends StatelessWidget {
 class _AccountMenu extends StatelessWidget {
   const _AccountMenu({
     required this.onSettings,
+    required this.onNotices,
   });
 
   final VoidCallback onSettings;
+  final VoidCallback onNotices;
 
   static const _items = [
     _MenuItem(
       icon: Icons.settings_outlined,
       label: '설정',
-      isSettings: true,
+      destination: _MenuDestination.settings,
     ),
-    _MenuItem(icon: Icons.campaign_outlined, label: '공지사항'),
-    _MenuItem(icon: Icons.help_outline_rounded, label: '고객센터'),
+    _MenuItem(
+      icon: Icons.campaign_outlined,
+      label: '공지사항',
+      destination: _MenuDestination.notices,
+    ),
   ];
 
   @override
@@ -489,7 +497,10 @@ class _AccountMenu extends StatelessWidget {
             for (var index = 0; index < _items.length; index++) ...[
               _MenuRow(
                 item: _items[index],
-                onTap: _items[index].isSettings ? onSettings : () {},
+                onTap: switch (_items[index].destination) {
+                  _MenuDestination.settings => onSettings,
+                  _MenuDestination.notices => onNotices,
+                },
               ),
               if (index < _items.length - 1)
                 const Divider(height: 1, color: AppColors.line, indent: 58),
@@ -513,7 +524,10 @@ class _MenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      key: item.isSettings ? const ValueKey('mypage-menu-settings') : null,
+      key: switch (item.destination) {
+        _MenuDestination.settings => const ValueKey('mypage-menu-settings'),
+        _MenuDestination.notices => const ValueKey('mypage-menu-notices'),
+      },
       onTap: onTap,
       child: SizedBox(
         height: 64,
@@ -568,13 +582,15 @@ class _MenuItem {
   const _MenuItem({
     required this.icon,
     required this.label,
-    this.isSettings = false,
+    required this.destination,
   });
 
   final IconData icon;
   final String label;
-  final bool isSettings;
+  final _MenuDestination destination;
 }
+
+enum _MenuDestination { settings, notices }
 
 BoxDecoration _myPageCardDecoration() {
   return BoxDecoration(

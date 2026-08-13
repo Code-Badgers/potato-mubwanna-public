@@ -9,6 +9,7 @@ import '../../features/coupon/presentation/screen/coupon_screen.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
 import '../../features/mission/presentation/screen/mission_screen.dart';
 import '../../features/mypage/presentation/screen/my_page_screen.dart';
+import '../../features/notice/presentation/screen/notice_screen.dart';
 import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screen/permission_guide_screen.dart';
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
@@ -48,6 +49,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/travel-records',
       builder: (context, state) => const TravelRecordScreen(),
+    ),
+    GoRoute(
+      path: '/notices',
+      builder: (context, state) => const NoticeScreen(),
     ),
     GoRoute(
       path: '/settings',
