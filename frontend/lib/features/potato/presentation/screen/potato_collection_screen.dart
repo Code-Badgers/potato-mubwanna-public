@@ -956,7 +956,7 @@ class _PotatoArtSlot extends StatelessWidget {
     final potato = item;
     final imageUrl = potato?.imageUrl;
     final assetPath = potato == null
-        ? 'assets/potatoes/potato_unknown.png'
+        ? potatoDefaultAssetPath
         : potatoLocalAssetPath(potato.code);
 
     final image = imageUrl != null && imageUrl.isNotEmpty

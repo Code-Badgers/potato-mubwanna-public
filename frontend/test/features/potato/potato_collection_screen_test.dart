@@ -71,7 +71,7 @@ void main() {
       return widget is Image &&
           widget.image is AssetImage &&
           (widget.image as AssetImage).assetName ==
-              'assets/potatoes/potato_haji_seed.png';
+              'assets/characters/potatoes/variety_sumi.png';
     });
 
     expect(find.text('일반 씨앗감자'), findsWidgets);

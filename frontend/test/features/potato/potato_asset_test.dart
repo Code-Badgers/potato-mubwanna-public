@@ -5,26 +5,33 @@ void main() {
   test('maps direct potato code to local asset path', () {
     expect(
       potatoLocalAssetPath('POTATO_GONDRE_JEONGSEON'),
-      'assets/potatoes/potato_gondre_jeongseon.png',
+      'assets/characters/potatoes/food_potato_ongsimi.png',
     );
   });
 
   test('maps reward-only potato codes to available fallback assets', () {
     expect(
       potatoLocalAssetPath('POTATO_COMMON_SEED'),
-      'assets/potatoes/potato_haji_seed.png',
+      'assets/characters/potatoes/variety_sumi.png',
     );
     expect(
       potatoLocalAssetPath('POTATO_GOLDEN_HONGCHEON'),
-      'assets/potatoes/potato_golden_gangwon.png',
+      'assets/characters/potatoes/variety_daepung.png',
     );
     expect(
       potatoLocalAssetPath('POTATO_HOBAN_CHUNCHEON'),
-      'assets/potatoes/potato_haji_gangneung.png',
+      'assets/characters/potatoes/food_gangneung_potato_bread.png',
     );
     expect(
       potatoLocalAssetPath('POTATO_RARE_SEED'),
-      'assets/potatoes/potato_jaju_seed.png',
+      'assets/characters/potatoes/variety_chubaek.png',
+    );
+  });
+
+  test('falls back to beginner potato for unknown code', () {
+    expect(
+      potatoLocalAssetPath('UNKNOWN_POTATO'),
+      potatoDefaultAssetPath,
     );
   });
 }
