@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/user_activity_summary_controller.dart';
@@ -72,7 +73,12 @@ class _ProfileHeader extends StatelessWidget {
         : profile.nickname.trim();
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      margin: const EdgeInsets.fromLTRB(
+        AppDimens.pageHorizontalPadding,
+        0,
+        AppDimens.pageHorizontalPadding,
+        16,
+      ),
       padding: const EdgeInsets.all(18),
       decoration: _myPageCardDecoration(),
       child: Row(
@@ -220,7 +226,12 @@ class _TravelStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      margin: const EdgeInsets.fromLTRB(
+        AppDimens.pageHorizontalPadding,
+        0,
+        AppDimens.pageHorizontalPadding,
+        24,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
       decoration: _myPageCardDecoration(),
       child: summaryState.when(
@@ -388,7 +399,12 @@ class _QuickActionGrid extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.pageHorizontalPadding,
+        0,
+        AppDimens.pageHorizontalPadding,
+        20,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -410,17 +426,17 @@ class _QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface.withValues(alpha: 0.86),
-      borderRadius: BorderRadius.circular(20),
+      color: AppColors.surface.withValues(alpha: 0.9),
+      borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
       child: InkWell(
         key: action.key,
         onTap: action.onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
         child: Container(
           height: 90,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
             border: Border.all(
               color: AppColors.line.withValues(alpha: 0.84),
             ),
@@ -484,12 +500,14 @@ class _AccountMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.pageHorizontalPadding,
+      ),
       child: Material(
         color: AppColors.surface.withValues(alpha: 0.9),
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppDimens.cardRadius),
           side: BorderSide(color: AppColors.line.withValues(alpha: 0.84)),
         ),
         child: Column(
@@ -594,15 +612,9 @@ enum _MenuDestination { settings, notices }
 
 BoxDecoration _myPageCardDecoration() {
   return BoxDecoration(
-    color: AppColors.surface.withValues(alpha: 0.88),
-    borderRadius: BorderRadius.circular(24),
+    color: AppColors.surface.withValues(alpha: 0.92),
+    borderRadius: BorderRadius.circular(AppDimens.cardRadius),
     border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.045),
-        blurRadius: 24,
-        offset: const Offset(0, 10),
-      ),
-    ],
+    boxShadow: AppShadows.softCard,
   );
 }

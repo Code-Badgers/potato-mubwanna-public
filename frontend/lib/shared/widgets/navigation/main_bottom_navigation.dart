@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_design_tokens.dart';
 
 class MainBottomNavigation extends StatelessWidget {
   const MainBottomNavigation({super.key});
@@ -17,7 +18,7 @@ class MainBottomNavigation extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: SizedBox(
-          height: 76 + bottomInset,
+          height: AppDimens.bottomNavigationHeight + bottomInset,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppColors.surface.withValues(alpha: 0.88),
@@ -29,7 +30,7 @@ class MainBottomNavigation extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 430),
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(10, 12, 10, 8 + bottomInset),
+                  padding: EdgeInsets.fromLTRB(10, 14, 10, 8 + bottomInset),
                   child: Row(
                     children: List.generate(_destinations.length, (index) {
                       final destination = _destinations[index];
@@ -98,7 +99,7 @@ class _FooterItem extends StatelessWidget {
       message: label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -110,7 +111,7 @@ class _FooterItem extends StatelessWidget {
                 color: isSelected
                     ? AppColors.primary.withValues(alpha: 0.18)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppDimens.pillRadius),
               ),
               child: Icon(icon, color: foregroundColor, size: 21),
             ),
