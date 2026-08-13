@@ -398,13 +398,20 @@ class _QuickActionGrid extends StatelessWidget {
       ),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
         AppDimens.pageHorizontalPadding,
         0,
         AppDimens.pageHorizontalPadding,
         16,
       ),
+      padding: const EdgeInsets.fromLTRB(
+        10,
+        12,
+        10,
+        12,
+      ),
+      decoration: _myPageGlassDecoration(alpha: 0.78),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -426,34 +433,20 @@ class _QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface.withValues(alpha: 0.82),
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
       child: InkWell(
         key: action.key,
         onTap: action.onTap,
         borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-        child: Container(
-          height: 82,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.72),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+        child: SizedBox(
+          height: 74,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: AppColors.primaryTint.withValues(alpha: 0.92),
                   shape: BoxShape.circle,
@@ -461,7 +454,7 @@ class _QuickActionCard extends StatelessWidget {
                 child:
                     Icon(action.icon, color: AppColors.primaryDark, size: 21),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 7),
               Text(
                 action.label,
                 maxLines: 1,
@@ -506,26 +499,32 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
+    return Container(
+      margin: const EdgeInsets.symmetric(
         horizontal: AppDimens.pageHorizontalPadding,
       ),
+      decoration: _myPageGlassDecoration(alpha: 0.82),
       child: Material(
         color: Colors.transparent,
         clipBehavior: Clip.antiAlias,
-        child: Row(
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        child: Column(
           children: [
             for (var index = 0; index < _items.length; index++) ...[
-              Expanded(
-                child: _MenuRow(
-                  item: _items[index],
-                  onTap: switch (_items[index].destination) {
-                    _MenuDestination.settings => onSettings,
-                    _MenuDestination.notices => onNotices,
-                  },
-                ),
+              _MenuRow(
+                item: _items[index],
+                onTap: switch (_items[index].destination) {
+                  _MenuDestination.settings => onSettings,
+                  _MenuDestination.notices => onNotices,
+                },
               ),
-              if (index < _items.length - 1) const SizedBox(width: 8),
+              if (index < _items.length - 1)
+                Divider(
+                  height: 1,
+                  indent: 56,
+                  endIndent: 18,
+                  color: AppColors.line.withValues(alpha: 0.34),
+                ),
             ],
           ],
         ),
@@ -551,29 +550,23 @@ class _MenuRow extends StatelessWidget {
         _MenuDestination.notices => const ValueKey('mypage-menu-notices'),
       },
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-      child: Container(
-        height: 54,
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
-        ),
+      child: SizedBox(
+        height: 58,
         child: Row(
           children: [
-            const SizedBox(width: 14),
+            const SizedBox(width: 18),
             Icon(
               item.icon,
               color: AppColors.primaryDark,
-              size: 21,
+              size: 22,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 item.label,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
@@ -582,9 +575,9 @@ class _MenuRow extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               color: AppColors.textSecondary,
-              size: 20,
+              size: 22,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 16),
           ],
         ),
       ),
@@ -622,9 +615,38 @@ enum _MenuDestination { settings, notices }
 
 BoxDecoration _myPageCardDecoration() {
   return BoxDecoration(
-    color: AppColors.surface.withValues(alpha: 0.92),
+    color: AppColors.surface.withValues(alpha: 0.86),
     borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-    border: Border.all(color: AppColors.line.withValues(alpha: 0.82)),
-    boxShadow: AppShadows.softCard,
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.textPrimary.withValues(alpha: 0.055),
+        blurRadius: 26,
+        offset: const Offset(0, 12),
+      ),
+      BoxShadow(
+        color: Colors.white.withValues(alpha: 0.86),
+        blurRadius: 0,
+        spreadRadius: 0.6,
+      ),
+    ],
+  );
+}
+
+BoxDecoration _myPageGlassDecoration({double alpha = 0.82}) {
+  return BoxDecoration(
+    color: AppColors.surface.withValues(alpha: alpha),
+    borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.textPrimary.withValues(alpha: 0.045),
+        blurRadius: 24,
+        offset: const Offset(0, 10),
+      ),
+      BoxShadow(
+        color: AppColors.primary.withValues(alpha: 0.035),
+        blurRadius: 34,
+        offset: const Offset(0, 16),
+      ),
+    ],
   );
 }
