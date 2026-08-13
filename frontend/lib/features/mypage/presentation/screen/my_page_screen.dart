@@ -6,6 +6,9 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../potato/application/potato_collection_controller.dart';
+import '../../../potato/domain/potato_collection.dart';
+import '../../../potato/presentation/potato_asset.dart';
 import '../../application/user_activity_summary_controller.dart';
 import '../../application/user_profile_controller.dart';
 import '../../domain/user_activity_summary.dart';
@@ -30,6 +33,7 @@ class MyPageScreen extends ConsumerWidget {
 
     final activitySummaryState = ref.watch(userActivitySummaryProvider);
     final profileState = ref.watch(userProfileProvider);
+    final potatoCollectionState = ref.watch(potatoCollectionProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -43,6 +47,12 @@ class MyPageScreen extends ConsumerWidget {
               child: _TravelStats(
                 summaryState: activitySummaryState,
                 onRetry: () => ref.invalidate(userActivitySummaryProvider),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _MyPotatoCardAlbum(
+                collectionState: potatoCollectionState,
+                onRetry: () => ref.invalidate(potatoCollectionProvider),
               ),
             ),
             const SliverToBoxAdapter(child: _QuickActionGrid()),
@@ -365,6 +375,414 @@ class _VerticalDivider extends StatelessWidget {
   }
 }
 
+class _MyPotatoCardAlbum extends StatelessWidget {
+  const _MyPotatoCardAlbum({
+    required this.collectionState,
+    required this.onRetry,
+  });
+
+  final AsyncValue<PotatoCollection?> collectionState;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppDimens.pageHorizontalPadding,
+        0,
+        AppDimens.pageHorizontalPadding,
+        16,
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: _myPageGlassDecoration(alpha: 0.9),
+      child: collectionState.when(
+        data: (collection) {
+          final cards = (collection?.items ?? const <PotatoCollectionItem>[])
+              .where((item) => item.acquired)
+              .toList(growable: false);
+          if (cards.isEmpty) {
+            return const _PotatoAlbumEmpty();
+          }
+          return _PotatoAlbumContent(cards: cards);
+        },
+        loading: () => const _PotatoAlbumLoading(),
+        error: (_, __) => _PotatoAlbumError(onRetry: onRetry),
+      ),
+    );
+  }
+}
+
+class _PotatoAlbumContent extends StatefulWidget {
+  const _PotatoAlbumContent({required this.cards});
+
+  final List<PotatoCollectionItem> cards;
+
+  @override
+  State<_PotatoAlbumContent> createState() => _PotatoAlbumContentState();
+}
+
+class _PotatoAlbumContentState extends State<_PotatoAlbumContent> {
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(
+      viewportFraction: widget.cards.length > 1 ? 0.78 : 1,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _PotatoAlbumContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cards.length != widget.cards.length) {
+      _pageController.jumpToPage(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = widget.cards;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '내 감자 도감',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '수집한 감자만 카드로 보여요',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryTint.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '${cards.length}장',
+                style: const TextStyle(
+                  color: AppColors.primaryDark,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 260,
+          child: PageView.builder(
+            key: const ValueKey('mypage-potato-card-album'),
+            controller: _pageController,
+            padEnds: cards.length > 1,
+            itemCount: cards.length,
+            itemBuilder: (context, index) {
+              return AnimatedBuilder(
+                animation: _pageController,
+                builder: (context, child) {
+                  var scale = 1.0;
+                  if (_pageController.hasClients &&
+                      _pageController.position.haveDimensions) {
+                    final page = _pageController.page ?? 0;
+                    scale = (1 - (page - index).abs() * 0.08).clamp(0.92, 1);
+                  }
+                  return Transform.scale(scale: scale, child: child);
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: cards.length > 1 ? 7 : 0,
+                  ),
+                  child: _MyPotatoCollectionCard(item: cards[index]),
+                ),
+              );
+            },
+          ),
+        ),
+        if (cards.length > 1) ...[
+          const SizedBox(height: 10),
+          const Center(
+            child: Text(
+              '좌우로 넘겨 카드 보기',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MyPotatoCollectionCard extends StatelessWidget {
+  const _MyPotatoCollectionCard({required this.item});
+
+  final PotatoCollectionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final rarityColor = _rarityColor(item.rarity);
+    final acquiredAt = item.acquiredAt;
+    final acquiredLabel = acquiredAt == null
+        ? '수집 완료'
+        : '${acquiredAt.year}.${acquiredAt.month.toString().padLeft(2, '0')}.${acquiredAt.day.toString().padLeft(2, '0')} 수집';
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        gradient: _rarityGradient(item.rarity),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: rarityColor.withValues(alpha: 0.20),
+            blurRadius: 22,
+            offset: const Offset(0, 13),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(21),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: _potatoCardSurfaceGradient(item.rarity),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 13, 16, 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '#${item.id.padLeft(3, '0')}',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                    ),
+                    _PotatoRarityPill(rarity: item.rarity),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Center(
+                    child: Image.asset(
+                      potatoLocalAssetPath(item.code),
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.eco_rounded,
+                        color: AppColors.primaryDark,
+                        size: 72,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.name.trim().isEmpty ? '감자 카드' : item.name.trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  [
+                    if (item.region.trim().isNotEmpty) item.region.trim(),
+                    acquiredLabel,
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.description.trim().isEmpty
+                      ? '강원 여행길에서 만난 감자 카드예요.'
+                      : item.description.trim(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.38,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PotatoRarityPill extends StatelessWidget {
+  const _PotatoRarityPill({required this.rarity});
+
+  final PotatoRarity rarity;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _rarityColor(rarity);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        _rarityLabel(rarity),
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+}
+
+class _PotatoAlbumEmpty extends StatelessWidget {
+  const _PotatoAlbumEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '내 감자 카드',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          SizedBox(height: 10),
+          Text(
+            '아직 수집한 카드가 없어요. 감자 스팟을 방문하면 이곳에 카드가 채워져요.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PotatoAlbumLoading extends StatelessWidget {
+  const _PotatoAlbumLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 150,
+      child: Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+  }
+}
+
+class _PotatoAlbumError extends StatelessWidget {
+  const _PotatoAlbumError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '내 감자 카드',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          '감자 카드를 불러오지 못했어요.',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded, size: 18),
+          label: const Text('다시 불러오기'),
+        ),
+      ],
+    );
+  }
+}
+
 String _formatInt(int value) {
   return value.toString().replaceAllMapped(
         RegExp(r'\B(?=(\d{3})+(?!\d))'),
@@ -649,4 +1067,102 @@ BoxDecoration _myPageGlassDecoration({double alpha = 0.82}) {
       ),
     ],
   );
+}
+
+Color _rarityColor(PotatoRarity rarity) {
+  return switch (rarity) {
+    PotatoRarity.common => const Color(0xFF7A6F5B),
+    PotatoRarity.rare => const Color(0xFF56B982),
+    PotatoRarity.epic => const Color(0xFF9B6CE8),
+    PotatoRarity.legendary => const Color(0xFFE0A91B),
+  };
+}
+
+String _rarityLabel(PotatoRarity rarity) {
+  return switch (rarity) {
+    PotatoRarity.common => '일반',
+    PotatoRarity.rare => '희귀',
+    PotatoRarity.epic => '영웅',
+    PotatoRarity.legendary => '전설',
+  };
+}
+
+Gradient _rarityGradient(PotatoRarity rarity) {
+  return switch (rarity) {
+    PotatoRarity.common => const LinearGradient(
+        colors: [
+          Color(0xFFE8E0D1),
+          Color(0xFFB7AA95),
+          Color(0xFFF7F0E2),
+        ],
+      ),
+    PotatoRarity.rare => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppColors.primary,
+          Color(0xFFFFD66B),
+          AppColors.primary,
+        ],
+      ),
+    PotatoRarity.epic => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF7A5AF8),
+          Color(0xFFF6C23E),
+          AppColors.primary,
+        ],
+      ),
+    PotatoRarity.legendary => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFFF3A1),
+          Color(0xFF6FE6FF),
+          Color(0xFFFF91DF),
+          Color(0xFFFFD66B),
+        ],
+      ),
+  };
+}
+
+Gradient _potatoCardSurfaceGradient(PotatoRarity rarity) {
+  return switch (rarity) {
+    PotatoRarity.common => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFFFFCF4),
+          Color(0xFFF6F0E5),
+        ],
+      ),
+    PotatoRarity.rare => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white,
+          Color(0xFFE9FAEF),
+          Color(0xFFFFF5D8),
+        ],
+      ),
+    PotatoRarity.epic => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFFFBF3),
+          Color(0xFFF1EAFF),
+          Color(0xFFE8F8EE),
+        ],
+      ),
+    PotatoRarity.legendary => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFFF8D9),
+          Color(0xFFE9FAFF),
+          Color(0xFFFFEFFA),
+        ],
+      ),
+  };
 }
