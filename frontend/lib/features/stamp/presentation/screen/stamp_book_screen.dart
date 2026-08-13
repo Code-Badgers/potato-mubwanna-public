@@ -110,6 +110,12 @@ class _CityStampGridBody extends StatelessWidget {
         SliverToBoxAdapter(
             child: _PassportHeader(onBack: () => _goBack(context))),
         SliverToBoxAdapter(
+          child: _PassportSummaryCard(
+            acquiredCount: acquiredCount,
+            totalCount: totalCount,
+          ),
+        ),
+        SliverToBoxAdapter(
           child: _PassportPageBook(
             pages: pages,
             acquiredCount: acquiredCount,
@@ -127,6 +133,95 @@ void _goBack(BuildContext context) {
     return;
   }
   context.go('/main/mypage');
+}
+
+class _PassportSummaryCard extends StatelessWidget {
+  const _PassportSummaryCard({
+    required this.acquiredCount,
+    required this.totalCount,
+  });
+
+  final int acquiredCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 2, 24, 18),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.surface,
+            AppColors.primaryTint.withValues(alpha: 0.58),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        boxShadow: AppShadows.softCard,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.confirmation_number_rounded,
+              color: AppColors.primaryDark,
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '강원 여행 패스포트',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '명소에서 인증하면 스탬프가 채워져요',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.86),
+              borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+            ),
+            child: Text(
+              '$acquiredCount / $totalCount',
+              style: const TextStyle(
+                color: AppColors.primaryDark,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PassportHeader extends StatelessWidget {
@@ -537,7 +632,7 @@ class _StampBookBody extends StatelessWidget {
     final progress = stampBook.progress;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final mapHeight = (constraints.maxHeight - 322).clamp(356.0, 420.0);
+        final mapHeight = (constraints.maxHeight - 314).clamp(376.0, 432.0);
         return CustomScrollView(
           slivers: [
             SliverToBoxAdapter(child: _StampTourHero(progress: progress)),
@@ -585,9 +680,9 @@ class _StampTourHero extends StatelessWidget {
                       '강원도\n스탬프 투어',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 28,
-                        height: 1.06,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 25,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
@@ -651,11 +746,11 @@ class _StampTourProgressPill extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '여행 도장  $acquiredCount/$totalCount',
+                  '스탬프북  $acquiredCount/$totalCount',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 0,
                   ),
                 ),
@@ -1300,8 +1395,8 @@ class _SelectedRegionCard extends StatelessWidget {
     final statusText = acquired ? '도장 획득' : '방문 인증 대기';
 
     return Container(
-      height: 178,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      height: 194,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -1402,9 +1497,9 @@ class _SelectedRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           Text(
-            '이 명소에서 인증하면 ${region.city} 여행 도장을 받을 수 있어요',
+            '이 명소에서 인증하면 ${region.city} 스탬프를 받을 수 있어요',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -1415,10 +1510,10 @@ class _SelectedRegionCard extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-            height: 46,
+            height: 42,
             child: FilledButton(
               onPressed: onSpotTap,
               style: FilledButton.styleFrom(
@@ -1436,7 +1531,7 @@ class _SelectedRegionCard extends StatelessWidget {
                   Text(
                     '방문 인증하기',
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0,
                     ),
@@ -1604,8 +1699,8 @@ class _EmptyRegionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 178,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      height: 194,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -1640,7 +1735,7 @@ class _EmptyRegionCard extends StatelessWidget {
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 20,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
@@ -1659,7 +1754,7 @@ class _EmptyRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           const Text(
             '지도 위 명소를 선택하면 방문 인증으로 이어지는 스탬프 장소가 나타나요.',
             maxLines: 3,
@@ -1753,7 +1848,7 @@ class _RallybookSpotMapNode extends StatelessWidget {
                         ? Icons.check_rounded
                         : selected
                             ? Icons.directions_car_rounded
-                            : Icons.person_rounded,
+                            : Icons.flag_rounded,
                     color: stampColor,
                     size: selected ? 17 : 14,
                   ),
