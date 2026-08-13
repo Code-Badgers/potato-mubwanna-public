@@ -756,9 +756,9 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
           margin: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           height: 438,
           decoration: BoxDecoration(
-            color: const Color(0xFFDDF2FA),
+            color: const Color(0xFFEAF8EE),
             borderRadius: BorderRadius.circular(AppDimens.sheetRadius),
-            border: Border.all(color: const Color(0xFFC7E7F0)),
+            border: Border.all(color: const Color(0xFFD5ECDC)),
           ),
           clipBehavior: Clip.antiAlias,
           child: LayoutBuilder(
@@ -925,18 +925,18 @@ class _GangwonMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final mapRect = _gangwonMapRect(size);
     canvas.drawRect(
-        Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
+        Offset.zero & size, Paint()..color = const Color(0xFFEAF8EE));
 
     var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
     final thinLinePaint = Paint()
-      ..color = const Color(0xFFB9E2EA)
+      ..color = const Color(0xFFB6DCC1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final selectedLinePaint = Paint()
-      ..color = const Color(0xFF59B8C7)
+      ..color = AppColors.primaryDark
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
@@ -954,7 +954,7 @@ class _GangwonMapPainter extends CustomPainter {
     }
 
     final coastlinePaint = Paint()
-      ..color = const Color(0xFF9FCFE0).withValues(alpha: 0.55)
+      ..color = AppColors.primary.withValues(alpha: 0.24)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10
       ..strokeCap = StrokeCap.round
@@ -968,13 +968,14 @@ class _GangwonMapPainter extends CustomPainter {
       }
       final path = _regionPath(region, mapRect);
       final acquired = stampsByCity[region.city]?.acquired ?? false;
-      fillPaint.color = acquired ? const Color(0xFFF1FFF6) : AppColors.surface;
+      fillPaint.color =
+          acquired ? const Color(0xFFE7F8E9) : const Color(0xFFFFFEF8);
       canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, thinLinePaint);
     }
 
     final outerPaint = Paint()
-      ..color = const Color(0xFFB9E2EA)
+      ..color = const Color(0xFF8CCB9E)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round
@@ -985,7 +986,7 @@ class _GangwonMapPainter extends CustomPainter {
         selectedCity == null ? null : _findRegion(selectedCity!);
     if (selectedRegion != null) {
       final path = _scaledPath(_regionPath(selectedRegion, mapRect), 1.035);
-      fillPaint.color = const Color(0xFFE9FBF4);
+      fillPaint.color = const Color(0xFFDDF7E6);
       canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, selectedLinePaint);
     }
@@ -1627,12 +1628,12 @@ class _RallybookSpotMapNode extends StatelessWidget {
     final stampColor = acquired
         ? AppColors.primary
         : selected
-            ? AppColors.secondary
-            : const Color(0xFFC9BFA8);
+            ? AppColors.primaryDark
+            : const Color(0xFFAFC7B2);
     final fillColor = acquired
         ? AppColors.primaryTint
         : selected
-            ? const Color(0xFFFFF4CF)
+            ? const Color(0xFFEAF8EE)
             : AppColors.surface.withValues(alpha: 0.96);
 
     return Semantics(

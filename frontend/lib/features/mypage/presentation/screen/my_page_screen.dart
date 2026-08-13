@@ -33,7 +33,6 @@ class MyPageScreen extends ConsumerWidget {
 
     final activitySummaryState = ref.watch(userActivitySummaryProvider);
     final profileState = ref.watch(userProfileProvider);
-    final potatoCollectionState = ref.watch(potatoCollectionProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -49,15 +48,10 @@ class MyPageScreen extends ConsumerWidget {
                 onRetry: () => ref.invalidate(userActivitySummaryProvider),
               ),
             ),
-            SliverToBoxAdapter(
-              child: _MyPotatoCardAlbum(
-                collectionState: potatoCollectionState,
-                onRetry: () => ref.invalidate(potatoCollectionProvider),
-              ),
-            ),
             const SliverToBoxAdapter(child: _QuickActionGrid()),
             SliverToBoxAdapter(
               child: _AccountMenu(
+                onCoupons: () => context.push('/coupons'),
                 onSettings: () => context.push('/settings'),
                 onNotices: () => context.push('/notices'),
               ),
@@ -397,9 +391,7 @@ class _MyPotatoCardAlbum extends StatelessWidget {
       decoration: _myPageGlassDecoration(alpha: 0.9),
       child: collectionState.when(
         data: (collection) {
-          final cards = (collection?.items ?? const <PotatoCollectionItem>[])
-              .where((item) => item.acquired)
-              .toList(growable: false);
+          final cards = _visiblePotatoCards(collection);
           if (cards.isEmpty) {
             return const _PotatoAlbumEmpty();
           }
@@ -410,6 +402,49 @@ class _MyPotatoCardAlbum extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showPotatoCardAlbumSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) {
+      return Consumer(
+        builder: (context, ref, child) {
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
+              child: SingleChildScrollView(
+                child: _MyPotatoCardAlbum(
+                  collectionState: ref.watch(potatoCollectionProvider),
+                  onRetry: () => ref.invalidate(potatoCollectionProvider),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+List<PotatoCollectionItem> _visiblePotatoCards(PotatoCollection? collection) {
+  final items = collection?.items ?? const <PotatoCollectionItem>[];
+  final acquiredCards =
+      items.where((item) => item.acquired).toList(growable: false);
+  if (acquiredCards.isNotEmpty) {
+    return acquiredCards;
+  }
+  final representative = collection?.representativePotato;
+  if (representative != null) {
+    return [representative];
+  }
+  if (items.isNotEmpty) {
+    return [items.first];
+  }
+  return const <PotatoCollectionItem>[];
 }
 
 class _PotatoAlbumContent extends StatefulWidget {
@@ -557,9 +592,11 @@ class _MyPotatoCollectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rarityColor = _rarityColor(item.rarity);
     final acquiredAt = item.acquiredAt;
-    final acquiredLabel = acquiredAt == null
-        ? '수집 완료'
-        : '${acquiredAt.year}.${acquiredAt.month.toString().padLeft(2, '0')}.${acquiredAt.day.toString().padLeft(2, '0')} 수집';
+    final acquiredLabel = !item.acquired
+        ? '대표 카드'
+        : acquiredAt == null
+            ? '수집 완료'
+            : '${acquiredAt.year}.${acquiredAt.month.toString().padLeft(2, '0')}.${acquiredAt.day.toString().padLeft(2, '0')} 수집';
 
     return Container(
       padding: const EdgeInsets.all(3),
@@ -797,10 +834,10 @@ class _QuickActionGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = [
       _QuickAction(
-        icon: Icons.card_giftcard_rounded,
-        label: '보상함',
-        key: const ValueKey('mypage-quick-action-coupons'),
-        onTap: () => context.push('/coupons'),
+        icon: Icons.style_rounded,
+        label: '감자 카드',
+        key: const ValueKey('mypage-quick-action-potato-cards'),
+        onTap: () => _showPotatoCardAlbumSheet(context),
       ),
       _QuickAction(
         icon: Icons.menu_book_rounded,
@@ -895,14 +932,21 @@ class _QuickActionCard extends StatelessWidget {
 
 class _AccountMenu extends StatelessWidget {
   const _AccountMenu({
+    required this.onCoupons,
     required this.onSettings,
     required this.onNotices,
   });
 
+  final VoidCallback onCoupons;
   final VoidCallback onSettings;
   final VoidCallback onNotices;
 
   static const _items = [
+    _MenuItem(
+      icon: Icons.card_giftcard_outlined,
+      label: '보상함',
+      destination: _MenuDestination.coupons,
+    ),
     _MenuItem(
       icon: Icons.settings_outlined,
       label: '설정',
@@ -932,6 +976,7 @@ class _AccountMenu extends StatelessWidget {
               _MenuRow(
                 item: _items[index],
                 onTap: switch (_items[index].destination) {
+                  _MenuDestination.coupons => onCoupons,
                   _MenuDestination.settings => onSettings,
                   _MenuDestination.notices => onNotices,
                 },
@@ -964,6 +1009,7 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       key: switch (item.destination) {
+        _MenuDestination.coupons => const ValueKey('mypage-menu-coupons'),
         _MenuDestination.settings => const ValueKey('mypage-menu-settings'),
         _MenuDestination.notices => const ValueKey('mypage-menu-notices'),
       },
@@ -1029,7 +1075,7 @@ class _MenuItem {
   final _MenuDestination destination;
 }
 
-enum _MenuDestination { settings, notices }
+enum _MenuDestination { coupons, settings, notices }
 
 BoxDecoration _myPageCardDecoration() {
   return BoxDecoration(
