@@ -278,12 +278,12 @@ class _PassportPageBook extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 430,
+      height: 500,
       child: PageView.builder(
         controller: PageController(viewportFraction: 0.9),
         itemCount: pages.length,
         itemBuilder: (context, index) => Padding(
-          padding: const EdgeInsets.fromLTRB(0, 2, 12, 28),
+          padding: const EdgeInsets.fromLTRB(0, 2, 12, 32),
           child: _PassportSpread(
             stamps: pages[index],
             pageNumber: index + 1,
@@ -376,19 +376,19 @@ class _PassportSpread extends StatelessWidget {
                     letterSpacing: 0,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 Expanded(
                   child: Column(
                     children: [
                       for (var index = 0; index < stamps.length; index++) ...[
                         Expanded(child: _CityStampTile(stamp: stamps[index])),
                         if (index < stamps.length - 1)
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -467,7 +467,7 @@ class _CityStampTile extends StatelessWidget {
     final landmark = _passportLandmarkFor(stamp.cityName, stamp.stampName);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: acquired
             ? AppColors.surface.withValues(alpha: 0.54)
@@ -479,85 +479,90 @@ class _CityStampTile extends StatelessWidget {
               : AppColors.line.withValues(alpha: 0.44),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: acquired
-                      ? AppColors.primaryTint
-                      : AppColors.background.withValues(alpha: 0.94),
-                  shape: BoxShape.circle,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: acquired
+                  ? AppColors.primaryTint
+                  : AppColors.background.withValues(alpha: 0.94),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              acquired ? icon : Icons.radio_button_unchecked_rounded,
+              color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
+              size: acquired ? 24 : 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stamp.cityName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: acquired
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
                 ),
-                child: Icon(
-                  acquired ? icon : Icons.radio_button_unchecked_rounded,
+                const SizedBox(height: 4),
+                Text(
+                  acquired ? landmark : '명소 방문 전',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: acquired
+                        ? AppColors.primaryDark
+                        : AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Transform.rotate(
+            angle: acquired ? -0.16 : 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: acquired
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : AppColors.line.withValues(alpha: 0.34),
+                borderRadius: BorderRadius.circular(999),
+                border: acquired
+                    ? Border.all(
+                        color: AppColors.primaryDark.withValues(alpha: 0.22),
+                      )
+                    : null,
+              ),
+              child: Text(
+                acquired ? 'STAMPED' : 'BLANK',
+                style: TextStyle(
                   color: acquired
                       ? AppColors.primaryDark
                       : AppColors.textSecondary,
-                  size: acquired ? 23 : 24,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
                 ),
               ),
-              const Spacer(),
-              Transform.rotate(
-                angle: acquired ? -0.16 : 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: acquired
-                        ? AppColors.primary.withValues(alpha: 0.12)
-                        : AppColors.line.withValues(alpha: 0.34),
-                    borderRadius: BorderRadius.circular(999),
-                    border: acquired
-                        ? Border.all(
-                            color:
-                                AppColors.primaryDark.withValues(alpha: 0.22),
-                          )
-                        : null,
-                  ),
-                  child: Text(
-                    acquired ? 'STAMPED' : 'BLANK',
-                    style: TextStyle(
-                      color: acquired
-                          ? AppColors.primaryDark
-                          : AppColors.textSecondary,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            stamp.cityName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: acquired ? AppColors.textPrimary : AppColors.textSecondary,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            acquired ? landmark : '명소 방문 전',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
             ),
           ),
         ],
