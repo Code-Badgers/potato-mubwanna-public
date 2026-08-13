@@ -10,7 +10,9 @@ import '../../domain/stamp_book.dart';
 import '../model/gangwon_context_region.dart';
 import '../model/gangwon_map_projection.dart';
 import '../model/gangwon_map_region.dart';
-import '../widget/attraction_stamp_image.dart';
+
+const _stampTourLockedAsset = 'assets/stamps/stamp_tour_locked.png';
+const _stampTourCompletedAsset = 'assets/stamps/stamp_tour_completed.png';
 
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
@@ -998,22 +1000,10 @@ class _SelectedRegionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: acquired ? AppColors.primaryTint : AppColors.cream,
-                  shape: BoxShape.circle,
-                ),
-                child: AttractionStampImage(
-                  spotName: spot.spotName,
-                  size: 38,
-                  fallback: Icon(
-                    acquired ? Icons.check_rounded : Icons.location_on_rounded,
-                    color: acquired ? AppColors.primaryDark : AppColors.brown,
-                    size: 24,
-                  ),
-                ),
+              _TourStampImage(
+                acquired: acquired,
+                size: 46,
+                fallbackSize: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1269,6 +1259,36 @@ class _EmptyRegionCard extends StatelessWidget {
   }
 }
 
+class _TourStampImage extends StatelessWidget {
+  const _TourStampImage({
+    required this.acquired,
+    required this.size,
+    required this.fallbackSize,
+  });
+
+  final bool acquired;
+  final double size;
+  final double fallbackSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetPath =
+        acquired ? _stampTourCompletedAsset : _stampTourLockedAsset;
+    return Image.asset(
+      assetPath,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      semanticLabel: acquired ? '획득한 관광지 스탬프' : '잠긴 관광지 스탬프',
+      errorBuilder: (_, __, ___) => Icon(
+        acquired ? Icons.verified_rounded : Icons.lock_rounded,
+        color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
+        size: fallbackSize,
+      ),
+    );
+  }
+}
+
 class _RallybookSpotMapNode extends StatelessWidget {
   const _RallybookSpotMapNode({
     required this.spot,
@@ -1283,16 +1303,11 @@ class _RallybookSpotMapNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
-    final stampColor = acquired
+    final shadowColor = acquired
         ? AppColors.primary
         : selected
-        ? AppColors.secondary
-        : const Color(0xFFC9BFA8);
-    final fillColor = acquired
-        ? AppColors.primaryTint
-        : selected
-        ? const Color(0xFFFFF4CF)
-        : AppColors.surface.withValues(alpha: 0.96);
+            ? AppColors.secondary
+            : AppColors.textSecondary;
 
     return Semantics(
       label: spot.spotName,
@@ -1306,45 +1321,22 @@ class _RallybookSpotMapNode extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: selected ? 38 : 30,
-              height: selected ? 38 : 30,
+              width: selected ? 42 : 32,
+              height: selected ? 42 : 32,
               decoration: BoxDecoration(
-                color: fillColor,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: stampColor,
-                  width: selected ? 3 : 2.2,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: stampColor.withValues(
-                      alpha: selected ? 0.24 : 0.12,
-                    ),
-                    blurRadius: selected ? 12 : 5,
+                    color:
+                        shadowColor.withValues(alpha: selected ? 0.26 : 0.12),
+                    blurRadius: selected ? 12 : 6,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: selected ? 19 : 15,
-                    height: selected ? 19 : 15,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: stampColor.withValues(alpha: 0.62),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    acquired ? Icons.check_rounded : Icons.flag_rounded,
-                    color: stampColor,
-                    size: acquired ? 18 : 14,
-                  ),
-                ],
+              child: _TourStampImage(
+                acquired: acquired,
+                size: selected ? 42 : 32,
+                fallbackSize: selected ? 24 : 18,
               ),
             ),
             if (selected) ...[
