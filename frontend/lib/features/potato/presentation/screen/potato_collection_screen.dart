@@ -407,6 +407,20 @@ class _PotatoCollectionBody extends StatelessWidget {
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
                   ),
+                  _PotatoGrowthCard(
+                    potato: representative,
+                    progress: collection.totalCount == 0
+                        ? 0
+                        : (collection.acquiredCount / collection.totalCount)
+                            .clamp(0, 1),
+                    acquiredCount: collection.acquiredCount,
+                    totalCount: collection.totalCount,
+                    updating: updatingRepresentative,
+                    onShowDetail: representative == null
+                        ? onShowDefaultDetail
+                        : () => onShowDetail(representative),
+                    onChangeRepresentative: onChangeRepresentative,
+                  ),
                   const SizedBox(height: 8),
                   const _TodayStepCard(),
                 ],
@@ -466,8 +480,6 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
   @override
   Widget build(BuildContext context) {
     final potato = widget.item;
-    final progress =
-        widget.totalCount == 0 ? 0.0 : widget.acquiredCount / widget.totalCount;
     final careMessage = _careMessage;
     final level = potato?.level ?? 1;
     final health = (62 + level * 4).clamp(62, 96);
@@ -483,6 +495,7 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
         children: [
           _PotatoCareStage(
             potato: potato,
+            level: level,
             speech: careMessage ??
                 (potato == null || !potato.acquired
                     ? _defaultPotatoSpeech
@@ -493,16 +506,16 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _MetaChip(label: 'Lv. $level'),
-                    if (potato != null) _RarityBadge(rarity: potato.rarity),
-                    if (potato != null) _MetaChip(label: potato.region),
-                  ],
-                ),
-                const SizedBox(height: 10),
+                if (potato != null)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _RarityBadge(rarity: potato.rarity),
+                      _MetaChip(label: potato.region),
+                    ],
+                  ),
+                if (potato != null) const SizedBox(height: 8),
                 _PotatoCareStats(
                   health: health,
                   moisture: moisture,
@@ -513,16 +526,6 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   onCare: _reactToCare,
                   enabled: potato == null || potato.acquired,
                 ),
-                const SizedBox(height: 12),
-                _PotatoGrowthPanel(
-                  potato: potato,
-                  progress: progress.clamp(0, 1),
-                  acquiredCount: widget.acquiredCount,
-                  totalCount: widget.totalCount,
-                  updating: widget.updating,
-                  onShowDetail: widget.onShowDetail,
-                  onChangeRepresentative: widget.onChangeRepresentative,
-                ),
               ],
             ),
           ),
@@ -532,13 +535,53 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
   }
 }
 
+class _PotatoGrowthCard extends StatelessWidget {
+  const _PotatoGrowthCard({
+    required this.potato,
+    required this.progress,
+    required this.acquiredCount,
+    required this.totalCount,
+    required this.updating,
+    required this.onShowDetail,
+    required this.onChangeRepresentative,
+  });
+
+  final PotatoCollectionItem? potato;
+  final double progress;
+  final int acquiredCount;
+  final int totalCount;
+  final bool updating;
+  final VoidCallback? onShowDetail;
+  final VoidCallback onChangeRepresentative;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      decoration: _cardDecoration(color: Colors.white),
+      child: _PotatoGrowthPanel(
+        potato: potato,
+        progress: progress,
+        acquiredCount: acquiredCount,
+        totalCount: totalCount,
+        updating: updating,
+        onShowDetail: onShowDetail,
+        onChangeRepresentative: onChangeRepresentative,
+      ),
+    );
+  }
+}
+
 class _PotatoCareStage extends StatelessWidget {
   const _PotatoCareStage({
     required this.potato,
+    required this.level,
     required this.speech,
   });
 
   final PotatoCollectionItem? potato;
+  final int level;
   final String speech;
 
   @override
@@ -607,7 +650,12 @@ class _PotatoCareStage extends StatelessWidget {
               ),
             ),
             Positioned(
-              top: 104,
+              right: 20,
+              top: 30,
+              child: _PotatoLevelBadge(level: level),
+            ),
+            Positioned(
+              top: 100,
               left: 20,
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -615,8 +663,8 @@ class _PotatoCareStage extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 80,
-              right: 8,
+              left: 28,
+              right: 28,
               bottom: -22,
               child: SizedBox(
                 height: 258,
@@ -690,6 +738,41 @@ class _PotatoCareStats extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PotatoLevelBadge extends StatelessWidget {
+  const _PotatoLevelBadge({required this.level});
+
+  final int level;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _potatoPrimary,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: _potatoPrimary.withValues(alpha: 0.22),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        child: Text(
+          'Lv. $level',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
       ),
     );
   }
@@ -799,20 +882,8 @@ class _PotatoGrowthPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
