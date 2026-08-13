@@ -52,7 +52,7 @@ class MyPageScreen extends ConsumerWidget {
                 onNotices: () => context.push('/notices'),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(child: SizedBox(height: 18)),
           ],
         ),
       ),
@@ -77,9 +77,9 @@ class _ProfileHeader extends StatelessWidget {
         AppDimens.pageHorizontalPadding,
         0,
         AppDimens.pageHorizontalPadding,
-        16,
+        14,
       ),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: _myPageCardDecoration(),
       child: Row(
         children: [
@@ -230,9 +230,9 @@ class _TravelStats extends StatelessWidget {
         AppDimens.pageHorizontalPadding,
         0,
         AppDimens.pageHorizontalPadding,
-        24,
+        18,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       decoration: _myPageCardDecoration(),
       child: summaryState.when(
         data: (summary) => _TravelStatRow(
@@ -324,24 +324,24 @@ class _StatItem extends StatelessWidget {
       children: [
         Text(
           label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 13,
+            fontSize: 11,
             fontWeight: FontWeight.w800,
+            height: 1.15,
             letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 8),
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             value,
             style: const TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 25,
+              fontSize: 23,
               fontWeight: FontWeight.w900,
               letterSpacing: 0,
             ),
@@ -360,7 +360,7 @@ class _VerticalDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 54,
-      color: AppColors.line,
+      color: AppColors.line.withValues(alpha: 0.68),
     );
   }
 }
@@ -403,7 +403,7 @@ class _QuickActionGrid extends StatelessWidget {
         AppDimens.pageHorizontalPadding,
         0,
         AppDimens.pageHorizontalPadding,
-        20,
+        16,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,20 +426,27 @@ class _QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface.withValues(alpha: 0.9),
+      color: AppColors.surface.withValues(alpha: 0.82),
       borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
       child: InkWell(
         key: action.key,
         onTap: action.onTap,
         borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
         child: Container(
-          height: 90,
+          height: 82,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
             border: Border.all(
-              color: AppColors.line.withValues(alpha: 0.84),
+              color: Colors.white.withValues(alpha: 0.72),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.textPrimary.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -454,7 +461,7 @@ class _QuickActionCard extends StatelessWidget {
                 child:
                     Icon(action.icon, color: AppColors.primaryDark, size: 21),
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 8),
               Text(
                 action.label,
                 maxLines: 1,
@@ -504,24 +511,21 @@ class _AccountMenu extends StatelessWidget {
         horizontal: AppDimens.pageHorizontalPadding,
       ),
       child: Material(
-        color: AppColors.surface.withValues(alpha: 0.9),
+        color: Colors.transparent,
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-          side: BorderSide(color: AppColors.line.withValues(alpha: 0.84)),
-        ),
-        child: Column(
+        child: Row(
           children: [
             for (var index = 0; index < _items.length; index++) ...[
-              _MenuRow(
-                item: _items[index],
-                onTap: switch (_items[index].destination) {
-                  _MenuDestination.settings => onSettings,
-                  _MenuDestination.notices => onNotices,
-                },
+              Expanded(
+                child: _MenuRow(
+                  item: _items[index],
+                  onTap: switch (_items[index].destination) {
+                    _MenuDestination.settings => onSettings,
+                    _MenuDestination.notices => onNotices,
+                  },
+                ),
               ),
-              if (index < _items.length - 1)
-                const Divider(height: 1, color: AppColors.line, indent: 58),
+              if (index < _items.length - 1) const SizedBox(width: 8),
             ],
           ],
         ),
@@ -547,23 +551,29 @@ class _MenuRow extends StatelessWidget {
         _MenuDestination.notices => const ValueKey('mypage-menu-notices'),
       },
       onTap: onTap,
-      child: SizedBox(
-        height: 64,
+      borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+        ),
         child: Row(
           children: [
-            const SizedBox(width: 20),
+            const SizedBox(width: 14),
             Icon(
               item.icon,
               color: AppColors.primaryDark,
-              size: 25,
+              size: 21,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 item.label,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 16,
+                  fontSize: 13,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
@@ -572,9 +582,9 @@ class _MenuRow extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               color: AppColors.textSecondary,
-              size: 25,
+              size: 20,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
           ],
         ),
       ),
