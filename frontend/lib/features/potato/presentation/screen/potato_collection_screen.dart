@@ -476,7 +476,7 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 18),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 14),
       decoration: _cardDecoration(color: const Color(0xFFFFFCF2)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,10 +487,9 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                 (potato == null || !potato.acquired
                     ? _defaultPotatoSpeech
                     : _potatoSpeechFor(potato)),
-            onOpenCollection: widget.onChangeRepresentative,
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 2, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -503,18 +502,18 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                     if (potato != null) _MetaChip(label: potato.region),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _PotatoCareStats(
                   health: health,
                   moisture: moisture,
                   mood: mood,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 _PotatoCareBar(
                   onCare: _reactToCare,
                   enabled: potato == null || potato.acquired,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _PotatoGrowthPanel(
                   potato: potato,
                   progress: progress.clamp(0, 1),
@@ -537,12 +536,10 @@ class _PotatoCareStage extends StatelessWidget {
   const _PotatoCareStage({
     required this.potato,
     required this.speech,
-    required this.onOpenCollection,
   });
 
   final PotatoCollectionItem? potato;
   final String speech;
-  final VoidCallback onOpenCollection;
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +547,7 @@ class _PotatoCareStage extends StatelessWidget {
     final subtitle = potato == null ? '첫 여행을 기다리는 단계' : '강원 여행을 함께하는 대표 감자';
 
     return SizedBox(
-      height: 376,
+      height: 328,
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(_potatoCardRadius),
@@ -581,7 +578,7 @@ class _PotatoCareStage extends StatelessWidget {
             ),
             Positioned(
               left: 20,
-              top: 34,
+              top: 28,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -610,85 +607,28 @@ class _PotatoCareStage extends StatelessWidget {
               ),
             ),
             Positioned(
-              right: 20,
-              top: 58,
-              child: _PotatoCollectionShortcut(onTap: onOpenCollection),
-            ),
-            Positioned(
-              top: 18,
-              left: 0,
-              right: 0,
-              child: Center(
+              top: 104,
+              left: 20,
+              child: Align(
+                alignment: Alignment.centerLeft,
                 child: _PotatoSpeechBubble(message: speech),
               ),
             ),
             Positioned(
-              left: 42,
-              right: 18,
-              bottom: -6,
+              left: 80,
+              right: 8,
+              bottom: -22,
               child: SizedBox(
-                height: 286,
+                height: 258,
                 child: _PotatoArtSlot(
                   item: potato,
                   locked: potato?.acquired != true,
-                  size: 286,
+                  size: 258,
                   framed: false,
                 ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PotatoCollectionShortcut extends StatelessWidget {
-  const _PotatoCollectionShortcut({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Ink(
-          width: 74,
-          height: 74,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.84),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.style_outlined,
-                color: AppColors.textPrimary,
-                size: 22,
-              ),
-              SizedBox(height: 4),
-              Text(
-                '도감',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
