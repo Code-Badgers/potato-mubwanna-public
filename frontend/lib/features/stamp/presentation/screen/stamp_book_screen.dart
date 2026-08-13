@@ -1283,6 +1283,16 @@ class _RallybookSpotMapNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
+    final stampColor = acquired
+        ? AppColors.primary
+        : selected
+        ? AppColors.secondary
+        : const Color(0xFFC9BFA8);
+    final fillColor = acquired
+        ? AppColors.primaryTint
+        : selected
+        ? const Color(0xFFFFF4CF)
+        : AppColors.surface.withValues(alpha: 0.96);
 
     return Semantics(
       label: spot.spotName,
@@ -1296,35 +1306,45 @@ class _RallybookSpotMapNode extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: selected ? 34 : 26,
-              height: selected ? 34 : 26,
+              width: selected ? 38 : 30,
+              height: selected ? 38 : 30,
               decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.secondary
-                    : acquired
-                    ? AppColors.primary
-                    : AppColors.surface,
+                color: fillColor,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.surface,
-                  width: selected ? 3 : 2,
+                  color: stampColor,
+                  width: selected ? 3 : 2.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: selected ? 0.18 : 0.1,
+                    color: stampColor.withValues(
+                      alpha: selected ? 0.24 : 0.12,
                     ),
                     blurRadius: selected ? 12 : 5,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Icon(
-                acquired ? Icons.check_rounded : Icons.flag_rounded,
-                color: acquired || selected
-                    ? Colors.white
-                    : const Color(0xFF9A8C72),
-                size: acquired ? 18 : 14,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: selected ? 19 : 15,
+                    height: selected ? 19 : 15,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: stampColor.withValues(alpha: 0.62),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    acquired ? Icons.check_rounded : Icons.flag_rounded,
+                    color: stampColor,
+                    size: acquired ? 18 : 14,
+                  ),
+                ],
               ),
             ),
             if (selected) ...[
