@@ -129,10 +129,10 @@ class _CityStampGridBody extends StatelessWidget {
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    '지역별 랠리북',
+                    '강원 여행 패스포트',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 28,
+                      fontSize: 25,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0,
                     ),
@@ -144,36 +144,85 @@ class _CityStampGridBody extends StatelessWidget {
         ),
         SliverToBoxAdapter(
           child: Container(
-            margin: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-            padding: const EdgeInsets.all(18),
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.line),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFFCF4),
+                  Color(0xFFEAF8F0),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+              boxShadow: AppShadows.softCard,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withValues(alpha: 0.74),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.confirmation_number_rounded,
+                        color: AppColors.primaryDark,
+                        size: 23,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '강원 여행 패스포트',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            '명소를 다녀오면 지역 페이지에 도장이 찍혀요',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              height: 1.35,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withValues(alpha: 0.82),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                       child: Text(
-                        '지역 세트 진행률',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
+                        '$acquiredCount / $totalCount',
+                        style: const TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 15,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
-                      ),
-                    ),
-                    Text(
-                      '$acquiredCount / $totalCount',
-                      style: const TextStyle(
-                        color: AppColors.primaryDark,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
                       ),
                     ),
                   ],
@@ -199,10 +248,10 @@ class _CityStampGridBody extends StatelessWidget {
           sliver: SliverGrid.builder(
             itemCount: progress.stamps.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1,
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.18,
             ),
             itemBuilder: (context, index) => _CityStampTile(
               stamp: progress.stamps[index],
@@ -222,49 +271,86 @@ class _CityStampTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp.acquired;
+    final icon = _passportIconFor(stamp.cityName);
+    final landmark = _passportLandmarkFor(stamp.cityName, stamp.stampName);
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
       decoration: BoxDecoration(
-        color: acquired ? AppColors.primaryTint : AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: acquired ? AppColors.primary : AppColors.line,
-          width: acquired ? 1.6 : 1,
-        ),
+        color: acquired
+            ? AppColors.cream.withValues(alpha: 0.96)
+            : AppColors.surface.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+        boxShadow: AppShadows.softCard,
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: acquired ? AppColors.primary : AppColors.background,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              acquired ? Icons.check_rounded : Icons.lock_outline_rounded,
-              color: acquired ? Colors.white : AppColors.textSecondary,
-              size: 22,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: acquired
+                      ? AppColors.primaryTint
+                      : AppColors.background.withValues(alpha: 0.94),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  acquired ? icon : Icons.radio_button_unchecked_rounded,
+                  color: acquired
+                      ? AppColors.primaryDark
+                      : AppColors.textSecondary,
+                  size: acquired ? 23 : 24,
+                ),
+              ),
+              const Spacer(),
+              Transform.rotate(
+                angle: acquired ? -0.16 : 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: acquired
+                        ? AppColors.primary.withValues(alpha: 0.14)
+                        : AppColors.line.withValues(alpha: 0.34),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    acquired ? 'STAMP' : 'EMPTY',
+                    style: TextStyle(
+                      color: acquired
+                          ? AppColors.primaryDark
+                          : AppColors.textSecondary,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 9),
+          const Spacer(),
           Text(
             stamp.cityName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
             style: TextStyle(
               color: acquired ? AppColors.textPrimary : AppColors.textSecondary,
-              fontSize: 13,
+              fontSize: 17,
               fontWeight: FontWeight.w900,
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           Text(
-            acquired ? '지역 완료' : '명소 대기',
+            acquired ? landmark : '명소 방문 전',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
               fontSize: 11,
@@ -276,6 +362,49 @@ class _CityStampTile extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _passportIconFor(String cityName) {
+  final city = _normalizeCityName(cityName);
+  return switch (city) {
+    '강릉' || '속초' || '동해' || '삼척' || '고성' || '양양' => Icons.waves_rounded,
+    '춘천' || '화천' || '양구' || '인제' || '홍천' => Icons.forest_rounded,
+    '평창' || '정선' || '태백' || '영월' => Icons.terrain_rounded,
+    '원주' => Icons.museum_rounded,
+    '철원' => Icons.landscape_rounded,
+    '횡성' => Icons.park_rounded,
+    _ => Icons.place_rounded,
+  };
+}
+
+String _passportLandmarkFor(String cityName, String stampName) {
+  final normalizedStamp = stampName.trim();
+  if (normalizedStamp.isNotEmpty) {
+    return normalizedStamp;
+  }
+
+  final city = _normalizeCityName(cityName);
+  return switch (city) {
+    '춘천' => '남이섬 스탬프',
+    '원주' => '뮤지엄 산 스탬프',
+    '강릉' => '안목해변 스탬프',
+    '동해' => '묵호등대 스탬프',
+    '태백' => '황지연못 스탬프',
+    '속초' => '속초시장 스탬프',
+    '삼척' => '환선굴 스탬프',
+    '홍천' => '수타사 스탬프',
+    '횡성' => '횡성호수길 스탬프',
+    '영월' => '청령포 스탬프',
+    '평창' => '양떼목장 스탬프',
+    '정선' => '정선 5일장 스탬프',
+    '철원' => '고석정 스탬프',
+    '화천' => '산천어축제 스탬프',
+    '양구' => '두타연 스탬프',
+    '인제' => '자작나무숲 스탬프',
+    '고성' => '통일전망대 스탬프',
+    '양양' => '서피비치 스탬프',
+    _ => '여행 스탬프',
+  };
 }
 
 class _StampBookStatusBody extends StatelessWidget {
