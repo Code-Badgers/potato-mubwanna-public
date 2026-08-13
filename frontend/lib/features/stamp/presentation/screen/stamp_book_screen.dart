@@ -112,9 +112,15 @@ class _CityStampGridBody extends StatelessWidget {
             child: Row(
               children: [
                 IconButton.filledTonal(
-                  onPressed: () => context.go('/main/mypage'),
+                  onPressed: () {
+                    if (Navigator.of(context).canPop()) {
+                      context.pop();
+                      return;
+                    }
+                    context.go('/main/mypage');
+                  },
                   icon: const Icon(Icons.arrow_back_rounded),
-                  tooltip: '마이페이지로 돌아가기',
+                  tooltip: '이전 화면으로 돌아가기',
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.surface,
                     foregroundColor: AppColors.textPrimary,

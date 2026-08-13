@@ -394,7 +394,7 @@ class _QuickActionGrid extends StatelessWidget {
         icon: Icons.grid_view_rounded,
         label: '스탬프 투어',
         key: const ValueKey('mypage-quick-action-stamp-tour'),
-        onTap: () => context.go('/main/stamps/cities'),
+        onTap: () => context.push('/main/stamps/cities'),
       ),
     ];
 
