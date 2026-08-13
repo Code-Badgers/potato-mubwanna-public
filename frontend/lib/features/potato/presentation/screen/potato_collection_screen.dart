@@ -367,9 +367,9 @@ class _PotatoCollectionBody extends StatelessWidget {
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+              padding: const EdgeInsets.fromLTRB(0, 28, 0, 12),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   _RepresentativePotatoCard(
                     item: representative,
@@ -381,6 +381,7 @@ class _PotatoCollectionBody extends StatelessWidget {
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
                   ),
+                  const SizedBox(height: 8),
                   const _TodayStepCard(),
                 ],
               ),
