@@ -407,22 +407,14 @@ class _PotatoCollectionBody extends StatelessWidget {
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
                   ),
-                  _PotatoGrowthCard(
-                    potato: representative,
-                    progress: collection.totalCount == 0
-                        ? 0
-                        : (collection.acquiredCount / collection.totalCount)
-                            .clamp(0, 1),
-                    acquiredCount: collection.acquiredCount,
-                    totalCount: collection.totalCount,
-                    updating: updatingRepresentative,
-                    onShowDetail: representative == null
-                        ? onShowDefaultDetail
-                        : () => onShowDetail(representative),
-                    onChangeRepresentative: onChangeRepresentative,
-                  ),
                   const SizedBox(height: 8),
-                  const _TodayStepCard(),
+                  _TodayStepCard(
+                    growthProgress: collection.totalCount == 0
+                        ? 0.0
+                        : (collection.acquiredCount / collection.totalCount)
+                            .clamp(0, 1)
+                            .toDouble(),
+                  ),
                 ],
               ),
             ),
@@ -526,49 +518,16 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   onCare: _reactToCare,
                   enabled: potato == null || potato.acquired,
                 ),
+                const SizedBox(height: 12),
+                _PotatoMainActions(
+                  updating: widget.updating,
+                  onShowDetail: widget.onShowDetail,
+                  onChangeRepresentative: widget.onChangeRepresentative,
+                ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PotatoGrowthCard extends StatelessWidget {
-  const _PotatoGrowthCard({
-    required this.potato,
-    required this.progress,
-    required this.acquiredCount,
-    required this.totalCount,
-    required this.updating,
-    required this.onShowDetail,
-    required this.onChangeRepresentative,
-  });
-
-  final PotatoCollectionItem? potato;
-  final double progress;
-  final int acquiredCount;
-  final int totalCount;
-  final bool updating;
-  final VoidCallback? onShowDetail;
-  final VoidCallback onChangeRepresentative;
-
-  @override
-  Widget build(BuildContext context) {
-    final percent = (progress * 100).round();
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-      decoration: _cardDecoration(color: Colors.white),
-      child: _PotatoGrowthPanel(
-        potato: potato,
-        progress: progress,
-        progressLabel: '$percent%',
-        updating: updating,
-        onShowDetail: onShowDetail,
-        onChangeRepresentative: onChangeRepresentative,
       ),
     );
   }
@@ -747,6 +706,82 @@ class _PotatoCareStats extends StatelessWidget {
   }
 }
 
+class _PotatoMainActions extends StatelessWidget {
+  const _PotatoMainActions({
+    required this.updating,
+    required this.onShowDetail,
+    required this.onChangeRepresentative,
+  });
+
+  final bool updating;
+  final VoidCallback? onShowDetail;
+  final VoidCallback onChangeRepresentative;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onShowDetail,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _potatoDark,
+              side: BorderSide(
+                color: _potatoPrimary.withValues(alpha: 0.55),
+              ),
+              minimumSize: const Size.fromHeight(44),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            icon: const Icon(Icons.info_outline_rounded, size: 17),
+            label: const Text(
+              '정보 보기',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: FilledButton(
+            onPressed: updating ? null : onChangeRepresentative,
+            style: FilledButton.styleFrom(
+              backgroundColor: _potatoPrimary,
+              disabledBackgroundColor: const Color(0xFFBFE5CC),
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(44),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            child: updating
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    '대표 감자 변경',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PotatoLevelBadge extends StatelessWidget {
   const _PotatoLevelBadge({required this.level});
 
@@ -861,131 +896,6 @@ class _PotatoStatMeter extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PotatoGrowthPanel extends StatelessWidget {
-  const _PotatoGrowthPanel({
-    required this.potato,
-    required this.progress,
-    required this.progressLabel,
-    required this.updating,
-    required this.onShowDetail,
-    required this.onChangeRepresentative,
-  });
-
-  final PotatoCollectionItem? potato;
-  final double progress;
-  final String progressLabel;
-  final bool updating;
-  final VoidCallback? onShowDetail;
-  final VoidCallback onChangeRepresentative;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '성장 경험치',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ),
-              Text(
-                progressLabel,
-                style: const TextStyle(
-                  color: _potatoDark,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 9,
-              value: progress,
-              backgroundColor: const Color(0xFFE8E5DA),
-              valueColor: const AlwaysStoppedAnimation<Color>(_potatoPrimary),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onShowDetail,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _potatoDark,
-                    side: BorderSide(
-                      color: _potatoPrimary.withValues(alpha: 0.55),
-                    ),
-                    minimumSize: const Size.fromHeight(46),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  icon: const Icon(Icons.info_outline_rounded, size: 18),
-                  label: const Text(
-                    '정보 보기',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: updating ? null : onChangeRepresentative,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _potatoPrimary,
-                    disabledBackgroundColor: const Color(0xFFBFE5CC),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(46),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  child: updating
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          '대표 감자 변경',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
@@ -1142,7 +1052,9 @@ class _PotatoSpeechBubble extends StatelessWidget {
 }
 
 class _TodayStepCard extends ConsumerWidget {
-  const _TodayStepCard();
+  const _TodayStepCard({required this.growthProgress});
+
+  final double growthProgress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1158,6 +1070,7 @@ class _TodayStepCard extends ConsumerWidget {
               monthlyDistanceKm: 0,
               remainingDistanceKmForRepresentative: 0,
             ),
+        growthProgress: growthProgress,
       ),
       loading: () => const _TodayStepCardShell(
         child: SizedBox(
@@ -1756,14 +1669,20 @@ class _GrowthProgress extends StatelessWidget {
 }
 
 class _TodayStepCardContent extends StatelessWidget {
-  const _TodayStepCardContent({required this.summary});
+  const _TodayStepCardContent({
+    required this.summary,
+    required this.growthProgress,
+  });
 
   final PotatoGrowthSummary summary;
+  final double growthProgress;
 
   @override
   Widget build(BuildContext context) {
     final ratio = summary.stepRatio;
     final percent = (ratio * 100).round();
+    final growthRatio = growthProgress.clamp(0, 1).toDouble();
+    final growthPercent = (growthRatio * 100).round();
     final remainingDistance = summary.remainingDistanceKmForRepresentative;
     final stepLabel =
         '${_formatInt(summary.todaySteps)} / ${_formatInt(summary.dailyStepGoal)}걸음';
@@ -1855,8 +1774,69 @@ class _TodayStepCardContent extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 18),
+          _PotatoProgressLine(
+            label: '성장 경험치',
+            valueLabel: '$growthPercent%',
+            value: growthRatio,
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _PotatoProgressLine extends StatelessWidget {
+  const _PotatoProgressLine({
+    required this.label,
+    required this.valueLabel,
+    required this.value,
+  });
+
+  final String label;
+  final String valueLabel;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+            Text(
+              valueLabel,
+              style: const TextStyle(
+                color: _potatoDark,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            minHeight: 8,
+            value: value,
+            backgroundColor: const Color(0xFFE7EFE9),
+            valueColor: const AlwaysStoppedAnimation<Color>(_potatoPrimary),
+          ),
+        ),
+      ],
     );
   }
 }
