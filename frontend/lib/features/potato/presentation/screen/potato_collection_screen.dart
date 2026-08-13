@@ -954,22 +954,15 @@ class _PotatoArtSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final potato = item;
-    final imageUrl = potato?.imageUrl;
     final assetPath = potato == null
-        ? 'assets/potatoes/potato_unknown.png'
+        ? potatoDefaultAssetPath
         : potatoLocalAssetPath(potato.code);
 
-    final image = imageUrl != null && imageUrl.isNotEmpty
-        ? Image.network(
-            imageUrl,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
-          )
-        : Image.asset(
-            assetPath,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
-          );
+    final image = Image.asset(
+      assetPath,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => _PotatoArtFallback(locked: locked),
+    );
     final visualImage = locked && potato != null
         ? ColorFiltered(
             colorFilter: ColorFilter.mode(
