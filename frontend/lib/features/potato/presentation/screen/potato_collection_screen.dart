@@ -360,25 +360,34 @@ class _PotatoCollectionBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final representative = collection.representativePotato;
 
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        const SliverToBoxAdapter(child: _PotatoHeader()),
-        SliverToBoxAdapter(
-          child: _RepresentativePotatoCard(
-            item: representative,
-            acquiredCount: collection.acquiredCount,
-            totalCount: collection.totalCount,
-            updating: updatingRepresentative,
-            onShowDetail: representative == null
-                ? null
-                : () => onShowDetail(representative),
-            onChangeRepresentative: onChangeRepresentative,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _RepresentativePotatoCard(
+                    item: representative,
+                    acquiredCount: collection.acquiredCount,
+                    totalCount: collection.totalCount,
+                    updating: updatingRepresentative,
+                    onShowDetail: representative == null
+                        ? null
+                        : () => onShowDetail(representative),
+                    onChangeRepresentative: onChangeRepresentative,
+                  ),
+                  const _TodayStepCard(),
+                ],
+              ),
+            ),
           ),
-        ),
-        const SliverToBoxAdapter(child: _TodayStepCard()),
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-      ],
+        );
+      },
     );
   }
 }
@@ -416,42 +425,56 @@ class _RepresentativePotatoCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: _PotatoArtSlot(
-              item: potato,
-              locked: potato == null || !potato.acquired,
-              size: 270,
-              framed: false,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Center(
-            child: Text(
-              potato?.name ?? '새싹 감자',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+            child: SizedBox(
+              width: 294,
+              height: 278,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    top: 18,
+                    child: _PotatoArtSlot(
+                      item: potato,
+                      locked: potato == null || !potato.acquired,
+                      size: 264,
+                      framed: false,
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    child: _PotatoSpeechBubble(
+                      message: potato == null || !potato.acquired
+                          ? _defaultPotatoSpeech
+                          : _potatoSpeechFor(potato),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    child: Text(
+                      potato?.name ?? '새싹 감자',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           const SizedBox(height: 10),
-          Center(
-            child: _PotatoSpeechBubble(
-              message: potato == null || !potato.acquired
-                  ? _defaultPotatoSpeech
-                  : _potatoSpeechFor(potato),
-            ),
-          ),
           if (potato != null) ...[
             const SizedBox(height: 8),
             Wrap(
