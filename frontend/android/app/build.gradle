@@ -55,8 +55,6 @@ def missingReleaseConfiguration = new LinkedHashSet([
 def requiredLegalDartDefines = [
     'LEGAL_BUSINESS_NAME',
     'LEGAL_REPRESENTATIVE_NAME',
-    'LEGAL_BUSINESS_REGISTRATION_NUMBER',
-    'LEGAL_BUSINESS_ADDRESS',
     'LEGAL_CONTACT_EMAIL',
     'LEGAL_CONTACT_PHONE',
     'LEGAL_EFFECTIVE_DATE',

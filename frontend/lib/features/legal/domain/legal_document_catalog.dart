@@ -84,8 +84,6 @@ class LegalDocumentCatalog {
         items: [
           '상호: ${AppEnvironment.legalBusinessName}',
           '대표자: ${AppEnvironment.legalRepresentativeName}',
-          '사업자등록번호: ${AppEnvironment.legalBusinessRegistrationNumber}',
-          '주소: ${AppEnvironment.legalBusinessAddress}',
           '전화: ${AppEnvironment.legalContactPhone}',
           '이메일: ${AppEnvironment.legalContactEmail}',
         ],
@@ -110,7 +108,6 @@ class LegalDocumentCatalog {
         items: [
           '상호: ${AppEnvironment.legalBusinessName}',
           '대표자: ${AppEnvironment.legalRepresentativeName}',
-          '주소: ${AppEnvironment.legalBusinessAddress}',
           '전화: ${AppEnvironment.legalContactPhone}',
           '이메일: ${AppEnvironment.legalContactEmail}',
         ],
@@ -220,8 +217,6 @@ class LegalDocumentCatalog {
         ],
         items: [
           '대표자: ${AppEnvironment.legalRepresentativeName}',
-          '사업자등록번호: ${AppEnvironment.legalBusinessRegistrationNumber}',
-          '주소: ${AppEnvironment.legalBusinessAddress}',
         ],
       ),
       LegalDocumentSection(

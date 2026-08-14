@@ -11,6 +11,7 @@ class LegalDocumentScreen extends StatefulWidget {
     this.manageConsent = false,
     this.returnOnAccept = false,
     this.consentStore = const SharedPreferencesLegalConsentStore(),
+    this.onConsentChanged,
     super.key,
   });
 
@@ -18,6 +19,7 @@ class LegalDocumentScreen extends StatefulWidget {
   final bool manageConsent;
   final bool returnOnAccept;
   final LegalConsentStore consentStore;
+  final Future<void> Function()? onConsentChanged;
 
   @override
   State<LegalDocumentScreen> createState() => _LegalDocumentScreenState();
@@ -86,9 +88,11 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
       switch (widget.document.type) {
         case LegalDocumentType.locationServiceTerms:
           await widget.consentStore.setPersonalLocationConsent(nextValue);
+          await widget.onConsentChanged?.call();
           break;
         case LegalDocumentType.healthDataConsent:
           await widget.consentStore.setHealthDataConsent(nextValue);
+          await widget.onConsentChanged?.call();
           break;
         case LegalDocumentType.serviceTerms:
         case LegalDocumentType.privacyPolicy:

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.legal.application.LocationUsageLogService;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionGroup;
 import com.gamjamubwatna.mission.domain.MissionRepository;
@@ -47,6 +48,7 @@ class VisitVerificationServiceTest {
     private VisitPotatoAcquisitionService visitPotatoAcquisitionService;
     private MissionRepository missionRepository;
     private UserMissionRepository userMissionRepository;
+    private LocationUsageLogService locationUsageLogService;
     private VisitVerificationService visitVerificationService;
 
     @BeforeEach
@@ -58,6 +60,7 @@ class VisitVerificationServiceTest {
         visitPotatoAcquisitionService = mock(VisitPotatoAcquisitionService.class);
         missionRepository = mock(MissionRepository.class);
         userMissionRepository = mock(UserMissionRepository.class);
+        locationUsageLogService = mock(LocationUsageLogService.class);
         visitVerificationService = new VisitVerificationService(
             userRepository,
             touristSpotRepository,
@@ -67,6 +70,7 @@ class VisitVerificationServiceTest {
             visitPotatoAcquisitionService,
             missionRepository,
             userMissionRepository,
+            locationUsageLogService,
             Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
         );
         when(missionRepository.findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(any(), any()))
@@ -118,6 +122,11 @@ class VisitVerificationServiceTest {
         verify(userVisitRepository).save(any(UserVisit.class));
         verify(visitStampIssuanceService).issueStamp(any(), any(), any());
         verify(visitPotatoAcquisitionService).acquireForVisit(any(), any(), any());
+        verify(locationUsageLogService).recordVisitVerification(
+            1L,
+            Instant.parse("2026-07-22T00:00:00Z"),
+            true
+        );
     }
 
     @Test
@@ -199,6 +208,11 @@ class VisitVerificationServiceTest {
         ))
             .isInstanceOf(VisitVerificationException.class)
             .hasMessage("방문 인증 가능 범위를 벗어났습니다.");
+        verify(locationUsageLogService).recordVisitVerification(
+            1L,
+            Instant.parse("2026-07-22T00:00:00Z"),
+            false
+        );
     }
 
     @Test

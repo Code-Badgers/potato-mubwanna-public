@@ -1,6 +1,7 @@
 package com.gamjamubwatna.user.api;
 
 import com.gamjamubwatna.auth.api.AuthApiResponse;
+import com.gamjamubwatna.mission.application.MissionUploadException;
 import com.gamjamubwatna.user.application.UserAccountService;
 import com.gamjamubwatna.user.application.UserActivitySummaryService;
 import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
@@ -72,6 +73,9 @@ public class UserController {
         } catch (UserProfileAuthenticationException exception) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        } catch (MissionUploadException exception) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(AuthApiResponse.failure(exception.getMessage()));
         }
     }
 

@@ -6,6 +6,7 @@ import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/push/application/push_notification_service.dart';
+import 'package:potato_mubwanna/features/legal/data/legal_consent_sync_service.dart';
 
 void main() {
   test('keeps auth idle while web login redirects to Kakao', () async {
@@ -24,10 +25,12 @@ void main() {
     final service = _CallbackKakaoLoginService();
     final repository = _RecordingAuthRepository();
     final pushLifecycle = _RecordingPushTokenLifecycle();
+    final legalConsentLifecycle = _RecordingLegalConsentLifecycle();
     final controller = AuthController(
       kakaoLoginService: service,
       authRepository: repository,
       pushTokenLifecycle: pushLifecycle,
+      legalConsentLifecycle: legalConsentLifecycle,
     );
 
     final loggedIn = await controller.completePendingKakaoLogin();
@@ -38,6 +41,7 @@ void main() {
     expect(repository.redirectUri, 'http://localhost:54631/');
     expect(service.cleared, isTrue);
     expect(pushLifecycle.synchronizeCalls, 1);
+    expect(legalConsentLifecycle.synchronizeCalls, 1);
   });
 
   test('resets auth state after the remote logout request fails', () async {
@@ -172,5 +176,14 @@ class _RecordingPushTokenLifecycle implements PushTokenLifecycle {
   @override
   Future<void> unregister() async {
     unregisterCalls++;
+  }
+}
+
+class _RecordingLegalConsentLifecycle implements LegalConsentLifecycle {
+  int synchronizeCalls = 0;
+
+  @override
+  Future<void> synchronize() async {
+    synchronizeCalls++;
   }
 }

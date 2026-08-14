@@ -122,5 +122,10 @@ class MissionUploadServiceTest {
         public StoredMissionPhotoFile read(String uploadKey) {
             throw new UnsupportedOperationException("MissionUploadServiceTest does not read files");
         }
+
+        @Override
+        public void deleteAllByUserId(Long userId) {
+            throw new UnsupportedOperationException("MissionUploadServiceTest does not delete files");
+        }
     }
 }

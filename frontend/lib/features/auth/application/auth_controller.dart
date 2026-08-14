@@ -7,6 +7,8 @@ import '../../../core/storage/token_storage.dart';
 import '../../push/application/push_messaging_client.dart';
 import '../../push/application/push_notification_service.dart';
 import '../../push/data/push_token_repository.dart';
+import '../../legal/data/legal_consent_store.dart';
+import '../../legal/data/legal_consent_sync_service.dart';
 import '../data/auth_repository.dart';
 import '../data/kakao_login_service.dart';
 
@@ -52,11 +54,19 @@ final authRepositoryProvider = Provider<AuthRepository>(
   ),
 );
 
+final legalConsentSyncServiceProvider = Provider<LegalConsentSyncService>(
+  (ref) => LegalConsentSyncService(
+    dio: ref.watch(dioClientProvider).dio,
+    store: ref.watch(legalConsentStoreProvider),
+  ),
+);
+
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
     kakaoLoginService: ref.watch(kakaoLoginServiceProvider),
     authRepository: ref.watch(authRepositoryProvider),
     pushTokenLifecycle: ref.watch(pushNotificationServiceProvider),
+    legalConsentLifecycle: ref.watch(legalConsentSyncServiceProvider),
   ),
 );
 
@@ -65,14 +75,18 @@ class AuthController extends StateNotifier<AuthState> {
     required KakaoLoginService kakaoLoginService,
     required AuthRepository authRepository,
     PushTokenLifecycle pushTokenLifecycle = const NoopPushTokenLifecycle(),
+    LegalConsentLifecycle legalConsentLifecycle =
+        const NoopLegalConsentLifecycle(),
   })  : _kakaoLoginService = kakaoLoginService,
         _authRepository = authRepository,
         _pushTokenLifecycle = pushTokenLifecycle,
+        _legalConsentLifecycle = legalConsentLifecycle,
         super(const AuthState.idle());
 
   final KakaoLoginService _kakaoLoginService;
   final AuthRepository _authRepository;
   final PushTokenLifecycle _pushTokenLifecycle;
+  final LegalConsentLifecycle _legalConsentLifecycle;
 
   Future<bool> loginWithKakao() async {
     state = const AuthState.loading();
@@ -86,6 +100,7 @@ class AuthController extends StateNotifier<AuthState> {
           (result as KakaoAccessTokenLoginResult).accessToken;
       await _authRepository.loginWithKakaoToken(kakaoAccessToken);
       await _synchronizePushToken();
+      await _synchronizeLegalConsent();
       state = const AuthState.authenticated();
       return true;
     } on KakaoLoginUnsupportedException catch (error) {
@@ -111,6 +126,7 @@ class AuthController extends StateNotifier<AuthState> {
         redirectUri: callback.redirectUri,
       );
       await _synchronizePushToken();
+      await _synchronizeLegalConsent();
       state = const AuthState.authenticated();
       return true;
     } on KakaoLoginUnsupportedException catch (error) {
@@ -131,6 +147,7 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       await _authRepository.refreshSession();
       await _synchronizePushToken();
+      await _synchronizeLegalConsent();
       state = const AuthState.authenticated();
       return true;
     } catch (_) {
@@ -172,6 +189,14 @@ class AuthController extends StateNotifier<AuthState> {
       await _pushTokenLifecycle.synchronize();
     } catch (_) {
       // 푸시 비활성화나 일시 장애가 로그인 성공을 막지 않게 한다.
+    }
+  }
+
+  Future<void> _synchronizeLegalConsent() async {
+    try {
+      await _legalConsentLifecycle.synchronize();
+    } catch (_) {
+      // 네트워크 장애가 로그인을 막지 않게 하고 다음 세션에서 재시도한다.
     }
   }
 
