@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
+import com.gamjamubwatna.mission.application.MissionUploadException;
 import com.gamjamubwatna.user.application.UserAccountService;
 import com.gamjamubwatna.user.application.UserActivitySummaryService;
 import com.gamjamubwatna.user.application.UserProfileAuthenticationException;
@@ -142,5 +143,16 @@ class UserControllerTest {
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("인증 정보를 확인할 수 없습니다."));
+    }
+
+    @Test
+    void withdrawCanBeRetriedWhenMissionPhotoDeletionFails() throws Exception {
+        doThrow(new MissionUploadException("미션 사진 삭제에 실패했습니다."))
+            .when(userAccountService).withdraw(1L);
+
+        mockMvc.perform(delete("/users/me").with(user("user:1")).with(csrf()))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("미션 사진 삭제에 실패했습니다."));
     }
 }

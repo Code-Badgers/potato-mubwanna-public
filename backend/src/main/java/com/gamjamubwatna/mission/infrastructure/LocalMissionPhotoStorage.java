@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -60,6 +61,26 @@ public class LocalMissionPhotoStorage implements MissionPhotoStorage {
             return new StoredMissionPhotoFile(uploadKey, Files.readAllBytes(target));
         } catch (IOException exception) {
             throw new MissionUploadException("이미지 파일을 읽지 못했습니다.");
+        }
+    }
+
+    @Override
+    public void deleteAllByUserId(Long userId) {
+        if (userId == null || userId < 1) {
+            throw new MissionUploadException("사용자 사진 저장 경로를 확인할 수 없습니다.");
+        }
+
+        Path userDirectory = targetPath("mission-uploads/" + userId);
+        if (!Files.exists(userDirectory)) {
+            return;
+        }
+
+        try (var paths = Files.walk(userDirectory)) {
+            for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+        } catch (IOException exception) {
+            throw new MissionUploadException("회원 탈퇴를 위한 미션 사진 삭제에 실패했습니다.");
         }
     }
 

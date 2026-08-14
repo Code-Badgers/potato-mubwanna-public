@@ -7,4 +7,6 @@ public interface MissionPhotoStorage {
     StoredMissionPhoto store(String uploadKey, String fileName, String contentType, MultipartFile file);
 
     StoredMissionPhotoFile read(String uploadKey);
+
+    void deleteAllByUserId(Long userId);
 }

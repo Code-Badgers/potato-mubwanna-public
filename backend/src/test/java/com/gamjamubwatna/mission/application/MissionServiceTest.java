@@ -937,5 +937,10 @@ class MissionServiceTest {
             }
             return new StoredMissionPhotoFile(uploadKey, bytes);
         }
+
+        @Override
+        public void deleteAllByUserId(Long userId) {
+            files.keySet().removeIf(key -> key.startsWith("mission-uploads/" + userId + "/"));
+        }
     }
 }

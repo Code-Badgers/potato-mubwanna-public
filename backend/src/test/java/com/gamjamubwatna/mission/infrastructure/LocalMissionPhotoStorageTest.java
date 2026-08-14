@@ -62,4 +62,24 @@ class LocalMissionPhotoStorageTest {
             .isInstanceOf(MissionUploadException.class)
             .hasMessage("이미지 저장 경로를 확인할 수 없습니다.");
     }
+
+    @Test
+    void deletesOnlyTheWithdrawnUsersMissionPhotos() throws Exception {
+        LocalMissionPhotoStorage storage = new LocalMissionPhotoStorage(tempDirectory.toString());
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "receipt.jpg",
+            "image/jpeg",
+            new byte[] {1, 2, 3}
+        );
+        storage.store("mission-uploads/1/1002/first.jpg", "first.jpg", "image/jpeg", file);
+        storage.store("mission-uploads/1/1003/second.jpg", "second.jpg", "image/jpeg", file);
+        storage.store("mission-uploads/2/1002/other.jpg", "other.jpg", "image/jpeg", file);
+
+        storage.deleteAllByUserId(1L);
+
+        assertThat(Files.exists(tempDirectory.resolve("mission-uploads/1"))).isFalse();
+        assertThat(Files.exists(tempDirectory.resolve("mission-uploads/2/1002/other.jpg"))).isTrue();
+        storage.deleteAllByUserId(1L);
+    }
 }

@@ -2,6 +2,7 @@ package com.gamjamubwatna.visit.application;
 
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.legal.application.LocationUsageLogService;
 import com.gamjamubwatna.mission.domain.Mission;
 import com.gamjamubwatna.mission.domain.MissionRepository;
 import com.gamjamubwatna.mission.domain.UserMissionRepository;
@@ -34,6 +35,7 @@ public class VisitVerificationService {
     private final VisitPotatoAcquisitionService visitPotatoAcquisitionService;
     private final MissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
+    private final LocationUsageLogService locationUsageLogService;
     private final Clock clock;
 
     @Autowired
@@ -45,7 +47,8 @@ public class VisitVerificationService {
         VisitStampIssuanceService visitStampIssuanceService,
         VisitPotatoAcquisitionService visitPotatoAcquisitionService,
         MissionRepository missionRepository,
-        UserMissionRepository userMissionRepository
+        UserMissionRepository userMissionRepository,
+        LocationUsageLogService locationUsageLogService
     ) {
         this(
             userRepository,
@@ -56,6 +59,7 @@ public class VisitVerificationService {
             visitPotatoAcquisitionService,
             missionRepository,
             userMissionRepository,
+            locationUsageLogService,
             Clock.systemUTC()
         );
     }
@@ -69,6 +73,7 @@ public class VisitVerificationService {
         VisitPotatoAcquisitionService visitPotatoAcquisitionService,
         MissionRepository missionRepository,
         UserMissionRepository userMissionRepository,
+        LocationUsageLogService locationUsageLogService,
         Clock clock
     ) {
         this.userRepository = userRepository;
@@ -79,6 +84,7 @@ public class VisitVerificationService {
         this.visitPotatoAcquisitionService = visitPotatoAcquisitionService;
         this.missionRepository = missionRepository;
         this.userMissionRepository = userMissionRepository;
+        this.locationUsageLogService = locationUsageLogService;
         this.clock = clock;
     }
 
@@ -99,11 +105,16 @@ public class VisitVerificationService {
             request.latitude(),
             request.longitude()
         );
-        if (!visitDistancePolicy.isWithinRadius(distanceMeters, spot.getVerificationRadiusMeter())) {
+        boolean isWithinRadius = visitDistancePolicy.isWithinRadius(
+            distanceMeters,
+            spot.getVerificationRadiusMeter()
+        );
+        Instant verifiedAt = Instant.now(clock);
+        locationUsageLogService.recordVisitVerification(userId, verifiedAt, isWithinRadius);
+        if (!isWithinRadius) {
             throw new VisitVerificationException("방문 인증 가능 범위를 벗어났습니다.");
         }
 
-        Instant verifiedAt = Instant.now(clock);
         userVisitRepository.save(new UserVisit(user, spot, distanceMeters, verifiedAt));
         boolean stampIssued = visitStampIssuanceService.issueStamp(user, spot, verifiedAt);
         PotatoAcquisitionResult potatoAcquisition =
