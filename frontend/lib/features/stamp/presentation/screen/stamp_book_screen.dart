@@ -174,16 +174,18 @@ class _PassportSummaryCard extends StatelessWidget {
               size: 25,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '강원 여행 패스포트',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 20,
+                    fontSize: 17,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
                   ),
@@ -191,9 +193,11 @@ class _PassportSummaryCard extends StatelessWidget {
                 SizedBox(height: 4),
                 Text(
                   '명소에서 인증하면 스탬프가 채워져요',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0,
                   ),
@@ -201,9 +205,9 @@ class _PassportSummaryCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
               color: AppColors.surface.withValues(alpha: 0.86),
               borderRadius: BorderRadius.circular(AppDimens.pillRadius),
@@ -212,7 +216,7 @@ class _PassportSummaryCard extends StatelessWidget {
               '$acquiredCount / $totalCount',
               style: const TextStyle(
                 color: AppColors.primaryDark,
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
               ),
@@ -500,7 +504,7 @@ class _CityStampTile extends StatelessWidget {
                     color: acquired
                         ? AppColors.textPrimary
                         : AppColors.textSecondary,
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
@@ -514,7 +518,7 @@ class _CityStampTile extends StatelessWidget {
                     color: acquired
                         ? AppColors.primaryDark
                         : AppColors.textSecondary,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
                   ),
@@ -543,11 +547,13 @@ class _CityStampTile extends StatelessWidget {
               ),
               child: Text(
                 acquired ? 'STAMPED' : 'BLANK',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: acquired
                       ? AppColors.primaryDark
                       : AppColors.textSecondary,
-                  fontSize: 9,
+                  fontSize: 8,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
