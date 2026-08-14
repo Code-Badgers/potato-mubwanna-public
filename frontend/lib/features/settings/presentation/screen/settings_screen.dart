@@ -186,6 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         onWithdraw: _confirmAccountWithdrawal,
                       ),
                     ),
+                  const SliverToBoxAdapter(child: _LegalSettingsSection()),
                 ],
               )
             : _errorMessage != null
@@ -219,6 +220,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 onWithdraw: _confirmAccountWithdrawal,
                               ),
                             ),
+                          const SliverToBoxAdapter(
+                            child: _LegalSettingsSection(),
+                          ),
                         ],
                       ),
       ),
@@ -565,6 +569,53 @@ class _AccountSettingsSection extends StatelessWidget {
               label: '회원 탈퇴',
               destructive: true,
               onTap: onWithdraw,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegalSettingsSection extends StatelessWidget {
+  const _LegalSettingsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      child: Material(
+        color: AppColors.surface,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: AppColors.line),
+        ),
+        child: Column(
+          children: [
+            _SettingsActionRow(
+              icon: Icons.description_outlined,
+              label: '서비스 이용약관',
+              onTap: () => context.push('/legal/service-terms'),
+            ),
+            const Divider(height: 1, color: AppColors.line, indent: 58),
+            _SettingsActionRow(
+              icon: Icons.shield_outlined,
+              label: '개인정보처리방침',
+              onTap: () => context.push('/legal/privacy-policy'),
+            ),
+            const Divider(height: 1, color: AppColors.line, indent: 58),
+            _SettingsActionRow(
+              icon: Icons.location_on_outlined,
+              label: '위치정보 동의 관리',
+              onTap: () => context.push('/legal/location-terms?manage=true'),
+            ),
+            const Divider(height: 1, color: AppColors.line, indent: 58),
+            _SettingsActionRow(
+              icon: Icons.directions_walk_rounded,
+              label: '걸음 정보 동의 관리',
+              onTap: () =>
+                  context.push('/legal/health-data-consent?manage=true'),
             ),
           ],
         ),

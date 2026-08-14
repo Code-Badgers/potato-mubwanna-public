@@ -31,6 +31,14 @@ flutter analyze
 flutter test
 ```
 
+### Legal notice configuration
+
+Copy `.env.example` to the ignored `frontend/.env` and fill every `LEGAL_*`
+value before a release build. The real registration number, home-office
+address, phone number, and email must not be committed. A release build must
+receive the file through `--dart-define-from-file=frontend/.env`; Gradle rejects
+the build when a required legal value is missing.
+
 ### Kakao Map on a Windows Android emulator
 
 The Kakao Maps native engine included in this project does not provide an

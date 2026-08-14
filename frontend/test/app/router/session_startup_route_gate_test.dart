@@ -36,6 +36,17 @@ void main() {
     expect(gate.redirectBeforeSessionStartup('/startup?source=push'), isNull);
   });
 
+  test('allows legal consent and document screens during startup', () {
+    final gate = SessionStartupRouteGate();
+
+    expect(gate.redirectBeforeSessionStartup('/legal-consent'), isNull);
+    expect(gate.redirectBeforeSessionStartup('/legal/service-terms'), isNull);
+    expect(
+      gate.redirectBeforeSessionStartup('/legal/privacy-policy?from=consent'),
+      isNull,
+    );
+  });
+
   test('rejects an external pending location', () {
     final gate = SessionStartupRouteGate();
 

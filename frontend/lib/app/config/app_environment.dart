@@ -38,6 +38,41 @@ class AppEnvironment {
     'FIREBASE_PROJECT_ID',
   );
 
+  static const legalBusinessName = String.fromEnvironment(
+    'LEGAL_BUSINESS_NAME',
+    defaultValue: '운영자 이름 입력',
+  );
+
+  static const legalRepresentativeName = String.fromEnvironment(
+    'LEGAL_REPRESENTATIVE_NAME',
+    defaultValue: '운영자 이름 입력',
+  );
+
+  static const legalBusinessRegistrationNumber = String.fromEnvironment(
+    'LEGAL_BUSINESS_REGISTRATION_NUMBER',
+    defaultValue: '출시 설정 필요',
+  );
+
+  static const legalBusinessAddress = String.fromEnvironment(
+    'LEGAL_BUSINESS_ADDRESS',
+    defaultValue: '출시 설정 필요',
+  );
+
+  static const legalContactEmail = String.fromEnvironment(
+    'LEGAL_CONTACT_EMAIL',
+    defaultValue: '출시 설정 필요',
+  );
+
+  static const legalContactPhone = String.fromEnvironment(
+    'LEGAL_CONTACT_PHONE',
+    defaultValue: '출시 설정 필요',
+  );
+
+  static const legalEffectiveDate = String.fromEnvironment(
+    'LEGAL_EFFECTIVE_DATE',
+    defaultValue: '2026-08-14',
+  );
+
   static bool get hasKakaoLoginKey => kakaoNativeAppKey.isNotEmpty;
 
   static bool get hasFirebaseMessagingConfig {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:potato_mubwanna/core/permissions/permission_service.dart';
 import 'package:potato_mubwanna/features/onboarding/data/onboarding_status_store.dart';
+import 'package:potato_mubwanna/features/legal/data/legal_consent_store.dart';
 import 'package:potato_mubwanna/features/onboarding/presentation/screen/onboarding_screen.dart';
 import 'package:potato_mubwanna/features/onboarding/presentation/screen/permission_guide_screen.dart';
 
@@ -169,6 +170,7 @@ GoRouter _permissionRouter(PermissionService permissionService) {
         path: '/permissions',
         builder: (_, __) => PermissionGuideScreen(
           permissionService: permissionService,
+          legalConsentStore: _AcceptedLegalConsentStore(),
         ),
       ),
       GoRoute(
@@ -179,6 +181,26 @@ GoRouter _permissionRouter(PermissionService permissionService) {
       ),
     ],
   );
+}
+
+class _AcceptedLegalConsentStore implements LegalConsentStore {
+  @override
+  Future<void> acceptRequiredDocuments() async {}
+
+  @override
+  Future<bool> hasAcceptedHealthData() async => true;
+
+  @override
+  Future<bool> hasAcceptedPersonalLocation() async => true;
+
+  @override
+  Future<bool> hasAcceptedRequiredDocuments() async => true;
+
+  @override
+  Future<void> setHealthDataConsent(bool accepted) async {}
+
+  @override
+  Future<void> setPersonalLocationConsent(bool accepted) async {}
 }
 
 class _FakePermissionService extends PermissionService {

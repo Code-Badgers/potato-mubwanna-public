@@ -252,16 +252,23 @@ class _VisitVerificationBar extends ConsumerWidget {
     LocationFailure error,
   ) {
     final settingsTarget = error.settingsTarget;
+    final needsConsent = error.type == LocationFailureType.consentRequired;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(error.message),
-        action: settingsTarget == null
+        action: !needsConsent && settingsTarget == null
             ? null
             : SnackBarAction(
                 label: error.actionLabel ?? '설정',
                 onPressed: () {
+                  if (needsConsent) {
+                    context.push(
+                      '/legal/location-terms?manage=true&returnOnAccept=true',
+                    );
+                    return;
+                  }
                   ref.read(locationServiceProvider).openSettings(
-                        settingsTarget,
+                        settingsTarget!,
                       );
                 },
               ),

@@ -26,6 +26,12 @@ class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
 
     final fallbackRoute =
         await ref.read(sessionStartupCoordinatorProvider).resolveInitialRoute();
+    if (fallbackRoute == '/legal-consent') {
+      if (mounted) {
+        context.go(fallbackRoute);
+      }
+      return;
+    }
     final route = sessionStartupRouteGate.completeSessionStartup(
       fallbackRoute: fallbackRoute,
       isAuthenticated:

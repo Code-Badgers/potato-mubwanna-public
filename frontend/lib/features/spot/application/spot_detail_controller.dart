@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/network/api_exception.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../legal/data/legal_consent_store.dart';
 import '../../potato/application/potato_collection_controller.dart';
 import '../../stamp/application/stamp_book_controller.dart';
 import '../data/spot_detail_repository.dart';
@@ -11,7 +12,10 @@ import '../domain/spot_detail.dart';
 import '../domain/visit_verification.dart';
 
 final locationServiceProvider = Provider<LocationService>(
-  (ref) => LocationService(),
+  (ref) => LocationService(
+    hasPersonalLocationConsent:
+        ref.watch(legalConsentStoreProvider).hasAcceptedPersonalLocation,
+  ),
 );
 
 final spotDetailRepositoryProvider = Provider<SpotDetailRepository>(

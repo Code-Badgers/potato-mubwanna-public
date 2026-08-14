@@ -3,6 +3,25 @@ import 'package:potato_mubwanna/features/auth/application/session_startup_coordi
 import 'package:potato_mubwanna/features/push/domain/push_message.dart';
 
 void main() {
+  test('requires current legal documents before reading session data',
+      () async {
+    var tokenReads = 0;
+    final coordinator = _coordinator(
+      hasAcceptedRequiredDocuments: false,
+      hasCompletedOnboarding: true,
+      refreshToken: 'stored-refresh-token',
+      onReadRefreshToken: () => tokenReads++,
+    );
+
+    expect(await coordinator.resolveInitialRoute(), '/legal-consent');
+    expect(tokenReads, 0);
+    expect(
+      await coordinator.resolveInitialRouteAfterLegalConsent(),
+      '/main/map',
+    );
+    expect(tokenReads, 1);
+  });
+
   test('restores a stored session before opening an initial push route',
       () async {
     final events = <String>[];
@@ -146,6 +165,7 @@ void main() {
 
 SessionStartupCoordinator _coordinator({
   bool hasKakaoAuthorizationCallback = false,
+  bool hasAcceptedRequiredDocuments = true,
   required bool hasCompletedOnboarding,
   required String? refreshToken,
   bool refreshSessionResult = true,
@@ -153,12 +173,17 @@ SessionStartupCoordinator _coordinator({
   void Function()? onUnregisterPushToken,
   void Function()? onClearLocalTokens,
   void Function()? onReadInitialPushMessage,
+  void Function()? onReadRefreshToken,
 }) {
   return SessionStartupCoordinator(
     hasKakaoAuthorizationCallback: hasKakaoAuthorizationCallback,
+    hasAcceptedRequiredDocuments: () async => hasAcceptedRequiredDocuments,
     hasCompletedOnboarding: () async => hasCompletedOnboarding,
     markOnboardingCompleted: () async {},
-    readRefreshToken: () async => refreshToken,
+    readRefreshToken: () async {
+      onReadRefreshToken?.call();
+      return refreshToken;
+    },
     refreshSession: () async {
       onRefreshSession?.call();
       return refreshSessionResult;

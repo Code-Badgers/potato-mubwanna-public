@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
+import '../../legal/data/legal_consent_store.dart';
+import '../data/legal_consent_step_count_reader.dart';
 import '../data/pending_potato_growth_store.dart';
 import '../data/potato_repository.dart';
 import '../domain/potato_collection.dart';
@@ -11,7 +13,10 @@ final potatoRepositoryProvider = Provider<PotatoRepository>(
 );
 
 final stepCountReaderProvider = Provider<StepCountReader>(
-  (ref) => createStepCountReader(),
+  (ref) => LegalConsentStepCountReader(
+    delegate: createStepCountReader(),
+    consentStore: ref.watch(legalConsentStoreProvider),
+  ),
 );
 
 final pendingPotatoGrowthStoreProvider = Provider<PendingPotatoGrowthStore>(
