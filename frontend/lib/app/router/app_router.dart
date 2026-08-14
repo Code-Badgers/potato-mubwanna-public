@@ -193,10 +193,24 @@ GoRoute _legalDocumentRoute({
 }) {
   return GoRoute(
     path: path,
-    builder: (context, state) => LegalDocumentScreen(
-      document: LegalDocumentCatalog.document(type),
-      manageConsent: state.queryParameters['manage'] == 'true',
-      returnOnAccept: state.queryParameters['returnOnAccept'] == 'true',
+    builder: (context, state) => Consumer(
+      builder: (context, ref, child) => LegalDocumentScreen(
+        document: LegalDocumentCatalog.document(type),
+        manageConsent: state.queryParameters['manage'] == 'true',
+        returnOnAccept: state.queryParameters['returnOnAccept'] == 'true',
+        consentStore: ref.read(legalConsentStoreProvider),
+        onConsentChanged: () async {
+          if (ref.read(authControllerProvider).status !=
+              AuthStatus.authenticated) {
+            return;
+          }
+          try {
+            await ref.read(legalConsentSyncServiceProvider).synchronize();
+          } catch (_) {
+            // 로컬 철회는 즉시 적용하고 서버는 다음 세션에서 다시 동기화한다.
+          }
+        },
+      ),
     ),
   );
 }

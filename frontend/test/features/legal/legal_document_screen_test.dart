@@ -13,6 +13,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final store = _MutableLegalConsentStore();
+    var synchronizationCalls = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -22,6 +23,7 @@ void main() {
           ),
           manageConsent: true,
           consentStore: store,
+          onConsentChanged: () async => synchronizationCalls++,
         ),
       ),
     );
@@ -35,6 +37,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(store.locationAccepted, isTrue);
+    expect(synchronizationCalls, 1);
     expect(find.text('동의 철회하기'), findsOneWidget);
   });
 

@@ -48,16 +48,6 @@ class AppEnvironment {
     defaultValue: '운영자 이름 입력',
   );
 
-  static const legalBusinessRegistrationNumber = String.fromEnvironment(
-    'LEGAL_BUSINESS_REGISTRATION_NUMBER',
-    defaultValue: '출시 설정 필요',
-  );
-
-  static const legalBusinessAddress = String.fromEnvironment(
-    'LEGAL_BUSINESS_ADDRESS',
-    defaultValue: '출시 설정 필요',
-  );
-
   static const legalContactEmail = String.fromEnvironment(
     'LEGAL_CONTACT_EMAIL',
     defaultValue: '출시 설정 필요',
