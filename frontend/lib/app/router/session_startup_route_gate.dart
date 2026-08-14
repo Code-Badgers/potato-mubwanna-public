@@ -28,7 +28,10 @@ class SessionStartupRouteGate {
   }
 
   bool _isStartupLocation(String location) {
-    return Uri.tryParse(location)?.path == '/startup';
+    final path = Uri.tryParse(location)?.path;
+    return path == '/startup' ||
+        path == '/legal-consent' ||
+        path?.startsWith('/legal/') == true;
   }
 
   String? _safeLocalLocation(String location) {

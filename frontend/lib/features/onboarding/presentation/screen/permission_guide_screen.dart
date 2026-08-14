@@ -4,16 +4,19 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/permissions/permission_service.dart';
+import '../../../legal/data/legal_consent_store.dart';
 
 const _permissionButtonColor = Color(0xFF56C787);
 
 class PermissionGuideScreen extends StatefulWidget {
   const PermissionGuideScreen({
     this.permissionService = const PermissionService(),
+    this.legalConsentStore = const SharedPreferencesLegalConsentStore(),
     super.key,
   });
 
   final PermissionService permissionService;
+  final LegalConsentStore legalConsentStore;
 
   @override
   State<PermissionGuideScreen> createState() => _PermissionGuideScreenState();
@@ -38,6 +41,24 @@ class _PermissionGuideScreenState extends State<PermissionGuideScreen> {
   bool _canContinueWithoutPermission = false;
 
   Future<void> _confirmPermissions() async {
+    final hasLocationConsent =
+        await widget.legalConsentStore.hasAcceptedPersonalLocation();
+    if (!mounted) {
+      return;
+    }
+    if (!hasLocationConsent) {
+      final accepted = await context.push<bool>(
+        '/legal/location-terms?manage=true&returnOnAccept=true',
+      );
+      if (accepted != true || !mounted) {
+        setState(() {
+          _permissionMessage = '위치정보 동의 없이 둘러볼 수 있지만 주변 탐색과 방문 인증은 제한됩니다.';
+          _canContinueWithoutPermission = true;
+        });
+        return;
+      }
+    }
+
     if (!widget.permissionService.supportsRuntimePermissions) {
       context.go('/main/map');
       return;

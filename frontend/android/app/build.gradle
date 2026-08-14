@@ -34,13 +34,37 @@ def releaseKeyPassword = System.getenv('ANDROID_KEY_PASSWORD') ?: ''
 def isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
     taskName.toLowerCase().contains('release')
 }
-def missingReleaseConfiguration = [
+def dartDefines = [:]
+if (project.hasProperty('dart-defines')) {
+    project.property('dart-defines').split(',').each { encodedDefine ->
+        def decodedDefine = new String(encodedDefine.decodeBase64(), 'UTF-8')
+        def separator = decodedDefine.indexOf('=')
+        if (separator > 0) {
+            dartDefines[decodedDefine.substring(0, separator)] =
+                decodedDefine.substring(separator + 1)
+        }
+    }
+}
+def missingReleaseConfiguration = new LinkedHashSet([
     'KAKAO_NATIVE_APP_KEY': kakaoNativeAppKey,
     'ANDROID_KEYSTORE_PATH': releaseKeystorePath,
     'ANDROID_KEYSTORE_PASSWORD': releaseKeystorePassword,
     'ANDROID_KEY_ALIAS': releaseKeyAlias,
     'ANDROID_KEY_PASSWORD': releaseKeyPassword,
-].findAll { _, value -> value.trim().isEmpty() }.keySet()
+].findAll { _, value -> value.trim().isEmpty() }.keySet())
+def requiredLegalDartDefines = [
+    'LEGAL_BUSINESS_NAME',
+    'LEGAL_REPRESENTATIVE_NAME',
+    'LEGAL_BUSINESS_REGISTRATION_NUMBER',
+    'LEGAL_BUSINESS_ADDRESS',
+    'LEGAL_CONTACT_EMAIL',
+    'LEGAL_CONTACT_PHONE',
+    'LEGAL_EFFECTIVE_DATE',
+]
+def missingLegalDartDefines = requiredLegalDartDefines.findAll { name ->
+    (dartDefines[name] ?: '').trim().isEmpty()
+}
+missingReleaseConfiguration.addAll(missingLegalDartDefines)
 
 if (isReleaseTaskRequested && !missingReleaseConfiguration.isEmpty()) {
     throw new GradleException(

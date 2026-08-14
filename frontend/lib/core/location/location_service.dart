@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 enum LocationFailureType {
+  consentRequired,
   serviceDisabled,
   permissionDenied,
   permissionDeniedForever,
@@ -28,7 +29,21 @@ class LocationFailure implements Exception {
 }
 
 class LocationService {
+  LocationService({
+    Future<bool> Function()? hasPersonalLocationConsent,
+  }) : _hasPersonalLocationConsent =
+            hasPersonalLocationConsent ?? _acceptExistingLocationCall;
+
+  final Future<bool> Function() _hasPersonalLocationConsent;
+
   Future<Position> getCurrentPosition() async {
+    if (!await _hasPersonalLocationConsent()) {
+      throw const LocationFailure(
+        type: LocationFailureType.consentRequired,
+        message: '방문 인증을 하려면 먼저 개인위치정보 이용에 동의해주세요.',
+        actionLabel: '동의하기',
+      );
+    }
     await _ensureLocationServiceEnabled();
     await _ensurePermissionGranted();
 
@@ -105,3 +120,5 @@ class LocationService {
     }
   }
 }
+
+Future<bool> _acceptExistingLocationCall() async => true;

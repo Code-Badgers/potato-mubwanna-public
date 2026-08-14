@@ -3,12 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/application/session_startup_coordinator.dart';
 import '../../features/auth/presentation/screen/login_screen.dart';
 import '../../features/auth/presentation/screen/session_startup_screen.dart';
 import '../../features/coupon/presentation/screen/coupon_screen.dart';
+import '../../features/legal/data/legal_consent_store.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
 import '../../features/mission/presentation/screen/mission_screen.dart';
 import '../../features/mypage/presentation/screen/my_page_screen.dart';
+import '../../features/legal/domain/legal_document.dart';
+import '../../features/legal/domain/legal_document_catalog.dart';
+import '../../features/legal/presentation/screen/legal_consent_screen.dart';
+import '../../features/legal/presentation/screen/legal_document_screen.dart';
 import '../../features/notice/presentation/screen/notice_screen.dart';
 import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screen/permission_guide_screen.dart';
@@ -30,6 +36,28 @@ final appRouter = GoRouter(
       path: '/startup',
       builder: (context, state) => const SessionStartupScreen(),
     ),
+    GoRoute(
+      path: '/legal-consent',
+      builder: (context, state) => Consumer(
+        builder: (context, ref, child) => LegalConsentScreen(
+          consentStore: ref.read(legalConsentStoreProvider),
+          onAccepted: () async {
+            final fallbackRoute = await ref
+                .read(sessionStartupCoordinatorProvider)
+                .resolveInitialRouteAfterLegalConsent();
+            final route = sessionStartupRouteGate.completeSessionStartup(
+              fallbackRoute: fallbackRoute,
+              isAuthenticated: ref.read(authControllerProvider).status ==
+                  AuthStatus.authenticated,
+            );
+            if (context.mounted) {
+              context.go(route);
+            }
+          },
+        ),
+      ),
+    ),
+    ..._legalDocumentRoutes(),
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
@@ -137,3 +165,38 @@ final appRouter = GoRouter(
     ),
   ),
 );
+
+List<GoRoute> _legalDocumentRoutes() {
+  return [
+    _legalDocumentRoute(
+      path: '/legal/service-terms',
+      type: LegalDocumentType.serviceTerms,
+    ),
+    _legalDocumentRoute(
+      path: '/legal/privacy-policy',
+      type: LegalDocumentType.privacyPolicy,
+    ),
+    _legalDocumentRoute(
+      path: '/legal/location-terms',
+      type: LegalDocumentType.locationServiceTerms,
+    ),
+    _legalDocumentRoute(
+      path: '/legal/health-data-consent',
+      type: LegalDocumentType.healthDataConsent,
+    ),
+  ];
+}
+
+GoRoute _legalDocumentRoute({
+  required String path,
+  required LegalDocumentType type,
+}) {
+  return GoRoute(
+    path: path,
+    builder: (context, state) => LegalDocumentScreen(
+      document: LegalDocumentCatalog.document(type),
+      manageConsent: state.queryParameters['manage'] == 'true',
+      returnOnAccept: state.queryParameters['returnOnAccept'] == 'true',
+    ),
+  );
+}

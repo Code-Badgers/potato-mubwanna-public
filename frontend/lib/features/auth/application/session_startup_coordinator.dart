@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/config/app_environment.dart';
 import '../../onboarding/data/onboarding_status_store.dart';
+import '../../legal/data/legal_consent_store.dart';
 import '../../push/domain/push_message.dart';
 import 'auth_controller.dart';
 
@@ -9,10 +10,13 @@ final sessionStartupCoordinatorProvider =
     Provider<SessionStartupCoordinator>((ref) {
   final tokenStorage = ref.watch(tokenStorageProvider);
   final onboardingStatusStore = ref.watch(onboardingStatusStoreProvider);
+  final legalConsentStore = ref.watch(legalConsentStoreProvider);
   final pushNotificationService = ref.watch(pushNotificationServiceProvider);
 
   return SessionStartupCoordinator(
     hasKakaoAuthorizationCallback: AppEnvironment.hasKakaoAuthorizationCallback,
+    hasAcceptedRequiredDocuments:
+        legalConsentStore.hasAcceptedRequiredDocuments,
     hasCompletedOnboarding: onboardingStatusStore.hasCompletedOnboarding,
     markOnboardingCompleted: onboardingStatusStore.markOnboardingCompleted,
     readRefreshToken: tokenStorage.readRefreshToken,
@@ -26,6 +30,7 @@ final sessionStartupCoordinatorProvider =
 class SessionStartupCoordinator {
   SessionStartupCoordinator({
     required bool hasKakaoAuthorizationCallback,
+    Future<bool> Function()? hasAcceptedRequiredDocuments,
     required Future<bool> Function() hasCompletedOnboarding,
     required Future<void> Function() markOnboardingCompleted,
     required Future<String?> Function() readRefreshToken,
@@ -34,6 +39,8 @@ class SessionStartupCoordinator {
     required Future<void> Function() clearLocalTokens,
     required Future<PushMessage?> Function() readInitialPushMessage,
   })  : _hasKakaoAuthorizationCallback = hasKakaoAuthorizationCallback,
+        _hasAcceptedRequiredDocuments =
+            hasAcceptedRequiredDocuments ?? _acceptExistingTestSession,
         _hasCompletedOnboarding = hasCompletedOnboarding,
         _markOnboardingCompleted = markOnboardingCompleted,
         _readRefreshToken = readRefreshToken,
@@ -43,6 +50,7 @@ class SessionStartupCoordinator {
         _readInitialPushMessage = readInitialPushMessage;
 
   final bool _hasKakaoAuthorizationCallback;
+  final Future<bool> Function() _hasAcceptedRequiredDocuments;
   final Future<bool> Function() _hasCompletedOnboarding;
   final Future<void> Function() _markOnboardingCompleted;
   final Future<String?> Function() _readRefreshToken;
@@ -52,13 +60,25 @@ class SessionStartupCoordinator {
   final Future<PushMessage?> Function() _readInitialPushMessage;
 
   Future<String>? _initialRoute;
+  bool _hasAcceptedRequiredDocumentsForSession = false;
 
   Future<String> resolveInitialRoute() {
     // 여러 위젯 프레임에서 시작 처리를 요청해도 refresh token은 한 번만 회전시킨다.
     return _initialRoute ??= _resolveInitialRoute();
   }
 
+  Future<String> resolveInitialRouteAfterLegalConsent() {
+    _hasAcceptedRequiredDocumentsForSession = true;
+    _initialRoute = _resolveInitialRoute();
+    return _initialRoute!;
+  }
+
   Future<String> _resolveInitialRoute() async {
+    if (!_hasAcceptedRequiredDocumentsForSession &&
+        !await _readRequiredDocumentConsent()) {
+      return '/legal-consent';
+    }
+
     if (_hasKakaoAuthorizationCallback) {
       return '/login';
     }
@@ -82,6 +102,14 @@ class SessionStartupCoordinator {
     final initialMessage = await _readInitialMessage();
     return PushRouteResolver.resolve(initialMessage?.data ?? const {}) ??
         '/main/map';
+  }
+
+  Future<bool> _readRequiredDocumentConsent() async {
+    try {
+      return await _hasAcceptedRequiredDocuments();
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> _readOnboardingStatus() async {
@@ -141,3 +169,5 @@ class SessionStartupCoordinator {
     }
   }
 }
+
+Future<bool> _acceptExistingTestSession() async => true;

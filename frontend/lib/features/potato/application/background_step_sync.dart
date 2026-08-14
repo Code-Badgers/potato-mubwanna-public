@@ -7,6 +7,8 @@ import '../../../app/config/app_environment.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../legal/data/legal_consent_store.dart';
+import '../data/legal_consent_step_count_reader.dart';
 import '../data/pending_potato_growth_store.dart';
 import '../data/potato_repository.dart';
 import '../domain/potato_collection.dart';
@@ -111,7 +113,10 @@ Future<BackgroundStepSyncOutcome> _runBackgroundStepSync() async {
     baseUrl: AppEnvironment.apiBaseUrl,
   );
   final repository = PotatoRepository(dio: dioClient.dio);
-  final stepCountReader = createStepCountReader();
+  final stepCountReader = LegalConsentStepCountReader(
+    delegate: createStepCountReader(),
+    consentStore: const SharedPreferencesLegalConsentStore(),
+  );
   const pendingGrowthStore = SharedPreferencesPendingPotatoGrowthStore();
 
   return BackgroundStepSyncService(
