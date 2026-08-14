@@ -75,6 +75,8 @@ class _ProfileHeader extends StatelessWidget {
     final nickname = profile == null || profile.nickname.trim().isEmpty
         ? '감자여행자'
         : profile.nickname.trim();
+    final issuedAt = _formatTravelerIssuedAt(profile?.createdAt);
+    final travelerNo = _formatTravelerId(profile?.userId ?? 0);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
@@ -83,44 +85,294 @@ class _ProfileHeader extends StatelessWidget {
         AppDimens.pageHorizontalPadding,
         14,
       ),
-      padding: const EdgeInsets.all(16),
-      decoration: _myPageCardDecoration(),
-      child: Row(
-        children: [
-          _ProfileAvatar(profile: profile),
-          const SizedBox(width: 14),
-          Expanded(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FBF1),
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        boxShadow: AppShadows.softCard,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        child: CustomPaint(
+          painter: const _TravelerIdCardPainter(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  nickname,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.public_rounded,
+                      color: AppColors.primaryDark,
+                      size: 30,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '강원도 여행자',
+                            style: TextStyle(
+                              color: AppColors.primaryDark,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          SizedBox(height: 1),
+                          Text(
+                            'GANGWON TRAVELER ID',
+                            style: TextStyle(
+                              color: AppColors.primaryDark,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.flight_takeoff_rounded,
+                      color: AppColors.primaryDark,
+                      size: 26,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 5),
-                const Text(
-                  '강원 감자 여행자',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _ProfileAvatar(profile: profile),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _TravelerIdField(label: 'NAME', value: nickname),
+                          const SizedBox(height: 10),
+                          const _TravelerIdField(
+                            label: 'TITLE',
+                            value: '강원 감자 여행자',
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _TravelerIdField(
+                                  label: 'ID CARD NO.',
+                                  value: travelerNo,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _TravelerIdField(
+                                  label: 'ISSUED',
+                                  value: issuedAt,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryTint.withValues(alpha: 0.82),
+                        borderRadius: BorderRadius.circular(
+                          AppDimens.pillRadius,
+                        ),
+                      ),
+                      child: const Text(
+                        'GANGWON VERIFIED',
+                        style: TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.7,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(
+                      Icons.terrain_rounded,
+                      color: AppColors.primaryDark,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'TRAVELER',
+                      style: TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.7,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
+}
+
+class _TravelerIdField extends StatelessWidget {
+  const _TravelerIdField({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.primaryDark,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 1,
+          decoration: BoxDecoration(
+            color: AppColors.primaryDark.withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TravelerIdCardPainter extends CustomPainter {
+  const _TravelerIdCardPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = AppColors.primaryDark.withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final wavePaint = Paint()
+      ..color = AppColors.primaryDark.withValues(alpha: 0.13)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    for (var index = 0; index < 9; index++) {
+      final rect = Rect.fromCircle(
+        center: Offset(size.width * 0.28, size.height * 0.54),
+        radius: 54.0 + index * 12,
+      );
+      canvas.drawOval(rect, linePaint);
+    }
+
+    final dividerY = size.height * 0.33;
+    canvas.drawLine(
+      Offset(0, dividerY),
+      Offset(size.width, dividerY),
+      linePaint,
+    );
+
+    for (var index = 0; index < 4; index++) {
+      final path = Path();
+      final y = size.height * 0.23 + index * 12;
+      path.moveTo(size.width * 0.70, y);
+      path.cubicTo(
+        size.width * 0.76,
+        y - 14,
+        size.width * 0.80,
+        y + 14,
+        size.width * 0.86,
+        y,
+      );
+      path.cubicTo(
+        size.width * 0.91,
+        y - 13,
+        size.width * 0.94,
+        y + 10,
+        size.width * 0.98,
+        y - 1,
+      );
+      canvas.drawPath(path, wavePaint);
+    }
+
+    final mountainPaint = Paint()
+      ..color = AppColors.primaryDark.withValues(alpha: 0.08)
+      ..style = PaintingStyle.fill;
+    final mountain = Path()
+      ..moveTo(size.width * 0.46, size.height)
+      ..lineTo(size.width * 0.58, size.height * 0.82)
+      ..lineTo(size.width * 0.67, size.height)
+      ..lineTo(size.width * 0.73, size.height * 0.86)
+      ..lineTo(size.width * 0.88, size.height)
+      ..close();
+    canvas.drawPath(mountain, mountainPaint);
+
+    final stampPaint = Paint()
+      ..color = AppColors.primaryDark.withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final stampCenter = Offset(size.width * 0.84, size.height * 0.58);
+    canvas.drawCircle(stampCenter, 42, stampPaint);
+    canvas.drawCircle(stampCenter, 31, stampPaint);
+    final iconPainter = TextPainter(
+      text: const TextSpan(
+        text: 'GW',
+        style: TextStyle(
+          color: AppColors.primaryDark,
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    iconPainter.paint(
+      canvas,
+      Offset(
+        stampCenter.dx - iconPainter.width / 2,
+        stampCenter.dy - iconPainter.height / 2,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _TravelerIdCardPainter oldDelegate) => false;
 }
 
 class _ProfileAvatar extends StatelessWidget {
@@ -133,47 +385,51 @@ class _ProfileAvatar extends StatelessWidget {
     final profileImage = profile?.profileImage.trim() ?? '';
 
     return Container(
-      width: 68,
-      height: 68,
+      width: 88,
+      height: 108,
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFEAF9F0),
-            Color(0xFFFFF8EA),
-          ],
+        color: AppColors.surface.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(
+          color: AppColors.primaryDark.withValues(alpha: 0.28),
         ),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: profileImage.isEmpty
-          ? const Center(
-              child: Icon(
-                Icons.person_rounded,
-                color: AppColors.primaryDark,
-                size: 34,
-              ),
-            )
-          : Image.network(
-              profileImage,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(
-                  Icons.person_rounded,
-                  color: AppColors.primaryDark,
-                  size: 34,
-                ),
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFEAF9F0),
+                Color(0xFFFFF8EA),
+              ],
             ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: profileImage.isEmpty
+              ? const Center(
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: AppColors.primaryDark,
+                    size: 48,
+                  ),
+                )
+              : Image.network(
+                  profileImage,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: AppColors.primaryDark,
+                      size: 48,
+                    ),
+                  ),
+                ),
+        ),
+      ),
     );
   }
 }
@@ -1135,6 +1391,24 @@ String _rarityLabel(PotatoRarity rarity) {
     PotatoRarity.epic => '영웅',
     PotatoRarity.legendary => '전설',
   };
+}
+
+String _formatTravelerId(int userId) {
+  if (userId <= 0) {
+    return 'GW-READY';
+  }
+  return 'GW-${userId.toString().padLeft(5, '0')}';
+}
+
+String _formatTravelerIssuedAt(DateTime? createdAt) {
+  if (createdAt == null) {
+    return 'READY';
+  }
+  final local = createdAt.toLocal();
+  final year = local.year.toString();
+  final month = local.month.toString().padLeft(2, '0');
+  final day = local.day.toString().padLeft(2, '0');
+  return '$year.$month.$day';
 }
 
 Gradient _rarityGradient(PotatoRarity rarity) {
