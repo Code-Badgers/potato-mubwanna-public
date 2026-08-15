@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="감자무봤나 위치기반서비스 이용약관">
+  <title>위치기반서비스 이용약관 | 감자무봤나</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: #f7f5ef;
+      --surface: #ffffff;
+      --text: #25231f;
+      --muted: #68645c;
+      --line: #e4dfd4;
+      --accent: #77552d;
+      --accent-soft: #f0e7d7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: 16px;
+      line-height: 1.75;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    a {
+      color: var(--accent);
+      text-underline-offset: 3px;
+    }
+
+    .page-header {
+      padding: 56px 24px 42px;
+      background: linear-gradient(145deg, #5d4326 0%, #8a673b 100%);
+      color: #ffffff;
+    }
+
+    .page-header__inner,
+    main {
+      width: min(920px, 100%);
+      margin: 0 auto;
+    }
+
+    .service-name {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      opacity: .84;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 6vw, 48px);
+      line-height: 1.25;
+      letter-spacing: -.04em;
+    }
+
+    .effective-date {
+      margin: 18px 0 0;
+      font-size: 15px;
+      opacity: .88;
+    }
+
+    main {
+      padding: 32px 20px 72px;
+    }
+
+    .intro,
+    .toc,
+    section {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 8px 28px rgba(65, 51, 32, .05);
+    }
+
+    .intro,
+    .toc {
+      margin-bottom: 20px;
+      padding: 24px;
+    }
+
+    .intro p,
+    section p,
+    section ul {
+      margin-top: 0;
+    }
+
+    .intro p:last-child,
+    section p:last-child,
+    section ul:last-child {
+      margin-bottom: 0;
+    }
+
+    .toc h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+
+    .toc ol {
+      columns: 2;
+      gap: 32px;
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    .toc li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    section {
+      margin-top: 20px;
+      padding: 30px;
+      scroll-margin-top: 16px;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 23px;
+      line-height: 1.4;
+      letter-spacing: -.025em;
+    }
+
+    ul {
+      padding-left: 22px;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .contact-card {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0;
+    }
+
+    .contact-card div {
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--accent-soft);
+    }
+
+    .contact-card .wide {
+      grid-column: 1 / -1;
+    }
+
+    .contact-card dt {
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .contact-card dd {
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .notice {
+      padding: 16px 18px;
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent-soft);
+    }
+
+    .page-footer {
+      padding: 28px 20px 40px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 14px;
+    }
+
+    @media (max-width: 680px) {
+      body {
+        font-size: 15px;
+        word-break: normal;
+      }
+
+      .page-header {
+        padding: 42px 20px 34px;
+      }
+
+      main {
+        padding: 20px 14px 52px;
+      }
+
+      .intro,
+      .toc,
+      section {
+        padding: 22px 18px;
+        border-radius: 14px;
+      }
+
+      .toc ol {
+        columns: 1;
+      }
+
+      .contact-card {
+        grid-template-columns: 1fr;
+      }
+
+      .contact-card .wide {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="page-header__inner">
+      <p class="service-name">감자무봤나</p>
+      <h1>위치기반서비스 이용약관</h1>
+      <p class="effective-date">시행일: 2026년 8월 15일</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="intro">
+      <p>이 약관은 <strong>운영자 이름 입력</strong>(이하 “운영자”)이 제공하는 감자무봤나 위치기반서비스의 이용 조건과 개인위치정보주체의 권리를 안내합니다.</p>
+      <p>위치정보 이용 동의는 선택사항입니다. 동의하지 않아도 현재 위치 탐색과 방문 인증을 제외한 지도·관광지 상세·오디오 가이드 등의 기능은 이용할 수 있습니다.</p>
+    </div>
+
+    <nav class="toc" aria-label="위치기반서비스 이용약관 목차">
+      <h2>목차</h2>
+      <ol>
+        <li><a href="#purpose">목적</a></li>
+        <li><a href="#operator">사업자 정보</a></li>
+        <li><a href="#service">서비스 내용과 요금</a></li>
+        <li><a href="#retention">이용과 보유</a></li>
+        <li><a href="#records">이용·제공사실 확인자료</a></li>
+        <li><a href="#third-party">제3자 제공</a></li>
+        <li><a href="#rights">이용자의 권리</a></li>
+        <li><a href="#officer">관리책임자</a></li>
+        <li><a href="#representative">법정대리인과 보호의무자</a></li>
+        <li><a href="#changes">약관의 공개와 변경</a></li>
+        <li><a href="#damages">손해배상과 분쟁</a></li>
+        <li><a href="#supplement">부칙</a></li>
+      </ol>
+    </nav>
+
+    <section id="purpose">
+      <h2>제1조 목적</h2>
+      <p>이 약관은 운영자가 개인위치정보를 이용하여 제공하는 감자무봤나 위치기반서비스의 내용, 이용 조건, 운영자와 개인위치정보주체의 권리·의무 및 책임사항을 정하는 것을 목적으로 합니다.</p>
+    </section>
+
+    <section id="operator">
+      <h2>제2조 사업자 정보</h2>
+      <dl class="contact-card">
+        <div>
+          <dt>상호</dt>
+          <dd>운영자 이름 입력</dd>
+        </div>
+        <div>
+          <dt>대표자</dt>
+          <dd>운영자 이름 입력</dd>
+        </div>
+        <div class="wide">
+          <dt>주소</dt>
+          <dd>운영자 주소 입력</dd>
+        </div>
+        <div>
+          <dt>전화</dt>
+          <dd><a href="tel:+821000000000">010-0000-0000</a></dd>
+        </div>
+        <div>
+          <dt>이메일</dt>
+          <dd><a href="mailto:privacy@example.com">privacy@example.com</a></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section id="service">
+      <h2>제3조 위치기반서비스의 내용과 요금</h2>
+      <ul>
+        <li>현재 위치 주변의 감자 스팟 탐색과 지도상의 현재 위치 표시</li>
+        <li>관광지 반경 내 방문 여부 확인과 스탬프·미션 처리</li>
+        <li>방문 이력을 이용한 여행 기록과 다음 장소 안내</li>
+      </ul>
+      <p class="notice">위치기반서비스 이용료는 무료입니다. 단, 서비스 이용에 필요한 데이터 통신요금은 이용자의 통신사 요금제에 따라 부과될 수 있습니다.</p>
+    </section>
+
+    <section id="retention">
+      <h2>제4조 개인위치정보의 이용과 보유</h2>
+      <p>이용자가 방문 인증을 요청하면 단말기의 GPS 위도·경도를 암호화된 통신으로 서버에 전송하여 관광지 좌표와의 거리를 계산합니다. 원본 위도·경도는 거리 계산이 끝난 뒤 데이터베이스에 저장하지 않고 즉시 파기합니다.</p>
+      <p>인증에 성공한 경우 관광지, 인증 시각과 계산된 거리를 방문 기록으로 저장하고 회원 탈퇴 시까지 여행 기록 제공에 이용합니다. 처리 목적이 달성되거나 회원이 탈퇴하면 관계 법령상 보존할 필요가 있는 자료를 제외하고 복구할 수 없는 방법으로 파기합니다.</p>
+    </section>
+
+    <section id="records">
+      <h2>제5조 위치정보 이용·제공사실 확인자료</h2>
+      <p>운영자는 「위치정보의 보호 및 이용 등에 관한 법률」에 따라 위치정보 이용·제공사실 확인자료를 자동으로 기록하고 최소 6개월 동안 보관합니다.</p>
+      <p>확인자료에는 원본 위치좌표를 포함하지 않으며, 이용자 식별값, 이용 일시, 취득 경로, 이용 목적과 서비스 처리 결과를 기록합니다. 보유기간이 끝나면 복구할 수 없는 방법으로 파기합니다.</p>
+    </section>
+
+    <section id="third-party">
+      <h2>제6조 개인위치정보의 제3자 제공</h2>
+      <p>운영자는 개인위치정보를 제3자에게 제공하지 않습니다. 향후 제3자 제공 기능을 도입하는 경우 제공받는 자, 제공 목적, 제공 항목과 보유기간을 알리고 별도 동의를 받으며, 제공할 때마다 관계 법령이 정한 방법으로 이용자에게 통보합니다.</p>
+    </section>
+
+    <section id="rights">
+      <h2>제7조 이용자의 권리와 행사방법</h2>
+      <p>이용자는 다음 권리를 행사할 수 있으며, 앱 설정 또는 제8조의 관리책임자 연락처로 요청할 수 있습니다. 운영자는 본인 확인 후 관계 법령에 따라 지체 없이 처리합니다.</p>
+      <ul>
+        <li>개인위치정보 이용 동의의 전부 또는 일부 철회</li>
+        <li>개인위치정보 이용의 일시 중지 요구</li>
+        <li>본인에 대한 위치정보 이용·제공사실 확인자료의 열람 또는 고지 요구</li>
+        <li>확인자료에 오류가 있는 경우 정정 요구</li>
+      </ul>
+    </section>
+
+    <section id="officer">
+      <h2>제8조 개인위치정보 관리책임자</h2>
+      <p>운영자는 위치정보를 적절히 관리·보호하고 이용자의 불만을 원활히 처리하기 위해 다음과 같이 개인위치정보 관리책임자를 지정합니다.</p>
+      <dl class="contact-card">
+        <div>
+          <dt>책임자</dt>
+          <dd>운영자 이름 입력</dd>
+        </div>
+        <div>
+          <dt>전화</dt>
+          <dd><a href="tel:+821000000000">010-0000-0000</a></dd>
+        </div>
+        <div class="wide">
+          <dt>이메일</dt>
+          <dd><a href="mailto:privacy@example.com">privacy@example.com</a></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section id="representative">
+      <h2>제9조 법정대리인과 보호의무자</h2>
+      <p>운영자가 만 14세 미만 아동 또는 관계 법령상 보호가 필요한 이용자의 개인위치정보를 이용해야 하는 경우에는 법정대리인 또는 보호의무자의 동의를 포함하여 관계 법령이 정한 절차를 따릅니다. 법정대리인과 보호의무자는 제7조에 따른 이용자의 권리를 동일하게 행사할 수 있습니다.</p>
+    </section>
+
+    <section id="changes">
+      <h2>제10조 약관의 공개와 변경</h2>
+      <p>운영자는 이용자가 이 약관을 쉽게 확인할 수 있도록 앱의 첫 화면과 연결된 화면 또는 인터넷 홈페이지에 공개합니다.</p>
+      <p>관련 법령을 위반하지 않는 범위에서 약관을 변경할 수 있으며, 변경하는 경우 적용일과 변경 사유를 명시하여 시행 전에 앱 공지 등을 통해 알립니다. 이용자의 권리에 중대한 영향을 미치는 변경은 관계 법령이 정한 절차에 따라 별도 동의를 받습니다.</p>
+    </section>
+
+    <section id="damages">
+      <h2>제11조 손해배상과 분쟁</h2>
+      <p>운영자가 관계 법령을 위반하여 이용자에게 손해가 발생한 경우 이용자는 손해배상을 청구할 수 있습니다. 운영자가 고의 또는 과실이 없음을 입증하지 못하면 책임을 면할 수 없습니다.</p>
+      <p>위치정보와 관련한 분쟁은 당사자 간 협의를 통해 해결하며, 협의되지 않는 경우 관계 법령에 따른 분쟁조정기관 또는 민사소송법상 관할 법원에 해결을 요청할 수 있습니다.</p>
+    </section>
+
+    <section id="supplement">
+      <h2>제12조 부칙</h2>
+      <p>이 약관은 2026년 8월 15일부터 시행합니다.</p>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <p>© 2026 감자무봤나. 위치기반서비스 이용약관</p>
+  </footer>
+</body>
+</html>
