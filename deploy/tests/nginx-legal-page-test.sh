@@ -21,19 +21,36 @@ MSYS_NO_PATHCONV=1 docker run --detach --rm \
 published_port="$(docker port "${container_name}" 80/tcp | sed -n 's/.*://p' | tail -n 1)"
 test -n "${published_port}"
 
-page="$(curl --fail --silent --show-error --retry 10 --retry-delay 1 \
+privacy_page="$(curl --fail --silent --show-error --retry 10 --retry-delay 1 \
   "http://127.0.0.1:${published_port}/privacy-policy")"
 
-grep -q '<title>개인정보처리방침 | 감자무봤나</title>' <<< "${page}"
-grep -q '시행일: 2026년 8월 15일' <<< "${page}"
-grep -q 'privacy@example.com' <<< "${page}"
-grep -q '010-0000-0000' <<< "${page}"
+grep -q '<title>개인정보처리방침 | 감자무봤나</title>' <<< "${privacy_page}"
+grep -q '시행일: 2026년 8월 15일' <<< "${privacy_page}"
+grep -q 'privacy@example.com' <<< "${privacy_page}"
+grep -q '010-0000-0000' <<< "${privacy_page}"
 
-redirect_headers="$(curl --silent --output /dev/null --dump-header - \
+privacy_redirect_headers="$(curl --silent --output /dev/null --dump-header - \
   "http://127.0.0.1:${published_port}/privacy-policy/" | tr -d '\r')"
-redirect_status="$(awk 'NR == 1 { print $2 }' <<< "${redirect_headers}")"
-redirect_location="$(sed -n 's/^Location: //Ip' <<< "${redirect_headers}" | tail -n 1)"
-test "${redirect_status}" = 308
-test "${redirect_location}" = /privacy-policy
+privacy_redirect_status="$(awk 'NR == 1 { print $2 }' <<< "${privacy_redirect_headers}")"
+privacy_redirect_location="$(sed -n 's/^Location: //Ip' <<< "${privacy_redirect_headers}" | tail -n 1)"
+test "${privacy_redirect_status}" = 308
+test "${privacy_redirect_location}" = /privacy-policy
 
-echo "Nginx privacy policy page and canonical redirect are valid."
+location_page="$(curl --fail --silent --show-error \
+  "http://127.0.0.1:${published_port}/location-terms")"
+
+grep -q '<title>위치기반서비스 이용약관 | 감자무봤나</title>' <<< "${location_page}"
+grep -q '운영자 주소 입력' <<< "${location_page}"
+grep -q '최소 6개월' <<< "${location_page}"
+grep -q '원본 위도·경도' <<< "${location_page}"
+grep -q 'privacy@example.com' <<< "${location_page}"
+grep -q '010-0000-0000' <<< "${location_page}"
+
+location_redirect_headers="$(curl --silent --output /dev/null --dump-header - \
+  "http://127.0.0.1:${published_port}/location-terms/" | tr -d '\r')"
+location_redirect_status="$(awk 'NR == 1 { print $2 }' <<< "${location_redirect_headers}")"
+location_redirect_location="$(sed -n 's/^Location: //Ip' <<< "${location_redirect_headers}" | tail -n 1)"
+test "${location_redirect_status}" = 308
+test "${location_redirect_location}" = /location-terms
+
+echo "Nginx legal pages and canonical redirects are valid."
