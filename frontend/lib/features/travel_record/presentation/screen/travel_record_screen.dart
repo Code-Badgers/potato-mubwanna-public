@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -11,8 +12,6 @@ import '../../domain/travel_record.dart';
 
 const _travelPrimary = Color(0xFF56C787);
 const _travelDark = Color(0xFF509B64);
-const _travelCream = Color(0xFFFFF8EA);
-const _travelLine = Color(0xFFE8E2D8);
 
 class TravelRecordScreen extends ConsumerWidget {
   const TravelRecordScreen({super.key});
@@ -81,22 +80,41 @@ class _TravelRecordHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 20, 10),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(12, 14, 24, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            tooltip: '뒤로 가기',
-            onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded),
+          Row(
+            children: [
+              IconButton(
+                tooltip: '뒤로 가기',
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+              const SizedBox(width: 4),
+              const Expanded(
+                child: Text(
+                  '여행 기록',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-          const Expanded(
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 6, 0, 0),
             child: Text(
-              '여행 기록',
+              '미션과 스탬프 인증을 위해 업로드한 사진은\n자동으로 이곳에 모여요.',
               style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
+                color: AppColors.textSecondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                height: 1.45,
+                letterSpacing: 0,
               ),
             ),
           ),
@@ -122,79 +140,16 @@ class _TravelRecordList extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: _travelPrimary,
-      child: ListView.separated(
+      child: CustomScrollView(
         key: const ValueKey('travel-record-list'),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-        itemCount: records.length + 1,
-        separatorBuilder: (_, index) => SizedBox(height: index == 0 ? 16 : 12),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return _TravelRecordSummary(count: records.length);
-          }
-          final record = records[index - 1];
-          return _TravelRecordCard(
-            record: record,
-            onTap: () => onRecordSelected(record),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _TravelRecordSummary extends StatelessWidget {
-  const _TravelRecordSummary({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE5F6EA),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFCDE8D7)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.route_rounded,
-              color: _travelDark,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '강원 감자 여행',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '총 $count곳을 방문했어요',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+            sliver: SliverToBoxAdapter(
+              child: _TravelRecordPhotoBoard(
+                records: records,
+                onRecordSelected: onRecordSelected,
+              ),
             ),
           ),
         ],
@@ -203,89 +158,174 @@ class _TravelRecordSummary extends StatelessWidget {
   }
 }
 
-class _TravelRecordCard extends StatelessWidget {
-  const _TravelRecordCard({required this.record, required this.onTap});
+class _TravelRecordPhotoBoard extends StatelessWidget {
+  const _TravelRecordPhotoBoard({
+    required this.records,
+    required this.onRecordSelected,
+  });
+
+  final List<TravelRecord> records;
+  final ValueChanged<TravelRecord> onRecordSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final columnWidth = (constraints.maxWidth - spacing) / 2;
+        final children = <Widget>[];
+
+        for (var index = 0; index < records.length; index += 1) {
+          final record = records[index];
+          final variant = _TravelRecordFrameVariant.fromIndex(index);
+          final width = variant.isWide
+              ? constraints.maxWidth
+              : variant.isNarrow
+                  ? columnWidth * 0.82
+                  : columnWidth;
+
+          children.add(
+            _TravelRecordFilmCard(
+              record: record,
+              variant: variant,
+              width: width,
+              onTap: () => onRecordSelected(record),
+            ),
+          );
+        }
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 18,
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.start,
+          children: children,
+        );
+      },
+    );
+  }
+}
+
+enum _TravelRecordFrameVariant {
+  wide,
+  portrait,
+  square,
+  narrow;
+
+  const _TravelRecordFrameVariant();
+
+  factory _TravelRecordFrameVariant.fromIndex(int index) {
+    return switch (index % 7) {
+      0 || 3 => _TravelRecordFrameVariant.wide,
+      1 || 6 => _TravelRecordFrameVariant.portrait,
+      2 => _TravelRecordFrameVariant.narrow,
+      _ => _TravelRecordFrameVariant.square,
+    };
+  }
+
+  bool get isWide => this == _TravelRecordFrameVariant.wide;
+  bool get isNarrow => this == _TravelRecordFrameVariant.narrow;
+
+  double get aspectRatio => switch (this) {
+        _TravelRecordFrameVariant.wide => 1.42,
+        _TravelRecordFrameVariant.portrait => 0.72,
+        _TravelRecordFrameVariant.square => 0.9,
+        _TravelRecordFrameVariant.narrow => 0.68,
+      };
+
+  bool get usesPortraitFrame =>
+      this == _TravelRecordFrameVariant.portrait ||
+      this == _TravelRecordFrameVariant.narrow;
+}
+
+class _TravelRecordTypeStamp extends StatelessWidget {
+  const _TravelRecordTypeStamp({required this.record});
 
   final TravelRecord record;
+
+  bool get _isMissionPhoto {
+    final category = record.category.toUpperCase();
+    return category.contains('MISSION') || category.contains('PHOTO');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _isMissionPhoto ? const Color(0xFF4F8CCB) : _travelPrimary;
+    final label = _isMissionPhoto ? '미션' : '스탬프';
+    final icon =
+        _isMissionPhoto ? Icons.flag_rounded : Icons.location_on_rounded;
+
+    return Transform.rotate(
+      angle: _isMissionPhoto ? -0.08 : 0.02,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.78),
+          border: Border.all(color: color.withValues(alpha: 0.66)),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 14),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelRecordFilmCard extends StatelessWidget {
+  const _TravelRecordFilmCard({
+    required this.record,
+    required this.variant,
+    required this.width,
+    required this.onTap,
+  });
+
+  final TravelRecord record;
+  final _TravelRecordFrameVariant variant;
+  final double width;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(18),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
       child: InkWell(
         key: ValueKey('travel-record-${record.visitId}'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _travelLine),
-          ),
-          child: Row(
-            children: [
-              _TravelRecordThumbnail(record: record),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      record.spotName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '${record.cityName} · ${record.categoryLabel}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          color: _travelPrimary,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            _formatVisitedAt(record.visitedAt),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _travelDark,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        child: SizedBox(
+          width: width,
+          child: AspectRatio(
+            aspectRatio: variant.aspectRatio,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: _TravelRecordFramedPhoto(
+                    record: record,
+                    variant: variant,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
-              ),
-            ],
+                Positioned(
+                  top: variant.usesPortraitFrame ? 8 : 10,
+                  right: variant.usesPortraitFrame ? 10 : 12,
+                  child: _TravelRecordTypeStamp(record: record),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -293,8 +333,107 @@ class _TravelRecordCard extends StatelessWidget {
   }
 }
 
-class _TravelRecordThumbnail extends ConsumerWidget {
-  const _TravelRecordThumbnail({required this.record});
+class _TravelRecordFramedPhoto extends StatelessWidget {
+  const _TravelRecordFramedPhoto({
+    required this.record,
+    required this.variant,
+  });
+
+  final TravelRecord record;
+  final _TravelRecordFrameVariant variant;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        final photoInsets = variant.usesPortraitFrame
+            ? EdgeInsets.fromLTRB(
+                width * 0.16,
+                height * 0.11,
+                width * 0.16,
+                height * 0.29,
+              )
+            : EdgeInsets.fromLTRB(
+                width * 0.09,
+                height * 0.12,
+                width * 0.09,
+                height * 0.28,
+              );
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFCF5),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Padding(
+                padding: photoInsets,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _TravelRecordPhoto(record: record),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.08),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.04),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: variant.usesPortraitFrame ? 16 : 12,
+              child: Text(
+                _formatHandwrittenDate(record.visitedAt),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textSecondary.withValues(alpha: 0.82),
+                  fontSize: variant.usesPortraitFrame ? 11 : 12,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.24,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TravelRecordPhoto extends ConsumerWidget {
+  const _TravelRecordPhoto({required this.record});
 
   final TravelRecord record;
 
@@ -305,20 +444,23 @@ class _TravelRecordThumbnail extends ConsumerWidget {
         ? null
         : ref.watch(travelRecordImageProvider(uploadedImageUrl)).valueOrNull;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        width: 54,
-        height: 54,
-        child: uploadedImage != null && uploadedImage.isNotEmpty
-            ? Image.memory(
-                uploadedImage,
-                key: ValueKey('travel-record-uploaded-image-${record.visitId}'),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _touristImageOrFallback(),
-              )
-            : _touristImageOrFallback(),
+    Widget child;
+    if (uploadedImage != null && uploadedImage.isNotEmpty) {
+      child = Image.memory(
+        uploadedImage,
+        key: ValueKey('travel-record-uploaded-image-${record.visitId}'),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _touristImageOrFallback(),
+      );
+    } else {
+      child = _touristImageOrFallback();
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint.withValues(alpha: 0.42),
       ),
+      child: child,
     );
   }
 
@@ -338,11 +480,22 @@ class _TravelRecordThumbnail extends ConsumerWidget {
   Widget _fallbackIcon() {
     return Container(
       key: ValueKey('travel-record-image-fallback-${record.visitId}'),
-      color: _travelCream,
-      child: const Icon(
-        Icons.location_on_rounded,
-        color: _travelDark,
-        size: 30,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryTint.withValues(alpha: 0.72),
+            AppColors.cream,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.photo_camera_rounded,
+          color: _travelDark,
+          size: 28,
+        ),
       ),
     );
   }
@@ -364,36 +517,223 @@ class _TravelRecordEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(28),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+      children: const [
+        _EmptyTravelArchive(),
+      ],
+    );
+  }
+}
+
+class _EmptyTravelArchive extends StatelessWidget {
+  const _EmptyTravelArchive();
+
+  static const _variants = [
+    _TravelRecordFrameVariant.wide,
+    _TravelRecordFrameVariant.portrait,
+    _TravelRecordFrameVariant.narrow,
+    _TravelRecordFrameVariant.wide,
+    _TravelRecordFrameVariant.square,
+    _TravelRecordFrameVariant.wide,
+    _TravelRecordFrameVariant.narrow,
+    _TravelRecordFrameVariant.wide,
+    _TravelRecordFrameVariant.portrait,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const spacing = 12.0;
+          final columnWidth = (constraints.maxWidth - spacing) / 2;
+          final children = <Widget>[];
+
+          for (var index = 0; index < _variants.length; index++) {
+            final variant = _variants[index];
+            final width = switch (variant) {
+              _TravelRecordFrameVariant.wide => columnWidth,
+              _TravelRecordFrameVariant.square => columnWidth * 0.72,
+              _TravelRecordFrameVariant.portrait => columnWidth * 0.64,
+              _TravelRecordFrameVariant.narrow => columnWidth * 0.52,
+            };
+
+            children.add(
+              _EmptyTravelRecordFrame(
+                index: index,
+                variant: variant,
+                width: width,
+              ),
+            );
+          }
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: 18,
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.start,
+            children: children,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EmptyTravelRecordFrame extends StatelessWidget {
+  const _EmptyTravelRecordFrame({
+    required this.index,
+    required this.variant,
+    required this.width,
+  });
+
+  final int index;
+  final _TravelRecordFrameVariant variant;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: AspectRatio(
+        aspectRatio: variant.aspectRatio,
+        child: _EmptyTravelRecordPhoto(
+          index: index,
+          variant: variant,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyTravelRecordPhoto extends StatelessWidget {
+  const _EmptyTravelRecordPhoto({
+    required this.index,
+    required this.variant,
+  });
+
+  final int index;
+  final _TravelRecordFrameVariant variant;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = _emptyRecordTint(index);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        final photoInsets = variant.usesPortraitFrame
+            ? EdgeInsets.fromLTRB(
+                width * 0.16,
+                height * 0.11,
+                width * 0.16,
+                height * 0.29,
+              )
+            : EdgeInsets.fromLTRB(
+                width * 0.09,
+                height * 0.12,
+                width * 0.09,
+                height * 0.28,
+              );
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFCF5),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.09),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Padding(
+                padding: photoInsets,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          tint.withValues(alpha: 0.26),
+                          AppColors.primaryTint.withValues(alpha: 0.18),
+                          AppColors.surface.withValues(alpha: 0.9),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (index == 0 || index == 3 || index == 7)
+              Positioned(
+                top: variant.usesPortraitFrame ? 8 : 10,
+                right: variant.usesPortraitFrame ? 10 : 12,
+                child: Opacity(
+                  opacity: 0.42,
+                  child: _EmptyTravelRecordStamp(
+                    label: index == 3 ? '미션' : '스탬프',
+                    color:
+                        index == 3 ? const Color(0xFF4F8CCB) : _travelPrimary,
+                    icon: index == 3
+                        ? Icons.flag_rounded
+                        : Icons.location_on_rounded,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _EmptyTravelRecordStamp extends StatelessWidget {
+  const _EmptyTravelRecordStamp({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: -0.06,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.76),
+          border: Border.all(color: color.withValues(alpha: 0.62)),
+          borderRadius: BorderRadius.circular(7),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.map_outlined,
-              color: _travelDark,
-              size: 52,
-            ),
-            SizedBox(height: 16),
+            Icon(icon, color: color, size: 14),
             Text(
-              '아직 여행 기록이 없어요',
+              label,
               style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 19,
+                color: color,
+                fontSize: 8,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '감자 스팟을 방문 인증하면\n이곳에 여행 기록이 쌓여요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                height: 1.5,
               ),
             ),
           ],
@@ -401,6 +741,16 @@ class _TravelRecordEmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+Color _emptyRecordTint(int index) {
+  return switch (index % 5) {
+    0 => const Color(0xFF79B8D8),
+    1 => const Color(0xFF8FBF75),
+    2 => const Color(0xFFB7D7A8),
+    3 => const Color(0xFFF1C46D),
+    _ => const Color(0xFF8ECAC4),
+  };
 }
 
 class _TravelRecordErrorState extends StatelessWidget {
@@ -449,11 +799,9 @@ class _TravelRecordErrorState extends StatelessWidget {
   }
 }
 
-String _formatVisitedAt(DateTime visitedAt) {
+String _formatHandwrittenDate(DateTime visitedAt) {
   final local = visitedAt.toLocal();
   final month = local.month.toString().padLeft(2, '0');
   final day = local.day.toString().padLeft(2, '0');
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '${local.year}.$month.$day · $hour:$minute 방문';
+  return '${local.year}. $month. $day';
 }

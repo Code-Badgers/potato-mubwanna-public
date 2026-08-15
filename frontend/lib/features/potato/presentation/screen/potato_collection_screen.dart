@@ -412,8 +412,6 @@ class _PotatoCollectionBody extends StatelessWidget {
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
                   ),
-                  const SizedBox(height: 8),
-                  const _TodayStepCard(),
                 ],
               ),
             ),
@@ -516,7 +514,9 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   moisture: moisture,
                   mood: mood,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
+                const _PotatoStepGrowthPanel(),
+                const SizedBox(height: 10),
                 _PotatoProgressLine(
                   label: '성장 경험치',
                   valueLabel: '$growthPercent%',
@@ -1054,43 +1054,6 @@ class _PotatoSpeechBubble extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TodayStepCard extends ConsumerWidget {
-  const _TodayStepCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final summaryState = ref.watch(potatoGrowthSummaryProvider);
-
-    return summaryState.when(
-      data: (summary) => _TodayStepCardContent(
-        summary: summary ??
-            const PotatoGrowthSummary(
-              todaySteps: 0,
-              dailyStepGoal: 10000,
-              weeklyDistanceKm: 0,
-              monthlyDistanceKm: 0,
-              remainingDistanceKmForRepresentative: 0,
-            ),
-      ),
-      loading: () => const _TodayStepCardShell(
-        child: SizedBox(
-          height: 148,
-          child: Center(
-            child: CircularProgressIndicator(color: _potatoPrimary),
-          ),
-        ),
-      ),
-      error: (error, _) => _TodayStepCardShell(
-        child: _InlineErrorState(
-          message:
-              error is ApiException ? error.message : '오늘의 감자걸음을 불러오지 못했습니다.',
-          onRetry: () => ref.invalidate(potatoGrowthSummaryProvider),
         ),
       ),
     );
@@ -1674,107 +1637,121 @@ class _GrowthProgress extends StatelessWidget {
   }
 }
 
-class _TodayStepCardContent extends StatelessWidget {
-  const _TodayStepCardContent({required this.summary});
-
-  final PotatoGrowthSummary summary;
+class _PotatoStepGrowthPanel extends ConsumerWidget {
+  const _PotatoStepGrowthPanel();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryState = ref.watch(potatoGrowthSummaryProvider);
+    final summary = summaryState.valueOrNull ??
+        const PotatoGrowthSummary(
+          todaySteps: 0,
+          dailyStepGoal: 10000,
+          weeklyDistanceKm: 0,
+          monthlyDistanceKm: 0,
+          remainingDistanceKmForRepresentative: 0,
+        );
     final ratio = summary.stepRatio;
     final percent = (ratio * 100).round();
-    final remainingDistance = summary.remainingDistanceKmForRepresentative;
     final stepLabel =
         '${_formatInt(summary.todaySteps)} / ${_formatInt(summary.dailyStepGoal)}걸음';
-    final remainingLabel = remainingDistance <= 0
-        ? '오늘 성장 목표를 달성했어요'
-        : '성장까지 약 ${remainingDistance.toStringAsFixed(1)}km 남았어요';
+    final isLoading =
+        summaryState.isLoading && summaryState.valueOrNull == null;
+    final hasError = summaryState.hasError && summaryState.valueOrNull == null;
 
-    return _TodayStepCardShell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '오늘의 감자걸음',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              SizedBox(
-                width: 96,
-                height: 96,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      strokeWidth: 10,
-                      value: ratio,
-                      backgroundColor: const Color(0xFFE7EFE9),
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(_potatoPrimary),
-                    ),
-                    Center(
-                      child: Text(
-                        '$percent%',
-                        style: const TextStyle(
-                          color: _potatoDark,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: _potatoPrimary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.directions_walk_rounded,
+                    color: _potatoDark,
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '오늘 감자걸음',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
                           letterSpacing: 0,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        isLoading
+                            ? '걸음 수를 불러오는 중'
+                            : hasError
+                                ? '걸음 수를 다시 확인해주세요'
+                                : stepLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stepLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '오늘 목표까지 $percent%',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      remainingLabel,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
+                Text(
+                  '$percent%',
+                  style: const TextStyle(
+                    color: _potatoDark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                minHeight: 7,
+                value: ratio,
+                backgroundColor: const Color(0xFFE7EFE9),
+                valueColor: const AlwaysStoppedAnimation<Color>(_potatoPrimary),
               ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 7),
+            const Text(
+              '걸음이 쌓이면 감자의 성장 경험치도 함께 올라가요',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1831,59 +1808,6 @@ class _PotatoProgressLine extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TodayStepCardShell extends StatelessWidget {
-  const _TodayStepCardShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-      decoration: _cardDecoration(),
-      child: child,
-    );
-  }
-}
-
-class _InlineErrorState extends StatelessWidget {
-  const _InlineErrorState({
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 148,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('다시 불러오기'),
-          ),
-        ],
-      ),
     );
   }
 }

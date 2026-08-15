@@ -53,4 +53,7 @@ flutter:
     - assets/characters/jumsooni/
     - assets/characters/potatoes/
     - assets/stamps/
+    - assets/stamps/passport/
+    - assets/stamps/passport/spots/
+    - assets/travel_records/
     - assets/geojson/
