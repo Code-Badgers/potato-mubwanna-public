@@ -114,11 +114,7 @@ class _CityStampGridBody extends StatelessWidget {
         : _passportEntriesFor(spots, progress.stamps);
     final totalCount = entries.isEmpty ? 29 : entries.length;
     final acquiredCount = entries.where((entry) => entry.acquired).length;
-    final pages = <List<_PassportStampEntry>>[];
-    for (var index = 0; index < entries.length; index += 5) {
-      final end = (index + 5).clamp(0, entries.length);
-      pages.add(entries.sublist(index, end));
-    }
+    final pages = _paginatePassportEntries(entries);
 
     return CustomScrollView(
       slivers: [
@@ -565,7 +561,6 @@ class _PassportStampTile extends StatelessWidget {
                   sketchAsset,
                   fit: BoxFit.contain,
                   alignment: Alignment.center,
-                  opacity: AlwaysStoppedAnimation(acquired ? 0.82 : 0.48),
                   filterQuality: FilterQuality.high,
                 ),
                 const _PassportSketchFade(),
@@ -588,12 +583,12 @@ class _PassportSketchFade extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFFFFFDF7),
-              Color(0x88FFFDF7),
+              Color(0xCCFFFDF7),
               Color(0x00FFFDF7),
-              Color(0x66FFFDF7),
+              Color(0x00FFFDF7),
+              Color(0x99FFFDF7),
             ],
-            stops: [0, 0.18, 0.72, 1],
+            stops: [0, 0.14, 0.86, 1],
           ),
         ),
       ),
@@ -743,6 +738,31 @@ bool _isPassportSpotAcquired(
 
 String _normalizeStampText(String value) {
   return value.replaceAll(RegExp(r'\s+'), '').replaceAll('스탬프', '').trim();
+}
+
+List<List<_PassportStampEntry>> _paginatePassportEntries(
+  List<_PassportStampEntry> entries,
+) {
+  const pageSizes = [3, 4, 4, 4, 4, 4, 3, 3];
+  final pages = <List<_PassportStampEntry>>[];
+  var cursor = 0;
+
+  for (final size in pageSizes) {
+    if (cursor >= entries.length) {
+      break;
+    }
+    final end = (cursor + size).clamp(0, entries.length);
+    pages.add(entries.sublist(cursor, end));
+    cursor = end;
+  }
+
+  while (cursor < entries.length) {
+    final end = (cursor + 4).clamp(0, entries.length);
+    pages.add(entries.sublist(cursor, end));
+    cursor = end;
+  }
+
+  return pages;
 }
 
 const _defaultPassportEntries = <_PassportStampEntry>[
