@@ -10,15 +10,6 @@ import '../../domain/stamp_book.dart';
 import '../model/gangwon_map_projection.dart';
 import '../model/gangwon_map_region.dart';
 
-const _passportPageAssets = [
-  'assets/stamps/passport/gangwon_passport_page_01.png',
-  'assets/stamps/passport/gangwon_passport_page_02.png',
-  'assets/stamps/passport/gangwon_passport_page_03.png',
-  'assets/stamps/passport/gangwon_passport_page_04.png',
-  'assets/stamps/passport/gangwon_passport_page_05.png',
-  'assets/stamps/passport/gangwon_passport_page_06.png',
-];
-
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
 
@@ -277,25 +268,21 @@ class _PassportPageBook extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (pages.isEmpty && _passportPageAssets.isEmpty) {
+    if (pages.isEmpty) {
       return const SizedBox.shrink();
     }
-    final pageCount = pages.length > _passportPageAssets.length
-        ? pages.length
-        : _passportPageAssets.length;
 
     return SizedBox(
       height: 500,
       child: PageView.builder(
         controller: PageController(viewportFraction: 0.9),
-        itemCount: pageCount,
+        itemCount: pages.length,
         itemBuilder: (context, index) => Padding(
           padding: const EdgeInsets.fromLTRB(0, 2, 12, 32),
           child: _PassportSpread(
-            stamps:
-                index < pages.length ? pages[index] : const <RallybookStamp>[],
+            stamps: pages[index],
             pageNumber: index + 1,
-            pageCount: pageCount,
+            pageCount: pages.length,
             showGuide: index == 0,
             acquiredCount: acquiredCount,
             totalCount: totalCount,
@@ -325,13 +312,6 @@ class _PassportSpread extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pageAsset = pageNumber <= _passportPageAssets.length
-        ? _passportPageAssets[pageNumber - 1]
-        : null;
-    if (pageAsset != null) {
-      return _PassportImageSpread(pageAsset: pageAsset);
-    }
-
     return DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8E8),
@@ -431,112 +411,6 @@ class _PassportSpread extends StatelessWidget {
   }
 }
 
-class _PassportImageSpread extends StatelessWidget {
-  const _PassportImageSpread({required this.pageAsset});
-
-  final String pageAsset;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E8),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppShadows.floating,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              pageAsset,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
-            const _PassportImageEdgeFade(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PassportImageEdgeFade extends StatelessWidget {
-  const _PassportImageEdgeFade();
-
-  static const _paperColor = Color(0xFFFFF8E8);
-
-  @override
-  Widget build(BuildContext context) {
-    final edgeColor = _paperColor.withValues(alpha: 0.76);
-    return IgnorePointer(
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 42,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [edgeColor, Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 42,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [edgeColor, Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 28,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [edgeColor, Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: 28,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [edgeColor, Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PassportPaperPainter extends CustomPainter {
   const _PassportPaperPainter();
 
@@ -584,6 +458,7 @@ class _CityStampTile extends StatelessWidget {
     final acquired = stamp.acquired;
     final icon = _passportIconFor(stamp.cityName);
     final landmark = _passportLandmarkFor(stamp.cityName, stamp.stampName);
+    final sketchAsset = _passportSketchAssetFor(stamp.cityName, landmark);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -653,40 +528,77 @@ class _CityStampTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Transform.rotate(
-            angle: acquired ? -0.16 : 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: acquired
-                    ? AppColors.primary.withValues(alpha: 0.12)
-                    : AppColors.line.withValues(alpha: 0.34),
-                borderRadius: BorderRadius.circular(999),
-                border: acquired
-                    ? Border.all(
-                        color: AppColors.primaryDark.withValues(alpha: 0.22),
-                      )
-                    : null,
-              ),
-              child: Text(
-                acquired ? 'STAMPED' : 'BLANK',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: acquired
-                      ? AppColors.primaryDark
-                      : AppColors.textSecondary,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
+          Expanded(
+            flex: 2,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  sketchAsset,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.centerRight,
+                  opacity: AlwaysStoppedAnimation(acquired ? 0.82 : 0.48),
+                  filterQuality: FilterQuality.high,
                 ),
-              ),
+                const _PassportSketchFade(),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Transform.rotate(
+                    angle: acquired ? -0.16 : 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: acquired
+                            ? AppColors.primary.withValues(alpha: 0.14)
+                            : AppColors.line.withValues(alpha: 0.42),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        acquired ? 'STAMPED' : 'BLANK',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: acquired
+                              ? AppColors.primaryDark
+                              : AppColors.textSecondary,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PassportSketchFade extends StatelessWidget {
+  const _PassportSketchFade();
+
+  @override
+  Widget build(BuildContext context) {
+    return const IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFFFFDF7),
+              Color(0x88FFFDF7),
+              Color(0x00FFFDF7),
+              Color(0x66FFFDF7),
+            ],
+            stops: [0, 0.18, 0.72, 1],
+          ),
+        ),
       ),
     );
   }
@@ -702,6 +614,73 @@ IconData _passportIconFor(String cityName) {
     '철원' => Icons.landscape_rounded,
     '횡성' => Icons.park_rounded,
     _ => Icons.place_rounded,
+  };
+}
+
+String _passportSketchAssetFor(String cityName, String landmark) {
+  final key = '${_normalizeCityName(cityName)} $landmark';
+  if (key.contains('소양강')) {
+    return 'assets/stamps/passport/spots/passport_spot_02_soyang_skywalk.png';
+  }
+  if (key.contains('경포')) {
+    return 'assets/stamps/passport/spots/passport_spot_04_gyeongpodae.png';
+  }
+  if (key.contains('논골담')) {
+    return 'assets/stamps/passport/spots/passport_spot_06_nongoldam_road.png';
+  }
+  if (key.contains('영금정')) {
+    return 'assets/stamps/passport/spots/passport_spot_10_yeonggeumjeong.png';
+  }
+  if (key.contains('장호')) {
+    return 'assets/stamps/passport/spots/passport_spot_11_jangho_port.png';
+  }
+  if (key.contains('비발디')) {
+    return 'assets/stamps/passport/spots/passport_spot_13_vivaldi_park.png';
+  }
+  if (key.contains('장릉')) {
+    return 'assets/stamps/passport/spots/passport_spot_16_jangneung.png';
+  }
+  if (key.contains('이효석')) {
+    return 'assets/stamps/passport/spots/passport_spot_19_lee_hyoseok_museum.png';
+  }
+  if (key.contains('박수근')) {
+    return 'assets/stamps/passport/spots/passport_spot_24_park_sookeun_museum.png';
+  }
+  if (key.contains('화진포')) {
+    return 'assets/stamps/passport/spots/passport_spot_27_hwajinpo.png';
+  }
+  if (key.contains('낙산')) {
+    return 'assets/stamps/passport/spots/passport_spot_28_naksansa.png';
+  }
+
+  final city = _normalizeCityName(cityName);
+  return switch (city) {
+    '춘천' => 'assets/stamps/passport/spots/passport_spot_01_nami_island.png',
+    '원주' => 'assets/stamps/passport/spots/passport_spot_03_museum_san.png',
+    '강릉' => 'assets/stamps/passport/spots/passport_spot_05_anmok_beach.png',
+    '동해' =>
+      'assets/stamps/passport/spots/passport_spot_07_mukho_lighthouse.png',
+    '태백' => 'assets/stamps/passport/spots/passport_spot_08_hwangji_pond.png',
+    '속초' => 'assets/stamps/passport/spots/passport_spot_09_sokcho_market.png',
+    '삼척' => 'assets/stamps/passport/spots/passport_spot_12_hwanseon_cave.png',
+    '홍천' => 'assets/stamps/passport/spots/passport_spot_14_sutasa.png',
+    '횡성' =>
+      'assets/stamps/passport/spots/passport_spot_15_hoengseong_lake_trail.png',
+    '영월' => 'assets/stamps/passport/spots/passport_spot_17_cheongnyeongpo.png',
+    '평창' =>
+      'assets/stamps/passport/spots/passport_spot_18_daegwallyeong_sheep_ranch.png',
+    '정선' =>
+      'assets/stamps/passport/spots/passport_spot_20_jeongseon_market.png',
+    '철원' => 'assets/stamps/passport/spots/passport_spot_21_goseokjeong.png',
+    '화천' =>
+      'assets/stamps/passport/spots/passport_spot_22_sancheoneo_festival.png',
+    '양구' => 'assets/stamps/passport/spots/passport_spot_23_dutayeon.png',
+    '인제' =>
+      'assets/stamps/passport/spots/passport_spot_25_wondaeri_birch_forest.png',
+    '고성' =>
+      'assets/stamps/passport/spots/passport_spot_26_unification_observatory.png',
+    '양양' => 'assets/stamps/passport/spots/passport_spot_29_surfyy_beach.png',
+    _ => 'assets/stamps/passport/spots/passport_spot_01_nami_island.png',
   };
 }
 
