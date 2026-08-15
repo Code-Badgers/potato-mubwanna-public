@@ -28,6 +28,8 @@ curl --fail https://<PUBLIC_DOMAIN>/health
 
 정상 상태이면 외부에서 `https://<PUBLIC_DOMAIN>/health`가 유효한 인증서로 `UP` 응답을 반환한다.
 
+개인정보처리방침은 인증 없이 `https://<PUBLIC_DOMAIN>/privacy-policy`에서 확인할 수 있다. 원본 HTML은 `deploy/legal/privacy-policy.html`이며, Nginx가 읽기 전용으로 제공한다.
+
 ## 로그와 재배포
 
 ```bash
