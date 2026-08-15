@@ -488,7 +488,7 @@ class _PassportStampTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 62,
+            width: 58,
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -513,9 +513,9 @@ class _PassportStampTile extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 92,
+            width: 84,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,20 +551,26 @@ class _PassportStampTile extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           Expanded(
-            flex: 2,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  sketchAsset,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.center,
-                  filterQuality: FilterQuality.high,
-                ),
-                const _PassportSketchFade(),
-              ],
+            flex: 3,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Transform.scale(
+                    scale: 1.22,
+                    child: Image.asset(
+                      sketchAsset,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                  const _PassportSketchFade(),
+                ],
+              ),
             ),
           ),
         ],
@@ -581,14 +587,27 @@ class _PassportSketchFade extends StatelessWidget {
     return const IgnorePointer(
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: RadialGradient(
+            radius: 0.9,
             colors: [
-              Color(0xCCFFFDF7),
               Color(0x00FFFDF7),
               Color(0x00FFFDF7),
-              Color(0x99FFFDF7),
+              Color(0xAAFFFDF7),
             ],
-            stops: [0, 0.14, 0.86, 1],
+            stops: [0, 0.68, 1],
+          ),
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xDDFFFDF7),
+                Color(0x00FFFDF7),
+                Color(0x00FFFDF7),
+                Color(0xBBFFFDF7),
+              ],
+              stops: [0, 0.11, 0.89, 1],
+            ),
           ),
         ),
       ),
