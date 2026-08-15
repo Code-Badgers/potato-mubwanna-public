@@ -29,8 +29,11 @@ grep -q '시행일: 2026년 8월 15일' <<< "${page}"
 grep -q 'privacy@example.com' <<< "${page}"
 grep -q '010-0000-0000' <<< "${page}"
 
-redirect_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
-  "http://127.0.0.1:${published_port}/privacy-policy/")"
+redirect_headers="$(curl --silent --output /dev/null --dump-header - \
+  "http://127.0.0.1:${published_port}/privacy-policy/" | tr -d '\r')"
+redirect_status="$(awk 'NR == 1 { print $2 }' <<< "${redirect_headers}")"
+redirect_location="$(sed -n 's/^Location: //Ip' <<< "${redirect_headers}" | tail -n 1)"
 test "${redirect_status}" = 308
+test "${redirect_location}" = /privacy-policy
 
 echo "Nginx privacy policy page and canonical redirect are valid."
