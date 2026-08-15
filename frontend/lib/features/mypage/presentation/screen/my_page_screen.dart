@@ -141,9 +141,9 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _ProfileAvatar(profile: profile),
+                    Center(child: _ProfileAvatar(profile: profile)),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -173,48 +173,6 @@ class _ProfileHeader extends StatelessWidget {
                             ],
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryTint.withValues(alpha: 0.82),
-                        borderRadius: BorderRadius.circular(
-                          AppDimens.pillRadius,
-                        ),
-                      ),
-                      child: const Text(
-                        'GANGWON VERIFIED',
-                        style: TextStyle(
-                          color: AppColors.primaryDark,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.7,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(
-                      Icons.terrain_rounded,
-                      color: AppColors.primaryDark,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'TRAVELER',
-                      style: TextStyle(
-                        color: AppColors.primaryDark,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.7,
                       ),
                     ),
                   ],
@@ -330,18 +288,6 @@ class _TravelerIdCardPainter extends CustomPainter {
       );
       canvas.drawPath(path, wavePaint);
     }
-
-    final mountainPaint = Paint()
-      ..color = AppColors.primaryDark.withValues(alpha: 0.08)
-      ..style = PaintingStyle.fill;
-    final mountain = Path()
-      ..moveTo(size.width * 0.46, size.height)
-      ..lineTo(size.width * 0.58, size.height * 0.82)
-      ..lineTo(size.width * 0.67, size.height)
-      ..lineTo(size.width * 0.73, size.height * 0.86)
-      ..lineTo(size.width * 0.88, size.height)
-      ..close();
-    canvas.drawPath(mountain, mountainPaint);
 
     final stampPaint = Paint()
       ..color = AppColors.primaryDark.withValues(alpha: 0.12)
