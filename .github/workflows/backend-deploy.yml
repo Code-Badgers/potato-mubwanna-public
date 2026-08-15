@@ -8,8 +8,14 @@ on:
         required: false
         type: string
   push:
+    branches:
+      - main
     tags:
       - "backend-v*"
+    paths:
+      - ".github/workflows/backend-deploy.yml"
+      - "backend/**"
+      - "deploy/**"
 
 concurrency:
   group: backend-production
