@@ -55,4 +55,5 @@ flutter:
     - assets/stamps/
     - assets/stamps/passport/
     - assets/stamps/passport/spots/
+    - assets/travel_records/
     - assets/geojson/
