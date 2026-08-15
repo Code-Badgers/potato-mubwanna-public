@@ -10,6 +10,15 @@ import '../../domain/stamp_book.dart';
 import '../model/gangwon_map_projection.dart';
 import '../model/gangwon_map_region.dart';
 
+const _passportPageAssets = [
+  'assets/stamps/passport/gangwon_passport_page_01.png',
+  'assets/stamps/passport/gangwon_passport_page_02.png',
+  'assets/stamps/passport/gangwon_passport_page_03.png',
+  'assets/stamps/passport/gangwon_passport_page_04.png',
+  'assets/stamps/passport/gangwon_passport_page_05.png',
+  'assets/stamps/passport/gangwon_passport_page_06.png',
+];
+
 class StampBookScreen extends ConsumerWidget {
   const StampBookScreen({super.key});
 
@@ -268,21 +277,25 @@ class _PassportPageBook extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (pages.isEmpty) {
+    if (pages.isEmpty && _passportPageAssets.isEmpty) {
       return const SizedBox.shrink();
     }
+    final pageCount = pages.length > _passportPageAssets.length
+        ? pages.length
+        : _passportPageAssets.length;
 
     return SizedBox(
       height: 500,
       child: PageView.builder(
         controller: PageController(viewportFraction: 0.9),
-        itemCount: pages.length,
+        itemCount: pageCount,
         itemBuilder: (context, index) => Padding(
           padding: const EdgeInsets.fromLTRB(0, 2, 12, 32),
           child: _PassportSpread(
-            stamps: pages[index],
+            stamps:
+                index < pages.length ? pages[index] : const <RallybookStamp>[],
             pageNumber: index + 1,
-            pageCount: pages.length,
+            pageCount: pageCount,
             showGuide: index == 0,
             acquiredCount: acquiredCount,
             totalCount: totalCount,
@@ -312,6 +325,13 @@ class _PassportSpread extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pageAsset = pageNumber <= _passportPageAssets.length
+        ? _passportPageAssets[pageNumber - 1]
+        : null;
+    if (pageAsset != null) {
+      return _PassportImageSpread(pageAsset: pageAsset);
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8E8),
@@ -406,6 +426,112 @@ class _PassportSpread extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PassportImageSpread extends StatelessWidget {
+  const _PassportImageSpread({required this.pageAsset});
+
+  final String pageAsset;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E8),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadows.floating,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              pageAsset,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+            ),
+            const _PassportImageEdgeFade(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PassportImageEdgeFade extends StatelessWidget {
+  const _PassportImageEdgeFade();
+
+  static const _paperColor = Color(0xFFFFF8E8);
+
+  @override
+  Widget build(BuildContext context) {
+    final edgeColor = _paperColor.withValues(alpha: 0.76);
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 42,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [edgeColor, Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 42,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [edgeColor, Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 28,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [edgeColor, Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 28,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [edgeColor, Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
