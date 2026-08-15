@@ -57,6 +57,7 @@ rollback_on_error() {
     set_backend_image "${previous_image}"
     docker image inspect "${previous_image}" > /dev/null 2>&1 \
       && "${compose[@]}" up -d --no-build \
+      && "${compose[@]}" restart nginx gateway \
       && curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors "${health_url}"
     local rollback_status=$?
     set -e
@@ -83,6 +84,7 @@ fi
 deployment_started=true
 set_backend_image "${image_uri}"
 "${compose[@]}" up -d --no-build
+"${compose[@]}" restart nginx gateway
 curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors "${health_url}"
 "${compose[@]}" ps
 

@@ -42,6 +42,7 @@ bash "${test_root}/deploy-backend.sh" \
   potato-mubwanna-backend:next true
 grep -q '^BACKEND_IMAGE=potato-mubwanna-backend:next$' "${test_root}/.env"
 grep -q '^build .*--tag potato-mubwanna-backend:next ' "${TEST_DOCKER_LOG}"
+grep -q 'restart nginx gateway' "${TEST_DOCKER_LOG}"
 grep -q 'https://potato-mubwanna.duckdns.org/health' "${TEST_DOCKER_LOG}"
 
 sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=potato-mubwanna-backend:previous|' "${test_root}/.env"
@@ -60,5 +61,6 @@ if grep -q '^build ' "${TEST_DOCKER_LOG}"; then
   exit 1
 fi
 grep -q '^image inspect potato-mubwanna-backend:previous$' "${TEST_DOCKER_LOG}"
+grep -q 'restart nginx gateway' "${TEST_DOCKER_LOG}"
 
 echo "Deployment script build, automatic rollback, and existing-image scenarios passed."
