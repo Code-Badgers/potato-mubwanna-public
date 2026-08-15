@@ -12,9 +12,6 @@ import '../../domain/travel_record.dart';
 
 const _travelPrimary = Color(0xFF56C787);
 const _travelDark = Color(0xFF509B64);
-const _travelFilm = Color(0xFFF9F4E8);
-const _filmFrameLandscape = 'assets/travel_records/film_frame_landscape.png';
-const _filmFramePortrait = 'assets/travel_records/film_frame_portrait.png';
 
 class TravelRecordScreen extends ConsumerWidget {
   const TravelRecordScreen({super.key});
@@ -172,53 +169,39 @@ class _TravelRecordPhotoBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 24),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.74),
-        borderRadius: BorderRadius.circular(34),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const spacing = 12.0;
-          final columnWidth = (constraints.maxWidth - spacing) / 2;
-          final children = <Widget>[];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final columnWidth = (constraints.maxWidth - spacing) / 2;
+        final children = <Widget>[];
 
-          for (var index = 0; index < records.length; index += 1) {
-            final record = records[index];
-            final variant = _TravelRecordFrameVariant.fromIndex(index);
-            final width = variant.isWide
-                ? constraints.maxWidth
-                : variant.isNarrow
-                    ? columnWidth * 0.82
-                    : columnWidth;
+        for (var index = 0; index < records.length; index += 1) {
+          final record = records[index];
+          final variant = _TravelRecordFrameVariant.fromIndex(index);
+          final width = variant.isWide
+              ? constraints.maxWidth
+              : variant.isNarrow
+                  ? columnWidth * 0.82
+                  : columnWidth;
 
-            children.add(
-              _TravelRecordFilmCard(
-                record: record,
-                variant: variant,
-                width: width,
-                onTap: () => onRecordSelected(record),
-              ),
-            );
-          }
-
-          return Wrap(
-            spacing: spacing,
-            runSpacing: 18,
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.start,
-            children: children,
+          children.add(
+            _TravelRecordFilmCard(
+              record: record,
+              variant: variant,
+              width: width,
+              onTap: () => onRecordSelected(record),
+            ),
           );
-        },
-      ),
+        }
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 18,
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.start,
+          children: children,
+        );
+      },
     );
   }
 }
@@ -361,25 +344,22 @@ class _TravelRecordFramedPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final frameAsset =
-        variant.usesPortraitFrame ? _filmFramePortrait : _filmFrameLandscape;
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final height = constraints.maxHeight;
         final photoInsets = variant.usesPortraitFrame
             ? EdgeInsets.fromLTRB(
-                width * 0.31,
-                height * 0.22,
-                width * 0.33,
-                height * 0.22,
+                width * 0.16,
+                height * 0.11,
+                width * 0.16,
+                height * 0.29,
               )
             : EdgeInsets.fromLTRB(
-                width * 0.18,
-                height * 0.26,
-                width * 0.19,
-                height * 0.34,
+                width * 0.09,
+                height * 0.12,
+                width * 0.09,
+                height * 0.28,
               );
 
         return Stack(
@@ -388,13 +368,13 @@ class _TravelRecordFramedPhoto extends StatelessWidget {
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: _travelFilm,
-                  borderRadius: BorderRadius.circular(18),
+                  color: const Color(0xFFFFFCF5),
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 14,
-                      offset: const Offset(0, 7),
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -404,22 +384,33 @@ class _TravelRecordFramedPhoto extends StatelessWidget {
               child: Padding(
                 padding: photoInsets,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: _TravelRecordPhoto(record: record),
+                  borderRadius: BorderRadius.circular(5),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _TravelRecordPhoto(record: record),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.08),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.04),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            Positioned.fill(
-              child: Image.asset(
-                frameAsset,
-                fit: BoxFit.fill,
-                filterQuality: FilterQuality.medium,
-              ),
-            ),
             Positioned(
-              left: 20,
-              right: 20,
-              bottom: variant.usesPortraitFrame ? 18 : 14,
+              left: 18,
+              right: 18,
+              bottom: variant.usesPortraitFrame ? 16 : 12,
               child: Text(
                 _formatHandwrittenDate(record.visitedAt),
                 textAlign: TextAlign.center,
@@ -553,18 +544,7 @@ class _EmptyTravelArchive extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 24),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(34),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: LayoutBuilder(
         builder: (context, constraints) {
           const spacing = 12.0;
@@ -639,8 +619,6 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final frameAsset =
-        variant.usesPortraitFrame ? _filmFramePortrait : _filmFrameLandscape;
     final tint = _emptyRecordTint(index);
 
     return LayoutBuilder(
@@ -649,16 +627,16 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
         final height = constraints.maxHeight;
         final photoInsets = variant.usesPortraitFrame
             ? EdgeInsets.fromLTRB(
-                width * 0.31,
-                height * 0.22,
-                width * 0.33,
-                height * 0.22,
+                width * 0.16,
+                height * 0.11,
+                width * 0.16,
+                height * 0.29,
               )
             : EdgeInsets.fromLTRB(
-                width * 0.18,
-                height * 0.26,
-                width * 0.19,
-                height * 0.34,
+                width * 0.09,
+                height * 0.12,
+                width * 0.09,
+                height * 0.28,
               );
 
         return Stack(
@@ -667,13 +645,13 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: _travelFilm,
-                  borderRadius: BorderRadius.circular(18),
+                  color: const Color(0xFFFFFCF5),
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.07),
-                      blurRadius: 14,
-                      offset: const Offset(0, 7),
+                      color: Colors.black.withValues(alpha: 0.09),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -683,7 +661,7 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
               child: Padding(
                 padding: photoInsets,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
+                  borderRadius: BorderRadius.circular(5),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -698,13 +676,6 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ),
-            Positioned.fill(
-              child: Image.asset(
-                frameAsset,
-                fit: BoxFit.fill,
-                filterQuality: FilterQuality.medium,
               ),
             ),
             if (index == 0 || index == 3 || index == 7)
