@@ -70,6 +70,7 @@ class CityStampGridScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stampBook = ref.watch(stampBookProvider);
+    final rallybookSpots = ref.watch(stampRallybookSpotsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -77,7 +78,10 @@ class CityStampGridScreen extends ConsumerWidget {
         child: stampBook.when(
           data: (value) => value == null
               ? const _SignedOutState()
-              : _CityStampGridBody(progress: value.progress),
+              : _CityStampGridBody(
+                  progress: value.progress,
+                  rallybookSpots: rallybookSpots,
+                ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, __) => _StampBookStatusBody(
             child: _StampBookError(
@@ -91,18 +95,29 @@ class CityStampGridScreen extends ConsumerWidget {
 }
 
 class _CityStampGridBody extends StatelessWidget {
-  const _CityStampGridBody({required this.progress});
+  const _CityStampGridBody({
+    required this.progress,
+    required this.rallybookSpots,
+  });
 
   final StampProgress progress;
+  final AsyncValue<List<RallybookSpot>?> rallybookSpots;
 
   @override
   Widget build(BuildContext context) {
-    final totalCount = progress.totalCount == 0 ? 18 : progress.totalCount;
-    final acquiredCount = progress.acquiredCount.clamp(0, totalCount);
-    final pages = <List<RallybookStamp>>[];
-    for (var index = 0; index < progress.stamps.length; index += 3) {
-      final end = (index + 3).clamp(0, progress.stamps.length);
-      pages.add(progress.stamps.sublist(index, end));
+    final spots = rallybookSpots.maybeWhen(
+      data: (values) => values ?? const <RallybookSpot>[],
+      orElse: () => const <RallybookSpot>[],
+    );
+    final entries = spots.isEmpty
+        ? _fallbackPassportEntries(progress.stamps)
+        : _passportEntriesFor(spots, progress.stamps);
+    final totalCount = entries.isEmpty ? 29 : entries.length;
+    final acquiredCount = entries.where((entry) => entry.acquired).length;
+    final pages = <List<_PassportStampEntry>>[];
+    for (var index = 0; index < entries.length; index += 5) {
+      final end = (index + 5).clamp(0, entries.length);
+      pages.add(entries.sublist(index, end));
     }
 
     return CustomScrollView(
@@ -262,7 +277,7 @@ class _PassportPageBook extends StatelessWidget {
     required this.totalCount,
   });
 
-  final List<List<RallybookStamp>> pages;
+  final List<List<_PassportStampEntry>> pages;
   final int acquiredCount;
   final int totalCount;
 
@@ -303,7 +318,7 @@ class _PassportSpread extends StatelessWidget {
     required this.totalCount,
   });
 
-  final List<RallybookStamp> stamps;
+  final List<_PassportStampEntry> stamps;
   final int pageNumber;
   final int pageCount;
   final bool showGuide;
@@ -372,9 +387,11 @@ class _PassportSpread extends StatelessWidget {
                   child: Column(
                     children: [
                       for (var index = 0; index < stamps.length; index++) ...[
-                        Expanded(child: _CityStampTile(stamp: stamps[index])),
+                        Expanded(
+                          child: _PassportStampTile(entry: stamps[index]),
+                        ),
                         if (index < stamps.length - 1)
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                       ],
                     ],
                   ),
@@ -448,20 +465,18 @@ class _PassportPaperPainter extends CustomPainter {
   bool shouldRepaint(covariant _PassportPaperPainter oldDelegate) => false;
 }
 
-class _CityStampTile extends StatelessWidget {
-  const _CityStampTile({required this.stamp});
+class _PassportStampTile extends StatelessWidget {
+  const _PassportStampTile({required this.entry});
 
-  final RallybookStamp stamp;
+  final _PassportStampEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final acquired = stamp.acquired;
-    final icon = _passportIconFor(stamp.cityName);
-    final landmark = _passportLandmarkFor(stamp.cityName, stamp.stampName);
-    final sketchAsset = _passportSketchAssetFor(stamp.cityName, landmark);
+    final acquired = entry.acquired;
+    final sketchAsset = _passportSketchAssetFor(entry.cityName, entry.landmark);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
         color: acquired
             ? AppColors.surface.withValues(alpha: 0.54)
@@ -476,58 +491,71 @@ class _CityStampTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: acquired
-                  ? AppColors.primaryTint
-                  : AppColors.background.withValues(alpha: 0.94),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              acquired ? icon : Icons.radio_button_unchecked_rounded,
-              color: acquired ? AppColors.primaryDark : AppColors.textSecondary,
-              size: acquired ? 24 : 24,
+          SizedBox(
+            width: 62,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size.square(54),
+                  painter: _PassportStampSlotPainter(acquired: acquired),
+                ),
+                if (acquired)
+                  Transform.rotate(
+                    angle: -0.16,
+                    child: Text(
+                      '감자무봤나',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.primaryDark.withValues(alpha: 0.78),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 92,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  stamp.cityName,
+                  entry.cityName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: acquired
                         ? AppColors.textPrimary
                         : AppColors.textSecondary,
-                    fontSize: 15,
+                    fontSize: 11,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  acquired ? landmark : '명소 방문 전',
-                  maxLines: 1,
+                  entry.landmark,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: acquired
                         ? AppColors.primaryDark
                         : AppColors.textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                    height: 1.06,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Expanded(
             flex: 2,
             child: Stack(
@@ -535,43 +563,12 @@ class _CityStampTile extends StatelessWidget {
               children: [
                 Image.asset(
                   sketchAsset,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.centerRight,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
                   opacity: AlwaysStoppedAnimation(acquired ? 0.82 : 0.48),
                   filterQuality: FilterQuality.high,
                 ),
                 const _PassportSketchFade(),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Transform.rotate(
-                    angle: acquired ? -0.16 : 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: acquired
-                            ? AppColors.primary.withValues(alpha: 0.14)
-                            : AppColors.line.withValues(alpha: 0.42),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        acquired ? 'STAMPED' : 'BLANK',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: acquired
-                              ? AppColors.primaryDark
-                              : AppColors.textSecondary,
-                          fontSize: 8,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -604,18 +601,226 @@ class _PassportSketchFade extends StatelessWidget {
   }
 }
 
-IconData _passportIconFor(String cityName) {
-  final city = _normalizeCityName(cityName);
-  return switch (city) {
-    '강릉' || '속초' || '동해' || '삼척' || '고성' || '양양' => Icons.waves_rounded,
-    '춘천' || '화천' || '양구' || '인제' || '홍천' => Icons.forest_rounded,
-    '평창' || '정선' || '태백' || '영월' => Icons.terrain_rounded,
-    '원주' => Icons.museum_rounded,
-    '철원' => Icons.landscape_rounded,
-    '횡성' => Icons.park_rounded,
-    _ => Icons.place_rounded,
-  };
+class _PassportStampSlotPainter extends CustomPainter {
+  const _PassportStampSlotPainter({required this.acquired});
+
+  final bool acquired;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide / 2 - 3;
+    final baseColor = acquired ? AppColors.primaryDark : AppColors.secondary;
+    final outerPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = acquired ? 2.8 : 1.8
+      ..color = baseColor.withValues(alpha: acquired ? 0.72 : 0.78);
+    final innerPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = baseColor.withValues(alpha: acquired ? 0.42 : 0.64);
+
+    canvas.drawCircle(center, radius, outerPaint);
+    canvas.drawCircle(center, radius * 0.72, innerPaint);
+
+    if (acquired) {
+      final fillPaint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = AppColors.primary.withValues(alpha: 0.09);
+      canvas.drawCircle(center, radius * 0.9, fillPaint);
+      final linePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..color = AppColors.primaryDark.withValues(alpha: 0.24);
+      for (var index = -2; index <= 2; index += 1) {
+        final dy = index * radius * 0.26;
+        canvas.drawLine(
+          Offset(center.dx - radius * 0.72, center.dy + dy),
+          Offset(center.dx + radius * 0.72, center.dy + dy - radius * 0.34),
+          linePaint,
+        );
+      }
+      return;
+    }
+
+    final dashPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1
+      ..strokeCap = StrokeCap.round
+      ..color = baseColor.withValues(alpha: 0.58);
+    const dashCount = 18;
+    for (var index = 0; index < dashCount; index += 1) {
+      final start = index * 2 * 3.141592653589793 / dashCount;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius * 0.86),
+        start,
+        0.13,
+        false,
+        dashPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PassportStampSlotPainter oldDelegate) {
+    return oldDelegate.acquired != acquired;
+  }
 }
+
+class _PassportStampEntry {
+  const _PassportStampEntry({
+    required this.id,
+    required this.cityName,
+    required this.landmark,
+    required this.acquired,
+  });
+
+  final int id;
+  final String cityName;
+  final String landmark;
+  final bool acquired;
+}
+
+List<_PassportStampEntry> _passportEntriesFor(
+  List<RallybookSpot> spots,
+  List<RallybookStamp> stamps,
+) {
+  final sorted = [...spots]..sort((a, b) => a.spotId.compareTo(b.spotId));
+  return sorted
+      .map(
+        (spot) => _PassportStampEntry(
+          id: spot.spotId,
+          cityName: _normalizeCityName(spot.cityName),
+          landmark: spot.spotName,
+          acquired: _isPassportSpotAcquired(spot, stamps),
+        ),
+      )
+      .toList(growable: false);
+}
+
+List<_PassportStampEntry> _fallbackPassportEntries(
+  List<RallybookStamp> stamps,
+) {
+  return _defaultPassportEntries
+      .map(
+        (entry) => _PassportStampEntry(
+          id: entry.id,
+          cityName: entry.cityName,
+          landmark: entry.landmark,
+          acquired: stamps.any(
+            (stamp) =>
+                stamp.acquired &&
+                _normalizeCityName(stamp.cityName) == entry.cityName &&
+                _normalizeStampText(stamp.stampName)
+                    .contains(_normalizeStampText(entry.landmark)),
+          ),
+        ),
+      )
+      .toList(growable: false);
+}
+
+bool _isPassportSpotAcquired(
+  RallybookSpot spot,
+  List<RallybookStamp> stamps,
+) {
+  final city = _normalizeCityName(spot.cityName);
+  final spotName = _normalizeStampText(spot.spotName);
+  return stamps.any((stamp) {
+    if (!stamp.acquired) {
+      return false;
+    }
+    final stampCity = _normalizeCityName(stamp.cityName);
+    final stampName = _normalizeStampText(stamp.stampName);
+    if (stampName.isEmpty) {
+      return false;
+    }
+    return stampCity == city &&
+        (stampName == spotName ||
+            stampName.contains(spotName) ||
+            spotName.contains(stampName));
+  });
+}
+
+String _normalizeStampText(String value) {
+  return value.replaceAll(RegExp(r'\s+'), '').replaceAll('스탬프', '').trim();
+}
+
+const _defaultPassportEntries = <_PassportStampEntry>[
+  _PassportStampEntry(id: 1, cityName: '춘천', landmark: '남이섬', acquired: false),
+  _PassportStampEntry(
+    id: 2,
+    cityName: '춘천',
+    landmark: '소양강 스카이워크',
+    acquired: false,
+  ),
+  _PassportStampEntry(
+      id: 3, cityName: '원주', landmark: '뮤지엄 산', acquired: false),
+  _PassportStampEntry(id: 4, cityName: '강릉', landmark: '경포대', acquired: false),
+  _PassportStampEntry(id: 5, cityName: '강릉', landmark: '안목해변', acquired: false),
+  _PassportStampEntry(id: 6, cityName: '동해', landmark: '논골담길', acquired: false),
+  _PassportStampEntry(id: 7, cityName: '동해', landmark: '묵호등대', acquired: false),
+  _PassportStampEntry(id: 8, cityName: '태백', landmark: '황지연못', acquired: false),
+  _PassportStampEntry(
+    id: 9,
+    cityName: '속초',
+    landmark: '속초관광수산시장',
+    acquired: false,
+  ),
+  _PassportStampEntry(id: 10, cityName: '속초', landmark: '영금정', acquired: false),
+  _PassportStampEntry(id: 11, cityName: '삼척', landmark: '장호항', acquired: false),
+  _PassportStampEntry(id: 12, cityName: '삼척', landmark: '환선굴', acquired: false),
+  _PassportStampEntry(
+      id: 13, cityName: '홍천', landmark: '비발디파크', acquired: false),
+  _PassportStampEntry(id: 14, cityName: '홍천', landmark: '수타사', acquired: false),
+  _PassportStampEntry(
+      id: 15, cityName: '횡성', landmark: '횡성호수길', acquired: false),
+  _PassportStampEntry(id: 16, cityName: '영월', landmark: '장릉', acquired: false),
+  _PassportStampEntry(id: 17, cityName: '영월', landmark: '청령포', acquired: false),
+  _PassportStampEntry(
+    id: 18,
+    cityName: '평창',
+    landmark: '대관령 양떼목장',
+    acquired: false,
+  ),
+  _PassportStampEntry(
+    id: 19,
+    cityName: '평창',
+    landmark: '이효석문학관',
+    acquired: false,
+  ),
+  _PassportStampEntry(
+      id: 20, cityName: '정선', landmark: '정선 5일장', acquired: false),
+  _PassportStampEntry(id: 21, cityName: '철원', landmark: '고석정', acquired: false),
+  _PassportStampEntry(
+    id: 22,
+    cityName: '화천',
+    landmark: '산천어축제장',
+    acquired: false,
+  ),
+  _PassportStampEntry(id: 23, cityName: '양구', landmark: '두타연', acquired: false),
+  _PassportStampEntry(
+    id: 24,
+    cityName: '양구',
+    landmark: '박수근미술관',
+    acquired: false,
+  ),
+  _PassportStampEntry(
+    id: 25,
+    cityName: '인제',
+    landmark: '원대리 자작나무숲',
+    acquired: false,
+  ),
+  _PassportStampEntry(
+    id: 26,
+    cityName: '고성',
+    landmark: '통일전망대',
+    acquired: false,
+  ),
+  _PassportStampEntry(id: 27, cityName: '고성', landmark: '화진포', acquired: false),
+  _PassportStampEntry(id: 28, cityName: '양양', landmark: '낙산사', acquired: false),
+  _PassportStampEntry(
+      id: 29, cityName: '양양', landmark: '서피비치', acquired: false),
+];
 
 String _passportSketchAssetFor(String cityName, String landmark) {
   final key = '${_normalizeCityName(cityName)} $landmark';
@@ -684,36 +889,6 @@ String _passportSketchAssetFor(String cityName, String landmark) {
   };
 }
 
-String _passportLandmarkFor(String cityName, String stampName) {
-  final normalizedStamp = stampName.trim();
-  if (normalizedStamp.isNotEmpty) {
-    return normalizedStamp;
-  }
-
-  final city = _normalizeCityName(cityName);
-  return switch (city) {
-    '춘천' => '남이섬 스탬프',
-    '원주' => '뮤지엄 산 스탬프',
-    '강릉' => '안목해변 스탬프',
-    '동해' => '묵호등대 스탬프',
-    '태백' => '황지연못 스탬프',
-    '속초' => '속초시장 스탬프',
-    '삼척' => '환선굴 스탬프',
-    '홍천' => '수타사 스탬프',
-    '횡성' => '횡성호수길 스탬프',
-    '영월' => '청령포 스탬프',
-    '평창' => '양떼목장 스탬프',
-    '정선' => '정선 5일장 스탬프',
-    '철원' => '고석정 스탬프',
-    '화천' => '산천어축제 스탬프',
-    '양구' => '두타연 스탬프',
-    '인제' => '자작나무숲 스탬프',
-    '고성' => '통일전망대 스탬프',
-    '양양' => '서피비치 스탬프',
-    _ => '여행 스탬프',
-  };
-}
-
 class _StampBookStatusBody extends StatelessWidget {
   const _StampBookStatusBody({required this.child});
 
@@ -746,7 +921,12 @@ class _StampBookBody extends StatelessWidget {
         final mapHeight = (constraints.maxHeight - 314).clamp(376.0, 432.0);
         return CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _StampTourHero(progress: progress)),
+            SliverToBoxAdapter(
+              child: _StampTourHero(
+                progress: progress,
+                rallybookSpots: rallybookSpots,
+              ),
+            ),
             SliverToBoxAdapter(
               child: _GangwonStampMap(
                 progress: progress,
@@ -764,14 +944,25 @@ class _StampBookBody extends StatelessWidget {
 }
 
 class _StampTourHero extends StatelessWidget {
-  const _StampTourHero({required this.progress});
+  const _StampTourHero({
+    required this.progress,
+    required this.rallybookSpots,
+  });
 
   final StampProgress progress;
+  final AsyncValue<List<RallybookSpot>?> rallybookSpots;
 
   @override
   Widget build(BuildContext context) {
-    final totalCount = progress.totalCount == 0 ? 18 : progress.totalCount;
-    final acquiredCount = progress.acquiredCount.clamp(0, totalCount);
+    final spots = rallybookSpots.maybeWhen(
+      data: (values) => values ?? const <RallybookSpot>[],
+      orElse: () => const <RallybookSpot>[],
+    );
+    final entries = spots.isEmpty
+        ? _fallbackPassportEntries(progress.stamps)
+        : _passportEntriesFor(spots, progress.stamps);
+    final totalCount = entries.isEmpty ? 29 : entries.length;
+    final acquiredCount = entries.where((entry) => entry.acquired).length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
