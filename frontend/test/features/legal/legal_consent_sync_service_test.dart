@@ -32,7 +32,7 @@ void main() {
     expect(requests.single.method, 'PUT');
     expect(requests.single.path, '/users/me/legal-consents');
     expect(requests.single.data, {
-      'requiredDocumentsVersion': '2026-08-14-v1',
+      'requiredDocumentsVersion': '2026-08-15-v2',
       'personalLocationConsentVersion': '2026-08-14-v1',
       'healthDataConsentVersion': null,
     });

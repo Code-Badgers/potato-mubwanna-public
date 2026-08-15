@@ -47,7 +47,13 @@ class LegalDocumentCatalog {
         ],
       ),
       LegalDocumentSection(
-        title: '제5조 이용자의 의무',
+        title: '제5조 이용 연령',
+        paragraphs: [
+          '서비스는 만 14세 이상 이용자에게 제공됩니다. 이용자는 최초 이용 시 만 14세 이상임을 확인해야 하며, 만 14세 미만인 경우 서비스에 가입하거나 이용할 수 없습니다.',
+        ],
+      ),
+      LegalDocumentSection(
+        title: '제6조 이용자의 의무',
         items: [
           '타인의 계정이나 위치를 도용하지 않습니다.',
           'GPS 조작, QR 위조, 자동화 도구 등으로 방문·미션 결과를 부정하게 만들지 않습니다.',
@@ -56,31 +62,31 @@ class LegalDocumentCatalog {
         ],
       ),
       LegalDocumentSection(
-        title: '제6조 서비스 변경과 중단',
+        title: '제7조 서비스 변경과 중단',
         paragraphs: [
           '점검, 장애, 천재지변, 제휴처 또는 외부 API의 사정이 있는 경우 서비스의 전부 또는 일부가 변경되거나 중단될 수 있습니다. 운영자는 예측 가능한 경우 앱 공지 등으로 미리 알립니다.',
         ],
       ),
       LegalDocumentSection(
-        title: '제7조 콘텐츠와 쿠폰',
+        title: '제8조 콘텐츠와 쿠폰',
         paragraphs: [
           '관광지 정보, 혼잡도, 영업정보와 외부 오디오 자료는 제공기관의 갱신 시점에 따라 실제 현황과 다를 수 있습니다. 쿠폰의 사용처, 수량과 유효기간은 각 쿠폰에 표시된 조건을 따릅니다.',
         ],
       ),
       LegalDocumentSection(
-        title: '제8조 이용 종료',
+        title: '제9조 이용 종료',
         paragraphs: [
           '이용자는 설정의 회원 탈퇴 기능으로 서비스 이용을 종료할 수 있습니다. 탈퇴 시 법령상 보존이 필요한 자료를 제외한 계정과 활동 기록은 복구할 수 없도록 삭제됩니다.',
         ],
       ),
       LegalDocumentSection(
-        title: '제9조 책임 제한과 분쟁',
+        title: '제10조 책임 제한과 분쟁',
         paragraphs: [
           '운영자는 고의 또는 과실이 없는 외부 서비스 장애, 이용자 귀책사유나 불가항력으로 발생한 손해에 책임을 지지 않습니다. 분쟁은 대한민국 법령을 따르며, 합의되지 않으면 민사소송법상 관할 법원에서 해결합니다.',
         ],
       ),
       LegalDocumentSection(
-        title: '제10조 운영자 정보',
+        title: '제11조 운영자 정보',
         items: [
           '상호: ${AppEnvironment.legalBusinessName}',
           '대표자: ${AppEnvironment.legalRepresentativeName}',
@@ -158,9 +164,9 @@ class LegalDocumentCatalog {
         ],
       ),
       LegalDocumentSection(
-        title: '제9조 법정대리인과 보호의무자',
+        title: '제9조 이용 연령',
         paragraphs: [
-          '만 14세 미만 아동 또는 관련 법령상 보호가 필요한 이용자의 개인위치정보를 이용해야 하는 경우 법정대리인 또는 보호의무자의 동의를 포함하여 관계 법령이 정한 절차를 따릅니다.',
+          '서비스는 만 14세 이상 이용자에게만 제공되며 만 14세 미만 아동의 개인위치정보를 수집하거나 이용하지 않습니다. 이용자는 위치정보 이용에 동의하기 전에 만 14세 이상임을 확인해야 합니다.',
         ],
       ),
     ],
@@ -214,6 +220,7 @@ class LegalDocumentCatalog {
         title: '1. 개인정보처리자',
         paragraphs: [
           '${AppEnvironment.legalBusinessName}(이하 “운영자”)은 개인정보 보호법과 위치정보법 등 관계 법령을 준수합니다.',
+          '서비스는 만 14세 이상 이용자에게만 제공되며, 만 14세 미만 아동의 개인정보와 개인위치정보를 수집하지 않습니다.',
         ],
         items: [
           '대표자: ${AppEnvironment.legalRepresentativeName}',

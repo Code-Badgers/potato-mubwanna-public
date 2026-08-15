@@ -29,4 +29,14 @@ void main() {
     expect(await store.hasAcceptedRequiredDocuments(), isTrue);
     expect(await store.hasAcceptedPersonalLocation(), isFalse);
   });
+
+  test('requires consent again after the minimum age policy version changes',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'legal.requiredDocumentsVersion': '2026-08-14-v1',
+    });
+    const store = SharedPreferencesLegalConsentStore();
+
+    expect(await store.hasAcceptedRequiredDocuments(), isFalse);
+  });
 }

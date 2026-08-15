@@ -19,20 +19,26 @@ class LegalConsentScreen extends StatefulWidget {
 }
 
 class _LegalConsentScreenState extends State<LegalConsentScreen> {
+  bool _minimumAgeConfirmed = false;
   bool _serviceTermsAccepted = false;
   bool _personalLocationAccepted = false;
   bool _healthDataAccepted = false;
   bool _isSaving = false;
   String? _errorMessage;
 
-  bool get _canContinue => _serviceTermsAccepted && !_isSaving;
+  bool get _canContinue =>
+      _minimumAgeConfirmed && _serviceTermsAccepted && !_isSaving;
 
   bool get _allAccepted =>
-      _serviceTermsAccepted && _personalLocationAccepted && _healthDataAccepted;
+      _minimumAgeConfirmed &&
+      _serviceTermsAccepted &&
+      _personalLocationAccepted &&
+      _healthDataAccepted;
 
   void _setAll(bool? accepted) {
     final value = accepted ?? false;
     setState(() {
+      _minimumAgeConfirmed = value;
       _serviceTermsAccepted = value;
       _personalLocationAccepted = value;
       _healthDataAccepted = value;
@@ -85,7 +91,7 @@ class _LegalConsentScreenState extends State<LegalConsentScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    '감자여행을 시작하기 전에\n약관을 확인해주세요',
+                    '감자여행을 시작하기 전에\n이용 연령과 약관을 확인해주세요',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 27,
@@ -112,6 +118,15 @@ class _LegalConsentScreenState extends State<LegalConsentScreen> {
                   Expanded(
                     child: ListView(
                       children: [
+                        _AgreementTile(
+                          label: '[필수] 만 14세 이상입니다',
+                          description: '만 14세 미만은 서비스를 이용할 수 없어요',
+                          value: _minimumAgeConfirmed,
+                          onChanged: (value) => setState(
+                            () => _minimumAgeConfirmed = value ?? false,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         _AgreementTile(
                           label: '[필수] 서비스 이용약관',
                           description: '계정과 서비스 이용 조건',
@@ -248,14 +263,14 @@ class _AgreementTile extends StatelessWidget {
     required this.description,
     required this.value,
     required this.onChanged,
-    required this.onOpen,
+    this.onOpen,
   });
 
   final String label;
   final String description;
   final bool value;
   final ValueChanged<bool?> onChanged;
-  final VoidCallback onOpen;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -299,11 +314,12 @@ class _AgreementTile extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            tooltip: '내용 보기',
-            onPressed: onOpen,
-            icon: const Icon(Icons.chevron_right_rounded),
-          ),
+          if (onOpen != null)
+            IconButton(
+              tooltip: '내용 보기',
+              onPressed: onOpen,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
         ],
       ),
     );
