@@ -4,7 +4,7 @@ import 'package:potato_mubwanna/features/legal/data/legal_consent_store.dart';
 import 'package:potato_mubwanna/features/legal/presentation/screen/legal_consent_screen.dart';
 
 void main() {
-  testWidgets('requires only service terms and stores optional choices',
+  testWidgets('requires minimum age confirmation and service terms',
       (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
@@ -27,6 +27,12 @@ void main() {
     expect(continueButton.onPressed, isNull);
 
     await tester.tap(find.text('[필수] 서비스 이용약관'));
+    await tester.pump();
+    final serviceTermsOnlyButton = tester
+        .widget<FilledButton>(find.widgetWithText(FilledButton, '동의하고 계속하기'));
+    expect(serviceTermsOnlyButton.onPressed, isNull);
+
+    await tester.tap(find.text('[필수] 만 14세 이상입니다'));
     await tester.pump();
     await tester.tap(find.text('[선택] 개인위치정보 이용 동의'));
     await tester.pump();
@@ -56,6 +62,10 @@ void main() {
     );
     await tester.tap(find.text('전체 동의'));
     await tester.pump();
+    final continueButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '동의하고 계속하기'),
+    );
+    expect(continueButton.onPressed, isNotNull);
     await tester.tap(find.text('동의하고 계속하기'));
     await tester.pumpAndSettle();
 

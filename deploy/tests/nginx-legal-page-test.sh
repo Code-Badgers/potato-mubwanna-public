@@ -28,6 +28,7 @@ grep -q '<title>개인정보처리방침 | 감자무봤나</title>' <<< "${priva
 grep -q '시행일: 2026년 8월 15일' <<< "${privacy_page}"
 grep -q 'privacy@example.com' <<< "${privacy_page}"
 grep -q '010-0000-0000' <<< "${privacy_page}"
+grep -q '만 14세 미만 아동의 개인정보와 개인위치정보를 수집하지 않습니다' <<< "${privacy_page}"
 
 privacy_redirect_headers="$(curl --silent --output /dev/null --dump-header - \
   "http://127.0.0.1:${published_port}/privacy-policy/" | tr -d '\r')"
@@ -45,6 +46,8 @@ grep -q '최소 6개월' <<< "${location_page}"
 grep -q '원본 위도·경도' <<< "${location_page}"
 grep -q 'privacy@example.com' <<< "${location_page}"
 grep -q '010-0000-0000' <<< "${location_page}"
+grep -q '제9조 이용 연령' <<< "${location_page}"
+grep -q '만 14세 미만 아동의 개인위치정보를 수집하거나 이용하지 않습니다' <<< "${location_page}"
 
 location_redirect_headers="$(curl --silent --output /dev/null --dump-header - \
   "http://127.0.0.1:${published_port}/location-terms/" | tr -d '\r')"

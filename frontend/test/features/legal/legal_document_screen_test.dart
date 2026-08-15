@@ -31,6 +31,12 @@ void main() {
 
     expect(find.text('위치기반서비스 이용약관'), findsOneWidget);
     expect(find.text('제3조 위치기반서비스의 내용과 요금'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('제9조 이용 연령'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('제9조 이용 연령'), findsOneWidget);
     expect(find.text('동의하기'), findsOneWidget);
 
     await tester.tap(find.text('동의하기'));
@@ -60,7 +66,36 @@ void main() {
 
     expect(find.text('개인정보처리방침'), findsOneWidget);
     expect(find.text('2. 처리 목적·항목·보유기간'), findsOneWidget);
+    expect(
+      find.textContaining('만 14세 미만 아동의 개인정보와 개인위치정보를 수집하지 않습니다'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.text('3. 개인위치정보 처리'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('3. 개인위치정보 처리'), findsOneWidget);
+  });
+
+  testWidgets('service terms disclose the minimum age policy', (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LegalDocumentScreen(
+          document: LegalDocumentCatalog.document(
+            LegalDocumentType.serviceTerms,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('제5조 이용 연령'), findsOneWidget);
+    expect(find.textContaining('만 14세 미만인 경우'), findsOneWidget);
   });
 }
 

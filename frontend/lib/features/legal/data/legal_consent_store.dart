@@ -22,7 +22,8 @@ abstract interface class LegalConsentStore {
 class SharedPreferencesLegalConsentStore implements LegalConsentStore {
   const SharedPreferencesLegalConsentStore();
 
-  static const requiredDocumentVersion = '2026-08-14-v1';
+  // v2는 서비스 이용약관 동의와 만 14세 이상 확인을 함께 의미한다.
+  static const requiredDocumentVersion = '2026-08-15-v2';
   static const personalLocationConsentVersion = '2026-08-14-v1';
   static const healthDataConsentVersion = '2026-08-14-v1';
 
