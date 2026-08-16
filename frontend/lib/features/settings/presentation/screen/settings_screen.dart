@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/permissions/permission_service.dart';
 import '../../../push/application/push_notification_service.dart';
 
@@ -330,7 +331,7 @@ class _SettingsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 20, 10),
+      padding: const EdgeInsets.fromLTRB(12, 12, 20, 12),
       child: Row(
         children: [
           IconButton(
@@ -344,8 +345,8 @@ class _SettingsHeader extends StatelessWidget {
               '설정',
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
                 letterSpacing: 0,
               ),
             ),
@@ -413,11 +414,8 @@ class _PermissionMessage extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.line),
-      ),
+      decoration: _settingsGlassDecoration(radius: AppDimens.compactCardRadius)
+          .copyWith(color: AppColors.cream.withValues(alpha: 0.74)),
       child: Text(
         message,
         style: const TextStyle(
@@ -459,11 +457,7 @@ class _PermissionRow extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
-      ),
+      decoration: _settingsGlassDecoration(radius: AppDimens.compactCardRadius),
       child: Row(
         children: [
           Container(
@@ -485,7 +479,7 @@ class _PermissionRow extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 0,
                   ),
                 ),
@@ -495,7 +489,7 @@ class _PermissionRow extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 0,
                   ),
                 ),
@@ -550,25 +544,38 @@ class _AccountSettingsSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
       child: Material(
-        color: AppColors.cream,
+        color: Colors.transparent,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppColors.line),
+          borderRadius: BorderRadius.circular(AppDimens.cardRadius),
         ),
         child: Column(
           children: [
-            _SettingsActionRow(
-              icon: Icons.logout_rounded,
-              label: '로그아웃',
-              onTap: onLogout,
-            ),
-            const Divider(height: 1, color: AppColors.line, indent: 58),
-            _SettingsActionRow(
-              icon: Icons.person_off_outlined,
-              label: '회원 탈퇴',
-              destructive: true,
-              onTap: onWithdraw,
+            Container(
+              decoration: _settingsGlassDecoration(),
+              child: Column(
+                children: [
+                  _SettingsActionRow(
+                    icon: Icons.logout_rounded,
+                    label: '로그아웃',
+                    description: '현재 계정 연결을 해제합니다',
+                    onTap: onLogout,
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 64,
+                    endIndent: 18,
+                    color: AppColors.line.withValues(alpha: 0.32),
+                  ),
+                  _SettingsActionRow(
+                    icon: Icons.person_off_outlined,
+                    label: '회원 탈퇴',
+                    description: '계정과 여행 기록을 삭제합니다',
+                    destructive: true,
+                    onTap: onWithdraw,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -585,37 +592,48 @@ class _LegalSettingsSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
       child: Material(
-        color: AppColors.surface,
+        color: Colors.transparent,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppColors.line),
+          borderRadius: BorderRadius.circular(AppDimens.cardRadius),
         ),
         child: Column(
           children: [
-            _SettingsActionRow(
-              icon: Icons.description_outlined,
-              label: '서비스 이용약관',
-              onTap: () => context.push('/legal/service-terms'),
-            ),
-            const Divider(height: 1, color: AppColors.line, indent: 58),
-            _SettingsActionRow(
-              icon: Icons.shield_outlined,
-              label: '개인정보처리방침',
-              onTap: () => context.push('/legal/privacy-policy'),
-            ),
-            const Divider(height: 1, color: AppColors.line, indent: 58),
-            _SettingsActionRow(
-              icon: Icons.location_on_outlined,
-              label: '위치정보 동의 관리',
-              onTap: () => context.push('/legal/location-terms?manage=true'),
-            ),
-            const Divider(height: 1, color: AppColors.line, indent: 58),
-            _SettingsActionRow(
-              icon: Icons.directions_walk_rounded,
-              label: '걸음 정보 동의 관리',
-              onTap: () =>
-                  context.push('/legal/health-data-consent?manage=true'),
+            Container(
+              decoration: _settingsGlassDecoration(),
+              child: Column(
+                children: [
+                  _SettingsActionRow(
+                    icon: Icons.description_outlined,
+                    label: '서비스 이용약관',
+                    description: '서비스 이용 기준',
+                    onTap: () => context.push('/legal/service-terms'),
+                  ),
+                  _SettingsDivider(),
+                  _SettingsActionRow(
+                    icon: Icons.shield_outlined,
+                    label: '개인정보처리방침',
+                    description: '개인정보 처리와 보관',
+                    onTap: () => context.push('/legal/privacy-policy'),
+                  ),
+                  _SettingsDivider(),
+                  _SettingsActionRow(
+                    icon: Icons.location_on_outlined,
+                    label: '위치정보 동의 관리',
+                    description: '방문 인증 위치 동의',
+                    onTap: () =>
+                        context.push('/legal/location-terms?manage=true'),
+                  ),
+                  _SettingsDivider(),
+                  _SettingsActionRow(
+                    icon: Icons.directions_walk_rounded,
+                    label: '걸음 정보 동의 관리',
+                    description: '감자걸음 성장 동의',
+                    onTap: () =>
+                        context.push('/legal/health-data-consent?manage=true'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -628,37 +646,68 @@ class _SettingsActionRow extends StatelessWidget {
   const _SettingsActionRow({
     required this.icon,
     required this.label,
+    required this.description,
     required this.onTap,
     this.destructive = false,
   });
 
   final IconData icon;
   final String label;
+  final String description;
   final VoidCallback onTap;
   final bool destructive;
 
   @override
   Widget build(BuildContext context) {
     final color = destructive ? AppColors.error : AppColors.textPrimary;
+    final iconColor = destructive ? AppColors.error : AppColors.primaryDark;
 
     return InkWell(
       onTap: onTap,
       child: SizedBox(
-        height: 62,
+        height: 68,
         child: Row(
           children: [
             const SizedBox(width: 20),
-            Icon(icon, color: color, size: 24),
-            const SizedBox(width: 16),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
               ),
             ),
             const Icon(
@@ -670,6 +719,18 @@ class _SettingsActionRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SettingsDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      indent: 68,
+      endIndent: 18,
+      color: AppColors.line.withValues(alpha: 0.32),
     );
   }
 }
@@ -699,4 +760,25 @@ class _SettingsErrorState extends StatelessWidget {
       ),
     );
   }
+}
+
+BoxDecoration _settingsGlassDecoration({
+  double radius = AppDimens.cardRadius,
+}) {
+  return BoxDecoration(
+    color: AppColors.surface.withValues(alpha: 0.9),
+    borderRadius: BorderRadius.circular(radius),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.textPrimary.withValues(alpha: 0.045),
+        blurRadius: 24,
+        offset: const Offset(0, 10),
+      ),
+      BoxShadow(
+        color: AppColors.primary.withValues(alpha: 0.03),
+        blurRadius: 32,
+        offset: const Offset(0, 16),
+      ),
+    ],
+  );
 }

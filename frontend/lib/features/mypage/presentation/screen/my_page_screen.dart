@@ -1151,59 +1151,64 @@ class _AccountMenu extends StatelessWidget {
     _MenuItem(
       icon: Icons.card_giftcard_outlined,
       label: '보상함',
+      description: '받은 쿠폰과 보상',
       destination: _MenuDestination.coupons,
+      accentColor: AppColors.secondary,
     ),
     _MenuItem(
       icon: Icons.settings_outlined,
       label: '설정',
+      description: '계정과 앱 관리',
       destination: _MenuDestination.settings,
+      accentColor: AppColors.primaryDark,
     ),
     _MenuItem(
       icon: Icons.campaign_outlined,
       label: '공지사항',
+      description: '서비스 소식 확인',
       destination: _MenuDestination.notices,
+      accentColor: Color(0xFF6F8FE8),
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final primaryItems = _items.take(2).toList(growable: false);
+    final notice = _items.last;
+
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppDimens.pageHorizontalPadding,
       ),
-      decoration: _myPageGlassDecoration(alpha: 0.82),
-      child: Material(
-        color: Colors.transparent,
-        clipBehavior: Clip.antiAlias,
-        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-        child: Column(
-          children: [
-            for (var index = 0; index < _items.length; index++) ...[
-              _MenuRow(
-                item: _items[index],
-                onTap: switch (_items[index].destination) {
-                  _MenuDestination.coupons => onCoupons,
-                  _MenuDestination.settings => onSettings,
-                  _MenuDestination.notices => onNotices,
-                },
-              ),
-              if (index < _items.length - 1)
-                Divider(
-                  height: 1,
-                  indent: 56,
-                  endIndent: 18,
-                  color: AppColors.line.withValues(alpha: 0.34),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              for (var index = 0; index < primaryItems.length; index++) ...[
+                Expanded(
+                  child: _MenuFeatureCard(
+                    item: primaryItems[index],
+                    onTap: switch (primaryItems[index].destination) {
+                      _MenuDestination.coupons => onCoupons,
+                      _MenuDestination.settings => onSettings,
+                      _MenuDestination.notices => onNotices,
+                    },
+                  ),
                 ),
+                if (index < primaryItems.length - 1) const SizedBox(width: 12),
+              ],
             ],
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          _NoticeActionRow(item: notice, onTap: onNotices),
+        ],
       ),
     );
   }
 }
 
-class _MenuRow extends StatelessWidget {
-  const _MenuRow({
+class _MenuFeatureCard extends StatelessWidget {
+  const _MenuFeatureCard({
     required this.item,
     required this.onTap,
   });
@@ -1213,42 +1218,142 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      key: switch (item.destination) {
-        _MenuDestination.coupons => const ValueKey('mypage-menu-coupons'),
-        _MenuDestination.settings => const ValueKey('mypage-menu-settings'),
-        _MenuDestination.notices => const ValueKey('mypage-menu-notices'),
-      },
-      onTap: onTap,
-      child: SizedBox(
-        height: 58,
-        child: Row(
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+      child: InkWell(
+        key: switch (item.destination) {
+          _MenuDestination.coupons => const ValueKey('mypage-menu-coupons'),
+          _MenuDestination.settings => const ValueKey('mypage-menu-settings'),
+          _MenuDestination.notices => const ValueKey('mypage-menu-notices'),
+        },
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(width: 18),
-            Icon(
-              item.icon,
-              color: AppColors.primaryDark,
-              size: 22,
+            Container(
+              height: 118,
+              padding: const EdgeInsets.all(16),
+              decoration: _myPageGlassDecoration(alpha: 0.9).copyWith(
+                borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: item.accentColor.withValues(alpha: 0.14),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          item.icon,
+                          color: item.accentColor,
+                          size: 22,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.textSecondary.withValues(alpha: 0.72),
+                        size: 22,
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                item.label,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeActionRow extends StatelessWidget {
+  const _NoticeActionRow({
+    required this.item,
+    required this.onTap,
+  });
+
+  final _MenuItem item;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+      child: InkWell(
+        key: const ValueKey('mypage-menu-notices'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+        child: Container(
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: _myPageGlassDecoration(alpha: 0.82).copyWith(
+            borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+          ),
+          child: Row(
+            children: [
+              Icon(item.icon, color: item.accentColor, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              Text(
+                item.description,
                 style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: 0,
                 ),
               ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
-              size: 22,
-            ),
-            const SizedBox(width: 16),
-          ],
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1273,12 +1378,16 @@ class _MenuItem {
   const _MenuItem({
     required this.icon,
     required this.label,
+    required this.description,
     required this.destination,
+    required this.accentColor,
   });
 
   final IconData icon;
   final String label;
+  final String description;
   final _MenuDestination destination;
+  final Color accentColor;
 }
 
 enum _MenuDestination { coupons, settings, notices }
