@@ -133,14 +133,14 @@ class RallybookSpot {
 }
 
 String _stampSpotCategoryLabel(String category) => switch (category) {
-      'POTATO_TOUR' => '관광',
+      'POTATO_TOUR' => '관광·쇼핑',
       'POTATO_EXPERIENCE' => '체험',
-      'POTATO_RESTAURANT' => '맛집',
-      'POTATO_CAFE' => '카페',
-      'POTATO_SNACK' => '간식',
-      'POTATO_MARKET' => '시장',
-      'POTATO_BREWERY' => '바 & 페어링',
-      'POTATO_SHOP' => '쇼핑',
+      'POTATO_RESTAURANT' => '식당',
+      'POTATO_CAFE' => '카페·디저트',
+      'POTATO_SNACK' => '카페·디저트',
+      'POTATO_MARKET' => '시장·상권',
+      'POTATO_BREWERY' => '식당',
+      'POTATO_SHOP' => '관광·쇼핑',
       _ => '감자 스팟',
     };
 

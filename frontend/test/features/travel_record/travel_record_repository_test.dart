@@ -31,7 +31,7 @@ void main() {
     expect(records.first.visitId, 2);
     expect(records.first.spotId, 20);
     expect(records.first.spotName, '감자 카페');
-    expect(records.first.categoryLabel, '카페');
+    expect(records.first.categoryLabel, '카페·디저트');
     expect(
       records.first.uploadedImageUrl,
       '/mission-uploads/completions/31/image',

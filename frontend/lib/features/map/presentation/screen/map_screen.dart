@@ -51,14 +51,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   static const _categories = [
     _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
-    _MapCategoryFilter(label: '맛집', icon: Icons.restaurant_rounded),
-    _MapCategoryFilter(label: '카페', icon: Icons.local_cafe_rounded),
-    _MapCategoryFilter(label: '관광', icon: Icons.landscape_rounded),
+    _MapCategoryFilter(label: '식당', icon: Icons.restaurant_rounded),
+    _MapCategoryFilter(label: '카페·디저트', icon: Icons.local_cafe_rounded),
+    _MapCategoryFilter(label: '관광·쇼핑', icon: Icons.landscape_rounded),
     _MapCategoryFilter(label: '체험', icon: Icons.directions_walk_rounded),
-    _MapCategoryFilter(label: '간식', icon: Icons.bakery_dining_rounded),
-    _MapCategoryFilter(label: '시장', icon: Icons.storefront_rounded),
-    _MapCategoryFilter(label: '바 & 페어링', icon: Icons.sports_bar_rounded),
-    _MapCategoryFilter(label: '쇼핑', icon: Icons.shopping_bag_rounded),
+    _MapCategoryFilter(label: '시장·상권', icon: Icons.storefront_rounded),
   ];
 
   List<MapSpot> _visibleSpots(

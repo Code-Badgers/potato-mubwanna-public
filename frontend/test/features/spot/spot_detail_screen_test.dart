@@ -36,7 +36,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('시장'), findsOneWidget);
+    expect(find.text('시장·상권'), findsOneWidget);
     expect(find.text('여유'), findsOneWidget);
     expect(find.text('#감자전'), findsOneWidget);
     expect(find.text('정선 5일장 이야기'), findsOneWidget);

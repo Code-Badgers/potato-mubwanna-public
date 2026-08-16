@@ -63,14 +63,14 @@ class MapSpot {
 
   String get categoryLabel {
     return switch (category) {
-      'POTATO_TOUR' => '관광',
+      'POTATO_TOUR' => '관광·쇼핑',
       'POTATO_EXPERIENCE' => '체험',
-      'POTATO_RESTAURANT' => '맛집',
-      'POTATO_CAFE' => '카페',
-      'POTATO_SNACK' => '간식',
-      'POTATO_MARKET' => '시장',
-      'POTATO_BREWERY' => '바 & 페어링',
-      'POTATO_SHOP' => '쇼핑',
+      'POTATO_RESTAURANT' => '식당',
+      'POTATO_CAFE' => '카페·디저트',
+      'POTATO_SNACK' => '카페·디저트',
+      'POTATO_MARKET' => '시장·상권',
+      'POTATO_BREWERY' => '식당',
+      'POTATO_SHOP' => '관광·쇼핑',
       _ => '감자',
     };
   }
@@ -85,12 +85,12 @@ class MapSpot {
 
   String get potatoName {
     return switch (category) {
-      'POTATO_RESTAURANT' => '맛감자',
+      'POTATO_RESTAURANT' => '식당감자',
       'POTATO_CAFE' => '디저트감자',
-      'POTATO_SNACK' => '간식감자',
-      'POTATO_MARKET' => '직판감자',
-      'POTATO_BREWERY' => '페어링감자',
-      'POTATO_SHOP' => '기념감자',
+      'POTATO_SNACK' => '디저트감자',
+      'POTATO_MARKET' => '시장감자',
+      'POTATO_BREWERY' => '식당감자',
+      'POTATO_SHOP' => '여행감자',
       'POTATO_EXPERIENCE' => '체험감자',
       _ => '여행감자',
     };
