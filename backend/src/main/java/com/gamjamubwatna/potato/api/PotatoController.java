@@ -4,6 +4,8 @@ import com.gamjamubwatna.auth.api.AuthApiResponse;
 import com.gamjamubwatna.potato.application.PotatoActivityException;
 import com.gamjamubwatna.potato.application.PotatoAuthenticationException;
 import com.gamjamubwatna.potato.application.PotatoCommandService;
+import com.gamjamubwatna.potato.application.PotatoInteractionCooldownException;
+import com.gamjamubwatna.potato.application.PotatoInteractionException;
 import com.gamjamubwatna.potato.application.PotatoQueryService;
 import com.gamjamubwatna.potato.application.PotatoRepresentativeException;
 import java.util.regex.Matcher;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -107,6 +110,28 @@ public class PotatoController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
         } catch (PotatoRepresentativeException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(AuthApiResponse.failure(exception.getMessage()));
+        }
+    }
+
+    // 대표 감자에게 짧은 돌봄 행동을 적용하고 쿨타임 기준으로 성장 보너스를 지급한다.
+    @PostMapping("/me/representative/interactions")
+    public ResponseEntity<AuthApiResponse<PotatoInteractionResponse>> interactWithRepresentativePotato(
+        Authentication authentication,
+        @RequestBody PotatoInteractionRequest request
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                potatoCommandService.interactWithRepresentativePotato(userId(authentication), request)
+            ));
+        } catch (PotatoAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        } catch (PotatoInteractionCooldownException exception) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(AuthApiResponse.failure(exception.getMessage()));
+        } catch (PotatoInteractionException exception) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(AuthApiResponse.failure(exception.getMessage()));
         }

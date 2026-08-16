@@ -25,8 +25,6 @@ import java.time.Instant;
 )
 public class UserPotato {
 
-    private static final int MAX_GROWTH_LEVEL = 5;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_potato_id")
@@ -100,7 +98,7 @@ public class UserPotato {
     }
 
     public boolean isFullyGrown() {
-        return level >= MAX_GROWTH_LEVEL;
+        return level >= potato.getMaxGrowthLevel();
     }
 
     public void addGrowthDistance(double additionalDistance) {
@@ -113,13 +111,13 @@ public class UserPotato {
             throw new IllegalStateException("감자 성장 목표 거리를 확인할 수 없습니다.");
         }
         if (isFullyGrown()) {
-            level = MAX_GROWTH_LEVEL;
+            level = potato.getMaxGrowthLevel();
             growthDistance = growthGoalDistance;
             return;
         }
 
         growthDistance += additionalDistance;
-        while (level < MAX_GROWTH_LEVEL && growthDistance >= growthGoalDistance) {
+        while (level < potato.getMaxGrowthLevel() && growthDistance >= growthGoalDistance) {
             level++;
             growthDistance -= growthGoalDistance;
         }

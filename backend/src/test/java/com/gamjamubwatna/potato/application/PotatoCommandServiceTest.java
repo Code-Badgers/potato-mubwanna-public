@@ -12,16 +12,23 @@ import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncRequest;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncResponse;
+import com.gamjamubwatna.potato.api.PotatoInteractionRequest;
+import com.gamjamubwatna.potato.api.PotatoInteractionResponse;
 import com.gamjamubwatna.potato.api.PotatoRepresentativeResponse;
 import com.gamjamubwatna.potato.domain.ActivitySource;
 import com.gamjamubwatna.potato.domain.Potato;
+import com.gamjamubwatna.potato.domain.PotatoInteractionAction;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.potato.domain.UserDailyActivity;
 import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
+import com.gamjamubwatna.potato.domain.UserPotatoInteraction;
+import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +45,9 @@ class PotatoCommandServiceTest {
     private UserPotatoRepository userPotatoRepository;
 
     @Mock
+    private UserPotatoInteractionRepository userPotatoInteractionRepository;
+
+    @Mock
     private UserDailyActivityRepository userDailyActivityRepository;
 
     @Mock
@@ -49,8 +59,10 @@ class PotatoCommandServiceTest {
     void setUp() {
         potatoCommandService = new PotatoCommandService(
             userPotatoRepository,
+            userPotatoInteractionRepository,
             userDailyActivityRepository,
-            userRepository
+            userRepository,
+            Clock.fixed(Instant.parse("2026-07-21T10:00:00Z"), ZoneOffset.UTC)
         );
     }
 
@@ -105,7 +117,7 @@ class PotatoCommandServiceTest {
     @Test
     void createsDailyActivityWhenActivityDoesNotExist() {
         User user = mock(User.class);
-        UserPotato representative = userPotato(1L, potato(1L, "하지감자"), true);
+        UserPotato representative = userPotato(1L, potato(1L, "자주감자", PotatoRarity.RARE), true);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
         when(userDailyActivityRepository.findByUserIdAndActivityDateAndSource(
@@ -133,7 +145,7 @@ class PotatoCommandServiceTest {
         assertThat(result.syncedAt()).isNotNull();
         assertThat(result.growthResult()).isNotNull();
         assertThat(result.growthResult().potatoId()).isEqualTo(1L);
-        assertThat(result.growthResult().potatoName()).isEqualTo("하지감자");
+        assertThat(result.growthResult().potatoName()).isEqualTo("자주감자");
         assertThat(result.growthResult().previousLevel()).isEqualTo(2);
         assertThat(result.growthResult().currentLevel()).isEqualTo(4);
         assertThat(result.growthResult().leveledUp()).isTrue();
@@ -180,7 +192,7 @@ class PotatoCommandServiceTest {
         assertThat(result.growthResult().currentLevel()).isEqualTo(3);
         assertThat(result.growthResult().leveledUp()).isTrue();
         assertThat(representative.getLevel()).isEqualTo(3);
-        assertThat(representative.getGrowthDistance()).isEqualTo(2700.0);
+        assertThat(representative.getGrowthDistance()).isEqualTo(3000.0);
     }
 
     @Test
@@ -223,7 +235,7 @@ class PotatoCommandServiceTest {
         User user = mock(User.class);
         UserPotato representative = userPotato(
             1L,
-            potato(1L, "하지감자"),
+            potato(1L, "자주감자", PotatoRarity.RARE),
             4,
             2900.0,
             true
@@ -260,7 +272,7 @@ class PotatoCommandServiceTest {
         User user = mock(User.class);
         UserPotato representative = userPotato(
             1L,
-            potato(1L, "하지감자"),
+            potato(1L, "자주감자", PotatoRarity.RARE),
             5,
             3000.0,
             true
@@ -356,6 +368,72 @@ class PotatoCommandServiceTest {
             .hasMessage("이동 거리가 허용 범위를 벗어났습니다.");
     }
 
+    @Test
+    void interactsWithRepresentativePotatoAndAppliesGrowth() {
+        UserPotato representative = userPotato(1L, potato(1L, "새싹감자"), 2, 2950.0, true);
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
+        when(userPotatoInteractionRepository.findTopByUserPotatoIdAndActionOrderByInteractedAtDesc(
+            1L,
+            PotatoInteractionAction.PAT
+        )).thenReturn(Optional.empty());
+        when(userPotatoInteractionRepository.save(any(UserPotatoInteraction.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoInteractionResponse result = potatoCommandService.interactWithRepresentativePotato(
+            1L,
+            new PotatoInteractionRequest(PotatoInteractionAction.PAT)
+        );
+
+        assertThat(result.potatoId()).isEqualTo(1L);
+        assertThat(result.action()).isEqualTo(PotatoInteractionAction.PAT);
+        assertThat(result.growthDistanceAdded()).isEqualTo(50.0);
+        assertThat(result.cooldownSeconds()).isEqualTo(1800);
+        assertThat(result.nextAvailableAt()).isEqualTo(Instant.parse("2026-07-21T10:30:00Z"));
+        assertThat(result.growthResult().previousLevel()).isEqualTo(2);
+        assertThat(result.growthResult().currentLevel()).isEqualTo(3);
+        assertThat(result.growthResult().fullyGrown()).isTrue();
+    }
+
+    @Test
+    void rejectsInteractionDuringCooldown() {
+        UserPotato representative = userPotato(1L, potato(1L, "새싹감자"), 1, 0.0, true);
+        UserPotatoInteraction lastInteraction = new UserPotatoInteraction(
+            representative,
+            PotatoInteractionAction.WATER,
+            120.0,
+            Instant.parse("2026-07-21T09:30:00Z")
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
+        when(userPotatoInteractionRepository.findTopByUserPotatoIdAndActionOrderByInteractedAtDesc(
+            1L,
+            PotatoInteractionAction.WATER
+        )).thenReturn(Optional.of(lastInteraction));
+
+        assertThatThrownBy(() -> potatoCommandService.interactWithRepresentativePotato(
+            1L,
+            new PotatoInteractionRequest(PotatoInteractionAction.WATER)
+        ))
+            .isInstanceOf(PotatoInteractionCooldownException.class)
+            .hasMessage("아직 다시 돌볼 수 없습니다. 잠시 후 다시 시도해주세요.");
+
+        verify(userPotatoInteractionRepository, never()).save(any(UserPotatoInteraction.class));
+    }
+
+    @Test
+    void rejectsInteractionWhenRepresentativePotatoDoesNotExist() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> potatoCommandService.interactWithRepresentativePotato(
+            1L,
+            new PotatoInteractionRequest(PotatoInteractionAction.SNACK)
+        ))
+            .isInstanceOf(PotatoInteractionException.class)
+            .hasMessage("대표 감자를 먼저 설정해주세요.");
+    }
+
     private UserPotato userPotato(Long id, Potato potato, boolean representative) {
         return userPotato(id, potato, 2, 1500.0, representative);
     }
@@ -380,11 +458,15 @@ class PotatoCommandServiceTest {
     }
 
     private Potato potato(Long id, String name) {
+        return potato(id, name, PotatoRarity.COMMON);
+    }
+
+    private Potato potato(Long id, String name, PotatoRarity rarity) {
         Potato potato = new Potato(
             "CODE_" + id,
             name,
             "강릉시",
-            PotatoRarity.COMMON,
+            rarity,
             name + " 설명",
             name + " 획득 방법",
             null,
