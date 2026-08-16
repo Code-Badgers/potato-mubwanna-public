@@ -122,6 +122,10 @@ public class Potato {
         return growthGoalDistance;
     }
 
+    public int getMaxGrowthLevel() {
+        return rarity.maxLevel();
+    }
+
     public int getDisplayOrder() {
         return displayOrder;
     }
