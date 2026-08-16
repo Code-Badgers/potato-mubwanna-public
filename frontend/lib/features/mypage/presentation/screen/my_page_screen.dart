@@ -4,14 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
-import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../potato/application/potato_collection_controller.dart';
 import '../../../potato/domain/potato_collection.dart';
 import '../../../potato/presentation/potato_asset.dart';
-import '../../application/user_activity_summary_controller.dart';
 import '../../application/user_profile_controller.dart';
-import '../../domain/user_activity_summary.dart';
 import '../../domain/user_profile.dart';
 
 class MyPageScreen extends ConsumerWidget {
@@ -31,7 +28,6 @@ class MyPageScreen extends ConsumerWidget {
       );
     }
 
-    final activitySummaryState = ref.watch(userActivitySummaryProvider);
     final profileState = ref.watch(userProfileProvider);
 
     return Scaffold(
@@ -42,12 +38,6 @@ class MyPageScreen extends ConsumerWidget {
             const SliverToBoxAdapter(child: SizedBox(height: 18)),
             SliverToBoxAdapter(
                 child: _ProfileHeader(profileState: profileState)),
-            SliverToBoxAdapter(
-              child: _TravelStats(
-                summaryState: activitySummaryState,
-                onRetry: () => ref.invalidate(userActivitySummaryProvider),
-              ),
-            ),
             const SliverToBoxAdapter(child: _QuickActionGrid()),
             SliverToBoxAdapter(
               child: _AccountMenu(
@@ -392,9 +382,75 @@ class _GuestMyPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: AuthRequiredView(
-          description: '마이페이지를 확인하려면 로그인해주세요.',
-          onLogin: onLogin,
+        child: CustomScrollView(
+          slivers: [
+            const SliverToBoxAdapter(child: SizedBox(height: 18)),
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(
+                  AppDimens.pageHorizontalPadding,
+                  0,
+                  AppDimens.pageHorizontalPadding,
+                  14,
+                ),
+                padding: const EdgeInsets.all(20),
+                decoration: _myPageGlassDecoration(alpha: 0.9),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '강원도 여행자',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '지도와 스탬프 투어는 둘러볼 수 있어요. 여행 기록과 보상 저장은 로그인 후 이어집니다.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.45,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: FilledButton(
+                        onPressed: onLogin,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(17),
+                          ),
+                        ),
+                        child: const Text(
+                          '로그인하고 기록 저장하기',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: _QuickActionGrid()),
+            SliverToBoxAdapter(
+              child: _AccountMenu(
+                onCoupons: () => context.push('/coupons'),
+                onSettings: () => context.push('/settings'),
+                onNotices: () => context.push('/notices'),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 18)),
+          ],
         ),
       ),
     );
@@ -416,157 +472,6 @@ class _MyPageLoading extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _TravelStats extends StatelessWidget {
-  const _TravelStats({
-    required this.summaryState,
-    required this.onRetry,
-  });
-
-  final AsyncValue<UserActivitySummary?> summaryState;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-        AppDimens.pageHorizontalPadding,
-        0,
-        AppDimens.pageHorizontalPadding,
-        18,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-      decoration: _myPageCardDecoration(),
-      child: summaryState.when(
-        data: (summary) => _TravelStatRow(
-          summary: summary ?? UserActivitySummary.empty,
-        ),
-        loading: () => const _TravelStatRow(
-          summary: UserActivitySummary.empty,
-          isLoading: true,
-        ),
-        error: (_, __) => Column(
-          children: [
-            const _TravelStatRow(
-              summary: UserActivitySummary.empty,
-              hasError: true,
-            ),
-            const SizedBox(height: 10),
-            TextButton.icon(
-              key: const ValueKey('activity-summary-retry'),
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('활동 요약 다시 시도'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TravelStatRow extends StatelessWidget {
-  const _TravelStatRow({
-    required this.summary,
-    this.isLoading = false,
-    this.hasError = false,
-  });
-
-  final UserActivitySummary summary;
-  final bool isLoading;
-  final bool hasError;
-
-  @override
-  Widget build(BuildContext context) {
-    final placeholder = isLoading ? '…' : '-';
-    return Row(
-      children: [
-        Expanded(
-          child: _StatItem(
-            label: '누적 걸음 수',
-            value: isLoading || hasError
-                ? placeholder
-                : _formatInt(summary.totalSteps),
-          ),
-        ),
-        const _VerticalDivider(),
-        Expanded(
-          child: _StatItem(
-            label: '누적 스탬프 수',
-            value: isLoading || hasError
-                ? placeholder
-                : _formatInt(summary.stampCount),
-          ),
-        ),
-        const _VerticalDivider(),
-        Expanded(
-          child: _StatItem(
-            label: '보유 감자 수',
-            value: isLoading || hasError
-                ? placeholder
-                : _formatInt(summary.ownedPotatoCount),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  const _StatItem({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          maxLines: 2,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            height: 1.15,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 8),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 23,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _VerticalDivider extends StatelessWidget {
-  const _VerticalDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 54,
-      color: AppColors.line.withValues(alpha: 0.68),
     );
   }
 }
@@ -1026,13 +931,6 @@ class _PotatoAlbumError extends StatelessWidget {
   }
 }
 
-String _formatInt(int value) {
-  return value.toString().replaceAllMapped(
-        RegExp(r'\B(?=(\d{3})+(?!\d))'),
-        (_) => ',',
-      );
-}
-
 class _QuickActionGrid extends StatelessWidget {
   const _QuickActionGrid();
 
@@ -1173,126 +1071,24 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryItems = _items.take(2).toList(growable: false);
-    final notice = _items.last;
-
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppDimens.pageHorizontalPadding,
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              for (var index = 0; index < primaryItems.length; index++) ...[
-                Expanded(
-                  child: _MenuFeatureCard(
-                    item: primaryItems[index],
-                    onTap: switch (primaryItems[index].destination) {
-                      _MenuDestination.coupons => onCoupons,
-                      _MenuDestination.settings => onSettings,
-                      _MenuDestination.notices => onNotices,
-                    },
-                  ),
-                ),
-                if (index < primaryItems.length - 1) const SizedBox(width: 12),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-          _NoticeActionRow(item: notice, onTap: onNotices),
-        ],
-      ),
-    );
-  }
-}
-
-class _MenuFeatureCard extends StatelessWidget {
-  const _MenuFeatureCard({
-    required this.item,
-    required this.onTap,
-  });
-
-  final _MenuItem item;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-      child: InkWell(
-        key: switch (item.destination) {
-          _MenuDestination.coupons => const ValueKey('mypage-menu-coupons'),
-          _MenuDestination.settings => const ValueKey('mypage-menu-settings'),
-          _MenuDestination.notices => const ValueKey('mypage-menu-notices'),
-        },
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 118,
-              padding: const EdgeInsets.all(16),
-              decoration: _myPageGlassDecoration(alpha: 0.9).copyWith(
-                borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: item.accentColor.withValues(alpha: 0.14),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          item.icon,
-                          color: item.accentColor,
-                          size: 22,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppColors.textSecondary.withValues(alpha: 0.72),
-                        size: 22,
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
-              ),
+          for (var index = 0; index < _items.length; index++) ...[
+            _NoticeActionRow(
+              item: _items[index],
+              onTap: switch (_items[index].destination) {
+                _MenuDestination.coupons => onCoupons,
+                _MenuDestination.settings => onSettings,
+                _MenuDestination.notices => onNotices,
+              },
             ),
+            if (index < _items.length - 1) const SizedBox(height: 10),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1391,25 +1187,6 @@ class _MenuItem {
 }
 
 enum _MenuDestination { coupons, settings, notices }
-
-BoxDecoration _myPageCardDecoration() {
-  return BoxDecoration(
-    color: AppColors.surface.withValues(alpha: 0.86),
-    borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-    boxShadow: [
-      BoxShadow(
-        color: AppColors.textPrimary.withValues(alpha: 0.055),
-        blurRadius: 26,
-        offset: const Offset(0, 12),
-      ),
-      BoxShadow(
-        color: Colors.white.withValues(alpha: 0.86),
-        blurRadius: 0,
-        spreadRadius: 0.6,
-      ),
-    ],
-  );
-}
 
 BoxDecoration _myPageGlassDecoration({double alpha = 0.82}) {
   return BoxDecoration(
