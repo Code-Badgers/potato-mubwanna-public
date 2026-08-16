@@ -81,7 +81,7 @@ class TouristSpotMigrationTest {
         List<TouristSpot> spots = curatedSpots();
 
         assertThat(spots)
-            .hasSizeGreaterThanOrEqualTo(24)
+            .hasSizeGreaterThanOrEqualTo(60)
             .extracting(TouristSpot::getName)
             .contains(
                 "감자밭",
@@ -102,7 +102,11 @@ class TouristSpotMigrationTest {
                 "감자뭉팅이",
                 "감자꽃스튜디오",
                 "늘햇살 만우농촌체험마을",
-                "대관령감자옹심이"
+                "대관령감자옹심이",
+                "라또래요",
+                "칠성조선소",
+                "토지옹심이 원주",
+                "평창무이예술관"
             );
     }
 
