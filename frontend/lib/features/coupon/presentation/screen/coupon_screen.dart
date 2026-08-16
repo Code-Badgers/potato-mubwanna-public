@@ -212,11 +212,17 @@ class _CouponHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 18, 24, 12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 24, 12),
       child: Row(
         children: [
-          CircleAvatar(
+          IconButton(
+            tooltip: '뒤로 가기',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          ),
+          const SizedBox(width: 4),
+          const CircleAvatar(
             radius: 20,
             backgroundColor: AppColors.primaryTint,
             child: Icon(
@@ -225,8 +231,8 @@ class _CouponHeader extends StatelessWidget {
               size: 22,
             ),
           ),
-          SizedBox(width: 12),
-          Text(
+          const SizedBox(width: 12),
+          const Text(
             '보상함',
             style: TextStyle(
               color: AppColors.textPrimary,
@@ -965,16 +971,55 @@ class _CouponEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title =
+        tab == _CouponTab.available ? '준비 중인 보상이에요' : '사용 내역이 없어요';
+    final description = tab == _CouponTab.available
+        ? '지자체·상점 제휴가 확정되면 여행 쿠폰과 혜택이 이곳에 추가됩니다.'
+        : '사용한 쿠폰과 만료된 쿠폰은 이후 이곳에서 확인할 수 있어요.';
+
     return Center(
-      child: Text(
-        tab == _CouponTab.available
-            ? '사용 가능한 쿠폰이 없어요.'
-            : '사용 완료 또는 만료된 쿠폰이 없어요.',
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.primaryTint.withValues(alpha: 0.86),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.card_giftcard_rounded,
+                color: AppColors.primaryDark,
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.45,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -988,15 +1033,37 @@ class _RewardHistoryEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Text(
-          '아직 받은 보상이 없어요.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
+        padding: EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.history_rounded,
+              color: AppColors.primaryDark,
+              size: 34,
+            ),
+            SizedBox(height: 14),
+            Text(
+              '아직 받은 보상이 없어요',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '미션과 스탬프 보상은 제휴 준비 후 순차적으로 기록됩니다.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.45,
+              ),
+            ),
+          ],
         ),
       ),
     );
