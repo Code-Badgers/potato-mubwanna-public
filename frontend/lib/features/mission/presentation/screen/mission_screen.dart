@@ -1100,8 +1100,20 @@ class _MissionTypeCircle extends StatelessWidget {
 }
 
 String _compactRewardLabel(MissionChallenge mission) {
-  final value = RegExp(r'\d+').firstMatch(mission.rewardLabel)?.group(0);
-  return value == null ? mission.rewardType.label : '코인 $value';
+  return switch (mission.rewardType) {
+    MissionRewardType.potato => '감자 카드 후보',
+    MissionRewardType.coupon => '제휴 혜택 준비중',
+    MissionRewardType.item => '여행 기록 저장',
+    MissionRewardType.coin => '참여 기록 저장',
+  };
+}
+
+String _completionRewardMessage(MissionChallenge mission) {
+  return switch (mission.rewardType) {
+    MissionRewardType.potato => '감자 카드 수집 후보로 기록됐어요.',
+    MissionRewardType.coupon => '제휴 혜택은 준비되는 대로 보상함에 이어집니다.',
+    MissionRewardType.item || MissionRewardType.coin => '미션 참여 기록이 저장됐어요.',
+  };
 }
 
 String _gentleMissionLine(MissionChallenge mission) {
@@ -1510,7 +1522,7 @@ class _MissionRewardSection extends StatelessWidget {
             const Expanded(
               child: _RewardSmallCard(
                 icon: Icons.eco_rounded,
-                label: '감자 1개',
+                label: '수집 후보',
               ),
             ),
             const SizedBox(width: 10),
@@ -1524,7 +1536,7 @@ class _MissionRewardSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          '제휴 쿠폰과 현장 혜택은 추후 순차적으로 추가됩니다.',
+          '보상은 공모전 MVP 기준으로 기록 저장 중심이며, 제휴 혜택은 추후 추가됩니다.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
@@ -2439,7 +2451,7 @@ class _MissionRewardDialog extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${mission.rewardLabel}을 획득했어요.',
+              _completionRewardMessage(mission),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.textSecondary,
