@@ -5,7 +5,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
-import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../reward/application/reward_history_controller.dart';
 import '../../../reward/domain/reward_history.dart';
@@ -36,8 +35,7 @@ class CouponScreen extends ConsumerWidget {
                 AuthStatus.loading => const Center(
                     child: CircularProgressIndicator(),
                   ),
-                AuthStatus.idle || AuthStatus.failure => AuthRequiredView(
-                    description: '보상함을 확인하려면 로그인해주세요.',
+                AuthStatus.idle || AuthStatus.failure => _RewardGuestPreview(
                     onLogin: () => context.go('/login'),
                   ),
               },
@@ -45,6 +43,90 @@ class CouponScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RewardGuestPreview extends StatelessWidget {
+  const _RewardGuestPreview({required this.onLogin});
+
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+            boxShadow: AppShadows.softCard,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTint.withValues(alpha: 0.86),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.card_giftcard_rounded,
+                  color: AppColors.primaryDark,
+                  size: 25,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '제휴 보상은 준비 중입니다',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '공모전 MVP에서는 스탬프와 미션 달성 기록을 먼저 남기고, 지자체·가맹점 제휴가 확정되면 쿠폰과 지역 혜택을 연결할 예정입니다.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.55,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: onLogin,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: const Text(
+                    '로그인하고 보상 기록 저장하기',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -971,8 +1053,7 @@ class _CouponEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title =
-        tab == _CouponTab.available ? '준비 중인 보상이에요' : '사용 내역이 없어요';
+    final title = tab == _CouponTab.available ? '준비 중인 보상이에요' : '사용 내역이 없어요';
     final description = tab == _CouponTab.available
         ? '지자체·상점 제휴가 확정되면 여행 쿠폰과 혜택이 이곳에 추가됩니다.'
         : '사용한 쿠폰과 만료된 쿠폰은 이후 이곳에서 확인할 수 있어요.';

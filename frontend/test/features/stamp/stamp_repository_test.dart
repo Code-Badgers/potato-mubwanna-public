@@ -84,7 +84,7 @@ void main() {
     expect(result.first.spotId, 101);
     expect(result.first.spotName, '정선 5일장');
     expect(result.first.cityName, '정선군');
-    expect(result.first.categoryLabel, '시장');
+    expect(result.first.categoryLabel, '시장·상권');
   });
 
   test('fetches rallybook spots with official coordinates', () async {

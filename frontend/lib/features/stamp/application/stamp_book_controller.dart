@@ -15,7 +15,21 @@ final stampBookProvider = FutureProvider.autoDispose<StampBook?>((ref) async {
     authControllerProvider.select((state) => state.status),
   );
   if (authStatus != AuthStatus.authenticated) {
-    return null;
+    return const StampBook(
+      progress: StampProgress(
+        totalCount: 29,
+        acquiredCount: 0,
+        stamps: [],
+      ),
+      nextReward: NextStampReward(
+        acquiredCount: 0,
+        nextTargetCount: null,
+        remainingCount: 29,
+        completed: false,
+        claimable: false,
+        claimableTargetCount: null,
+      ),
+    );
   }
 
   return ref.watch(stampRepositoryProvider).fetchStampBook();
@@ -39,7 +53,7 @@ final stampRallybookSpotsProvider =
     authControllerProvider.select((state) => state.status),
   );
   if (authStatus != AuthStatus.authenticated) {
-    return null;
+    return const <RallybookSpot>[];
   }
 
   return ref.watch(stampRepositoryProvider).fetchRallybookSpots();

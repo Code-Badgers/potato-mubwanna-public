@@ -17,7 +17,7 @@ void main() {
     expect(requestedPaths, ['/spots/1']);
     expect(detail.id, '1');
     expect(detail.name, '정선 5일장');
-    expect(detail.categoryLabel, '시장');
+    expect(detail.categoryLabel, '시장·상권');
     expect(detail.congestionLabel, '여유');
     expect(detail.potatoTags, ['감자', '감자전']);
     expect(detail.verificationRadiusMeter, 100);

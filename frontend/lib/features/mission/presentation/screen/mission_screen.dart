@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/mission_controller.dart';
 import '../../data/mission_native_input_service.dart';
@@ -213,10 +212,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     }
     if (authStatus != AuthStatus.authenticated) {
       return _MissionScaffold(
-        child: AuthRequiredView(
-          description: '여행 미션에 도전하려면 로그인해주세요.',
-          onLogin: () => context.go('/login'),
-        ),
+        child: _MissionGuestPreview(onLogin: () => context.go('/login')),
       );
     }
 
@@ -489,6 +485,149 @@ class _MissionLoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: CircularProgressIndicator(color: _missionPrimary),
+    );
+  }
+}
+
+class _MissionGuestPreview extends StatelessWidget {
+  const _MissionGuestPreview({required this.onLogin});
+
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final previews = [
+      (Icons.directions_walk_rounded, '가볍게 걷기', '감자 걸음은 로그인 후 저장돼요'),
+      (Icons.place_rounded, '명소 방문하기', '방문 인증은 로그인 후 남길 수 있어요'),
+      (Icons.quiz_rounded, '강원 퀴즈 풀기', '정답 기록은 로그인 후 반영돼요'),
+    ];
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '점순이의 미션',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '둘러보기는 바로 가능해요. 미션 기록과 보상 저장은 로그인 후 이어집니다.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.45,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                for (final preview in previews) ...[
+                  _MissionGuestPreviewTile(
+                    icon: preview.$1,
+                    title: preview.$2,
+                    subtitle: preview.$3,
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: onLogin,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _missionPrimary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: const Text(
+                      '로그인하고 기록 저장하기',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MissionGuestPreviewTile extends StatelessWidget {
+  const _MissionGuestPreviewTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(_missionCardRadius),
+        boxShadow: AppShadows.softCard,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primaryTint.withValues(alpha: 0.9),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primaryDark, size: 23),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

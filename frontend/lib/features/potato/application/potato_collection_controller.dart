@@ -68,7 +68,11 @@ final potatoCollectionProvider =
     authControllerProvider.select((state) => state.status),
   );
   if (authStatus != AuthStatus.authenticated) {
-    return null;
+    return const PotatoCollection(
+      totalCount: 15,
+      acquiredCount: 0,
+      items: [],
+    );
   }
 
   await ref.watch(potatoActivitySyncProvider.future);
@@ -81,7 +85,13 @@ final potatoGrowthSummaryProvider =
     authControllerProvider.select((state) => state.status),
   );
   if (authStatus != AuthStatus.authenticated) {
-    return null;
+    return const PotatoGrowthSummary(
+      todaySteps: 0,
+      dailyStepGoal: 10000,
+      weeklyDistanceKm: 0,
+      monthlyDistanceKm: 0,
+      remainingDistanceKmForRepresentative: 0,
+    );
   }
 
   await ref.watch(potatoActivitySyncProvider.future);

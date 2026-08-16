@@ -32,7 +32,7 @@ void main() {
     expect(find.text('강원'), findsNothing);
     expect(find.text('내 동선 0곳'), findsOneWidget);
     expect(find.text('전체'), findsOneWidget);
-    expect(find.text('관광'), findsOneWidget);
+    expect(find.text('관광·쇼핑'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('전체')).dy,
       lessThan(tester.getTopLeft(find.text('내 동선 0곳')).dy),
@@ -132,7 +132,7 @@ void main() {
     expect(mountCount, 1);
     expect(mountedSpotIds.single, ['1', '2', '3', '4']);
 
-    await tester.tap(find.text('카페'));
+    await tester.tap(find.text('카페·디저트'));
     await tester.pumpAndSettle();
 
     expect(find.text('감자 카페'), findsOneWidget);
