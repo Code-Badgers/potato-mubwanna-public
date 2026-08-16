@@ -70,9 +70,6 @@ public class PotatoSpotClassifier {
     }
 
     private SpotCategory classifyCategory(Integer contentTypeId, String text) {
-        if (containsAny(text, "맥주", "브루어리", "양조", "펍", "술", "바", "페어링")) {
-            return SpotCategory.POTATO_BREWERY;
-        }
         if (containsAny(text, "체험", "만들기", "클래스", "공방", "농장", "팜")) {
             return SpotCategory.POTATO_EXPERIENCE;
         }
@@ -83,10 +80,13 @@ public class PotatoSpotClassifier {
             return SpotCategory.POTATO_CAFE;
         }
         if (containsAny(text, "빵", "간식", "떡", "과자", "알감자", "회오리감자", "휴게소")) {
-            return SpotCategory.POTATO_SNACK;
+            return SpotCategory.POTATO_CAFE;
         }
         if (containsAny(text, "기념품", "굿즈", "특산품", "판매장")) {
             return SpotCategory.POTATO_SHOP;
+        }
+        if (containsAny(text, "맥주", "브루어리", "양조", "펍", "술", "바", "페어링")) {
+            return SpotCategory.POTATO_RESTAURANT;
         }
         if (containsAny(text, "축제", "박물관", "연구소", "감자밭", "감자꽃", "고랭지")) {
             return SpotCategory.POTATO_TOUR;

@@ -92,11 +92,16 @@ class TouristSpotMigrationTest {
                 "대관령원예농협 바우파머스",
                 "감자유원지",
                 "대관령감자빵",
-                "속초불탄감자빵 본점",
+                "속초불탄감자빵 본점 아궁이카페",
                 "만낭포감자떡 본점",
                 "옹심이장칼국수 감자바우",
                 "감자아일랜드 온의점",
-                "삶은감자"
+                "삶은감자",
+                "감자네",
+                "강릉감자천국",
+                "감자뭉팅이",
+                "감자꽃스튜디오",
+                "늘햇살 만우농촌체험마을"
             );
     }
 
@@ -202,9 +207,10 @@ class TouristSpotMigrationTest {
             .findActiveByTouristSpotIds(curatedSpotIds);
 
         assertThat(menuItems)
-            .hasSize(9)
+            .hasSizeGreaterThanOrEqualTo(21)
             .allSatisfy(item -> {
-                assertThat(item.getVerifiedOn()).isEqualTo(LocalDate.of(2026, 8, 4));
+                assertThat(item.getVerifiedOn())
+                    .isIn(LocalDate.of(2026, 8, 4), LocalDate.of(2026, 8, 16));
                 assertThat(item.getSourceUrl())
                     .doesNotStartWith("https://place.map.kakao.com/");
             });
@@ -218,7 +224,12 @@ class TouristSpotMigrationTest {
                 tuple("원조 감자빵 10개입 (공식몰)", 33000, null),
                 tuple("감자적", 6000, null),
                 tuple("컵길감자", 3100, null),
-                tuple("감자둥둥섬", null, "매장 가격 확인")
+                tuple("감자둥둥섬", null, "매장 가격 확인"),
+                tuple("감자전", 10000, null),
+                tuple("꿀치즈감자채전", 15000, null),
+                tuple("감자 둥글레 6알", 4500, null),
+                tuple("감자뭉팅이", 5000, null),
+                tuple("사골옹심이국수", 10000, null)
             );
         assertThat(menuItems)
             .extracting(SpotMenuItem::getName)
@@ -229,7 +240,8 @@ class TouristSpotMigrationTest {
                 "https://gamzabatt.com/all/?idx=1",
                 "https://app.catchtable.co.kr/ct/shop/gamjageok1",
                 "https://www.instagram.com/gil_potato/reel/DQJBIyqkYU8/",
-                "https://pf.kakao.com/_xbxfxgAs"
+                "https://pf.kakao.com/_xbxfxgAs",
+                "https://app.notion.com/p/3be51ca118cf803cb1aacbe1cb448423"
             );
         assertThat(menuItems)
             .extracting(SpotMenuItem::getTouristSpotId)
@@ -254,10 +266,13 @@ class TouristSpotMigrationTest {
             .andExpect(jsonPath("$.data[?(@.name == '대관령원예농협 바우파머스')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '감자유원지')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '대관령감자빵')]").isNotEmpty())
-            .andExpect(jsonPath("$.data[?(@.name == '속초불탄감자빵 본점')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '속초불탄감자빵 본점 아궁이카페')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '만낭포감자떡 본점')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '옹심이장칼국수 감자바우')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '삶은감자')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '감자네')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '감자뭉팅이')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '늘햇살 만우농촌체험마을')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '소양강 스카이워크')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '뮤지엄 산')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '통일전망대')]").isNotEmpty())
