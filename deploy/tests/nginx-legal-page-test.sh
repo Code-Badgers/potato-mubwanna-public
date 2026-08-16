@@ -22,6 +22,7 @@ published_port="$(docker port "${container_name}" 80/tcp | sed -n 's/.*://p' | t
 test -n "${published_port}"
 
 privacy_page="$(curl --fail --silent --show-error --retry 10 --retry-delay 1 \
+  --retry-connrefused --retry-all-errors \
   "http://127.0.0.1:${published_port}/privacy-policy")"
 
 grep -q '<title>개인정보처리방침 | 감자무봤나</title>' <<< "${privacy_page}"
