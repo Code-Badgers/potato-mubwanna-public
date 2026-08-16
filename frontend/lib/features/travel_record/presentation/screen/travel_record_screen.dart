@@ -187,6 +187,7 @@ class _TravelRecordPhotoBoard extends StatelessWidget {
           children.add(
             _TravelRecordFilmCard(
               record: record,
+              index: index,
               variant: variant,
               width: width,
               onTap: () => onRecordSelected(record),
@@ -287,44 +288,58 @@ class _TravelRecordTypeStamp extends StatelessWidget {
 class _TravelRecordFilmCard extends StatelessWidget {
   const _TravelRecordFilmCard({
     required this.record,
+    required this.index,
     required this.variant,
     required this.width,
     required this.onTap,
   });
 
   final TravelRecord record;
+  final int index;
   final _TravelRecordFrameVariant variant;
   final double width;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-      child: InkWell(
-        key: ValueKey('travel-record-${record.visitId}'),
-        onTap: onTap,
+    final angle = switch (index % 6) {
+      0 => -0.018,
+      1 => 0.014,
+      2 => -0.01,
+      3 => 0.018,
+      4 => -0.006,
+      _ => 0.01,
+    };
+
+    return Transform.rotate(
+      angle: angle,
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-        child: SizedBox(
-          width: width,
-          child: AspectRatio(
-            aspectRatio: variant.aspectRatio,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: _TravelRecordFramedPhoto(
-                    record: record,
-                    variant: variant,
+        child: InkWell(
+          key: ValueKey('travel-record-${record.visitId}'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+          child: SizedBox(
+            width: width,
+            child: AspectRatio(
+              aspectRatio: variant.aspectRatio,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: _TravelRecordFramedPhoto(
+                      record: record,
+                      variant: variant,
+                    ),
                   ),
-                ),
-                Positioned(
-                  top: variant.usesPortraitFrame ? 8 : 10,
-                  right: variant.usesPortraitFrame ? 10 : 12,
-                  child: _TravelRecordTypeStamp(record: record),
-                ),
-              ],
+                  Positioned(
+                    top: variant.usesPortraitFrame ? 8 : 10,
+                    right: variant.usesPortraitFrame ? 10 : 12,
+                    child: _TravelRecordTypeStamp(record: record),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -595,13 +610,25 @@ class _EmptyTravelRecordFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: AspectRatio(
-        aspectRatio: variant.aspectRatio,
-        child: _EmptyTravelRecordPhoto(
-          index: index,
-          variant: variant,
+    final angle = switch (index % 6) {
+      0 => -0.018,
+      1 => 0.014,
+      2 => -0.01,
+      3 => 0.018,
+      4 => -0.006,
+      _ => 0.01,
+    };
+
+    return Transform.rotate(
+      angle: angle,
+      child: SizedBox(
+        width: width,
+        child: AspectRatio(
+          aspectRatio: variant.aspectRatio,
+          child: _EmptyTravelRecordPhoto(
+            index: index,
+            variant: variant,
+          ),
         ),
       ),
     );
