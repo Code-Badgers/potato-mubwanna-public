@@ -101,7 +101,8 @@ class TouristSpotMigrationTest {
                 "강릉감자천국",
                 "감자뭉팅이",
                 "감자꽃스튜디오",
-                "늘햇살 만우농촌체험마을"
+                "늘햇살 만우농촌체험마을",
+                "대관령감자옹심이"
             );
     }
 
@@ -229,7 +230,9 @@ class TouristSpotMigrationTest {
                 tuple("꿀치즈감자채전", 15000, null),
                 tuple("감자 둥글레 6알", 4500, null),
                 tuple("감자뭉팅이", 5000, null),
-                tuple("사골옹심이국수", 10000, null)
+                tuple("사골옹심이국수", 10000, null),
+                tuple("감자라떼", 6000, null),
+                tuple("치즈말이 감자전", 9000, null)
             );
         assertThat(menuItems)
             .extracting(SpotMenuItem::getName)

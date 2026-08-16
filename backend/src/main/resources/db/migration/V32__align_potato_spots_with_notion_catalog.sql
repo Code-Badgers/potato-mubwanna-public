@@ -54,7 +54,8 @@ FROM (
         ('CURATED:KAKAO:10023986', 39, '포남사골옹심이', 'POTATO_RESTAURANT', 37.7650263, 128.9073738, '강원특별자치도 강릉시 남구길10번길 11', '강릉시', '감자,사골옹심이,감자송편,식당', 'NORMAL'),
         ('CURATED:ADDRESS:MAEUITAEJA_CLASS', 14, '마의태자권역마을 로컬 클래스', 'POTATO_EXPERIENCE', 37.8810990, 128.2566587, '강원특별자치도 인제군 상남면 김부대왕로 2376', '인제군', '감자,감자빵만들기,원데이클래스,체험', 'LOW'),
         ('CURATED:ADDRESS:GOTANSANDEULMI', 14, '고탄산들미마을', 'POTATO_EXPERIENCE', 37.9884866, 127.7042607, '강원특별자치도 춘천시 사북면 춘화로 485', '춘천시', '감자,감자캐기,농촌체험,체험', 'LOW'),
-        ('CURATED:KAKAO:16108175', 39, '감자바우', 'POTATO_RESTAURANT', 37.8965530, 128.0365033, '강원특별자치도 홍천군 두촌면 장남리 411-1', '홍천군', '감자,향토음식,식당,홍천', 'LOW')
+        ('CURATED:KAKAO:16108175', 39, '감자바우', 'POTATO_RESTAURANT', 37.8965530, 128.0365033, '강원특별자치도 홍천군 두촌면 장남리 411-1', '홍천군', '감자,향토음식,식당,홍천', 'LOW'),
+        ('CURATED:KAKAO:1977116251', 39, '대관령감자옹심이', 'POTATO_RESTAURANT', 37.6800041, 128.7001895, '강원특별자치도 평창군 대관령면 경강로 5193', '평창군', '감자,감자옹심이,식당,대관령', 'LOW')
 ) AS seed(
     content_id,
     content_type_id,
@@ -90,6 +91,31 @@ WHERE content_id = 'CURATED:KAKAO:487698285';
 
 UPDATE tourist_spots
 SET
+    potato_tags = '감자,감자빵,치즈감자빵,감자라떼,카페디저트',
+    updated_at = CURRENT_TIMESTAMP
+WHERE content_id = 'CURATED:GAMZABATT';
+
+UPDATE tourist_spots
+SET
+    address = '강원특별자치도 강릉시 공항길30번길 5',
+    potato_tags = '감자,감자적,감자전,옹심이,감자떡,식당',
+    updated_at = CURRENT_TIMESTAMP
+WHERE content_id = 'CURATED:KAKAO:11542807';
+
+UPDATE tourist_spots
+SET
+    potato_tags = '감자,옹심이,장칼국수,감자전,식당',
+    updated_at = CURRENT_TIMESTAMP
+WHERE content_id = 'CURATED:KAKAO:11395119';
+
+UPDATE tourist_spots
+SET
+    potato_tags = '감자,소품샵,기념품,관광쇼핑',
+    updated_at = CURRENT_TIMESTAMP
+WHERE content_id = 'CURATED:KAKAO:777074207';
+
+UPDATE tourist_spots
+SET
     potato_tags = '감자,감자맥주,브루펍,페어링,식당',
     updated_at = CURRENT_TIMESTAMP
 WHERE category = 'POTATO_BREWERY';
@@ -112,7 +138,15 @@ JOIN (VALUES
     ('CURATED:KAKAO:333181363', '감자핫도그', 5000, 4),
     ('CURATED:KAKAO:10023986', '사골옹심이국수', 10000, 1),
     ('CURATED:KAKAO:10023986', '사골순옹심이', 11000, 2),
-    ('CURATED:KAKAO:10023986', '감자송편', 11000, 3)
+    ('CURATED:KAKAO:10023986', '감자송편', 11000, 3),
+    ('CURATED:GAMZABATT', '감자빵', 3300, 2),
+    ('CURATED:GAMZABATT', '치즈 감자빵', 3800, 3),
+    ('CURATED:GAMZABATT', '감자라떼', 6000, 4),
+    ('CURATED:KAKAO:11542807', '순옹심이', 8000, 2),
+    ('CURATED:KAKAO:11542807', '칼옹심이', 8000, 3),
+    ('CURATED:KAKAO:11542807', '흑임자 옹심이', 12000, 4),
+    ('CURATED:KAKAO:11542807', '치즈말이 감자전', 9000, 5),
+    ('CURATED:KAKAO:11542807', '감자떡', 7000, 6)
 ) AS menu(content_id, name, price_won, display_order)
     ON spot.content_id = menu.content_id
 WHERE NOT EXISTS (
