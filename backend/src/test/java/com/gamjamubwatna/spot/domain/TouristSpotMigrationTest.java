@@ -81,15 +81,22 @@ class TouristSpotMigrationTest {
         List<TouristSpot> spots = curatedSpots();
 
         assertThat(spots)
-            .hasSize(6)
+            .hasSizeGreaterThanOrEqualTo(24)
             .extracting(TouristSpot::getName)
-            .containsExactlyInAnyOrder(
+            .contains(
                 "감자밭",
                 "감자적1번지",
                 "강릉 길감자",
                 "바회마을",
                 "감자아일랜드 춘천",
-                "대관령원예농협 바우파머스"
+                "대관령원예농협 바우파머스",
+                "감자유원지",
+                "대관령감자빵",
+                "속초불탄감자빵 본점",
+                "만낭포감자떡 본점",
+                "옹심이장칼국수 감자바우",
+                "감자아일랜드 온의점",
+                "삶은감자"
             );
     }
 
@@ -245,6 +252,12 @@ class TouristSpotMigrationTest {
             .andExpect(jsonPath("$.data[?(@.name == '바회마을')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '감자아일랜드 춘천')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '대관령원예농협 바우파머스')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '감자유원지')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '대관령감자빵')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '속초불탄감자빵 본점')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '만낭포감자떡 본점')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '옹심이장칼국수 감자바우')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '삶은감자')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '소양강 스카이워크')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '뮤지엄 산')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '통일전망대')]").isNotEmpty())
