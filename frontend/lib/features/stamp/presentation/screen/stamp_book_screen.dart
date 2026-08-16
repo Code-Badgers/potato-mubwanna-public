@@ -1021,9 +1021,9 @@ class _StampTourHero extends StatelessWidget {
                       '강원도\n스탬프 투어',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 25,
-                        height: 1.1,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 23,
+                        height: 1.08,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0,
                       ),
                     ),
@@ -1087,7 +1087,7 @@ class _StampTourProgressPill extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '스탬프북  $acquiredCount/$totalCount',
+                  '패스포트  $acquiredCount/$totalCount',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
@@ -1207,9 +1207,22 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
           margin: const EdgeInsets.fromLTRB(16, 2, 16, 10),
           height: widget.mapHeight,
           decoration: BoxDecoration(
-            color: const Color(0xFFDDF2FA),
-            borderRadius: BorderRadius.circular(AppDimens.sheetRadius),
-            boxShadow: AppShadows.softCard,
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEAF7F0),
+                Color(0xFFDDF2FA),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryDark.withValues(alpha: 0.08),
+                blurRadius: 28,
+                offset: const Offset(0, 14),
+              ),
+            ],
           ),
           clipBehavior: Clip.antiAlias,
           child: LayoutBuilder(
@@ -1737,11 +1750,17 @@ class _SelectedRegionCard extends StatelessWidget {
 
     return Container(
       height: 194,
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.97),
-        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-        boxShadow: AppShadows.floating,
+        color: AppColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 30,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1750,11 +1769,6 @@ class _SelectedRegionCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _SpotPreviewMedallion(
-                spot: spot,
-                acquired: acquired,
-              ),
-              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1810,26 +1824,26 @@ class _SelectedRegionCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 8),
                     Text(
                       spot.spotName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       '${region.city} · $statusText',
                       style: TextStyle(
                         color:
                             acquired ? AppColors.primaryDark : AppColors.brown,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
@@ -1838,7 +1852,7 @@ class _SelectedRegionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 12),
           Text(
             '이 명소에서 인증하면 ${region.city} 스탬프를 받을 수 있어요',
             maxLines: 2,
@@ -1851,7 +1865,7 @@ class _SelectedRegionCard extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 8),
+          const Spacer(),
           SizedBox(
             width: double.infinity,
             height: 40,
@@ -1861,7 +1875,7 @@ class _SelectedRegionCard extends StatelessWidget {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.buttonRadius),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: const Row(
@@ -1887,152 +1901,6 @@ class _SelectedRegionCard extends StatelessWidget {
   }
 }
 
-class _SpotPreviewMedallion extends StatelessWidget {
-  const _SpotPreviewMedallion({
-    required this.spot,
-    required this.acquired,
-  });
-
-  final RallybookSpot spot;
-  final bool acquired;
-
-  @override
-  Widget build(BuildContext context) {
-    final asset = _stampImageForSpot(spot.spotName);
-
-    return Container(
-      width: 68,
-      height: 68,
-      padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        shape: BoxShape.circle,
-        boxShadow: AppShadows.softCard,
-      ),
-      child: ClipOval(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              asset,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => ColoredBox(
-                color: AppColors.primaryTint,
-                child: Icon(
-                  acquired ? Icons.verified_rounded : Icons.landscape_rounded,
-                  color: AppColors.primaryDark,
-                  size: 28,
-                ),
-              ),
-            ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppColors.surface.withValues(alpha: 0.9),
-                  width: 2,
-                ),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _stampImageForSpot(String spotName) {
-  final normalized = spotName.toLowerCase().replaceAll(' ', '');
-  if (normalized.contains('뮤지엄산')) {
-    return 'assets/stamps/museum_san.png';
-  }
-  if (normalized.contains('남이섬')) {
-    return 'assets/stamps/nami_island.png';
-  }
-  if (normalized.contains('소양강')) {
-    return 'assets/stamps/soyang_skywalk.png';
-  }
-  if (normalized.contains('안목')) {
-    return 'assets/stamps/anmok_beach.png';
-  }
-  if (normalized.contains('경포')) {
-    return 'assets/stamps/gyeongpodae.png';
-  }
-  if (normalized.contains('묵호')) {
-    return 'assets/stamps/mukho_lighthouse.png';
-  }
-  if (normalized.contains('논골')) {
-    return 'assets/stamps/nongoldam_road.png';
-  }
-  if (normalized.contains('황지')) {
-    return 'assets/stamps/hwangji_pond.png';
-  }
-  if (normalized.contains('속초')) {
-    return 'assets/stamps/sokcho_market.png';
-  }
-  if (normalized.contains('영금')) {
-    return 'assets/stamps/yeonggeumjeong.png';
-  }
-  if (normalized.contains('환선')) {
-    return 'assets/stamps/hwanseon_cave.png';
-  }
-  if (normalized.contains('장호')) {
-    return 'assets/stamps/jangho_port.png';
-  }
-  if (normalized.contains('수타사')) {
-    return 'assets/stamps/sutasa.png';
-  }
-  if (normalized.contains('비발디')) {
-    return 'assets/stamps/vivaldi_park.png';
-  }
-  if (normalized.contains('횡성')) {
-    return 'assets/stamps/hoengseong_lake_trail.png';
-  }
-  if (normalized.contains('청령포')) {
-    return 'assets/stamps/cheongnyeongpo.png';
-  }
-  if (normalized.contains('장릉')) {
-    return 'assets/stamps/jangneung.png';
-  }
-  if (normalized.contains('대관령')) {
-    return 'assets/stamps/daegwallyeong_sheep_ranch.png';
-  }
-  if (normalized.contains('이효석')) {
-    return 'assets/stamps/lee_hyoseok_museum.png';
-  }
-  if (normalized.contains('정선')) {
-    return 'assets/stamps/jeongseon_market.png';
-  }
-  if (normalized.contains('고석정')) {
-    return 'assets/stamps/goseokjeong.png';
-  }
-  if (normalized.contains('산천어')) {
-    return 'assets/stamps/sancheoneo_festival.png';
-  }
-  if (normalized.contains('박수근')) {
-    return 'assets/stamps/park_sookeun_museum.png';
-  }
-  if (normalized.contains('두타연')) {
-    return 'assets/stamps/dutayeon.png';
-  }
-  if (normalized.contains('자작')) {
-    return 'assets/stamps/wondaeri_birch_forest.png';
-  }
-  if (normalized.contains('통일')) {
-    return 'assets/stamps/unification_observatory.png';
-  }
-  if (normalized.contains('화진포')) {
-    return 'assets/stamps/hwajinpo.png';
-  }
-  if (normalized.contains('서피')) {
-    return 'assets/stamps/surfyy_beach.png';
-  }
-  if (normalized.contains('낙산')) {
-    return 'assets/stamps/naksansa.png';
-  }
-  return 'assets/stamps/stamp_tour_locked.png';
-}
-
 class _EmptyRegionCard extends StatelessWidget {
   const _EmptyRegionCard();
 
@@ -2041,11 +1909,17 @@ class _EmptyRegionCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 194,
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-        boxShadow: AppShadows.floating,
+        color: AppColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 30,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2075,7 +1949,7 @@ class _EmptyRegionCard extends StatelessWidget {
                       '여행할 명소를 골라보세요',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 20,
+                        fontSize: 19,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),

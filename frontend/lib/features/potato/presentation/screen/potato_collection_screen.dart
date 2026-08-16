@@ -515,8 +515,6 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   mood: mood,
                 ),
                 const SizedBox(height: 10),
-                const _PotatoStepGrowthPanel(),
-                const SizedBox(height: 10),
                 _PotatoProgressLine(
                   label: '성장 경험치',
                   valueLabel: '$growthPercent%',
@@ -527,7 +525,9 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   onCare: _reactToCare,
                   enabled: potato == null || potato.acquired,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
+                const _PotatoStepGrowthPanel(),
+                const SizedBox(height: 10),
                 _PotatoMainActions(
                   updating: widget.updating,
                   onShowDetail: widget.onShowDetail,
@@ -1652,7 +1652,6 @@ class _PotatoStepGrowthPanel extends ConsumerWidget {
           remainingDistanceKmForRepresentative: 0,
         );
     final ratio = summary.stepRatio;
-    final percent = (ratio * 100).round();
     final stepLabel =
         '${_formatInt(summary.todaySteps)} / ${_formatInt(summary.dailyStepGoal)}걸음';
     final isLoading =
@@ -1717,15 +1716,6 @@ class _PotatoStepGrowthPanel extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Text(
-                  '$percent%',
-                  style: const TextStyle(
-                    color: _potatoDark,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -1736,18 +1726,6 @@ class _PotatoStepGrowthPanel extends ConsumerWidget {
                 value: ratio,
                 backgroundColor: const Color(0xFFE7EFE9),
                 valueColor: const AlwaysStoppedAnimation<Color>(_potatoPrimary),
-              ),
-            ),
-            const SizedBox(height: 7),
-            const Text(
-              '걸음이 쌓이면 감자의 성장 경험치도 함께 올라가요',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
               ),
             ),
           ],
