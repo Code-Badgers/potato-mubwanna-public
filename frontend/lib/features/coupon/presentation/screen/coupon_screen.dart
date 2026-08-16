@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../reward/application/reward_history_controller.dart';
@@ -12,7 +13,6 @@ import '../../application/coupon_controller.dart';
 import '../../domain/coupon.dart';
 
 const _couponPrimary = Color(0xFF56C787);
-const _couponLine = Color(0xFFE7E1D7);
 const _couponCream = Color(0xFFFFF8EA);
 const _couponGold = Color(0xFFF6C23E);
 const _couponBrown = Color(0xFF7A4A24);
@@ -96,8 +96,8 @@ class _RewardBoxSectionBar extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 48),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F4EB),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.primaryTint.withValues(alpha: 0.76),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
       ),
       child: Row(
         children: [
@@ -213,17 +213,25 @@ class _CouponHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 18, 24, 10),
+      padding: EdgeInsets.fromLTRB(24, 18, 24, 12),
       child: Row(
         children: [
-          Icon(Icons.card_giftcard_rounded, color: _couponGold, size: 30),
-          SizedBox(width: 10),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.primaryTint,
+            child: Icon(
+              Icons.card_giftcard_rounded,
+              color: AppColors.primaryDark,
+              size: 22,
+            ),
+          ),
+          SizedBox(width: 12),
           Text(
             '보상함',
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -295,11 +303,7 @@ class _RewardHistoryCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _couponLine),
-      ),
+      decoration: _rewardGlassDecoration(radius: AppDimens.compactCardRadius),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -318,7 +322,7 @@ class _RewardHistoryCard extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -342,7 +346,7 @@ class _RewardHistoryCard extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -399,8 +403,8 @@ class _CouponTabBar extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 48),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0EEE8),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.cream.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
       ),
       child: Row(
         children: [
@@ -444,10 +448,10 @@ class _SegmentButton extends StatelessWidget {
       selected: selected,
       child: Material(
         color: selected ? AppColors.surface : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius - 4),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(AppDimens.compactCardRadius - 4),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Center(
@@ -458,7 +462,7 @@ class _SegmentButton extends StatelessWidget {
                       ? AppColors.textPrimary
                       : AppColors.textSecondary,
                   fontSize: 15,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -479,10 +483,10 @@ class _CouponSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: _rewardGlassDecoration(
         color: _couponCream,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF0DBA2)),
+        alpha: 0.82,
+        radius: AppDimens.compactCardRadius,
       ),
       child: Row(
         children: [
@@ -500,7 +504,7 @@ class _CouponSummaryCard extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -509,7 +513,7 @@ class _CouponSummaryCard extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -537,15 +541,15 @@ class _CouponCard extends StatelessWidget {
 
     return Material(
       color: available ? AppColors.surface : const Color(0xFFF4F3EF),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
         child: Container(
           padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: _couponLine),
+          decoration: _rewardGlassDecoration(
+            color: available ? AppColors.surface : const Color(0xFFF4F3EF),
+            alpha: available ? 0.92 : 0.8,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,7 +567,7 @@ class _CouponCard extends StatelessWidget {
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 17,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -576,7 +580,7 @@ class _CouponCard extends StatelessWidget {
                 style: TextStyle(
                   color: available ? _couponBrown : AppColors.textSecondary,
                   fontSize: 27,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 6),
@@ -585,7 +589,7 @@ class _CouponCard extends StatelessWidget {
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -631,7 +635,7 @@ class _CouponStatusChip extends StatelessWidget {
         style: TextStyle(
           color: foreground,
           fontSize: 12,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -1076,3 +1080,26 @@ String _formatDateTime(DateTime date) {
 enum _RewardBoxSection { coupons, history }
 
 enum _CouponTab { available, completed }
+
+BoxDecoration _rewardGlassDecoration({
+  Color color = AppColors.surface,
+  double alpha = 0.9,
+  double radius = AppDimens.cardRadius,
+}) {
+  return BoxDecoration(
+    color: color.withValues(alpha: alpha),
+    borderRadius: BorderRadius.circular(radius),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.textPrimary.withValues(alpha: 0.045),
+        blurRadius: 24,
+        offset: const Offset(0, 10),
+      ),
+      BoxShadow(
+        color: AppColors.primary.withValues(alpha: 0.028),
+        blurRadius: 30,
+        offset: const Offset(0, 16),
+      ),
+    ],
+  );
+}
