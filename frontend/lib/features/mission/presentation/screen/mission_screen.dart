@@ -1383,6 +1383,17 @@ class _MissionRewardSection extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        const Text(
+          '제휴 쿠폰과 현장 혜택은 추후 순차적으로 추가됩니다.',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
+            letterSpacing: 0,
+          ),
+        ),
       ],
     );
   }

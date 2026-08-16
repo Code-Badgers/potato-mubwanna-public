@@ -26,13 +26,13 @@ class StampBookScreen extends ConsumerWidget {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(
-              const SnackBar(content: Text('보상 수령이 완료됐어요. 쿠폰함에서 확인해 주세요.')),
+              const SnackBar(content: Text('스탬프 보상 기록이 저장됐어요. 제휴 혜택은 추후 추가됩니다.')),
             );
         },
         error: (error, _) {
           final message = error is ApiException && error.message.isNotEmpty
               ? error.message
-              : '보상을 받지 못했습니다. 잠시 후 다시 시도해 주세요.';
+              : '스탬프 보상 기록을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.';
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(message)));
