@@ -26,6 +26,9 @@ import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.visit.domain.UserVisit;
+import com.gamjamubwatna.visit.domain.UserVisitRepository;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -53,6 +56,7 @@ public class MissionService {
     private final MissionPhotoStorage missionPhotoStorage;
     private final MissionPhotoTextReader missionPhotoTextReader;
     private final TouristSpotRepository touristSpotRepository;
+    private final UserVisitRepository userVisitRepository;
     private final Clock clock;
 
     @Autowired
@@ -67,7 +71,8 @@ public class MissionService {
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
         MissionPhotoTextReader missionPhotoTextReader,
-        TouristSpotRepository touristSpotRepository
+        TouristSpotRepository touristSpotRepository,
+        UserVisitRepository userVisitRepository
     ) {
         this(
             missionRepository,
@@ -81,6 +86,7 @@ public class MissionService {
             missionPhotoStorage,
             missionPhotoTextReader,
             touristSpotRepository,
+            userVisitRepository,
             Clock.systemUTC()
         );
     }
@@ -97,6 +103,7 @@ public class MissionService {
         MissionPhotoStorage missionPhotoStorage,
         MissionPhotoTextReader missionPhotoTextReader,
         TouristSpotRepository touristSpotRepository,
+        UserVisitRepository userVisitRepository,
         Clock clock
     ) {
         this.missionRepository = missionRepository;
@@ -110,6 +117,7 @@ public class MissionService {
         this.missionPhotoStorage = missionPhotoStorage;
         this.missionPhotoTextReader = missionPhotoTextReader;
         this.touristSpotRepository = touristSpotRepository;
+        this.userVisitRepository = userVisitRepository;
         this.clock = clock;
     }
 
@@ -196,6 +204,7 @@ public class MissionService {
             evidenceUploadKey,
             evidenceSpot
         ));
+        saveTravelRecordForPhotoEvidence(user, evidenceSpot, completedAt);
         saveMissionRewardHistory(user, mission, period, completedAt);
 
         return new MissionVerifyResponse(
@@ -206,6 +215,26 @@ public class MissionService {
             mission.getRewardType(),
             mission.getRewardLabel()
         );
+    }
+
+    private void saveTravelRecordForPhotoEvidence(
+        User user,
+        TouristSpot evidenceSpot,
+        Instant completedAt
+    ) {
+        if (evidenceSpot == null) {
+            return;
+        }
+        if (userVisitRepository.existsByUserIdAndTouristSpotId(user.getId(), evidenceSpot.getId())) {
+            return;
+        }
+        // 사진 인증 미션은 GPS 거리값이 없으므로 여행 기록 표시용 방문으로 0m를 남긴다.
+        userVisitRepository.save(new UserVisit(
+            user,
+            evidenceSpot,
+            BigDecimal.ZERO,
+            completedAt
+        ));
     }
 
     private void saveMissionRewardHistory(

@@ -39,6 +39,8 @@ import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.visit.domain.UserVisit;
+import com.gamjamubwatna.visit.domain.UserVisitRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -86,6 +88,9 @@ class MissionServiceTest {
     @Mock
     private TouristSpotRepository touristSpotRepository;
 
+    @Mock
+    private UserVisitRepository userVisitRepository;
+
     private FakeMissionPhotoStorage missionPhotoStorage;
     private MissionPhotoTextReader missionPhotoTextReader;
     private MissionService missionService;
@@ -106,6 +111,7 @@ class MissionServiceTest {
             missionPhotoStorage,
             missionPhotoTextReader,
             touristSpotRepository,
+            userVisitRepository,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -544,6 +550,41 @@ class MissionServiceTest {
         verify(userMissionRepository).save(completionCaptor.capture());
         assertThat(completionCaptor.getValue().getEvidenceUploadKey()).isEqualTo(uploadKey);
         assertThat(completionCaptor.getValue().getTouristSpot()).isSameAs(touristSpot);
+        ArgumentCaptor<UserVisit> visitCaptor = ArgumentCaptor.forClass(UserVisit.class);
+        verify(userVisitRepository).save(visitCaptor.capture());
+        assertThat(visitCaptor.getValue().getTouristSpot()).isSameAs(touristSpot);
+        assertThat(visitCaptor.getValue().getDistanceMeters()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(visitCaptor.getValue().getVisitedAt())
+            .isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));
+    }
+
+    @Test
+    void doesNotDuplicateTravelRecordWhenPhotoMissionSpotWasAlreadyVisited() {
+        User user = user(1L);
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        TouristSpot touristSpot = spot(20L, mission.getSpotName(), mission.getCityName());
+        String uploadKey = "mission-uploads/1/1/test-photo.jpg";
+        missionPhotoStorage.put(uploadKey, new byte[] {1, 2, 3});
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
+            mission.getSpotName(),
+            mission.getCityName()
+        )).thenReturn(Optional.of(touristSpot));
+        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 20L)).thenReturn(true);
+        when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO, null, null, uploadKey, null)
+        );
+
+        verify(userVisitRepository).existsByUserIdAndTouristSpotId(1L, 20L);
+        verify(userVisitRepository, times(0)).save(any(UserVisit.class));
     }
 
     @Test
@@ -842,6 +883,7 @@ class MissionServiceTest {
             missionPhotoStorage,
             missionPhotoTextReader,
             touristSpotRepository,
+            userVisitRepository,
             Clock.fixed(now, ZoneOffset.UTC)
         );
     }
