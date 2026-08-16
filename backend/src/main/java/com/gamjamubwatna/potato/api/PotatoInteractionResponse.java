@@ -1,0 +1,33 @@
+package com.gamjamubwatna.potato.api;
+
+import com.gamjamubwatna.potato.domain.PotatoInteractionAction;
+import com.gamjamubwatna.potato.domain.UserPotato;
+import java.time.Instant;
+
+public record PotatoInteractionResponse(
+    Long potatoId,
+    String potatoName,
+    PotatoInteractionAction action,
+    double growthDistanceAdded,
+    long cooldownSeconds,
+    Instant nextAvailableAt,
+    PotatoGrowthResultResponse growthResult
+) {
+
+    public static PotatoInteractionResponse from(
+        UserPotato userPotato,
+        PotatoInteractionAction action,
+        Instant nextAvailableAt,
+        int previousLevel
+    ) {
+        return new PotatoInteractionResponse(
+            userPotato.getPotato().getId(),
+            userPotato.getPotato().getName(),
+            action,
+            action.growthDistance(),
+            action.cooldown().toSeconds(),
+            nextAvailableAt,
+            PotatoGrowthResultResponse.from(userPotato, previousLevel)
+        );
+    }
+}

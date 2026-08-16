@@ -961,12 +961,69 @@ Response:
 - 동일하거나 감소한 스냅샷은 성장량을 중복 지급하거나 회수하지 않는다.
 - `growthResult`는 이번 요청의 양의 거리 증가분이 성장 전 대표 감자에 실제 반영된 경우에만 반환한다.
 - 대표 감자가 없거나 이미 완전히 성장했거나 거리 증가분이 없으면 `growthResult`는 `null`이다.
-- `leveledUp`은 현재 레벨이 이전 레벨보다 높을 때, `fullyGrown`은 이번 반영 후 레벨 5에 도달했을 때 `true`다.
+- `leveledUp`은 현재 레벨이 이전 레벨보다 높을 때, `fullyGrown`은 이번 반영 후 감자 희귀도별 최대 레벨에 도달했을 때 `true`다.
 - `steps`와 `distanceMeters`는 음수일 수 없다.
 - `steps`가 비정상적으로 크거나 `distanceMeters`가 비정상적으로 크면 `400 Bad Request`를 반환한다.
 - 인증 정보가 없거나 사용자 정보가 유효하지 않으면 `401 Unauthorized`를 반환한다.
 
-### 5.7 감자 성장 처리
+### 5.7 대표 감자 상호작용
+
+```http
+POST /api/potatoes/me/representative/interactions
+```
+
+Request:
+
+```json
+{
+  "action": "PAT"
+}
+```
+
+`action` 값:
+
+| action | 설명 | 성장 보너스 | 쿨타임 |
+| --- | --- | ---: | ---: |
+| `PAT` | 쓰다듬기 | 50m | 30분 |
+| `WATER` | 물주기 | 120m | 2시간 |
+| `SNACK` | 간식주기 | 200m | 4시간 |
+| `WALK` | 산책 | 500m | 12시간 |
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "potatoId": 1,
+    "potatoName": "초보감자",
+    "action": "PAT",
+    "growthDistanceAdded": 50.0,
+    "cooldownSeconds": 1800,
+    "nextAvailableAt": "2026-08-16T15:30:00Z",
+    "growthResult": {
+      "potatoId": 1,
+      "potatoName": "초보감자",
+      "previousLevel": 2,
+      "currentLevel": 3,
+      "leveledUp": true,
+      "fullyGrown": true
+    }
+  }
+}
+```
+
+처리 규칙:
+
+- 로그인 사용자의 대표 감자에만 적용한다.
+- 대표 감자가 없으면 `400 Bad Request`를 반환한다.
+- 대표 감자가 이미 희귀도별 최대 레벨에 도달했다면 `400 Bad Request`를 반환한다.
+- 같은 대표 감자와 같은 액션의 마지막 실행 시각을 기준으로 쿨타임을 계산한다.
+- 쿨타임 중 재시도하면 성장 수치를 변경하지 않고 `429 Too Many Requests`를 반환한다.
+- 성공 시 `user_potato_interactions`에 액션 기록을 남기고 대표 감자의 성장 거리를 증가시킨다.
+
+### 5.8 감자 성장 처리
 
 ```http
 POST /api/potatoes/{potatoId}/grow

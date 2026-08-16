@@ -5,12 +5,19 @@ import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncRequest;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncResponse;
 import com.gamjamubwatna.potato.api.PotatoGrowthResultResponse;
+import com.gamjamubwatna.potato.api.PotatoInteractionRequest;
+import com.gamjamubwatna.potato.api.PotatoInteractionResponse;
 import com.gamjamubwatna.potato.api.PotatoRepresentativeResponse;
 import com.gamjamubwatna.potato.domain.ActivitySource;
+import com.gamjamubwatna.potato.domain.PotatoInteractionAction;
 import com.gamjamubwatna.potato.domain.UserDailyActivity;
 import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
+import com.gamjamubwatna.potato.domain.UserPotatoInteraction;
+import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,17 +32,33 @@ public class PotatoCommandService {
     private static final double MAX_DAILY_DISTANCE_METERS = 100_000.0;
 
     private final UserPotatoRepository userPotatoRepository;
+    private final UserPotatoInteractionRepository userPotatoInteractionRepository;
     private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     public PotatoCommandService(
         UserPotatoRepository userPotatoRepository,
+        UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository
     ) {
+        this(userPotatoRepository, userPotatoInteractionRepository, userDailyActivityRepository, userRepository,
+            Clock.systemUTC());
+    }
+
+    PotatoCommandService(
+        UserPotatoRepository userPotatoRepository,
+        UserPotatoInteractionRepository userPotatoInteractionRepository,
+        UserDailyActivityRepository userDailyActivityRepository,
+        UserRepository userRepository,
+        Clock clock
+    ) {
         this.userPotatoRepository = userPotatoRepository;
+        this.userPotatoInteractionRepository = userPotatoInteractionRepository;
         this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -112,6 +135,48 @@ public class PotatoCommandService {
         return PotatoDailyActivitySyncResponse.from(savedActivity, growthResult);
     }
 
+    @Transactional
+    public PotatoInteractionResponse interactWithRepresentativePotato(
+        Long userId,
+        PotatoInteractionRequest request
+    ) {
+        if (!userRepository.existsById(userId)) {
+            throw new PotatoAuthenticationException("사용자를 찾을 수 없습니다.");
+        }
+        if (request == null || request.action() == null) {
+            throw new PotatoInteractionException("감자 돌봄 행동을 확인할 수 없습니다.");
+        }
+
+        UserPotato representative = userPotatoRepository.findByUserId(userId)
+            .stream()
+            .filter(UserPotato::isRepresentative)
+            .findFirst()
+            .orElseThrow(() -> new PotatoInteractionException("대표 감자를 먼저 설정해주세요."));
+        if (representative.isFullyGrown()) {
+            throw new PotatoInteractionException("이미 최대 레벨까지 성장한 감자입니다.");
+        }
+
+        PotatoInteractionAction action = request.action();
+        Instant now = Instant.now(clock);
+        validateInteractionCooldown(representative, action, now);
+
+        int previousLevel = representative.getLevel();
+        representative.addGrowthDistance(action.growthDistance());
+        userPotatoInteractionRepository.save(new UserPotatoInteraction(
+            representative,
+            action,
+            action.growthDistance(),
+            now
+        ));
+
+        return PotatoInteractionResponse.from(
+            representative,
+            action,
+            now.plus(action.cooldown()),
+            previousLevel
+        );
+    }
+
     private PotatoGrowthResultResponse applyRepresentativePotatoGrowth(
         Long userId,
         double additionalGrowthDistance
@@ -133,6 +198,27 @@ public class PotatoCommandService {
         int previousLevel = userPotato.getLevel();
         userPotato.addGrowthDistance(additionalGrowthDistance);
         return PotatoGrowthResultResponse.from(userPotato, previousLevel);
+    }
+
+    private void validateInteractionCooldown(
+        UserPotato representative,
+        PotatoInteractionAction action,
+        Instant now
+    ) {
+        Optional<UserPotatoInteraction> lastInteraction = userPotatoInteractionRepository
+            .findTopByUserPotatoIdAndActionOrderByInteractedAtDesc(representative.getId(), action);
+        if (lastInteraction.isEmpty()) {
+            return;
+        }
+
+        Duration cooldown = action.cooldown();
+        Instant nextAvailableAt = lastInteraction.get().getInteractedAt().plus(cooldown);
+        if (now.isBefore(nextAvailableAt)) {
+            throw new PotatoInteractionCooldownException(
+                "아직 다시 돌볼 수 없습니다. 잠시 후 다시 시도해주세요.",
+                nextAvailableAt
+            );
+        }
     }
 
     private void validateDailyActivityRequest(PotatoDailyActivitySyncRequest request) {

@@ -6,6 +6,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,9 +14,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.potato.application.PotatoActivityException;
 import com.gamjamubwatna.potato.application.PotatoCommandService;
+import com.gamjamubwatna.potato.application.PotatoInteractionCooldownException;
+import com.gamjamubwatna.potato.application.PotatoInteractionException;
 import com.gamjamubwatna.potato.application.PotatoQueryService;
 import com.gamjamubwatna.potato.application.PotatoRepresentativeException;
 import com.gamjamubwatna.potato.domain.ActivitySource;
+import com.gamjamubwatna.potato.domain.PotatoInteractionAction;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -200,6 +204,75 @@ class PotatoControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("획득한 감자만 대표 감자로 설정할 수 있습니다."));
+    }
+
+    @Test
+    void interactsWithRepresentativePotato() throws Exception {
+        when(potatoCommandService.interactWithRepresentativePotato(
+            eq(1L),
+            eq(new PotatoInteractionRequest(PotatoInteractionAction.PAT))
+        )).thenReturn(new PotatoInteractionResponse(
+            1L,
+            "새싹감자",
+            PotatoInteractionAction.PAT,
+            50.0,
+            1800,
+            Instant.parse("2026-07-21T10:30:00Z"),
+            new PotatoGrowthResultResponse(1L, "새싹감자", 2, 3, true, true)
+        ));
+
+        mockMvc.perform(post("/potatoes/me/representative/interactions")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"action\":\"PAT\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.potatoId").value(1))
+            .andExpect(jsonPath("$.data.potatoName").value("새싹감자"))
+            .andExpect(jsonPath("$.data.action").value("PAT"))
+            .andExpect(jsonPath("$.data.growthDistanceAdded").value(50.0))
+            .andExpect(jsonPath("$.data.cooldownSeconds").value(1800))
+            .andExpect(jsonPath("$.data.nextAvailableAt").value("2026-07-21T10:30:00Z"))
+            .andExpect(jsonPath("$.data.growthResult.currentLevel").value(3))
+            .andExpect(jsonPath("$.data.growthResult.fullyGrown").value(true));
+    }
+
+    @Test
+    void rejectsPotatoInteractionDuringCooldown() throws Exception {
+        when(potatoCommandService.interactWithRepresentativePotato(
+            eq(1L),
+            eq(new PotatoInteractionRequest(PotatoInteractionAction.WATER))
+        )).thenThrow(new PotatoInteractionCooldownException(
+            "아직 다시 돌볼 수 없습니다. 잠시 후 다시 시도해주세요.",
+            Instant.parse("2026-07-21T11:30:00Z")
+        ));
+
+        mockMvc.perform(post("/potatoes/me/representative/interactions")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"action\":\"WATER\"}"))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("아직 다시 돌볼 수 없습니다. 잠시 후 다시 시도해주세요."));
+    }
+
+    @Test
+    void rejectsInvalidPotatoInteraction() throws Exception {
+        when(potatoCommandService.interactWithRepresentativePotato(
+            eq(1L),
+            eq(new PotatoInteractionRequest(PotatoInteractionAction.SNACK))
+        )).thenThrow(new PotatoInteractionException("대표 감자를 먼저 설정해주세요."));
+
+        mockMvc.perform(post("/potatoes/me/representative/interactions")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"action\":\"SNACK\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("대표 감자를 먼저 설정해주세요."));
     }
 
     private PotatoCatalogItemResponse catalogItem() {
