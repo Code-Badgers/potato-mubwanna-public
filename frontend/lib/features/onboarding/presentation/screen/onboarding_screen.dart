@@ -139,10 +139,17 @@ class _ServiceIntroPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       height: constrainedCopyHeight,
-                      child: Image.asset(
-                        step.copyAsset,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.bottomCenter,
+                      child: Align(
+                        alignment: const Alignment(0.18, 0),
+                        child: FractionallySizedBox(
+                          widthFactor: 0.8,
+                          heightFactor: 0.9,
+                          child: Image.asset(
+                            step.copyAsset,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.center,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -174,19 +181,27 @@ class _ShadowedIntroVisual extends StatelessWidget {
       alignment: Alignment.bottomCenter,
       children: [
         Positioned(
-          bottom: 9,
+          bottom: 4,
           child: Container(
-            width: 230,
-            height: 24,
+            width: 268,
+            height: 32,
             decoration: BoxDecoration(
-              color: AppColors.textPrimary.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(999),
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.textPrimary.withValues(alpha: 0),
+                  AppColors.textPrimary.withValues(alpha: 0.07),
+                  AppColors.textPrimary.withValues(alpha: 0.11),
+                  AppColors.textPrimary.withValues(alpha: 0.07),
+                  AppColors.textPrimary.withValues(alpha: 0),
+                ],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.textPrimary.withValues(alpha: 0.14),
-                  blurRadius: 28,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 10),
+                  color: AppColors.textPrimary.withValues(alpha: 0.12),
+                  blurRadius: 42,
+                  spreadRadius: 8,
+                  offset: const Offset(0, 14),
                 ),
               ],
             ),
