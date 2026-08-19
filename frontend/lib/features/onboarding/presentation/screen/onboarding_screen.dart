@@ -181,33 +181,38 @@ class _ShadowedIntroVisual extends StatelessWidget {
       alignment: Alignment.bottomCenter,
       children: [
         Positioned(
-          bottom: 4,
+          bottom: 2,
           child: Container(
-            width: 268,
-            height: 32,
+            width: 318,
+            height: 42,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
                 colors: [
-                  AppColors.textPrimary.withValues(alpha: 0),
-                  AppColors.textPrimary.withValues(alpha: 0.07),
-                  AppColors.textPrimary.withValues(alpha: 0.11),
+                  AppColors.textPrimary.withValues(alpha: 0.14),
                   AppColors.textPrimary.withValues(alpha: 0.07),
                   AppColors.textPrimary.withValues(alpha: 0),
                 ],
+                stops: const [0, 0.42, 1],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.textPrimary.withValues(alpha: 0.12),
-                  blurRadius: 42,
-                  spreadRadius: 8,
-                  offset: const Offset(0, 14),
+                  color: AppColors.textPrimary.withValues(alpha: 0.1),
+                  blurRadius: 54,
+                  spreadRadius: 14,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
           ),
         ),
-        Positioned.fill(
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 28,
           child: Image.asset(
             asset,
             fit: BoxFit.contain,
