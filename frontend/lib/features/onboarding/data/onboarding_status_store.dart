@@ -14,7 +14,7 @@ abstract interface class OnboardingStatusStore {
 class SharedPreferencesOnboardingStatusStore implements OnboardingStatusStore {
   const SharedPreferencesOnboardingStatusStore();
 
-  static const _completedKey = 'hasCompletedOnboarding';
+  static const _completedKey = 'hasCompletedLoginIntroOnboardingV1';
 
   @override
   Future<bool> hasCompletedOnboarding() async {
