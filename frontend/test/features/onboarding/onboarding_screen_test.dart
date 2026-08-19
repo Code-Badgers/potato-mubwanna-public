@@ -21,31 +21,23 @@ void main() {
       ),
     );
 
-    expect(find.byType(Image), findsOneWidget);
-    expect(find.text('감자를 따라 강원으로'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);
     expect(find.text('다음'), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(-430, 0));
     await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('여행 도장을 모아요'), findsOneWidget);
     expect(find.text('다음'), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(-430, 0));
     await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('감자를 키워요'), findsOneWidget);
     expect(find.text('다음'), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(-430, 0));
     await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('점순이가 골라둔 미션'), findsOneWidget);
-    expect(
-      find.text('사진, 퀴즈, 산책 미션으로 여행 기록을 남겨보세요'),
-      findsOneWidget,
-    );
-    expect(find.text('카카오 로그인하러 가기'), findsOneWidget);
+    expect(find.text('카카오 로그인'), findsOneWidget);
   });
 
   testWidgets('shows only the runtime permissions currently used',
@@ -99,7 +91,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     await tester.drag(find.byType(PageView), const Offset(-800, 0));
     await tester.pump(const Duration(milliseconds: 600));
-    await tester.tap(find.text('카카오 로그인하러 가기'));
+    await tester.tap(find.text('카카오 로그인'));
     await tester.pumpAndSettle();
 
     expect(statusStore.markCalls, 1);

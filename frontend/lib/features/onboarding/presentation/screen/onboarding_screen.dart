@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_design_tokens.dart';
 import '../../data/onboarding_status_store.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -23,24 +22,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _steps = [
     _IntroStep(
-      title: '감자를 따라 강원으로',
-      description: '지도 위 감자 스팟을 따라 숨은 명소를 찾아보세요',
       imageAsset: 'assets/onboarding/service_intro_01.png',
+      copyAsset: 'assets/onboarding/service_intro_copy_01.png',
     ),
     _IntroStep(
-      title: '여행 도장을 모아요',
-      description: '명소에 도착하면 방문 인증으로 스탬프가 채워져요',
       imageAsset: 'assets/onboarding/service_intro_02.png',
+      copyAsset: 'assets/onboarding/service_intro_copy_02.png',
     ),
     _IntroStep(
-      title: '감자를 키워요',
-      description: '걸음과 미션으로 나만의 감자 도감을 완성해보세요',
       imageAsset: 'assets/onboarding/service_intro_03.png',
+      copyAsset: 'assets/onboarding/service_intro_copy_03.png',
     ),
     _IntroStep(
-      title: '점순이가 골라둔 미션',
-      description: '사진, 퀴즈, 산책 미션으로 여행 기록을 남겨보세요',
       imageAsset: 'assets/onboarding/service_intro_04.png',
+      copyAsset: 'assets/onboarding/service_intro_copy_04.png',
     ),
   ];
 
@@ -100,7 +95,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: _OnboardingControls(
                     currentPage: _currentPage,
                     pageCount: _steps.length,
-                    buttonLabel: _isLastPage ? '카카오 로그인하러 가기' : '다음',
+                    isLastPage: _isLastPage,
+                    buttonLabel: _isLastPage ? '카카오 로그인' : '다음',
                     onPressed: _handlePrimaryAction,
                   ),
                 ),
@@ -120,79 +116,40 @@ class _ServiceIntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.asset(
-          step.imageAsset,
-          fit: BoxFit.cover,
-          alignment: Alignment.center,
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFFFBF3),
+            AppColors.surface,
+          ],
         ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.surface.withValues(alpha: 0),
-                AppColors.surface.withValues(alpha: 0),
-                AppColors.surface.withValues(alpha: 0.9),
-              ],
-              stops: const [0, 0.58, 1],
-            ),
-          ),
-        ),
-        Positioned(
-          left: 26,
-          right: 26,
-          bottom: 116,
-          child: _IntroCopy(step: step),
-        ),
-      ],
-    );
-  }
-}
-
-class _IntroCopy extends StatelessWidget {
-  const _IntroCopy({required this.step});
-
-  final _IntroStep step;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-        boxShadow: AppShadows.softCard,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            step.title,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
-              height: 1.2,
-              letterSpacing: 0,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 26, 20, 104),
+        child: Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: 188,
+              child: Image.asset(
+                step.copyAsset,
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            step.description,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              height: 1.38,
-              letterSpacing: 0,
+            const SizedBox(height: 12),
+            Expanded(
+              child: Image.asset(
+                step.imageAsset,
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -202,12 +159,14 @@ class _OnboardingControls extends StatelessWidget {
   const _OnboardingControls({
     required this.currentPage,
     required this.pageCount,
+    required this.isLastPage,
     required this.buttonLabel,
     required this.onPressed,
   });
 
   final int currentPage;
   final int pageCount;
+  final bool isLastPage;
   final String buttonLabel;
   final VoidCallback onPressed;
 
@@ -227,10 +186,12 @@ class _OnboardingControls extends StatelessWidget {
           child: FilledButton(
             onPressed: onPressed,
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
+              backgroundColor:
+                  isLastPage ? const Color(0xFFFEE500) : AppColors.primary,
+              foregroundColor:
+                  isLastPage ? const Color(0xFF191919) : AppColors.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimens.buttonRadius),
+                borderRadius: BorderRadius.circular(18),
               ),
               textStyle: const TextStyle(
                 fontSize: 16,
@@ -270,7 +231,7 @@ class _PageIndicator extends StatelessWidget {
             color: isActive
                 ? AppColors.primary
                 : AppColors.textSecondary.withValues(alpha: 0.22),
-            borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+            borderRadius: BorderRadius.circular(999),
           ),
         );
       }),
@@ -280,12 +241,10 @@ class _PageIndicator extends StatelessWidget {
 
 class _IntroStep {
   const _IntroStep({
-    required this.title,
-    required this.description,
     required this.imageAsset,
+    required this.copyAsset,
   });
 
-  final String title;
-  final String description;
   final String imageAsset;
+  final String copyAsset;
 }
