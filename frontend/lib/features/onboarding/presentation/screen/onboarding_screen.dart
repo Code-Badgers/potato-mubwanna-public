@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../data/onboarding_status_store.dart';
-
-const _primaryButtonColor = Color(0xFF56C787);
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({
@@ -24,21 +23,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _steps = [
     _IntroStep(
-      title: '감자무봤나?',
-      description: '강원도 감자여행\n스탬프를 모아보세요!',
-      imageAsset: 'assets/onboading.png',
+      title: '감자를 따라 강원으로',
+      description: '지도 위 감자 스팟을 따라 숨은 명소를 찾아보세요',
+      imageAsset: 'assets/onboarding/service_intro_01.png',
     ),
     _IntroStep(
-      title: '지도로 감자 스팟 찾기',
-      description: '가까운 관광지, 카페, 체험 장소를\n감자 핀으로 빠르게 확인해요.',
-      icon: Icons.map_outlined,
+      title: '여행 도장을 모아요',
+      description: '명소에 도착하면 방문 인증으로 스탬프가 채워져요',
+      imageAsset: 'assets/onboarding/service_intro_02.png',
     ),
     _IntroStep(
-      title: '수집하고 보상받기',
-      description: '스탬프를 모으고 감자 미션을 완료해\n강원 지역 쿠폰을 받아보세요.',
-      icon: Icons.emoji_events_outlined,
+      title: '감자를 키워요',
+      description: '걸음과 미션으로 나만의 감자 도감을 완성해보세요',
+      imageAsset: 'assets/onboarding/service_intro_03.png',
+    ),
+    _IntroStep(
+      title: '점순이가 골라둔 미션',
+      description: '사진, 퀴즈, 산책 미션으로 여행 기록을 남겨보세요',
+      imageAsset: 'assets/onboarding/service_intro_04.png',
     ),
   ];
+
+  bool get _isLastPage => _currentPage == _steps.length - 1;
 
   @override
   void dispose() {
@@ -47,8 +53,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _handlePrimaryAction() async {
-    if (_currentPage < _steps.length - 1) {
-      _pageController.nextPage(
+    if (!_isLastPage) {
+      await _pageController.nextPage(
         duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
       );
@@ -84,57 +90,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     });
                   },
                   itemBuilder: (context, index) {
-                    final item = _steps[index];
-                    if (item.imageAsset != null) {
-                      return _ImageIntroPage(
-                        step: item,
-                        onTap: _handlePrimaryAction,
-                      );
-                    }
-
-                    return _TextIntroPage(step: item);
+                    return _ServiceIntroPage(step: _steps[index]);
                   },
                 ),
                 Positioned(
                   left: 24,
                   right: 24,
                   bottom: 22,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _PageIndicator(
-                        count: _steps.length,
-                        currentIndex: _currentPage,
-                      ),
-                      const SizedBox(height: 18),
-                      if (_currentPage == 0)
-                        const _BlinkingStartText(label: '터치하여 시작하기')
-                      else
-                        SizedBox(
-                          width: double.infinity,
-                          height: 58,
-                          child: FilledButton(
-                            onPressed: _handlePrimaryAction,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _primaryButtonColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              textStyle: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0,
-                              ),
-                            ),
-                            child: Text(
-                              _currentPage == _steps.length - 1
-                                  ? '카카오 로그인하러 가기'
-                                  : '다음',
-                            ),
-                          ),
-                        ),
-                    ],
+                  child: _OnboardingControls(
+                    currentPage: _currentPage,
+                    pageCount: _steps.length,
+                    buttonLabel: _isLastPage ? '카카오 로그인하러 가기' : '다음',
+                    onPressed: _handlePrimaryAction,
                   ),
                 ),
               ],
@@ -146,129 +113,135 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _ImageIntroPage extends StatelessWidget {
-  const _ImageIntroPage({
-    required this.step,
-    required this.onTap,
-  });
+class _ServiceIntroPage extends StatelessWidget {
+  const _ServiceIntroPage({required this.step});
 
   final _IntroStep step;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Image.asset(
-        step.imageAsset!,
-        fit: BoxFit.cover,
-      ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          step.imageAsset,
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.surface.withValues(alpha: 0),
+                AppColors.surface.withValues(alpha: 0),
+                AppColors.surface.withValues(alpha: 0.9),
+              ],
+              stops: const [0, 0.58, 1],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 26,
+          right: 26,
+          bottom: 116,
+          child: _IntroCopy(step: step),
+        ),
+      ],
     );
   }
 }
 
-class _TextIntroPage extends StatelessWidget {
-  const _TextIntroPage({required this.step});
+class _IntroCopy extends StatelessWidget {
+  const _IntroCopy({required this.step});
 
   final _IntroStep step;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 72, 28, 126),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        boxShadow: AppShadows.softCard,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 86,
-            height: 86,
-            decoration: BoxDecoration(
-              color: _primaryButtonColor.withValues(alpha: 0.13),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              step.icon,
-              color: _primaryButtonColor,
-              size: 44,
-            ),
-          ),
-          const Spacer(),
           Text(
             step.title,
             style: const TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 31,
+              fontSize: 25,
               fontWeight: FontWeight.w900,
-              height: 1.22,
+              height: 1.2,
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Text(
             step.description,
             style: const TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 18,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
-              height: 1.45,
+              height: 1.38,
               letterSpacing: 0,
             ),
           ),
-          const Spacer(flex: 2),
         ],
       ),
     );
   }
 }
 
-class _BlinkingStartText extends StatefulWidget {
-  const _BlinkingStartText({required this.label});
+class _OnboardingControls extends StatelessWidget {
+  const _OnboardingControls({
+    required this.currentPage,
+    required this.pageCount,
+    required this.buttonLabel,
+    required this.onPressed,
+  });
 
-  final String label;
-
-  @override
-  State<_BlinkingStartText> createState() => _BlinkingStartTextState();
-}
-
-class _BlinkingStartTextState extends State<_BlinkingStartText>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 820),
-  )..repeat(reverse: true);
-
-  late final Animation<double> _opacity = Tween<double>(
-    begin: 0.34,
-    end: 1,
-  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final int currentPage;
+  final int pageCount;
+  final String buttonLabel;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: Text(
-        widget.label,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 16,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-          shadows: [
-            Shadow(
-              color: Colors.white,
-              blurRadius: 8,
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _PageIndicator(
+          count: pageCount,
+          currentIndex: currentPage,
         ),
-      ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: FilledButton(
+            onPressed: onPressed,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimens.buttonRadius),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            child: Text(buttonLabel),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -295,9 +268,9 @@ class _PageIndicator extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             color: isActive
-                ? _primaryButtonColor
+                ? AppColors.primary
                 : AppColors.textSecondary.withValues(alpha: 0.22),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(AppDimens.pillRadius),
           ),
         );
       }),
@@ -309,12 +282,10 @@ class _IntroStep {
   const _IntroStep({
     required this.title,
     required this.description,
-    this.imageAsset,
-    this.icon,
+    required this.imageAsset,
   });
 
   final String title;
   final String description;
-  final String? imageAsset;
-  final IconData? icon;
+  final String imageAsset;
 }

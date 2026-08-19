@@ -22,20 +22,27 @@ void main() {
     );
 
     expect(find.byType(Image), findsOneWidget);
-    expect(find.text('터치하여 시작하기'), findsOneWidget);
-
-    await tester.drag(find.byType(PageView), const Offset(-430, 0));
-    await tester.pump(const Duration(milliseconds: 600));
-
-    expect(find.text('지도로 감자 스팟 찾기'), findsOneWidget);
+    expect(find.text('감자를 따라 강원으로'), findsOneWidget);
     expect(find.text('다음'), findsOneWidget);
 
     await tester.drag(find.byType(PageView), const Offset(-430, 0));
     await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('수집하고 보상받기'), findsOneWidget);
+    expect(find.text('여행 도장을 모아요'), findsOneWidget);
+    expect(find.text('다음'), findsOneWidget);
+
+    await tester.drag(find.byType(PageView), const Offset(-430, 0));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('감자를 키워요'), findsOneWidget);
+    expect(find.text('다음'), findsOneWidget);
+
+    await tester.drag(find.byType(PageView), const Offset(-430, 0));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('점순이가 골라둔 미션'), findsOneWidget);
     expect(
-      find.text('스탬프를 모으고 감자 미션을 완료해\n강원 지역 쿠폰을 받아보세요.'),
+      find.text('사진, 퀴즈, 산책 미션으로 여행 기록을 남겨보세요'),
       findsOneWidget,
     );
     expect(find.text('카카오 로그인하러 가기'), findsOneWidget);
@@ -86,6 +93,8 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.drag(find.byType(PageView), const Offset(-800, 0));
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.drag(find.byType(PageView), const Offset(-800, 0));
     await tester.pump(const Duration(milliseconds: 600));
     await tester.drag(find.byType(PageView), const Offset(-800, 0));
