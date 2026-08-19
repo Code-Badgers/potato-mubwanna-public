@@ -156,7 +156,7 @@ class _ServiceIntroPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       height: constrainedVisualHeight,
-                      child: _ShadowedIntroVisual(asset: step.imageAsset),
+                      child: _IntroVisual(asset: step.imageAsset),
                     ),
                   ],
                 ),
@@ -170,56 +170,20 @@ class _ServiceIntroPage extends StatelessWidget {
   }
 }
 
-class _ShadowedIntroVisual extends StatelessWidget {
-  const _ShadowedIntroVisual({required this.asset});
+class _IntroVisual extends StatelessWidget {
+  const _IntroVisual({required this.asset});
 
   final String asset;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      children: [
-        Positioned(
-          bottom: 2,
-          child: Container(
-            width: 318,
-            height: 42,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.textPrimary.withValues(alpha: 0.14),
-                  AppColors.textPrimary.withValues(alpha: 0.07),
-                  AppColors.textPrimary.withValues(alpha: 0),
-                ],
-                stops: const [0, 0.42, 1],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.textPrimary.withValues(alpha: 0.1),
-                  blurRadius: 54,
-                  spreadRadius: 14,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 28,
-          child: Image.asset(
-            asset,
-            fit: BoxFit.contain,
-            alignment: Alignment.bottomCenter,
-          ),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Image.asset(
+        asset,
+        fit: BoxFit.contain,
+        alignment: Alignment.bottomCenter,
+      ),
     );
   }
 }
