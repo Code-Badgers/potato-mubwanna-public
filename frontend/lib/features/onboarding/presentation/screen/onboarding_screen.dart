@@ -116,39 +116,115 @@ class _ServiceIntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFFBF3),
-            AppColors.surface,
-          ],
-        ),
+    return ColoredBox(
+      color: AppColors.surface,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final contentHeight = constraints.maxHeight - 32 - 104 - 4;
+              final copyHeight = contentHeight * 0.3;
+              final constrainedCopyHeight =
+                  copyHeight.clamp(128.0, 236.0).toDouble();
+              final constrainedVisualHeight =
+                  (contentHeight - constrainedCopyHeight)
+                      .clamp(260.0, 500.0)
+                      .toDouble();
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 32, 20, 104),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: constrainedCopyHeight,
+                      child: Image.asset(
+                        step.copyAsset,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.bottomCenter,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      height: constrainedVisualHeight,
+                      child: _ShadowedIntroVisual(asset: step.imageAsset),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const _BottomSurfaceFade(),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 26, 20, 104),
-        child: Column(
-          children: [
-            SizedBox(
-              width: double.infinity,
-              height: 188,
-              child: Image.asset(
-                step.copyAsset,
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomCenter,
-              ),
+    );
+  }
+}
+
+class _ShadowedIntroVisual extends StatelessWidget {
+  const _ShadowedIntroVisual({required this.asset});
+
+  final String asset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        Positioned(
+          bottom: 9,
+          child: Container(
+            width: 230,
+            height: 24,
+            decoration: BoxDecoration(
+              color: AppColors.textPrimary.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.textPrimary.withValues(alpha: 0.14),
+                  blurRadius: 28,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Image.asset(
-                step.imageAsset,
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomCenter,
-              ),
+          ),
+        ),
+        Positioned.fill(
+          child: Image.asset(
+            asset,
+            fit: BoxFit.contain,
+            alignment: Alignment.bottomCenter,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BottomSurfaceFade extends StatelessWidget {
+  const _BottomSurfaceFade();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          height: 164,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x00FAFAF7),
+                AppColors.surface,
+              ],
+              stops: [0, 0.72],
             ),
-          ],
+          ),
         ),
       ),
     );
