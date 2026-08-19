@@ -49,6 +49,7 @@ flutter:
     - assets/onboading.png
     - assets/onboading_02.png
     - assets/onboading_03.png
+    - assets/onboarding/
     - assets/kakao_login_medium_wide.png
     - assets/characters/jumsooni/
     - assets/characters/potatoes/
