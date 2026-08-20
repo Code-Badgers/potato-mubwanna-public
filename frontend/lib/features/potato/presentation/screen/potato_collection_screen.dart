@@ -120,23 +120,30 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
     }
   }
 
-  void _showRepresentativePicker(PotatoCollection collection) {
-    showModalBottomSheet<void>(
+  Future<void> _showRepresentativePicker(PotatoCollection collection) async {
+    final result = await showModalBottomSheet<
+        ({PotatoCollectionItem item, bool showDetail})>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => _RepresentativePotatoSheet(
         collection: collection,
         onShowDetail: (item) {
-          Navigator.of(sheetContext).pop();
-          _showPotatoDetail(item);
+          Navigator.of(sheetContext).pop((item: item, showDetail: true));
         },
         onSelect: (item) {
-          Navigator.of(sheetContext).pop();
-          _updateRepresentativePotato(item);
+          Navigator.of(sheetContext).pop((item: item, showDetail: false));
         },
       ),
     );
+    if (!mounted || result == null) {
+      return;
+    }
+    if (result.showDetail) {
+      _showPotatoDetail(result.item);
+    } else {
+      await _updateRepresentativePotato(result.item);
+    }
   }
 
   void _showPotatoDetail(PotatoCollectionItem item) {
@@ -193,6 +200,22 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
         setState(() => _isUpdatingRepresentative = false);
       }
     }
+  }
+
+  Future<PotatoInteractionResult> _interactWithRepresentativePotato(
+    PotatoInteractionAction action,
+  ) async {
+    final result = await ref
+        .read(potatoRepositoryProvider)
+        .interactWithRepresentativePotato(action);
+    ref.invalidate(potatoCollectionProvider);
+    ref.invalidate(potatoGrowthSummaryProvider);
+
+    final growthResult = result.growthResult;
+    if (growthResult?.leveledUp == true) {
+      unawaited(_showGrowthFeedbackAfterCollectionLoads(growthResult!));
+    }
+    return result;
   }
 
   Future<void> _showGrowthFeedbackAfterCollectionLoads(
@@ -253,6 +276,7 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
                     onChangeRepresentative: () {
                       _showRepresentativePicker(collection);
                     },
+                    onCare: _interactWithRepresentativePotato,
                   ),
                 ),
           loading: () => const _PotatoStatusBody(
@@ -374,6 +398,7 @@ class _PotatoCollectionBody extends StatelessWidget {
     required this.onShowDetail,
     required this.onShowDefaultDetail,
     required this.onChangeRepresentative,
+    required this.onCare,
   });
 
   final PotatoCollection collection;
@@ -381,6 +406,8 @@ class _PotatoCollectionBody extends StatelessWidget {
   final ValueChanged<PotatoCollectionItem> onShowDetail;
   final VoidCallback onShowDefaultDetail;
   final VoidCallback onChangeRepresentative;
+  final Future<PotatoInteractionResult> Function(PotatoInteractionAction action)
+      onCare;
 
   @override
   Widget build(BuildContext context) {
@@ -411,6 +438,7 @@ class _PotatoCollectionBody extends StatelessWidget {
                         ? onShowDefaultDetail
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
+                    onCare: representative == null ? null : onCare,
                   ),
                 ],
               ),
@@ -440,6 +468,7 @@ class _RepresentativePotatoCard extends StatefulWidget {
     required this.updating,
     required this.onShowDetail,
     required this.onChangeRepresentative,
+    required this.onCare,
   });
 
   final PotatoCollectionItem? item;
@@ -449,6 +478,8 @@ class _RepresentativePotatoCard extends StatefulWidget {
   final bool updating;
   final VoidCallback? onShowDetail;
   final VoidCallback onChangeRepresentative;
+  final Future<PotatoInteractionResult> Function(
+      PotatoInteractionAction action)? onCare;
 
   @override
   State<_RepresentativePotatoCard> createState() =>
@@ -457,15 +488,46 @@ class _RepresentativePotatoCard extends StatefulWidget {
 
 class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
   String? _careMessage;
+  bool _isCaring = false;
 
-  void _reactToCare(_PotatoCareAction action) {
-    setState(() {
-      _careMessage = switch (action) {
-        _PotatoCareAction.pat => '기분이 조금 좋아졌어요',
-        _PotatoCareAction.water => '좋아요, 오늘도 단단하게 자라볼게요',
-        _PotatoCareAction.walk => '산책길은 내가 따라갈게요',
-      };
-    });
+  Future<void> _reactToCare(PotatoInteractionAction action) async {
+    final onCare = widget.onCare;
+    if (onCare == null || _isCaring) {
+      return;
+    }
+
+    setState(() => _isCaring = true);
+    try {
+      final result = await onCare(action);
+      if (!mounted) {
+        return;
+      }
+      final distance = result.growthDistanceAdded.round();
+      setState(() {
+        _careMessage = switch (action) {
+          PotatoInteractionAction.pat => '기분이 좋아졌어요. 성장 거리 ${distance}m 추가!',
+          PotatoInteractionAction.water => '물을 마셨어요. 성장 거리 ${distance}m 추가!',
+          PotatoInteractionAction.snack => '간식을 먹었어요. 성장 거리 ${distance}m 추가!',
+          PotatoInteractionAction.walk => '산책했어요. 성장 거리 ${distance}m 추가!',
+        };
+      });
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('감자를 돌보지 못했습니다. 다시 시도해주세요.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCaring = false);
+      }
+    }
   }
 
   @override
@@ -523,7 +585,10 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                 const SizedBox(height: 12),
                 _PotatoCareBar(
                   onCare: _reactToCare,
-                  enabled: potato == null || potato.acquired,
+                  enabled: potato != null &&
+                      potato.acquired &&
+                      widget.onCare != null &&
+                      !_isCaring,
                 ),
                 const SizedBox(height: 10),
                 const _PotatoStepGrowthPanel(),
@@ -909,19 +974,13 @@ class _PotatoStatMeter extends StatelessWidget {
   }
 }
 
-enum _PotatoCareAction {
-  pat,
-  water,
-  walk,
-}
-
 class _PotatoCareBar extends StatelessWidget {
   const _PotatoCareBar({
     required this.onCare,
     required this.enabled,
   });
 
-  final ValueChanged<_PotatoCareAction> onCare;
+  final ValueChanged<PotatoInteractionAction> onCare;
   final bool enabled;
 
   @override
@@ -933,7 +992,7 @@ class _PotatoCareBar extends StatelessWidget {
             icon: Icons.favorite_rounded,
             label: '쓰다듬기',
             enabled: enabled,
-            onPressed: () => onCare(_PotatoCareAction.pat),
+            onPressed: () => onCare(PotatoInteractionAction.pat),
           ),
         ),
         const SizedBox(width: 8),
@@ -942,7 +1001,7 @@ class _PotatoCareBar extends StatelessWidget {
             icon: Icons.water_drop_rounded,
             label: '물 주기',
             enabled: enabled,
-            onPressed: () => onCare(_PotatoCareAction.water),
+            onPressed: () => onCare(PotatoInteractionAction.water),
           ),
         ),
         const SizedBox(width: 8),
@@ -951,7 +1010,7 @@ class _PotatoCareBar extends StatelessWidget {
             icon: Icons.directions_walk_rounded,
             label: '산책',
             enabled: enabled,
-            onPressed: () => onCare(_PotatoCareAction.walk),
+            onPressed: () => onCare(PotatoInteractionAction.walk),
           ),
         ),
       ],

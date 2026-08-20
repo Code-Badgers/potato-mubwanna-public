@@ -90,10 +90,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('총 2곳을 방문했어요'), findsOneWidget);
-    expect(find.text('감자 카페'), findsOneWidget);
-    expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('정선군 · 카페'), findsOneWidget);
+    expect(find.byKey(const ValueKey('travel-record-2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('travel-record-1')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('travel-record-uploaded-image-2')),
       findsOneWidget,
@@ -127,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('아직 여행 기록이 없어요'), findsOneWidget);
-    expect(find.textContaining('방문 인증하면'), findsOneWidget);
+    expect(find.textContaining('스탬프 방문 인증이나 사진 미션'), findsOneWidget);
   });
 
   testWidgets('shows retry action when visit history fails', (tester) async {

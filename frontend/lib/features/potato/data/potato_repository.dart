@@ -77,6 +77,23 @@ class PotatoRepository {
     return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
+  Future<PotatoInteractionResult> interactWithRepresentativePotato(
+    PotatoInteractionAction action,
+  ) async {
+    final response = await _request(
+      () => _dio.post<Map<String, dynamic>>(
+        ApiPaths.representativePotatoInteractions,
+        data: {'action': action.apiValue},
+      ),
+    );
+    final apiResponse = ApiResponse<PotatoInteractionResult>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      PotatoInteractionResult.fromJson,
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(
