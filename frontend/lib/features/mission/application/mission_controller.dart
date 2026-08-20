@@ -4,6 +4,7 @@ import '../../../core/location/location_service.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../coupon/application/coupon_controller.dart';
 import '../../legal/data/legal_consent_store.dart';
+import '../../potato/application/potato_collection_controller.dart';
 import '../data/mission_native_input_service.dart';
 import '../data/mission_repository.dart';
 import '../data/mission_upload_repository.dart';
@@ -33,6 +34,14 @@ final missionsProvider = StateNotifierProvider<MissionController,
   (ref) => MissionController(
     ref.watch(missionRepositoryProvider),
     onCouponReward: () => ref.invalidate(couponListProvider),
+    beforeLoad: () async {
+      try {
+        ref.invalidate(missionStepActivitySyncProvider);
+        await ref.read(missionStepActivitySyncProvider.future);
+      } catch (_) {
+        // 걸음 동기화 실패가 걸음 외 미션 목록 진입을 막지 않게 한다.
+      }
+    },
   )..load(),
 );
 
@@ -53,15 +62,19 @@ class MissionController
   MissionController(
     this._repository, {
     void Function()? onCouponReward,
+    Future<void> Function()? beforeLoad,
   })  : _onCouponReward = onCouponReward,
+        _beforeLoad = beforeLoad,
         super(const AsyncValue.loading());
 
   final MissionRepository _repository;
   final void Function()? _onCouponReward;
+  final Future<void> Function()? _beforeLoad;
 
   Future<void> load() async {
     state = const AsyncValue.loading();
     try {
+      await _beforeLoad?.call();
       state = AsyncValue.data(await _repository.fetchMissions());
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

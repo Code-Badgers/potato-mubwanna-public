@@ -12,14 +12,19 @@ class LegalConsentStepCountReader implements StepCountReader {
   final LegalConsentStore _consentStore;
 
   @override
-  Future<StepCountSnapshot?> readTodaySteps({
+  Future<StepCountReadResult> readTodaySteps({
     StepCountAuthorization authorization =
         StepCountAuthorization.requestIfNeeded,
   }) async {
     if (!await _consentStore.hasAcceptedRequiredDocuments() ||
         !await _consentStore.hasAcceptedHealthData()) {
-      return null;
+      return const StepCountReadResult(
+        status: StepCountReadStatus.consentRequired,
+      );
     }
     return _delegate.readTodaySteps(authorization: authorization);
   }
+
+  @override
+  Future<void> openHealthSettings() => _delegate.openHealthSettings();
 }

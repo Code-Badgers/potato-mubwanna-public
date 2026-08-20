@@ -3,6 +3,7 @@ package com.gamjamubwatna.potato.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,9 @@ import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoInteraction;
 import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -53,6 +58,9 @@ class PotatoCommandServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PushEventPublisher pushEventPublisher;
+
     private PotatoCommandService potatoCommandService;
 
     @BeforeEach
@@ -63,6 +71,7 @@ class PotatoCommandServiceTest {
             userDailyActivityRepository,
             userRepository,
             new PotatoCareStatusPolicy(),
+            pushEventPublisher,
             Clock.fixed(Instant.parse("2026-07-21T10:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -153,6 +162,11 @@ class PotatoCommandServiceTest {
         assertThat(result.growthResult().fullyGrown()).isFalse();
         assertThat(representative.getLevel()).isEqualTo(4);
         assertThat(representative.getGrowthDistance()).isEqualTo(1394.0);
+        ArgumentCaptor<PushNotificationMessage> pushCaptor =
+            ArgumentCaptor.forClass(PushNotificationMessage.class);
+        verify(pushEventPublisher).publish(eq(1L), pushCaptor.capture());
+        assertThat(pushCaptor.getValue().destination()).isEqualTo(PushDestination.POTATOES);
+        assertThat(pushCaptor.getValue().body()).contains("Lv.4");
     }
 
     @Test
@@ -395,6 +409,11 @@ class PotatoCommandServiceTest {
         assertThat(result.growthResult().currentLevel()).isEqualTo(3);
         assertThat(result.growthResult().fullyGrown()).isTrue();
         assertThat(result.careStatus().mood()).isEqualTo(100);
+        ArgumentCaptor<PushNotificationMessage> pushCaptor =
+            ArgumentCaptor.forClass(PushNotificationMessage.class);
+        verify(pushEventPublisher).publish(eq(1L), pushCaptor.capture());
+        assertThat(pushCaptor.getValue().destination()).isEqualTo(PushDestination.POTATOES);
+        assertThat(pushCaptor.getValue().body()).contains("Lv.3");
     }
 
     @Test

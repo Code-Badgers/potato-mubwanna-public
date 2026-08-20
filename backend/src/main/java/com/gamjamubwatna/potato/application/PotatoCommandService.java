@@ -16,6 +16,9 @@ import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoInteraction;
 import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -38,6 +41,7 @@ public class PotatoCommandService {
     private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
     private final PotatoCareStatusPolicy potatoCareStatusPolicy;
+    private final PushEventPublisher pushEventPublisher;
     private final Clock clock;
 
     @Autowired
@@ -46,7 +50,8 @@ public class PotatoCommandService {
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository,
-        PotatoCareStatusPolicy potatoCareStatusPolicy
+        PotatoCareStatusPolicy potatoCareStatusPolicy,
+        PushEventPublisher pushEventPublisher
     ) {
         this(
             userPotatoRepository,
@@ -54,6 +59,7 @@ public class PotatoCommandService {
             userDailyActivityRepository,
             userRepository,
             potatoCareStatusPolicy,
+            pushEventPublisher,
             Clock.systemUTC()
         );
     }
@@ -64,6 +70,7 @@ public class PotatoCommandService {
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository,
         PotatoCareStatusPolicy potatoCareStatusPolicy,
+        PushEventPublisher pushEventPublisher,
         Clock clock
     ) {
         this.userPotatoRepository = userPotatoRepository;
@@ -71,6 +78,7 @@ public class PotatoCommandService {
         this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
         this.potatoCareStatusPolicy = potatoCareStatusPolicy;
+        this.pushEventPublisher = pushEventPublisher;
         this.clock = clock;
     }
 
@@ -145,6 +153,7 @@ public class PotatoCommandService {
             userId,
             additionalGrowthDistance
         );
+        publishLevelUp(userId, growthResult);
         return PotatoDailyActivitySyncResponse.from(savedActivity, growthResult);
     }
 
@@ -188,12 +197,30 @@ public class PotatoCommandService {
         );
         interactions.add(savedInteraction);
 
-        return PotatoInteractionResponse.from(
+        PotatoInteractionResponse response = PotatoInteractionResponse.from(
             representative,
             action,
             now.plus(action.cooldown()),
             previousLevel,
             potatoCareStatusPolicy.calculate(representative, interactions, now)
+        );
+        publishLevelUp(userId, response.growthResult());
+        return response;
+    }
+
+    private void publishLevelUp(Long userId, PotatoGrowthResultResponse growthResult) {
+        if (growthResult == null || !growthResult.leveledUp()) {
+            return;
+        }
+        pushEventPublisher.publish(
+            userId,
+            new PushNotificationMessage(
+                "감자가 성장했어요!",
+                "대표 감자 '" + growthResult.potatoName() + "'가 Lv."
+                    + growthResult.currentLevel() + "로 성장했어요.",
+                PushDestination.POTATOES,
+                null
+            )
         );
     }
 
