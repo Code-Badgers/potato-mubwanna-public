@@ -7,6 +7,7 @@ import com.gamjamubwatna.coupon.domain.CouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCoupon;
 import com.gamjamubwatna.coupon.domain.UserCouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCouponStatus;
+import com.gamjamubwatna.legal.application.LocationUsageLogService;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
 import com.gamjamubwatna.mission.api.MissionVerifyRequest;
@@ -26,6 +27,7 @@ import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.visit.application.VisitDistancePolicy;
 import com.gamjamubwatna.visit.domain.UserVisit;
 import com.gamjamubwatna.visit.domain.UserVisitRepository;
 import java.math.BigDecimal;
@@ -54,9 +56,10 @@ public class MissionService {
     private final UserRepository userRepository;
     private final MissionEvidenceValidator missionEvidenceValidator;
     private final MissionPhotoStorage missionPhotoStorage;
-    private final MissionPhotoTextReader missionPhotoTextReader;
     private final TouristSpotRepository touristSpotRepository;
     private final UserVisitRepository userVisitRepository;
+    private final VisitDistancePolicy visitDistancePolicy;
+    private final LocationUsageLogService locationUsageLogService;
     private final Clock clock;
 
     @Autowired
@@ -70,9 +73,10 @@ public class MissionService {
         UserRepository userRepository,
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
-        MissionPhotoTextReader missionPhotoTextReader,
         TouristSpotRepository touristSpotRepository,
-        UserVisitRepository userVisitRepository
+        UserVisitRepository userVisitRepository,
+        VisitDistancePolicy visitDistancePolicy,
+        LocationUsageLogService locationUsageLogService
     ) {
         this(
             missionRepository,
@@ -84,9 +88,10 @@ public class MissionService {
             userRepository,
             missionEvidenceValidator,
             missionPhotoStorage,
-            missionPhotoTextReader,
             touristSpotRepository,
             userVisitRepository,
+            visitDistancePolicy,
+            locationUsageLogService,
             Clock.systemUTC()
         );
     }
@@ -101,9 +106,10 @@ public class MissionService {
         UserRepository userRepository,
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
-        MissionPhotoTextReader missionPhotoTextReader,
         TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
+        VisitDistancePolicy visitDistancePolicy,
+        LocationUsageLogService locationUsageLogService,
         Clock clock
     ) {
         this.missionRepository = missionRepository;
@@ -115,9 +121,10 @@ public class MissionService {
         this.userRepository = userRepository;
         this.missionEvidenceValidator = missionEvidenceValidator;
         this.missionPhotoStorage = missionPhotoStorage;
-        this.missionPhotoTextReader = missionPhotoTextReader;
         this.touristSpotRepository = touristSpotRepository;
         this.userVisitRepository = userVisitRepository;
+        this.visitDistancePolicy = visitDistancePolicy;
+        this.locationUsageLogService = locationUsageLogService;
         this.clock = clock;
     }
 
@@ -188,23 +195,23 @@ public class MissionService {
         Instant completedAt = Instant.now(clock);
         MissionPeriod period = MissionPeriod.current(mission, completedAt);
         validateCompletionTarget(userId, mission, period);
-        String evidenceUploadKey = validateMissionInput(userId, mission, request, period);
-        TouristSpot evidenceSpot = evidenceUploadKey == null
-            ? null
-            : touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
-                mission.getSpotName(),
-                mission.getCityName()
-            ).orElse(null);
+        PhotoMissionEvidence photoEvidence = validateMissionInput(
+            userId,
+            mission,
+            request,
+            period,
+            completedAt
+        );
 
         UserMission userMission = userMissionRepository.save(new UserMission(
             user,
             mission,
             completedAt,
             period.key(),
-            evidenceUploadKey,
-            evidenceSpot
+            photoEvidence == null ? null : photoEvidence.uploadKey(),
+            photoEvidence == null ? null : photoEvidence.touristSpot()
         ));
-        saveTravelRecordForPhotoEvidence(user, evidenceSpot, completedAt);
+        saveTravelRecordForPhotoEvidence(user, photoEvidence, completedAt);
         saveMissionRewardHistory(user, mission, period, completedAt);
 
         return new MissionVerifyResponse(
@@ -219,20 +226,20 @@ public class MissionService {
 
     private void saveTravelRecordForPhotoEvidence(
         User user,
-        TouristSpot evidenceSpot,
+        PhotoMissionEvidence photoEvidence,
         Instant completedAt
     ) {
-        if (evidenceSpot == null) {
+        if (photoEvidence == null) {
             return;
         }
+        TouristSpot evidenceSpot = photoEvidence.touristSpot();
         if (userVisitRepository.existsByUserIdAndTouristSpotId(user.getId(), evidenceSpot.getId())) {
             return;
         }
-        // 사진 인증 미션은 GPS 거리값이 없으므로 여행 기록 표시용 방문으로 0m를 남긴다.
         userVisitRepository.save(new UserVisit(
             user,
             evidenceSpot,
-            BigDecimal.ZERO,
+            photoEvidence.distanceMeters(),
             completedAt
         ));
     }
@@ -290,11 +297,12 @@ public class MissionService {
         }
     }
 
-    private String validateMissionInput(
+    private PhotoMissionEvidence validateMissionInput(
         Long userId,
         Mission mission,
         MissionVerifyRequest request,
-        MissionPeriod period
+        MissionPeriod period,
+        Instant completedAt
     ) {
         if (request == null || request.type() == null) {
             throw new MissionVerificationException("미션 인증 정보를 확인해주세요.");
@@ -317,21 +325,13 @@ public class MissionService {
                 );
                 yield null;
             }
-            case PHOTO -> {
-                StoredMissionPhotoFile photoFile = validatePhoto(
-                    userId,
-                    mission,
-                    verificationPolicy(mission),
-                    request.uploadKey()
-                );
-                yield photoFile == null ? null : photoFile.uploadKey();
-            }
-            case PHOTO_OCR -> validatePhotoOcr(
+            case PHOTO, PHOTO_OCR -> validatePhotoLocation(
                 userId,
                 mission,
                 verificationPolicy(mission),
-                request.uploadKey()
-            ).uploadKey();
+                request,
+                completedAt
+            );
             case QR_SCAN -> {
                 validateQrCode(verificationPolicy(mission), request.qrCode());
                 yield null;
@@ -475,25 +475,63 @@ public class MissionService {
         return null;
     }
 
-    private StoredMissionPhotoFile validatePhotoOcr(
+    private PhotoMissionEvidence validatePhotoLocation(
         Long userId,
         Mission mission,
         MissionVerificationPolicy policy,
-        String uploadKey
+        MissionVerifyRequest request,
+        Instant usedAt
     ) {
-        StoredMissionPhotoFile photoFile = validatePhoto(userId, mission, policy, uploadKey);
-        String expectedKeyword = policy.getExpectedAnswer();
-        if (expectedKeyword == null || expectedKeyword.isBlank()) {
-            throw new MissionVerificationException("미션 OCR 정책을 확인할 수 없습니다.");
-        }
+        StoredMissionPhotoFile photoFile = validatePhoto(
+            userId,
+            mission,
+            policy,
+            request.uploadKey()
+        );
         if (photoFile == null) {
             throw new MissionVerificationException("업로드된 이미지를 찾을 수 없습니다.");
         }
-        String recognizedText = missionPhotoTextReader.readText(photoFile);
-        if (recognizedText == null || !recognizedText.contains(expectedKeyword)) {
-            throw new MissionVerificationException("인증 이미지에서 미션 키워드를 찾지 못했습니다.");
+        validatePhotoLocationCoordinates(request.latitude(), request.longitude());
+
+        TouristSpot touristSpot = touristSpotRepository
+            .findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
+                mission.getSpotName(),
+                mission.getCityName()
+            )
+            .orElseThrow(() -> new MissionVerificationException(
+                "사진 미션 관광지 정보를 확인할 수 없습니다."
+            ));
+        BigDecimal distanceMeters = visitDistancePolicy.distanceMeters(
+            touristSpot.getLatitude(),
+            touristSpot.getLongitude(),
+            request.latitude(),
+            request.longitude()
+        );
+        boolean isWithinRadius = visitDistancePolicy.isWithinRadius(
+            distanceMeters,
+            touristSpot.getVerificationRadiusMeter()
+        );
+        // 원본 좌표는 저장하지 않고 위치 사용 결과만 법정 보관 기간 동안 감사 로그로 남긴다.
+        locationUsageLogService.recordVisitVerification(userId, usedAt, isWithinRadius);
+        if (!isWithinRadius) {
+            throw new MissionVerificationException("사진 미션 인증 가능 범위를 벗어났습니다.");
         }
-        return photoFile;
+        return new PhotoMissionEvidence(photoFile.uploadKey(), touristSpot, distanceMeters);
+    }
+
+    private void validatePhotoLocationCoordinates(
+        BigDecimal latitude,
+        BigDecimal longitude
+    ) {
+        boolean isValidLatitude = latitude != null
+            && latitude.compareTo(BigDecimal.valueOf(-90)) >= 0
+            && latitude.compareTo(BigDecimal.valueOf(90)) <= 0;
+        boolean isValidLongitude = longitude != null
+            && longitude.compareTo(BigDecimal.valueOf(-180)) >= 0
+            && longitude.compareTo(BigDecimal.valueOf(180)) <= 0;
+        if (!isValidLatitude || !isValidLongitude) {
+            throw new MissionVerificationException("사진 미션 인증 위치를 확인할 수 없습니다.");
+        }
     }
 
     private void validateQrCode(MissionVerificationPolicy policy, String qrCode) {
@@ -505,6 +543,13 @@ public class MissionService {
         if (!expectedQrCode.trim().equals(qrCode.trim())) {
             throw new MissionVerificationException("올바르지 않은 QR 코드입니다.");
         }
+    }
+
+    private record PhotoMissionEvidence(
+        String uploadKey,
+        TouristSpot touristSpot,
+        BigDecimal distanceMeters
+    ) {
     }
 
     private void validateRequiredText(String value, String message) {
