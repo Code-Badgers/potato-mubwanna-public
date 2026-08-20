@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller.dart';
+import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
 import 'package:potato_mubwanna/features/stamp/presentation/screen/stamp_book_screen.dart';
 
@@ -253,6 +256,110 @@ void main() {
 
     expect(find.text('로그인 후 스탬프 투어를 확인할 수 있어요.'), findsOneWidget);
   });
+
+  testWidgets('claims an available stamp reward from the stamp tour', (
+    tester,
+  ) async {
+    final repository = _ClaimStampRepository();
+    final controller = StampRewardClaimController(
+      repository,
+      onStampBookRefresh: () {},
+      onCouponListRefresh: () {},
+      onRewardHistoryRefresh: () {},
+    );
+
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith(
+        (ref) async => _stampBook(acquiredCount: 6, claimableTargetCount: 6),
+      ),
+      additionalOverrides: [
+        stampRewardClaimProvider.overrideWith((ref) => controller),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stamp-reward-claim-card')),
+      findsOneWidget,
+    );
+    expect(find.text('6개 스탬프 달성!'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('stamp-reward-claim-button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.requestedTargetCount, 6);
+    expect(find.text('강원 감자 할인권을 받았어요.'), findsOneWidget);
+  });
+
+  testWidgets('disables reward claim while the request is pending', (
+    tester,
+  ) async {
+    final completer = Completer<StampRewardClaimResult>();
+    final repository = _ClaimStampRepository(completer: completer);
+    final controller = StampRewardClaimController(
+      repository,
+      onStampBookRefresh: () {},
+      onCouponListRefresh: () {},
+      onRewardHistoryRefresh: () {},
+    );
+
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith(
+        (ref) async => _stampBook(acquiredCount: 6, claimableTargetCount: 6),
+      ),
+      additionalOverrides: [
+        stampRewardClaimProvider.overrideWith((ref) => controller),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('stamp-reward-claim-button')));
+    await tester.pump();
+
+    final button = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('stamp-reward-claim-button')),
+    );
+    expect(button.onPressed, isNull);
+    expect(repository.claimCount, 1);
+
+    completer.complete(_claimResult);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('shows the server message when reward claim fails', (
+    tester,
+  ) async {
+    final repository = _ClaimStampRepository(
+      error: const ApiException(message: '이미 수령한 보상입니다.'),
+    );
+    final controller = StampRewardClaimController(
+      repository,
+      onStampBookRefresh: () {},
+      onCouponListRefresh: () {},
+      onRewardHistoryRefresh: () {},
+    );
+
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith(
+        (ref) async => _stampBook(
+          acquiredCount: 6,
+          claimableTargetCount: 6,
+        ),
+      ),
+      additionalOverrides: [
+        stampRewardClaimProvider.overrideWith((ref) => controller),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('stamp-reward-claim-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이미 수령한 보상입니다.'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpScreen(
@@ -316,6 +423,7 @@ const _rallybookSpots = <RallybookSpot>[
 
 StampBook _stampBook({
   int acquiredCount = 8,
+  int? claimableTargetCount,
 }) {
   const cityNames = [
     '강릉시',
@@ -365,8 +473,42 @@ StampBook _stampBook({
       nextTargetCount: 12,
       remainingCount: 4,
       completed: false,
-      claimable: false,
-      claimableTargetCount: null,
+      claimable: claimableTargetCount != null,
+      claimableTargetCount: claimableTargetCount,
     ),
   );
 }
+
+class _ClaimStampRepository extends StampRepository {
+  _ClaimStampRepository({this.completer, this.error}) : super(dio: Dio());
+
+  final Completer<StampRewardClaimResult>? completer;
+  final Object? error;
+  int claimCount = 0;
+  int? requestedTargetCount;
+
+  @override
+  Future<StampRewardClaimResult> claimReward(
+    StampRewardClaimRequest request,
+  ) async {
+    claimCount += 1;
+    requestedTargetCount = request.targetCount;
+    final claimError = error;
+    if (claimError != null) {
+      throw claimError;
+    }
+    final pendingResult = completer;
+    if (pendingResult != null) {
+      return pendingResult.future;
+    }
+    return _claimResult;
+  }
+}
+
+final _claimResult = StampRewardClaimResult(
+  targetCount: 6,
+  rewardHistoryId: 10,
+  userCouponId: 21,
+  couponName: '강원 감자 할인권',
+  expiresAt: DateTime.parse('2026-09-20T00:00:00Z'),
+);

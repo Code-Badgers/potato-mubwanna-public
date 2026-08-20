@@ -17,6 +17,7 @@ class StampBookScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stampBook = ref.watch(stampBookProvider);
     final rallybookSpots = ref.watch(stampRallybookSpotsProvider);
+    final rewardClaim = ref.watch(stampRewardClaimProvider);
     ref.listen(stampRewardClaimProvider, (_, next) {
       next.whenOrNull(
         data: (result) {
@@ -26,7 +27,7 @@ class StampBookScreen extends ConsumerWidget {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(
-              const SnackBar(content: Text('스탬프 보상 기록이 저장됐어요. 제휴 혜택은 추후 추가됩니다.')),
+              SnackBar(content: Text('${result.couponName}을 받았어요.')),
             );
         },
         error: (error, _) {
@@ -49,6 +50,16 @@ class StampBookScreen extends ConsumerWidget {
               : _StampBookBody(
                   stampBook: value,
                   rallybookSpots: rallybookSpots,
+                  isRewardClaiming: rewardClaim.isLoading,
+                  onClaimReward: () {
+                    final targetCount = value.nextReward.claimableTargetCount;
+                    if (targetCount == null) {
+                      return;
+                    }
+                    ref
+                        .read(stampRewardClaimProvider.notifier)
+                        .claim(targetCount);
+                  },
                 ),
           loading: () => const _StampBookStatusBody(
             child: Center(child: CircularProgressIndicator()),
@@ -947,17 +958,26 @@ class _StampBookBody extends StatelessWidget {
   const _StampBookBody({
     required this.stampBook,
     required this.rallybookSpots,
+    required this.isRewardClaiming,
+    required this.onClaimReward,
   });
 
   final StampBook stampBook;
   final AsyncValue<List<RallybookSpot>?> rallybookSpots;
+  final bool isRewardClaiming;
+  final VoidCallback onClaimReward;
 
   @override
   Widget build(BuildContext context) {
     final progress = stampBook.progress;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final mapHeight = (constraints.maxHeight - 314).clamp(376.0, 432.0);
+        final hasClaimableReward = stampBook.nextReward.canClaim;
+        final reservedHeight = hasClaimableReward ? 454 : 314;
+        final mapHeight = (constraints.maxHeight - reservedHeight).clamp(
+          376.0,
+          432.0,
+        );
         return CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
@@ -966,6 +986,14 @@ class _StampBookBody extends StatelessWidget {
                 rallybookSpots: rallybookSpots,
               ),
             ),
+            if (hasClaimableReward)
+              SliverToBoxAdapter(
+                child: _StampRewardClaimCard(
+                  targetCount: stampBook.nextReward.claimableTargetCount!,
+                  isLoading: isRewardClaiming,
+                  onPressed: onClaimReward,
+                ),
+              ),
             SliverToBoxAdapter(
               child: _GangwonStampMap(
                 progress: progress,
@@ -978,6 +1006,95 @@ class _StampBookBody extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _StampRewardClaimCard extends StatelessWidget {
+  const _StampRewardClaimCard({
+    required this.targetCount,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final int targetCount;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('stamp-reward-claim-card'),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.34)),
+        boxShadow: AppShadows.softCard,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.card_giftcard_rounded,
+              color: AppColors.primaryDark,
+              size: 23,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$targetCount개 스탬프 달성!',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                const Text(
+                  '지금 달성 보상을 받을 수 있어요',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton(
+            key: const ValueKey('stamp-reward-claim-button'),
+            onPressed: isLoading ? null : onPressed,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(88, 42),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+            ),
+            child: isLoading
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.surface,
+                    ),
+                  )
+                : const Text('보상 받기'),
+          ),
+        ],
+      ),
     );
   }
 }
