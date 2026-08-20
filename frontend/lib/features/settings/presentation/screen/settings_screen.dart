@@ -5,11 +5,15 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/permissions/permission_service.dart';
+import '../../../legal/data/legal_consent_store.dart';
+import '../../../potato/data/legal_consent_step_count_reader.dart';
+import '../../../potato/domain/step_count_reader.dart';
 import '../../../push/application/push_notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({
+  SettingsScreen({
     PermissionService? permissionService,
+    StepCountReader? stepCountReader,
     this.pushTokenLifecycle = const NoopPushTokenLifecycle(),
     this.showAccountActions = false,
     this.onLogout,
@@ -17,9 +21,15 @@ class SettingsScreen extends StatefulWidget {
     this.authMessage,
     this.onOpenLogin,
     super.key,
-  }) : permissionService = permissionService ?? const PermissionService();
+  })  : permissionService = permissionService ?? const PermissionService(),
+        stepCountReader = stepCountReader ??
+            LegalConsentStepCountReader(
+              delegate: createStepCountReader(),
+              consentStore: const SharedPreferencesLegalConsentStore(),
+            );
 
   final PermissionService permissionService;
+  final StepCountReader stepCountReader;
   final PushTokenLifecycle pushTokenLifecycle;
   final bool showAccountActions;
   final Future<void> Function()? onLogout;
@@ -35,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   PermissionStatus? _locationStatus;
   PermissionStatus? _notificationStatus;
+  StepCountReadStatus? _stepCountStatus;
   String? _errorMessage;
   String? _permissionMessage;
 
@@ -76,6 +87,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       final locationStatus = await widget.permissionService.locationStatus();
       final notificationStatus =
           await widget.permissionService.notificationStatus();
+      final stepCountResult = await widget.stepCountReader.readTodaySteps(
+        authorization: StepCountAuthorization.previouslyGrantedOnly,
+      );
       await _updatePushRegistration(notificationStatus);
 
       if (!mounted) {
@@ -85,6 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       setState(() {
         _locationStatus = locationStatus;
         _notificationStatus = notificationStatus;
+        _stepCountStatus = stepCountResult.status;
       });
     } catch (_) {
       if (!mounted) {
@@ -154,6 +169,49 @@ class _SettingsScreenState extends State<SettingsScreen>
     await _loadStatuses();
   }
 
+  Future<void> _manageStepCountAccess() async {
+    var status = _stepCountStatus!;
+    if (status == StepCountReadStatus.consentRequired) {
+      final accepted = await context.push<bool>(
+        '/legal/health-data-consent?manage=true&returnOnAccept=true',
+      );
+      if (accepted != true || !mounted) {
+        return;
+      }
+      status = StepCountReadStatus.healthPermissionRequired;
+    }
+
+    if (status == StepCountReadStatus.healthPlatformUnavailable ||
+        status == StepCountReadStatus.failed) {
+      await widget.stepCountReader.openHealthSettings();
+      return;
+    }
+
+    final result = await widget.stepCountReader.readTodaySteps();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _stepCountStatus = result.status;
+      _permissionMessage = _stepCountMessage(result.status);
+    });
+  }
+
+  String? _stepCountMessage(StepCountReadStatus status) {
+    return switch (status) {
+      StepCountReadStatus.success => '걸음 정보 연동이 완료되었습니다.',
+      StepCountReadStatus.consentRequired => '걸음 정보를 연결하려면 먼저 선택 동의를 확인해주세요.',
+      StepCountReadStatus.activityPermissionRequired =>
+        '신체 활동 권한을 허용해야 걸음 수를 읽을 수 있습니다.',
+      StepCountReadStatus.healthPermissionRequired =>
+        '건강 앱에서 감자무봤나의 걸음 읽기 권한을 허용해주세요.',
+      StepCountReadStatus.healthPlatformUnavailable =>
+        'Health Connect를 설치하거나 업데이트한 뒤 다시 확인해주세요.',
+      StepCountReadStatus.unsupported => '이 기기에서는 걸음 정보 연동을 지원하지 않습니다.',
+      StepCountReadStatus.failed => '걸음 정보를 확인하지 못했습니다. 건강 앱 설정을 확인해주세요.',
+    };
+  }
+
   String? _permissionMessageFor(
     PermissionStatus status, {
     required String deniedMessage,
@@ -195,7 +253,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                     message: _errorMessage!,
                     onRetry: _loadStatuses,
                   )
-                : _locationStatus == null || _notificationStatus == null
+                : _locationStatus == null ||
+                        _notificationStatus == null ||
+                        _stepCountStatus == null
                     ? const Center(child: CircularProgressIndicator())
                     : CustomScrollView(
                         slivers: [
@@ -208,10 +268,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                             child: _SettingsIntro(
                               locationStatus: _locationStatus!,
                               notificationStatus: _notificationStatus!,
+                              stepCountStatus: _stepCountStatus!,
                               permissionMessage: _permissionMessage,
                               onLocationAction: _manageLocationPermission,
                               onNotificationAction:
                                   _manageNotificationPermission,
+                              onStepCountAction: _manageStepCountAccess,
                             ),
                           ),
                           if (widget.showAccountActions)
@@ -361,16 +423,20 @@ class _SettingsIntro extends StatelessWidget {
   const _SettingsIntro({
     required this.locationStatus,
     required this.notificationStatus,
+    required this.stepCountStatus,
     required this.permissionMessage,
     required this.onLocationAction,
     required this.onNotificationAction,
+    required this.onStepCountAction,
   });
 
   final PermissionStatus locationStatus;
   final PermissionStatus notificationStatus;
+  final StepCountReadStatus stepCountStatus;
   final String? permissionMessage;
   final VoidCallback onLocationAction;
   final VoidCallback onNotificationAction;
+  final VoidCallback onStepCountAction;
 
   @override
   Widget build(BuildContext context) {
@@ -398,6 +464,117 @@ class _SettingsIntro extends StatelessWidget {
             status: notificationStatus,
             onAction: onNotificationAction,
           ),
+          const SizedBox(height: 12),
+          _StepCountPermissionRow(
+            status: stepCountStatus,
+            onAction: onStepCountAction,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepCountPermissionRow extends StatelessWidget {
+  const _StepCountPermissionRow({
+    required this.status,
+    required this.onAction,
+  });
+
+  final StepCountReadStatus status;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = status == StepCountReadStatus.success;
+    final unsupported = status == StepCountReadStatus.unsupported;
+    final needsSettings =
+        status == StepCountReadStatus.healthPlatformUnavailable ||
+            status == StepCountReadStatus.failed;
+    final statusLabel = switch (status) {
+      StepCountReadStatus.success => '연결됨',
+      StepCountReadStatus.consentRequired => '선택 동의 필요',
+      StepCountReadStatus.activityPermissionRequired => '신체 활동 권한 필요',
+      StepCountReadStatus.healthPermissionRequired => '건강 앱 권한 필요',
+      StepCountReadStatus.healthPlatformUnavailable => 'Health Connect 설치 필요',
+      StepCountReadStatus.unsupported => '지원하지 않음',
+      StepCountReadStatus.failed => '설정 확인 필요',
+    };
+    final actionLabel = needsSettings
+        ? '설정 열기'
+        : status == StepCountReadStatus.consentRequired
+            ? '동의하기'
+            : '연결하기';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _settingsGlassDecoration(radius: AppDimens.compactCardRadius),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppColors.primaryTint,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.directions_walk_rounded,
+              color: AppColors.primaryDark,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '걸음 정보',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '감자 성장과 걸음 미션 진행률에 사용합니다.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: connected
+                        ? AppColors.primaryDark
+                        : AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!connected && !unsupported) ...[
+            const SizedBox(width: 10),
+            needsSettings
+                ? OutlinedButton(
+                    onPressed: onAction,
+                    child: Text(actionLabel),
+                  )
+                : FilledButton(
+                    onPressed: onAction,
+                    child: Text(actionLabel),
+                  ),
+          ],
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:potato_mubwanna/core/permissions/permission_service.dart';
 import 'package:potato_mubwanna/features/push/application/push_notification_service.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
+import 'package:potato_mubwanna/features/potato/domain/step_count_reader.dart';
 
 void main() {
   testWidgets('shows browser guidance without querying runtime permissions',
@@ -15,7 +16,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsScreen(permissionService: service)),
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -37,7 +43,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsScreen(permissionService: service)),
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -48,6 +59,30 @@ void main() {
     expect(find.text('알림 권한'), findsOneWidget);
     expect(find.text('허용됨'), findsOneWidget);
     expect(find.text('허용하기'), findsOneWidget);
+  });
+
+  testWidgets('shows when health app permission is still required',
+      (tester) async {
+    final service = _FakePermissionService(
+      location: PermissionStatus.granted,
+      notification: PermissionStatus.granted,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          stepCountReader: const _FixedStepCountReader(
+            status: StepCountReadStatus.healthPermissionRequired,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('걸음 정보'), findsOneWidget);
+    expect(find.text('건강 앱 권한 필요'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '연결하기'), findsOneWidget);
   });
 
   testWidgets('requests a denied permission and refreshes its state',
@@ -62,6 +97,7 @@ void main() {
       MaterialApp(
         home: SettingsScreen(
           permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
           pushTokenLifecycle: pushLifecycle,
         ),
       ),
@@ -85,7 +121,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsScreen(permissionService: service)),
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -105,7 +146,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsScreen(permissionService: service)),
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -127,7 +173,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsScreen(permissionService: service)),
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -145,7 +196,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsScreen(permissionService: service)),
+      MaterialApp(
+        home: SettingsScreen(
+          permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -172,6 +228,7 @@ void main() {
       MaterialApp(
         home: SettingsScreen(
           permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
           showAccountActions: true,
           onLogout: () async => logoutCalls++,
           onOpenLogin: () => loginCalls++,
@@ -202,6 +259,7 @@ void main() {
       MaterialApp(
         home: SettingsScreen(
           permissionService: service,
+          stepCountReader: const _FixedStepCountReader(),
           showAccountActions: true,
           onWithdrawAccount: () async {
             withdrawalCalls++;
@@ -295,4 +353,33 @@ class _RecordingPushTokenLifecycle implements PushTokenLifecycle {
   Future<void> unregister() async {
     unregisterCalls++;
   }
+}
+
+class _FixedStepCountReader implements StepCountReader {
+  const _FixedStepCountReader({
+    this.status = StepCountReadStatus.success,
+  });
+
+  final StepCountReadStatus status;
+
+  @override
+  Future<StepCountReadResult> readTodaySteps({
+    StepCountAuthorization authorization =
+        StepCountAuthorization.requestIfNeeded,
+  }) async {
+    if (status != StepCountReadStatus.success) {
+      return StepCountReadResult(status: status);
+    }
+    return StepCountReadResult.success(
+      StepCountSnapshot(
+        activityDate: DateTime(2026, 8, 20),
+        steps: 1200,
+        distanceMeters: 840,
+        source: ActivitySyncSource.healthConnect,
+      ),
+    );
+  }
+
+  @override
+  Future<void> openHealthSettings() async {}
 }

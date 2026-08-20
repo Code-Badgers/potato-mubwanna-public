@@ -40,7 +40,8 @@ final potatoActivitySyncProvider =
     // 저장소 오류가 포그라운드 건강 데이터 동기화를 막지 않게 한다.
   }
 
-  final snapshot = await ref.watch(stepCountReaderProvider).readTodaySteps();
+  final readResult = await ref.watch(stepCountReaderProvider).readTodaySteps();
+  final snapshot = readResult.snapshot;
   if (snapshot == null) {
     return pendingGrowthResult;
   }
@@ -60,6 +61,36 @@ final potatoActivitySyncProvider =
     // 동기화 실패가 도감 진입 자체를 막으면 안 되므로 서버의 마지막 상태를 계속 사용한다.
     return pendingGrowthResult;
   }
+});
+
+final missionStepActivitySyncProvider =
+    FutureProvider.autoDispose<PotatoGrowthResult?>((ref) async {
+  final authStatus = ref.watch(
+    authControllerProvider.select((state) => state.status),
+  );
+  if (authStatus != AuthStatus.authenticated) {
+    return null;
+  }
+
+  final readResult = await ref.watch(stepCountReaderProvider).readTodaySteps(
+        authorization: StepCountAuthorization.previouslyGrantedOnly,
+      );
+  final snapshot = readResult.snapshot;
+  if (snapshot == null) {
+    return null;
+  }
+
+  final growthResult =
+      await ref.watch(potatoRepositoryProvider).syncDailyActivity(snapshot);
+  if (growthResult?.leveledUp == true) {
+    // 미션 진입 동기화로 발생한 성장 안내는 감자 화면에서 한 번 보여준다.
+    try {
+      await ref.watch(pendingPotatoGrowthStoreProvider).save(growthResult!);
+    } catch (_) {
+      // 로컬 안내 저장 실패가 서버 동기화와 미션 조회를 막으면 안 된다.
+    }
+  }
+  return growthResult;
 });
 
 final potatoCollectionProvider =

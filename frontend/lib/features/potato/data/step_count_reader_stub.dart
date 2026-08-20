@@ -7,9 +7,12 @@ class UnsupportedStepCountReader implements StepCountReader {
   const UnsupportedStepCountReader();
 
   @override
-  Future<StepCountSnapshot?> readTodaySteps({
+  Future<StepCountReadResult> readTodaySteps({
     StepCountAuthorization authorization =
         StepCountAuthorization.requestIfNeeded,
   }) async =>
-      null;
+      const StepCountReadResult(status: StepCountReadStatus.unsupported);
+
+  @override
+  Future<void> openHealthSettings() async {}
 }

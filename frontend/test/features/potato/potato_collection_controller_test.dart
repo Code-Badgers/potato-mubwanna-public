@@ -112,6 +112,32 @@ void main() {
     expect(repository.operations, ['sync', 'collection']);
   });
 
+  test('mission sync reads only previously granted health access', () async {
+    final authController = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: _SessionAuthRepository(),
+    );
+    await authController.refreshSession();
+    final repository = _RecordingPotatoRepository();
+    final stepReader = _RecordingStepCountReader();
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith((ref) => authController),
+        potatoRepositoryProvider.overrideWithValue(repository),
+        stepCountReaderProvider.overrideWithValue(stepReader),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(missionStepActivitySyncProvider.future);
+
+    expect(
+      stepReader.authorizations,
+      [StepCountAuthorization.previouslyGrantedOnly],
+    );
+    expect(repository.operations, ['sync']);
+  });
+
   test('returns the server-confirmed potato growth result', () async {
     final authController = AuthController(
       kakaoLoginService: const KakaoLoginService(),
@@ -228,16 +254,34 @@ class _RecordingPotatoRepository extends PotatoRepository {
 
 class _FixedStepCountReader implements StepCountReader {
   @override
-  Future<StepCountSnapshot?> readTodaySteps({
+  Future<StepCountReadResult> readTodaySteps({
     StepCountAuthorization authorization =
         StepCountAuthorization.requestIfNeeded,
   }) async {
-    return StepCountSnapshot(
-      activityDate: DateTime(2026, 8, 1),
-      steps: 100,
-      distanceMeters: 70,
-      source: ActivitySyncSource.healthConnect,
+    return StepCountReadResult.success(
+      StepCountSnapshot(
+        activityDate: DateTime(2026, 8, 1),
+        steps: 100,
+        distanceMeters: 70,
+        source: ActivitySyncSource.healthConnect,
+      ),
     );
+  }
+
+  @override
+  Future<void> openHealthSettings() async {}
+}
+
+class _RecordingStepCountReader extends _FixedStepCountReader {
+  final List<StepCountAuthorization> authorizations = [];
+
+  @override
+  Future<StepCountReadResult> readTodaySteps({
+    StepCountAuthorization authorization =
+        StepCountAuthorization.requestIfNeeded,
+  }) {
+    authorizations.add(authorization);
+    return super.readTodaySteps(authorization: authorization);
   }
 }
 
