@@ -218,6 +218,12 @@ class PotatoControllerTest {
             50.0,
             1800,
             Instant.parse("2026-07-21T10:30:00Z"),
+            new PotatoCareStatusResponse(
+                70,
+                66,
+                100,
+                Instant.parse("2026-07-21T10:00:00Z")
+            ),
             new PotatoGrowthResultResponse(1L, "새싹감자", 2, 3, true, true)
         ));
 
@@ -234,6 +240,7 @@ class PotatoControllerTest {
             .andExpect(jsonPath("$.data.growthDistanceAdded").value(50.0))
             .andExpect(jsonPath("$.data.cooldownSeconds").value(1800))
             .andExpect(jsonPath("$.data.nextAvailableAt").value("2026-07-21T10:30:00Z"))
+            .andExpect(jsonPath("$.data.careStatus.mood").value(100))
             .andExpect(jsonPath("$.data.growthResult.currentLevel").value(3))
             .andExpect(jsonPath("$.data.growthResult.fullyGrown").value(true));
     }
@@ -304,6 +311,12 @@ class PotatoControllerTest {
             2,
             1500.0,
             3000.0,
+            new PotatoCareStatusResponse(
+                70,
+                70,
+                70,
+                Instant.parse("2026-07-21T10:00:00Z")
+            ),
             true
         );
     }

@@ -11,12 +11,16 @@ import com.gamjamubwatna.potato.domain.PotatoRepository;
 import com.gamjamubwatna.potato.domain.UserDailyActivity;
 import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
+import com.gamjamubwatna.potato.domain.UserPotatoInteraction;
+import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +37,9 @@ public class PotatoQueryService {
     private final PotatoRepository potatoRepository;
     private final UserPotatoRepository userPotatoRepository;
     private final UserDailyActivityRepository userDailyActivityRepository;
+    private final UserPotatoInteractionRepository userPotatoInteractionRepository;
     private final UserRepository userRepository;
+    private final PotatoCareStatusPolicy potatoCareStatusPolicy;
     private final Clock clock;
 
     @Autowired
@@ -41,13 +47,17 @@ public class PotatoQueryService {
         PotatoRepository potatoRepository,
         UserPotatoRepository userPotatoRepository,
         UserDailyActivityRepository userDailyActivityRepository,
-        UserRepository userRepository
+        UserPotatoInteractionRepository userPotatoInteractionRepository,
+        UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy
     ) {
         this(
             potatoRepository,
             userPotatoRepository,
             userDailyActivityRepository,
+            userPotatoInteractionRepository,
             userRepository,
+            potatoCareStatusPolicy,
             Clock.system(SERVICE_ZONE_ID)
         );
     }
@@ -56,13 +66,17 @@ public class PotatoQueryService {
         PotatoRepository potatoRepository,
         UserPotatoRepository userPotatoRepository,
         UserDailyActivityRepository userDailyActivityRepository,
+        UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy,
         Clock clock
     ) {
         this.potatoRepository = potatoRepository;
         this.userPotatoRepository = userPotatoRepository;
         this.userDailyActivityRepository = userDailyActivityRepository;
+        this.userPotatoInteractionRepository = userPotatoInteractionRepository;
         this.userRepository = userRepository;
+        this.potatoCareStatusPolicy = potatoCareStatusPolicy;
         this.clock = clock;
     }
 
@@ -84,17 +98,45 @@ public class PotatoQueryService {
         }
 
         List<Potato> potatoes = potatoRepository.findByActiveTrueOrderByDisplayOrderAsc();
-        Map<Long, UserPotato> userPotatoesByPotatoId = userPotatoRepository.findByUserId(userId)
+        List<UserPotato> userPotatoes = userPotatoRepository.findByUserId(userId);
+        Map<Long, UserPotato> userPotatoesByPotatoId = userPotatoes
             .stream()
             .collect(Collectors.toMap(
                 userPotato -> userPotato.getPotato().getId(),
                 Function.identity()
             ));
+        List<Long> userPotatoIds = userPotatoes.stream()
+            .map(UserPotato::getId)
+            .filter(Objects::nonNull)
+            .toList();
+        Map<Long, List<UserPotatoInteraction>> interactionsByUserPotatoId = userPotatoIds.isEmpty()
+            ? Map.of()
+            : userPotatoInteractionRepository.findByUserPotatoIdIn(userPotatoIds)
+                .stream()
+                .collect(Collectors.groupingBy(
+                    interaction -> interaction.getUserPotato().getId()
+                ));
+        Instant calculatedAt = Instant.now(clock);
         List<UserPotatoCollectionItemResponse> items = potatoes.stream()
-            .map(potato -> UserPotatoCollectionItemResponse.from(
-                potato,
-                userPotatoesByPotatoId.get(potato.getId())
-            ))
+            .map(potato -> {
+                UserPotato userPotato = userPotatoesByPotatoId.get(potato.getId());
+                return UserPotatoCollectionItemResponse.from(
+                    potato,
+                    userPotato,
+                    userPotato == null
+                        ? null
+                        : potatoCareStatusPolicy.calculate(
+                            userPotato,
+                            userPotato.getId() == null
+                                ? List.of()
+                                : interactionsByUserPotatoId.getOrDefault(
+                                    userPotato.getId(),
+                                    List.of()
+                                ),
+                            calculatedAt
+                        )
+                );
+            })
             .toList();
 
         return new UserPotatoCollectionResponse(

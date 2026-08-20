@@ -20,6 +20,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ public class PotatoCommandService {
     private final UserPotatoInteractionRepository userPotatoInteractionRepository;
     private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
+    private final PotatoCareStatusPolicy potatoCareStatusPolicy;
     private final Clock clock;
 
     @Autowired
@@ -43,10 +45,17 @@ public class PotatoCommandService {
         UserPotatoRepository userPotatoRepository,
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy
     ) {
-        this(userPotatoRepository, userPotatoInteractionRepository, userDailyActivityRepository, userRepository,
-            Clock.systemUTC());
+        this(
+            userPotatoRepository,
+            userPotatoInteractionRepository,
+            userDailyActivityRepository,
+            userRepository,
+            potatoCareStatusPolicy,
+            Clock.systemUTC()
+        );
     }
 
     PotatoCommandService(
@@ -54,12 +63,14 @@ public class PotatoCommandService {
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy,
         Clock clock
     ) {
         this.userPotatoRepository = userPotatoRepository;
         this.userPotatoInteractionRepository = userPotatoInteractionRepository;
         this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
+        this.potatoCareStatusPolicy = potatoCareStatusPolicy;
         this.clock = clock;
     }
 
@@ -164,18 +175,25 @@ public class PotatoCommandService {
 
         int previousLevel = representative.getLevel();
         representative.addGrowthDistance(action.growthDistance());
-        userPotatoInteractionRepository.save(new UserPotatoInteraction(
-            representative,
-            action,
-            action.growthDistance(),
-            now
-        ));
+        List<UserPotatoInteraction> interactions = new ArrayList<>(
+            userPotatoInteractionRepository.findByUserPotatoIdIn(List.of(representative.getId()))
+        );
+        UserPotatoInteraction savedInteraction = userPotatoInteractionRepository.save(
+            new UserPotatoInteraction(
+                representative,
+                action,
+                action.growthDistance(),
+                now
+            )
+        );
+        interactions.add(savedInteraction);
 
         return PotatoInteractionResponse.from(
             representative,
             action,
             now.plus(action.cooldown()),
-            previousLevel
+            previousLevel,
+            potatoCareStatusPolicy.calculate(representative, interactions, now)
         );
     }
 

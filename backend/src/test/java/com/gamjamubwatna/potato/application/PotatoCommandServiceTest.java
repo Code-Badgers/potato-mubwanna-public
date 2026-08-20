@@ -62,6 +62,7 @@ class PotatoCommandServiceTest {
             userPotatoInteractionRepository,
             userDailyActivityRepository,
             userRepository,
+            new PotatoCareStatusPolicy(),
             Clock.fixed(Instant.parse("2026-07-21T10:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -393,6 +394,7 @@ class PotatoCommandServiceTest {
         assertThat(result.growthResult().previousLevel()).isEqualTo(2);
         assertThat(result.growthResult().currentLevel()).isEqualTo(3);
         assertThat(result.growthResult().fullyGrown()).isTrue();
+        assertThat(result.careStatus().mood()).isEqualTo(100);
     }
 
     @Test
