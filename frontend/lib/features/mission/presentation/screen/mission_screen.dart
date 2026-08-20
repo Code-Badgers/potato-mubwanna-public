@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/mission_controller.dart';
@@ -134,13 +135,13 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   Future<MissionVerificationPayload?> _showPhotoChallenge(
     MissionChallenge mission,
   ) async {
-    final uploadKey = await _showPhotoInputSheet(mission);
-    if (uploadKey == null) {
+    final evidence = await _showPhotoInputSheet(mission);
+    if (evidence == null) {
       return null;
     }
     final result = _verificationService.verifyPhotoUpload(
       mission: mission,
-      uploaded: uploadKey.isNotEmpty,
+      uploaded: evidence.uploadKey.isNotEmpty,
     );
     if (!result.canComplete) {
       _showSnackBar(result.message);
@@ -148,7 +149,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     }
     return MissionVerificationPayload(
       type: mission.type,
-      uploadKey: uploadKey,
+      uploadKey: evidence.uploadKey,
+      latitude: evidence.latitude,
+      longitude: evidence.longitude,
     );
   }
 
@@ -181,10 +184,10 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     return ref.read(missionNativeInputServiceProvider);
   }
 
-  Future<String?> _showPhotoInputSheet(
+  Future<_MissionPhotoEvidence?> _showPhotoInputSheet(
     MissionChallenge mission,
   ) {
-    return showModalBottomSheet<String>(
+    return showModalBottomSheet<_MissionPhotoEvidence>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -192,6 +195,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         mission: mission,
         inputService: _nativeInputService,
         uploadRepository: ref.read(missionUploadRepositoryProvider),
+        locationService: ref.read(missionLocationServiceProvider),
       ),
     );
   }
@@ -1534,17 +1538,6 @@ class _MissionRewardSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        const Text(
-          '보상은 공모전 MVP 기준으로 기록 저장 중심이며, 제휴 혜택은 추후 추가됩니다.',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            height: 1.35,
-            letterSpacing: 0,
-          ),
-        ),
       ],
     );
   }
@@ -1967,16 +1960,30 @@ String _detailActionLabel(MissionChallenge mission) {
   };
 }
 
+class _MissionPhotoEvidence {
+  const _MissionPhotoEvidence({
+    required this.uploadKey,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  final String uploadKey;
+  final double latitude;
+  final double longitude;
+}
+
 class _MissionPhotoSheet extends StatefulWidget {
   const _MissionPhotoSheet({
     required this.mission,
     required this.inputService,
     required this.uploadRepository,
+    required this.locationService,
   });
 
   final MissionChallenge mission;
   final MissionNativeInputService inputService;
   final MissionUploadRepository uploadRepository;
+  final LocationService locationService;
 
   @override
   State<_MissionPhotoSheet> createState() => _MissionPhotoSheetState();
@@ -2033,6 +2040,7 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
       _errorMessage = null;
     });
     try {
+      final position = await widget.locationService.getCurrentPosition();
       final result = await widget.uploadRepository.uploadPhoto(
         missionId: widget.mission.id,
         file: input.file,
@@ -2040,7 +2048,19 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
       if (!mounted) {
         return;
       }
-      Navigator.of(context).pop(result.uploadKey);
+      Navigator.of(context).pop(_MissionPhotoEvidence(
+        uploadKey: result.uploadKey,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      ));
+    } on LocationFailure catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isUploading = false;
+        _errorMessage = error.message;
+      });
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -2069,7 +2089,7 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '이미지가 업로드되어야 미션을 완료할 수 있어요.',
+            '현장 위치와 이미지가 모두 확인되어야 미션을 완료할 수 있어요.',
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,
@@ -2107,7 +2127,9 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
           ],
           if (_isUploading) ...[
             const SizedBox(height: 14),
-            const _MissionInputProgress(label: '인증샷을 업로드하는 중이에요.'),
+            const _MissionInputProgress(
+              label: '현재 위치를 확인하고 인증샷을 업로드하는 중이에요.',
+            ),
           ],
           const SizedBox(height: 16),
           FilledButton.icon(

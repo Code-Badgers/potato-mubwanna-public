@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/location/location_service.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../coupon/application/coupon_controller.dart';
+import '../../legal/data/legal_consent_store.dart';
 import '../data/mission_native_input_service.dart';
 import '../data/mission_repository.dart';
 import '../data/mission_upload_repository.dart';
@@ -17,6 +19,13 @@ final missionNativeInputServiceProvider = Provider<MissionNativeInputService>(
 
 final missionUploadRepositoryProvider = Provider<MissionUploadRepository>(
   (ref) => MissionUploadRepository(dio: ref.watch(dioClientProvider).dio),
+);
+
+final missionLocationServiceProvider = Provider<LocationService>(
+  (ref) => LocationService(
+    hasPersonalLocationConsent:
+        ref.watch(legalConsentStoreProvider).hasAcceptedPersonalLocation,
+  ),
 );
 
 final missionsProvider = StateNotifierProvider<MissionController,

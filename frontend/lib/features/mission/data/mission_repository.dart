@@ -97,6 +97,8 @@ class MissionVerificationPayload {
     this.stepCount,
     this.uploadKey,
     this.qrCode,
+    this.latitude,
+    this.longitude,
   });
 
   final MissionType type;
@@ -104,6 +106,8 @@ class MissionVerificationPayload {
   final int? stepCount;
   final String? uploadKey;
   final String? qrCode;
+  final double? latitude;
+  final double? longitude;
 
   Map<String, Object?> toJson() {
     return {
@@ -112,6 +116,8 @@ class MissionVerificationPayload {
       if (stepCount != null) 'stepCount': stepCount,
       if (uploadKey != null) 'uploadKey': uploadKey,
       if (qrCode != null) 'qrCode': qrCode,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     };
   }
 }
