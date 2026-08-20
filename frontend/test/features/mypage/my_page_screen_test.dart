@@ -19,6 +19,7 @@ import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 import 'package:potato_mubwanna/features/notice/presentation/screen/notice_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
+import 'package:potato_mubwanna/features/potato/data/step_count_reader_stub.dart';
 import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
 import 'package:potato_mubwanna/features/travel_record/domain/travel_record.dart';
 import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
@@ -352,6 +353,7 @@ void main() {
           path: '/settings',
           builder: (_, __) => SettingsScreen(
             permissionService: _GrantedPermissionService(),
+            stepCountReader: const UnsupportedStepCountReader(),
           ),
         ),
       ],

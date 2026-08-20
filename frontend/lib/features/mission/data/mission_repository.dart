@@ -26,20 +26,6 @@ class MissionRepository {
     return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
-  Future<MissionCompletionResult> completeMission(String missionId) async {
-    final response = await _request(
-      () => _dio.post<Map<String, dynamic>>(
-        '${ApiPaths.missions}/$missionId/complete',
-      ),
-    );
-    final apiResponse = ApiResponse<MissionCompletionResult>.fromJson(
-      response.data ?? const <String, dynamic>{},
-      (json) => MissionCompletionResult.fromJson(json),
-    );
-
-    return _requireData(apiResponse, statusCode: response.statusCode);
-  }
-
   Future<MissionCompletionResult> verifyMission(
     String missionId,
     MissionVerificationPayload payload,
