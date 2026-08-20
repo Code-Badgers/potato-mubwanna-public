@@ -23,6 +23,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,7 @@ public class PotatoCommandService {
     private final UserPotatoInteractionRepository userPotatoInteractionRepository;
     private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
+    private final PotatoCareStatusPolicy potatoCareStatusPolicy;
     private final PushEventPublisher pushEventPublisher;
     private final Clock clock;
 
@@ -48,6 +50,7 @@ public class PotatoCommandService {
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy,
         PushEventPublisher pushEventPublisher
     ) {
         this(
@@ -55,6 +58,7 @@ public class PotatoCommandService {
             userPotatoInteractionRepository,
             userDailyActivityRepository,
             userRepository,
+            potatoCareStatusPolicy,
             pushEventPublisher,
             Clock.systemUTC()
         );
@@ -65,23 +69,7 @@ public class PotatoCommandService {
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository,
-        Clock clock
-    ) {
-        this(
-            userPotatoRepository,
-            userPotatoInteractionRepository,
-            userDailyActivityRepository,
-            userRepository,
-            PushEventPublisher.noop(),
-            clock
-        );
-    }
-
-    PotatoCommandService(
-        UserPotatoRepository userPotatoRepository,
-        UserPotatoInteractionRepository userPotatoInteractionRepository,
-        UserDailyActivityRepository userDailyActivityRepository,
-        UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy,
         PushEventPublisher pushEventPublisher,
         Clock clock
     ) {
@@ -89,6 +77,7 @@ public class PotatoCommandService {
         this.userPotatoInteractionRepository = userPotatoInteractionRepository;
         this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
+        this.potatoCareStatusPolicy = potatoCareStatusPolicy;
         this.pushEventPublisher = pushEventPublisher;
         this.clock = clock;
     }
@@ -195,18 +184,25 @@ public class PotatoCommandService {
 
         int previousLevel = representative.getLevel();
         representative.addGrowthDistance(action.growthDistance());
-        userPotatoInteractionRepository.save(new UserPotatoInteraction(
-            representative,
-            action,
-            action.growthDistance(),
-            now
-        ));
+        List<UserPotatoInteraction> interactions = new ArrayList<>(
+            userPotatoInteractionRepository.findByUserPotatoIdIn(List.of(representative.getId()))
+        );
+        UserPotatoInteraction savedInteraction = userPotatoInteractionRepository.save(
+            new UserPotatoInteraction(
+                representative,
+                action,
+                action.growthDistance(),
+                now
+            )
+        );
+        interactions.add(savedInteraction);
 
         PotatoInteractionResponse response = PotatoInteractionResponse.from(
             representative,
             action,
             now.plus(action.cooldown()),
-            previousLevel
+            previousLevel,
+            potatoCareStatusPolicy.calculate(representative, interactions, now)
         );
         publishLevelUp(userId, response.growthResult());
         return response;

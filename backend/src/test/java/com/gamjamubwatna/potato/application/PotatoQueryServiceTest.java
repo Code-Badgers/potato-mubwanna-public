@@ -18,6 +18,7 @@ import com.gamjamubwatna.potato.domain.PotatoRepository;
 import com.gamjamubwatna.potato.domain.UserDailyActivity;
 import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
+import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -44,6 +45,9 @@ class PotatoQueryServiceTest {
     private UserDailyActivityRepository userDailyActivityRepository;
 
     @Mock
+    private UserPotatoInteractionRepository userPotatoInteractionRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     private PotatoQueryService potatoQueryService;
@@ -54,7 +58,9 @@ class PotatoQueryServiceTest {
             potatoRepository,
             userPotatoRepository,
             userDailyActivityRepository,
-            userRepository
+            userPotatoInteractionRepository,
+            userRepository,
+            new PotatoCareStatusPolicy()
         );
     }
 
@@ -95,8 +101,11 @@ class PotatoQueryServiceTest {
         assertThat(result.items().getFirst().acquired()).isTrue();
         assertThat(result.items().getFirst().level()).isEqualTo(3);
         assertThat(result.items().getFirst().representative()).isTrue();
+        assertThat(result.items().getFirst().careStatus()).isNotNull();
+        assertThat(result.items().getFirst().careStatus().satiety()).isBetween(20, 100);
         assertThat(result.items().get(1).acquired()).isFalse();
         assertThat(result.items().get(1).level()).isZero();
+        assertThat(result.items().get(1).careStatus()).isNull();
     }
 
     @Test
@@ -220,7 +229,9 @@ class PotatoQueryServiceTest {
             potatoRepository,
             userPotatoRepository,
             userDailyActivityRepository,
+            userPotatoInteractionRepository,
             userRepository,
+            new PotatoCareStatusPolicy(),
             koreaClock
         );
         when(userRepository.existsById(1L)).thenReturn(true);

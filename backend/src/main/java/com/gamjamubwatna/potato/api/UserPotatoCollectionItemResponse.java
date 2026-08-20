@@ -1,6 +1,7 @@
 package com.gamjamubwatna.potato.api;
 
 import com.gamjamubwatna.potato.domain.Potato;
+import com.gamjamubwatna.potato.domain.PotatoCareStatus;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.potato.domain.UserPotato;
 import java.time.Instant;
@@ -19,12 +20,14 @@ public record UserPotatoCollectionItemResponse(
     int level,
     double growthDistance,
     double growthGoalDistance,
+    PotatoCareStatusResponse careStatus,
     boolean representative
 ) {
 
     public static UserPotatoCollectionItemResponse from(
         Potato potato,
-        UserPotato userPotato
+        UserPotato userPotato,
+        PotatoCareStatus careStatus
     ) {
         boolean acquired = userPotato != null;
         return new UserPotatoCollectionItemResponse(
@@ -41,6 +44,7 @@ public record UserPotatoCollectionItemResponse(
             acquired ? userPotato.getLevel() : 0,
             acquired ? userPotato.getGrowthDistance() : 0.0,
             potato.getGrowthGoalDistance(),
+            careStatus == null ? null : PotatoCareStatusResponse.from(careStatus),
             acquired && userPotato.isRepresentative()
         );
     }
