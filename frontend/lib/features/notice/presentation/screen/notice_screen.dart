@@ -1,78 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../application/notice_controller.dart';
+import '../../domain/notice.dart';
 
-class NoticeScreen extends StatelessWidget {
+class NoticeScreen extends ConsumerWidget {
   const NoticeScreen({super.key});
 
-  static const _notices = [
-    _NoticeItem(
-      publishedAt: '2026.08.16',
-      category: '안내',
-      title: '감자 스팟 데이터는 계속 보정됩니다',
-      body:
-          '감자 스팟은 강원도 관광지와 지역 맛집 데이터를 바탕으로 제공됩니다. 실제 운영 전까지 위치, 분류, 설명을 계속 다듬어 더 정확한 여행 탐색을 제공할 예정입니다.',
-    ),
-    _NoticeItem(
-      publishedAt: '2026.08.16',
-      category: '스탬프',
-      title: '방문 인증은 현장 위치를 기준으로 합니다',
-      body:
-          '스탬프는 지정된 장소 근처에서 위치 확인을 마치면 찍을 수 있습니다. 위치 권한이 꺼져 있으면 인증이 제한될 수 있으니, 여행 전 앱 위치 권한을 확인해주세요.',
-    ),
-    _NoticeItem(
-      publishedAt: '2026.08.16',
-      category: '보상',
-      title: '제휴 보상은 추후 순차적으로 추가됩니다',
-      body:
-          '현재는 공모전 MVP 단계라 실제 지자체·상점 제휴 보상은 준비 중입니다. 향후 협의가 완료되면 미션, 스탬프, 보상함에서 사용할 수 있는 쿠폰과 혜택이 순차적으로 추가될 예정입니다.',
-    ),
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final noticesState = ref.watch(noticesProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: '뒤로 가기',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        child: Column(
+          children: [
+            _NoticeHeader(onBack: () => Navigator.of(context).maybePop()),
+            Expanded(
+              child: noticesState.when(
+                data: (notices) {
+                  if (notices.isEmpty) {
+                    return const _NoticeMessage(
+                      icon: Icons.campaign_outlined,
+                      title: '새로운 공지사항이 없어요',
+                      description: '새 소식이 생기면 이곳에서 알려드릴게요.',
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: () => ref.refresh(noticesProvider.future),
+                    child: ListView.separated(
+                      key: const ValueKey('notice-list'),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      itemCount: notices.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final notice = notices[index];
+                        return _NoticeRow(
+                          key: ValueKey('notice-${notice.id}'),
+                          notice: notice,
+                          onTap: () => _showNoticeDetail(context, notice),
+                        );
+                      },
                     ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '공지사항',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              sliver: SliverList.separated(
-                itemCount: _notices.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final notice = _notices[index];
-                  return _NoticeRow(
-                    notice: notice,
-                    onTap: () => _showNoticeDetail(context, notice),
                   );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => _NoticeMessage(
+                  icon: Icons.wifi_off_rounded,
+                  title: '공지사항을 불러오지 못했습니다.',
+                  description: '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
+                  actionLabel: '다시 시도',
+                  onAction: () => ref.invalidate(noticesProvider),
+                ),
               ),
             ),
           ],
@@ -81,7 +63,7 @@ class NoticeScreen extends StatelessWidget {
     );
   }
 
-  static void _showNoticeDetail(BuildContext context, _NoticeItem notice) {
+  static void _showNoticeDetail(BuildContext context, Notice notice) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -96,7 +78,7 @@ class NoticeScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _NoticeMeta(item: notice),
+              _NoticeMeta(notice: notice),
               const SizedBox(height: 14),
               Text(
                 notice.title,
@@ -110,7 +92,7 @@ class NoticeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                notice.body,
+                notice.content,
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 15,
@@ -135,13 +117,42 @@ class NoticeScreen extends StatelessWidget {
   }
 }
 
-class _NoticeRow extends StatelessWidget {
-  const _NoticeRow({
-    required this.notice,
-    required this.onTap,
-  });
+class _NoticeHeader extends StatelessWidget {
+  const _NoticeHeader({required this.onBack});
 
-  final _NoticeItem notice;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: '뒤로 가기',
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          ),
+          const SizedBox(width: 4),
+          const Text(
+            '공지사항',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeRow extends StatelessWidget {
+  const _NoticeRow({super.key, required this.notice, required this.onTap});
+
+  final Notice notice;
   final VoidCallback onTap;
 
   @override
@@ -197,7 +208,7 @@ class _NoticeRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    _NoticeMeta(item: notice),
+                    _NoticeMeta(notice: notice),
                   ],
                 ),
               ),
@@ -216,14 +227,14 @@ class _NoticeRow extends StatelessWidget {
 }
 
 class _NoticeMeta extends StatelessWidget {
-  const _NoticeMeta({required this.item});
+  const _NoticeMeta({required this.notice});
 
-  final _NoticeItem item;
+  final Notice notice;
 
   @override
   Widget build(BuildContext context) {
     return Text(
-      '${item.category} · ${item.publishedAt}',
+      _formattedDate(notice.publishedAt),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(
@@ -234,18 +245,67 @@ class _NoticeMeta extends StatelessWidget {
       ),
     );
   }
+
+  String _formattedDate(DateTime value) {
+    final local = value.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}.$month.$day';
+  }
 }
 
-class _NoticeItem {
-  const _NoticeItem({
-    required this.publishedAt,
-    required this.category,
+class _NoticeMessage extends StatelessWidget {
+  const _NoticeMessage({
+    required this.icon,
     required this.title,
-    required this.body,
+    required this.description,
+    this.actionLabel,
+    this.onAction,
   });
 
-  final String publishedAt;
-  final String category;
+  final IconData icon;
   final String title;
-  final String body;
+  final String description;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 42, color: AppColors.textSecondary),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.5,
+              ),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 18),
+              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

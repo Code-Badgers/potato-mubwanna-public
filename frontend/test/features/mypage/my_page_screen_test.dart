@@ -17,6 +17,8 @@ import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_scree
 import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
+import 'package:potato_mubwanna/features/notice/application/notice_controller.dart';
+import 'package:potato_mubwanna/features/notice/domain/notice.dart';
 import 'package:potato_mubwanna/features/notice/presentation/screen/notice_screen.dart';
 import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
@@ -440,9 +442,25 @@ List<Override> _myPageProviderOverrides({
         createdAt: null,
       ),
     ),
+    noticesProvider.overrideWith((ref) async => _notices),
     ...overrides,
   ];
 }
+
+final _notices = [
+  Notice(
+    id: 2,
+    title: '감자 스팟 데이터는 계속 보정됩니다',
+    content: '감자 스팟 정보를 최신 상태로 보정합니다.',
+    publishedAt: DateTime.utc(2026, 8, 16),
+  ),
+  Notice(
+    id: 1,
+    title: '방문 인증은 현장 위치를 기준으로 합니다',
+    content: '현장에서 위치를 확인해 주세요.',
+    publishedAt: DateTime.utc(2026, 8, 16),
+  ),
+];
 
 class _IdleAuthController extends AuthController {
   _IdleAuthController()
