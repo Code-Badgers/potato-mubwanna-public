@@ -2,6 +2,7 @@ package com.gamjamubwatna.potato.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -18,8 +19,10 @@ import com.gamjamubwatna.potato.domain.UserDailyActivity;
 import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -204,6 +207,35 @@ class PotatoQueryServiceTest {
         assertThat(result.weeklyDistanceKm()).isEqualTo(7.994);
         assertThat(result.monthlyDistanceKm()).isEqualTo(8.694);
         assertThat(result.remainingDistanceKmForRepresentative()).isEqualTo(1.5);
+    }
+
+    @Test
+    void usesKoreaDateForGrowthSummaryWhenServerInstantIsPreviousUtcDate() {
+        LocalDate koreaToday = LocalDate.parse("2026-08-21");
+        Clock koreaClock = Clock.fixed(
+            Instant.parse("2026-08-20T15:30:00Z"),
+            ZoneId.of("Asia/Seoul")
+        );
+        potatoQueryService = new PotatoQueryService(
+            potatoRepository,
+            userPotatoRepository,
+            userDailyActivityRepository,
+            userRepository,
+            koreaClock
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userDailyActivityRepository.findByUserIdAndActivityDateBetween(
+            1L,
+            koreaToday.withDayOfMonth(1),
+            koreaToday
+        )).thenReturn(List.of(activity(koreaToday, 4321, 3024.7)));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of());
+
+        PotatoGrowthSummaryResponse result = potatoQueryService.getGrowthSummary(1L);
+
+        assertThat(result.todaySteps()).isEqualTo(4321);
+        assertThat(result.weeklyDistanceKm()).isCloseTo(3.0247, within(0.0000001));
+        assertThat(result.monthlyDistanceKm()).isCloseTo(3.0247, within(0.0000001));
     }
 
     @Test

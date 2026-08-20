@@ -12,11 +12,14 @@ import com.gamjamubwatna.potato.domain.UserDailyActivity;
 import com.gamjamubwatna.potato.domain.UserDailyActivityRepository;
 import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,22 +28,42 @@ public class PotatoQueryService {
 
     private static final int DAILY_STEP_GOAL = 10000;
     private static final double METERS_PER_KILOMETER = 1000.0;
+    private static final ZoneId SERVICE_ZONE_ID = ZoneId.of("Asia/Seoul");
 
     private final PotatoRepository potatoRepository;
     private final UserPotatoRepository userPotatoRepository;
     private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
+    @Autowired
     public PotatoQueryService(
         PotatoRepository potatoRepository,
         UserPotatoRepository userPotatoRepository,
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository
     ) {
+        this(
+            potatoRepository,
+            userPotatoRepository,
+            userDailyActivityRepository,
+            userRepository,
+            Clock.system(SERVICE_ZONE_ID)
+        );
+    }
+
+    PotatoQueryService(
+        PotatoRepository potatoRepository,
+        UserPotatoRepository userPotatoRepository,
+        UserDailyActivityRepository userDailyActivityRepository,
+        UserRepository userRepository,
+        Clock clock
+    ) {
         this.potatoRepository = potatoRepository;
         this.userPotatoRepository = userPotatoRepository;
         this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +106,7 @@ public class PotatoQueryService {
 
     @Transactional(readOnly = true)
     public PotatoGrowthSummaryResponse getGrowthSummary(Long userId) {
-        return getGrowthSummary(userId, LocalDate.now());
+        return getGrowthSummary(userId, LocalDate.now(clock));
     }
 
     PotatoGrowthSummaryResponse getGrowthSummary(Long userId, LocalDate today) {
