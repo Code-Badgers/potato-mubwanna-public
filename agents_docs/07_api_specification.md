@@ -1071,11 +1071,13 @@ Request:
 
 ```json
 {
-  "type": "QR_SCAN",
+  "type": "PHOTO_OCR",
   "answer": null,
   "stepCount": null,
-  "uploadKey": null,
-  "qrCode": "gamjamubwatna://mission/qr/MISSION_SOKCHO_ONNURI_QR"
+  "uploadKey": "mission-uploads/1/1002/20260729T073000Z-9f1c2a3b-photo.jpg",
+  "qrCode": null,
+  "latitude": 37.3715,
+  "longitude": 127.8323
 }
 ```
 
@@ -1113,8 +1115,12 @@ Notes:
 - `VISIT_AND_STEP`: 요청의 `stepCount`를 신뢰하지 않고 서버에 동기화된 당일 HealthKit/Health Connect 걸음 수를 검증한다. 장소형 미션은 해당 장소의 방문 인증 기록도 함께 확인한다.
 - `STAMP`: 미션 기간에 서버가 발급한 스탬프 수가 목표 이상인지 검증한다.
 - `COLLECTION`: 미션 기간에 서버에 저장된 서로 다른 방문 시군 수가 목표 이상인지 검증한다.
-- `PHOTO`: `uploadKey`가 로그인 사용자와 해당 미션에 발급된 key인지, 실제 저장 파일이 존재하는지 검증한다.
-- `PHOTO_OCR`: `uploadKey`로 저장된 이미지를 읽고 OCR 판독 결과에 미션 정책 키워드가 포함되는지 검증한다.
+- `PHOTO`: `uploadKey`가 로그인 사용자와 해당 미션에 발급된 key인지, 실제 저장 파일이 존재하는지 검증한 뒤 `latitude`, `longitude`로 미션 관광지 방문 반경을 검증한다.
+- `PHOTO_OCR`: 기존 앱과 DB 호환을 위해 타입 이름은 유지하지만 OCR 문자열 판정은 사용하지 않는다. `PHOTO`와 동일하게 소유권이 검증된 사진과 현재 위치가 모두 관광지 방문 반경 조건을 충족해야 한다.
+- 사진 미션의 `latitude`는 `-90` 이상 `90` 이하, `longitude`는 `-180` 이상 `180` 이하여야 한다. 위치가 없거나 범위를 벗어나면 `MISSION_VERIFICATION_FAILED`로 거부한다.
+- 사진 미션의 관광지는 미션 `spotName`, `cityName`과 일치하는 활성 관광지로 결정하며, 관광지를 찾을 수 없으면 인증을 거부한다.
+- 서버는 관광지 `verificationRadiusMeter`를 기준으로 거리를 계산한다. 반경 밖이면 미션·보상·여행 기록을 저장하지 않고 위치 이용 결과만 감사 로그에 기록한다.
+- 사진 미션이 완료되면 업로드 이미지를 미션 증빙으로 연결하고, 같은 관광지의 방문 기록이 없을 때 계산된 실제 거리를 포함한 여행 기록을 생성한다.
 - `QR_SCAN`: `qrCode` 존재 여부와 미션별 정책 QR payload의 정확한 일치 여부를 검증한다. 스캔값의 앞뒤 공백은 서버에서 제거한 뒤 비교한다.
 - 인증 성공 시 서버가 중복 완료 여부를 확인하고 미션 완료와 보상 응답을 함께 처리한다.
 - 검증 입력 없이 완료하는 `POST /api/missions/{missionId}/complete` endpoint는 제공하지 않는다.
@@ -1183,8 +1189,8 @@ Notes:
 - 로컬 개발 기본값은 서버 로컬 디스크(`local-runtime/mission-uploads`)에 파일을 저장하고 저장된 object key를 `uploadKey`로 반환한다.
 - `uploadKey`는 이후 `POST /api/missions/{missionId}/verify`의 `uploadKey`로 전달한다.
 - 운영 환경에서 S3 또는 호환 오브젝트 스토리지로 전환할 경우 storage 구현체와 환경변수를 별도 이슈에서 확장한다.
-- 현재 로컬 OCR adapter는 운영 OCR 엔진 연결 전까지 파일 bytes에 포함된 텍스트를 판독 결과로 사용한다.
-- 실제 OCR SaaS 또는 온디바이스 OCR 엔진 연결은 후속 이슈에서 진행한다.
+- 사진 장소 인증은 OCR 문자열이 아니라 서버 GPS 반경 검증을 사용한다.
+- 영수증·표지판 문구 자체가 필수인 별도 미션을 도입할 경우에만 실제 OCR 엔진 연동을 별도 이슈에서 진행한다.
 
 Environment:
 

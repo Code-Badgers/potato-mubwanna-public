@@ -18,6 +18,7 @@ import com.gamjamubwatna.coupon.domain.CouponDisplayStatus;
 import com.gamjamubwatna.coupon.domain.CouponRepository;
 import com.gamjamubwatna.coupon.domain.UserCoupon;
 import com.gamjamubwatna.coupon.domain.UserCouponRepository;
+import com.gamjamubwatna.legal.application.LocationUsageLogService;
 import com.gamjamubwatna.mission.api.MissionItemResponse;
 import com.gamjamubwatna.mission.api.MissionListResponse;
 import com.gamjamubwatna.mission.api.MissionVerifyRequest;
@@ -39,6 +40,7 @@ import com.gamjamubwatna.reward.domain.RewardSourceType;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
+import com.gamjamubwatna.visit.application.VisitDistancePolicy;
 import com.gamjamubwatna.visit.domain.UserVisit;
 import com.gamjamubwatna.visit.domain.UserVisitRepository;
 import java.math.BigDecimal;
@@ -91,14 +93,15 @@ class MissionServiceTest {
     @Mock
     private UserVisitRepository userVisitRepository;
 
+    @Mock
+    private LocationUsageLogService locationUsageLogService;
+
     private FakeMissionPhotoStorage missionPhotoStorage;
-    private MissionPhotoTextReader missionPhotoTextReader;
     private MissionService missionService;
 
     @BeforeEach
     void setUp() {
         missionPhotoStorage = new FakeMissionPhotoStorage();
-        missionPhotoTextReader = photoFile -> new String(photoFile.bytes());
         missionService = new MissionService(
             missionRepository,
             missionVerificationPolicyRepository,
@@ -109,9 +112,10 @@ class MissionServiceTest {
             userRepository,
             missionEvidenceValidator,
             missionPhotoStorage,
-            missionPhotoTextReader,
             touristSpotRepository,
             userVisitRepository,
+            new VisitDistancePolicy(),
+            locationUsageLogService,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -542,7 +546,7 @@ class MissionServiceTest {
         MissionVerifyResponse result = missionService.verifyMission(
             1L,
             1L,
-            new MissionVerifyRequest(MissionType.PHOTO, null, null, uploadKey, null)
+            photoRequest(MissionType.PHOTO, uploadKey)
         );
 
         assertThat(result.verified()).isTrue();
@@ -580,7 +584,7 @@ class MissionServiceTest {
         missionService.verifyMission(
             1L,
             1L,
-            new MissionVerifyRequest(MissionType.PHOTO, null, null, uploadKey, null)
+            photoRequest(MissionType.PHOTO, uploadKey)
         );
 
         verify(userVisitRepository).existsByUserIdAndTouristSpotId(1L, 20L);
@@ -588,12 +592,12 @@ class MissionServiceTest {
     }
 
     @Test
-    void verifiesPhotoOcrMissionWhenRecognizedTextContainsExpectedKeyword() {
+    void verifiesLegacyPhotoOcrMissionWithPhotoAndCurrentLocation() {
         User user = user(1L);
         Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
         TouristSpot touristSpot = spot(20L, mission.getSpotName(), mission.getCityName());
-        String uploadKey = "mission-uploads/1/1/test-receipt.jpg";
-        missionPhotoStorage.put(uploadKey, "안목 커피거리 영수증 하지감자".getBytes());
+        String uploadKey = "mission-uploads/1/1/test-photo.jpg";
+        missionPhotoStorage.put(uploadKey, new byte[] {1, 2, 3});
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
@@ -608,7 +612,7 @@ class MissionServiceTest {
         MissionVerifyResponse result = missionService.verifyMission(
             1L,
             1L,
-            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, uploadKey, null)
+            photoRequest(MissionType.PHOTO_OCR, uploadKey)
         );
 
         assertThat(result.verified()).isTrue();
@@ -617,26 +621,72 @@ class MissionServiceTest {
         verify(userMissionRepository).save(completionCaptor.capture());
         assertThat(completionCaptor.getValue().getEvidenceUploadKey()).isEqualTo(uploadKey);
         assertThat(completionCaptor.getValue().getTouristSpot()).isSameAs(touristSpot);
+        verify(locationUsageLogService).recordVisitVerification(
+            1L,
+            Instant.parse("2026-07-01T00:00:00Z"),
+            true
+        );
     }
 
     @Test
-    void rejectsPhotoOcrMissionWhenKeywordIsMissing() {
+    void rejectsPhotoMissionOutsideTouristSpotRadius() {
         Mission mission = mission(1L, "MISSION_PHOTO_OCR", MissionStatus.READY, true, MissionType.PHOTO_OCR);
-        String uploadKey = "mission-uploads/1/1/test-receipt.jpg";
-        missionPhotoStorage.put(uploadKey, "안목 커피거리 영수증".getBytes());
+        TouristSpot touristSpot = spot(20L, mission.getSpotName(), mission.getCityName());
+        String uploadKey = "mission-uploads/1/1/test-photo.jpg";
+        missionPhotoStorage.put(uploadKey, new byte[] {1, 2, 3});
         when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
         when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(missionVerificationPolicyRepository.findByMissionId(1L))
             .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
+        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
+            mission.getSpotName(),
+            mission.getCityName()
+        )).thenReturn(Optional.of(touristSpot));
 
         assertThatThrownBy(() -> missionService.verifyMission(
             1L,
             1L,
-            new MissionVerifyRequest(MissionType.PHOTO_OCR, null, null, uploadKey, null)
+            new MissionVerifyRequest(
+                MissionType.PHOTO_OCR,
+                null,
+                null,
+                uploadKey,
+                null,
+                new BigDecimal("38.3801000"),
+                new BigDecimal("128.6609000")
+            )
         ))
             .isInstanceOf(MissionVerificationException.class)
-            .hasMessage("인증 이미지에서 미션 키워드를 찾지 못했습니다.");
+            .hasMessage("사진 미션 인증 가능 범위를 벗어났습니다.");
+        verify(locationUsageLogService).recordVisitVerification(
+            1L,
+            Instant.parse("2026-07-01T00:00:00Z"),
+            false
+        );
+        verifyNoInteractions(rewardHistoryRepository);
+        verify(userMissionRepository, times(0)).save(any(UserMission.class));
+    }
+
+    @Test
+    void rejectsPhotoMissionWithoutCurrentLocation() {
+        Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        String uploadKey = "mission-uploads/1/1/test-photo.jpg";
+        missionPhotoStorage.put(uploadKey, new byte[] {1, 2, 3});
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(mission));
+        when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
+        when(missionVerificationPolicyRepository.findByMissionId(1L))
+            .thenReturn(Optional.of(uploadPolicy(mission)));
+
+        assertThatThrownBy(() -> missionService.verifyMission(
+            1L,
+            1L,
+            new MissionVerifyRequest(MissionType.PHOTO, null, null, uploadKey, null)
+        ))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("사진 미션 인증 위치를 확인할 수 없습니다.");
+        verifyNoInteractions(locationUsageLogService);
     }
 
     @Test
@@ -881,10 +931,23 @@ class MissionServiceTest {
             userRepository,
             missionEvidenceValidator,
             missionPhotoStorage,
-            missionPhotoTextReader,
             touristSpotRepository,
             userVisitRepository,
+            new VisitDistancePolicy(),
+            locationUsageLogService,
             Clock.fixed(now, ZoneOffset.UTC)
+        );
+    }
+
+    private MissionVerifyRequest photoRequest(MissionType type, String uploadKey) {
+        return new MissionVerifyRequest(
+            type,
+            null,
+            null,
+            uploadKey,
+            null,
+            new BigDecimal("37.3801000"),
+            new BigDecimal("128.6609000")
         );
     }
 

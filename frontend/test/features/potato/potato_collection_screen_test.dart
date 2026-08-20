@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
 import 'package:potato_mubwanna/features/potato/data/potato_repository.dart';
 import 'package:potato_mubwanna/features/potato/domain/potato_collection.dart';
@@ -23,10 +24,8 @@ void main() {
 
     expect(find.text('대표 감자'), findsNothing);
     expect(find.text('곤드레감자'), findsWidgets);
-    expect(find.text('2 / 3'), findsOneWidget);
-    expect(find.text('오늘의 감자걸음'), findsOneWidget);
-    expect(find.text('7,842 걸음'), findsOneWidget);
-    expect(find.text('/10,000 걸음'), findsOneWidget);
+    expect(find.text('오늘 감자걸음'), findsOneWidget);
+    expect(find.text('7,842 / 10,000걸음'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, '정보 보기'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '대표 감자 변경'), findsOneWidget);
     expect(find.text('나의 감자 도감'), findsNothing);
@@ -44,12 +43,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, '정보 보기'));
-    await tester.pumpAndSettle();
+    final detailButton = find.widgetWithText(OutlinedButton, '정보 보기');
+    await tester.ensureVisible(detailButton);
+    await tester.tap(detailButton);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('곤드레감자'), findsWidgets);
-    expect(find.text('감자 소개'), findsOneWidget);
-    expect(find.text('획득 방법'), findsOneWidget);
+    expect(find.text('감자 이야기'), findsOneWidget);
+    expect(find.text('획득 기록'), findsOneWidget);
     expect(find.text('성장 진행'), findsOneWidget);
     expect(find.text('대표 감자로 설정'), findsNothing);
   });
@@ -117,12 +119,15 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, '대표 감자 변경'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('???'));
-    await tester.pumpAndSettle();
+    final lockedPotato = find.text('???');
+    await tester.ensureVisible(lockedPotato);
+    await tester.tap(lockedPotato);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('???'), findsWidgets);
-    expect(find.text('감자 소개'), findsOneWidget);
-    expect(find.text('획득 방법'), findsOneWidget);
+    expect(find.text('아직 만나지 못한 감자'), findsWidgets);
+    expect(find.text('감자 이야기'), findsOneWidget);
+    expect(find.text('획득 기록'), findsOneWidget);
     expect(repository.updatedPotatoId, isNull);
   });
 
@@ -157,6 +162,52 @@ void main() {
 
     expect(repository.updatedPotatoId, '1');
     expect(find.text('대표 감자를 하지감자로 변경했어요.'), findsOneWidget);
+  });
+
+  testWidgets('persists potato care and shows the growth distance', (
+    tester,
+  ) async {
+    final repository = _FakePotatoRepository();
+
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+        potatoRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('쓰다듬기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.interactionAction, PotatoInteractionAction.pat);
+    expect(find.text('기분이 좋아졌어요. 성장 거리 50m 추가!'), findsOneWidget);
+  });
+
+  testWidgets('shows the server message when potato care is rejected', (
+    tester,
+  ) async {
+    final repository = _FakePotatoRepository(
+      interactionError: const ApiException(
+        message: '쓰다듬기는 30분 후 다시 할 수 있습니다.',
+        statusCode: 429,
+      ),
+    );
+
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+        potatoRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('쓰다듬기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('쓰다듬기는 30분 후 다시 할 수 있습니다.'), findsOneWidget);
   });
 
   testWidgets('shows a level-up dialog after the latest collection loads', (
@@ -260,11 +311,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(RefreshIndicator), findsOneWidget);
-      await tester.fling(
-        find.byType(CustomScrollView),
-        const Offset(0, 300),
-        1000,
+      final refreshIndicator = tester.state<RefreshIndicatorState>(
+        find.byType(RefreshIndicator),
       );
+      unawaited(refreshIndicator.show());
       await tester.pumpAndSettle();
 
       expect(activitySyncCalls, 2);
@@ -477,9 +527,11 @@ Future<void> _pumpScreen(
 }
 
 class _FakePotatoRepository extends PotatoRepository {
-  _FakePotatoRepository() : super(dio: Dio());
+  _FakePotatoRepository({this.interactionError}) : super(dio: Dio());
 
+  final ApiException? interactionError;
   String? updatedPotatoId;
+  PotatoInteractionAction? interactionAction;
 
   @override
   Future<PotatoRepresentativeResult> updateRepresentativePotato(
@@ -489,6 +541,33 @@ class _FakePotatoRepository extends PotatoRepository {
     return PotatoRepresentativeResult(
       potatoId: potatoId,
       representative: true,
+    );
+  }
+
+  @override
+  Future<PotatoInteractionResult> interactWithRepresentativePotato(
+    PotatoInteractionAction action,
+  ) async {
+    interactionAction = action;
+    final error = interactionError;
+    if (error != null) {
+      throw error;
+    }
+    return PotatoInteractionResult(
+      potatoId: '2',
+      potatoName: '곤드레감자',
+      action: action,
+      growthDistanceAdded: 50,
+      cooldownSeconds: 1800,
+      nextAvailableAt: DateTime.parse('2026-08-20T10:30:00Z'),
+      growthResult: const PotatoGrowthResult(
+        potatoId: '2',
+        potatoName: '곤드레감자',
+        previousLevel: 3,
+        currentLevel: 3,
+        leveledUp: false,
+        fullyGrown: false,
+      ),
     );
   }
 }

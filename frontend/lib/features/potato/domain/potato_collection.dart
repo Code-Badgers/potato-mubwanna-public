@@ -127,6 +127,58 @@ class PotatoRepresentativeResult {
   }
 }
 
+enum PotatoInteractionAction {
+  pat('PAT'),
+  water('WATER'),
+  snack('SNACK'),
+  walk('WALK');
+
+  const PotatoInteractionAction(this.apiValue);
+
+  final String apiValue;
+}
+
+class PotatoInteractionResult {
+  const PotatoInteractionResult({
+    required this.potatoId,
+    required this.potatoName,
+    required this.action,
+    required this.growthDistanceAdded,
+    required this.cooldownSeconds,
+    required this.nextAvailableAt,
+    required this.growthResult,
+  });
+
+  final String potatoId;
+  final String potatoName;
+  final PotatoInteractionAction action;
+  final double growthDistanceAdded;
+  final int cooldownSeconds;
+  final DateTime nextAvailableAt;
+  final PotatoGrowthResult? growthResult;
+
+  static PotatoInteractionResult fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final actionValue = data['action'] as String?;
+    final growthResultJson = data['growthResult'];
+    return PotatoInteractionResult(
+      potatoId: data['potatoId']?.toString() ?? '',
+      potatoName: data['potatoName'] as String? ?? '',
+      action: PotatoInteractionAction.values.firstWhere(
+        (action) => action.apiValue == actionValue,
+        orElse: () => PotatoInteractionAction.pat,
+      ),
+      growthDistanceAdded:
+          (data['growthDistanceAdded'] as num?)?.toDouble() ?? 0,
+      cooldownSeconds: (data['cooldownSeconds'] as num?)?.toInt() ?? 0,
+      nextAvailableAt: DateTime.parse(data['nextAvailableAt'] as String),
+      growthResult: growthResultJson is Map<String, dynamic>
+          ? PotatoGrowthResult.fromJson(growthResultJson)
+          : null,
+    );
+  }
+}
+
 class PotatoActivitySyncResult {
   const PotatoActivitySyncResult({required this.growthResult});
 

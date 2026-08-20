@@ -59,7 +59,7 @@ class MissionMigrationTest {
     }
 
     @Test
-    void seedsPhotoOcrKeywords() throws Exception {
+    void clearsLegacyPhotoOcrKeywordsForLocationVerification() throws Exception {
         try (
             Connection connection = dataSource.getConnection();
             ResultSet rows = connection.createStatement().executeQuery("""
@@ -74,16 +74,17 @@ class MissionMigrationTest {
                 ORDER BY m.code
                 """)
         ) {
-            Set<String> policyPairs = new HashSet<>();
+            Set<String> missionCodes = new HashSet<>();
             while (rows.next()) {
-                policyPairs.add(rows.getString("CODE") + "=" + rows.getString("EXPECTED_ANSWER"));
+                missionCodes.add(rows.getString("CODE"));
+                assertThat(rows.getString("EXPECTED_ANSWER")).isNull();
             }
 
-            assertThat(policyPairs)
+            assertThat(missionCodes)
                 .containsExactlyInAnyOrder(
-                    "MISSION_GANGNEUNG_ANMOK_PHOTO_OCR=하지감자",
-                    "MISSION_WONJU_MUSEUM_SAN_PHOTO_OCR=물의 정원",
-                    "MISSION_GOSEONG_DMZ_PHOTO_OCR=평화의 종"
+                    "MISSION_GANGNEUNG_ANMOK_PHOTO_OCR",
+                    "MISSION_WONJU_MUSEUM_SAN_PHOTO_OCR",
+                    "MISSION_GOSEONG_DMZ_PHOTO_OCR"
                 );
         }
     }

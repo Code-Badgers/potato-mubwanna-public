@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:potato_mubwanna/core/location/location_service.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
@@ -103,6 +105,7 @@ void main() {
 
     expect(find.text('미션 상세'), findsOneWidget);
     expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
+    expect(find.textContaining('보상은 공모전 MVP 기준으로'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('문제 미리보기'),
       160,
@@ -204,8 +207,39 @@ void main() {
     expect(repository.completeCallCount, 1);
     expect(repository.lastPayload?.uploadKey,
         'mission-uploads/1/1002/receipt.jpg');
+    expect(repository.lastPayload?.latitude, 37.3801);
+    expect(repository.lastPayload?.longitude, 128.6609);
     expect(inputService.lastPhotoSource, MissionPhotoSource.gallery);
     expect(uploadRepository.lastMissionId, '1002');
+  });
+
+  testWidgets('does not upload photo when current location is unavailable',
+      (tester) async {
+    final repository = _FakeMissionRepository();
+    final uploadRepository = _FakeMissionUploadRepository();
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      uploadRepository: uploadRepository,
+      locationService: _FakeLocationService(
+        error: const LocationFailure(
+          type: LocationFailureType.permissionDenied,
+          message: '위치 권한이 없어 방문 인증을 진행할 수 없습니다.',
+        ),
+      ),
+      visitEntryMissionId: '1002',
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, '사진 찍기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('갤러리에서 선택하기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '인증 완료하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('위치 권한이 없어 방문 인증을 진행할 수 없습니다.'), findsOneWidget);
+    expect(uploadRepository.lastMissionId, isNull);
+    expect(repository.completeCallCount, 0);
   });
 
   testWidgets('shows upload error when photo upload key request fails',
@@ -393,6 +427,7 @@ Future<void> _pumpMissionScreen(
   MissionRepository? repository,
   MissionNativeInputService? inputService,
   MissionUploadRepository? uploadRepository,
+  LocationService? locationService,
   String? visitEntrySpotName,
   String? visitEntryMissionId,
 }) async {
@@ -410,6 +445,9 @@ Future<void> _pumpMissionScreen(
         ),
         missionUploadRepositoryProvider.overrideWithValue(
           uploadRepository ?? _FakeMissionUploadRepository(),
+        ),
+        missionLocationServiceProvider.overrideWithValue(
+          locationService ?? _FakeLocationService(),
         ),
       ],
       child: MaterialApp(
@@ -487,9 +525,13 @@ class _FakeMissionRepository extends MissionRepository {
         (payload.stepCount ?? 0) < mission.target) {
       throw const ApiException(message: '걸음을 다 채우고 재시도해주세요.');
     }
-    if (mission.type == MissionType.photoOcr &&
-        (payload.uploadKey == null || payload.uploadKey!.isEmpty)) {
-      throw const ApiException(message: '이미지를 업로드한 뒤 다시 시도해주세요.');
+    if ((mission.type == MissionType.photo ||
+            mission.type == MissionType.photoOcr) &&
+        (payload.uploadKey == null ||
+            payload.uploadKey!.isEmpty ||
+            payload.latitude == null ||
+            payload.longitude == null)) {
+      throw const ApiException(message: '사진과 현재 위치를 확인한 뒤 다시 시도해주세요.');
     }
     if (mission.type == MissionType.qrScan &&
         payload.qrCode != _sokchoMissionQrPayload) {
@@ -598,6 +640,32 @@ class _FakeMissionUploadRepository extends MissionUploadRepository {
       throw error;
     }
     return result;
+  }
+}
+
+class _FakeLocationService extends LocationService {
+  _FakeLocationService({this.error});
+
+  final Object? error;
+
+  @override
+  Future<Position> getCurrentPosition() async {
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return Position(
+      longitude: 128.6609,
+      latitude: 37.3801,
+      timestamp: DateTime.parse('2026-07-27T00:00:00Z'),
+      accuracy: 4,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
   }
 }
 

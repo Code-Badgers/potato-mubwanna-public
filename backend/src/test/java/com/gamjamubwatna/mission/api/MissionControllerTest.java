@@ -1,6 +1,8 @@
 package com.gamjamubwatna.mission.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -20,6 +22,7 @@ import com.gamjamubwatna.mission.domain.MissionType;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -99,6 +102,40 @@ class MissionControllerTest {
             .andExpect(jsonPath("$.data.verified").value(true))
             .andExpect(jsonPath("$.data.completed").value(true))
             .andExpect(jsonPath("$.data.rewardLabel").value("황금감자 성장 아이템"));
+    }
+
+    @Test
+    void mapsPhotoLocationVerificationRequest() throws Exception {
+        when(missionService.verifyMission(eq(1L), eq(1L), anyVerifyRequest()))
+            .thenReturn(new MissionVerifyResponse(
+                1L,
+                true,
+                true,
+                Instant.parse("2026-07-01T00:00:00Z"),
+                MissionRewardType.ITEM,
+                "여행 사진"
+            ));
+
+        mockMvc.perform(post("/missions/1/verify")
+                .with(user("user:1"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {
+                      "type": "PHOTO_OCR",
+                      "uploadKey": "mission-uploads/1/1/photo.jpg",
+                      "latitude": 37.3801,
+                      "longitude": 128.6609
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        ArgumentCaptor<MissionVerifyRequest> requestCaptor =
+            ArgumentCaptor.forClass(MissionVerifyRequest.class);
+        verify(missionService).verifyMission(eq(1L), eq(1L), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().type()).isEqualTo(MissionType.PHOTO_OCR);
+        assertThat(requestCaptor.getValue().latitude()).isEqualByComparingTo("37.3801");
+        assertThat(requestCaptor.getValue().longitude()).isEqualByComparingTo("128.6609");
     }
 
     @Test

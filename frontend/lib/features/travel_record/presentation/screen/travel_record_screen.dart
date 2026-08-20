@@ -535,6 +535,33 @@ class _TravelRecordEmptyState extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: const [
+        Icon(
+          Icons.photo_library_outlined,
+          color: _travelDark,
+          size: 42,
+        ),
+        SizedBox(height: 12),
+        Text(
+          '아직 여행 기록이 없어요',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        SizedBox(height: 7),
+        Text(
+          '스탬프 방문 인증이나 사진 미션을 완료하면\n이곳에 여행 사진이 차곡차곡 모여요.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            height: 1.45,
+          ),
+        ),
+        SizedBox(height: 22),
         _EmptyTravelArchive(),
       ],
     );

@@ -74,6 +74,42 @@ void main() {
     expect(result.rewardLabel, '황금감자 성장 아이템');
   });
 
+  test('sends current location with photo mission evidence', () async {
+    Object? requestBody;
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestBody = options.data;
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: _missionCompleteResponse,
+              ),
+            );
+          },
+        ),
+      );
+
+    await MissionRepository(dio: dio).verifyMission(
+      '1002',
+      const MissionVerificationPayload(
+        type: MissionType.photoOcr,
+        uploadKey: 'mission-uploads/1/1002/photo.jpg',
+        latitude: 37.3801,
+        longitude: 128.6609,
+      ),
+    );
+
+    expect(requestBody, {
+      'type': 'PHOTO_OCR',
+      'uploadKey': 'mission-uploads/1/1002/photo.jpg',
+      'latitude': 37.3801,
+      'longitude': 128.6609,
+    });
+  });
+
   test('keeps completeMission compatible with complete endpoint', () async {
     final requestedPaths = <String>[];
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
