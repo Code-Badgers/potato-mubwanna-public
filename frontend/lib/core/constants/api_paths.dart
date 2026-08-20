@@ -17,9 +17,7 @@ class ApiPaths {
   static String spotAudioGuide(String spotId) => '/audio-guides/spots/$spotId';
   static const favoriteSpots = '/me/favorite-spots';
   static const favoriteSpotRoute = '/me/favorite-spots/route';
-  static const nearbySpots = '/spots/nearby';
   static const visitVerify = '/visits/verify';
-  static const stampVerify = '/stamps/verify';
   static const myStamps = '/stamps/me';
   static const stampNextTargets = '/stamps/me/next-targets';
   static const stampRallybookSpots = '/stamps/rallybook-spots';
