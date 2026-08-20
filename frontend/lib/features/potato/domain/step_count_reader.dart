@@ -2,15 +2,41 @@ import '../data/step_count_reader_stub.dart'
     if (dart.library.io) '../data/step_count_reader_mobile.dart';
 
 abstract interface class StepCountReader {
-  Future<StepCountSnapshot?> readTodaySteps({
+  Future<StepCountReadResult> readTodaySteps({
     StepCountAuthorization authorization =
         StepCountAuthorization.requestIfNeeded,
   });
+
+  Future<void> openHealthSettings();
 }
 
 enum StepCountAuthorization {
   requestIfNeeded,
   previouslyGrantedOnly,
+  backgroundPreviouslyGrantedOnly,
+}
+
+enum StepCountReadStatus {
+  success,
+  consentRequired,
+  activityPermissionRequired,
+  healthPermissionRequired,
+  healthPlatformUnavailable,
+  unsupported,
+  failed,
+}
+
+class StepCountReadResult {
+  const StepCountReadResult({
+    required this.status,
+    this.snapshot,
+  });
+
+  const StepCountReadResult.success(StepCountSnapshot snapshot)
+      : this(status: StepCountReadStatus.success, snapshot: snapshot);
+
+  final StepCountReadStatus status;
+  final StepCountSnapshot? snapshot;
 }
 
 class StepCountSnapshot {

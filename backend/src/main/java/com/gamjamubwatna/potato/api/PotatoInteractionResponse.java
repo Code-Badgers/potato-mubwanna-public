@@ -1,6 +1,7 @@
 package com.gamjamubwatna.potato.api;
 
 import com.gamjamubwatna.potato.domain.PotatoInteractionAction;
+import com.gamjamubwatna.potato.domain.PotatoCareStatus;
 import com.gamjamubwatna.potato.domain.UserPotato;
 import java.time.Instant;
 
@@ -11,6 +12,7 @@ public record PotatoInteractionResponse(
     double growthDistanceAdded,
     long cooldownSeconds,
     Instant nextAvailableAt,
+    PotatoCareStatusResponse careStatus,
     PotatoGrowthResultResponse growthResult
 ) {
 
@@ -18,7 +20,8 @@ public record PotatoInteractionResponse(
         UserPotato userPotato,
         PotatoInteractionAction action,
         Instant nextAvailableAt,
-        int previousLevel
+        int previousLevel,
+        PotatoCareStatus careStatus
     ) {
         return new PotatoInteractionResponse(
             userPotato.getPotato().getId(),
@@ -27,6 +30,7 @@ public record PotatoInteractionResponse(
             action.growthDistance(),
             action.cooldown().toSeconds(),
             nextAvailableAt,
+            PotatoCareStatusResponse.from(careStatus),
             PotatoGrowthResultResponse.from(userPotato, previousLevel)
         );
     }

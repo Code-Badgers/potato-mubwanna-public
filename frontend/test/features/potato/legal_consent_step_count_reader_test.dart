@@ -11,7 +11,10 @@ void main() {
       consentStore: _FakeLegalConsentStore(healthAccepted: false),
     );
 
-    expect(await reader.readTodaySteps(), isNull);
+    expect(
+      (await reader.readTodaySteps()).status,
+      StepCountReadStatus.consentRequired,
+    );
     expect(delegate.readCalls, 0);
   });
 
@@ -22,7 +25,10 @@ void main() {
       consentStore: _FakeLegalConsentStore(healthAccepted: true),
     );
 
-    expect(await reader.readTodaySteps(), isNotNull);
+    expect(
+      (await reader.readTodaySteps()).status,
+      StepCountReadStatus.success,
+    );
     expect(delegate.readCalls, 1);
   });
 }
@@ -31,18 +37,23 @@ class _RecordingStepCountReader implements StepCountReader {
   int readCalls = 0;
 
   @override
-  Future<StepCountSnapshot?> readTodaySteps({
+  Future<StepCountReadResult> readTodaySteps({
     StepCountAuthorization authorization =
         StepCountAuthorization.requestIfNeeded,
   }) async {
     readCalls++;
-    return StepCountSnapshot(
-      activityDate: DateTime(2026, 8, 14),
-      steps: 1000,
-      distanceMeters: 700,
-      source: ActivitySyncSource.healthConnect,
+    return StepCountReadResult.success(
+      StepCountSnapshot(
+        activityDate: DateTime(2026, 8, 14),
+        steps: 1000,
+        distanceMeters: 700,
+        source: ActivitySyncSource.healthConnect,
+      ),
     );
   }
+
+  @override
+  Future<void> openHealthSettings() async {}
 }
 
 class _FakeLegalConsentStore implements LegalConsentStore {

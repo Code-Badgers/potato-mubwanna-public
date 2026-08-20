@@ -26,6 +26,10 @@ void main() {
     expect(find.text('곤드레감자'), findsWidgets);
     expect(find.text('오늘 감자걸음'), findsOneWidget);
     expect(find.text('7,842 / 10,000걸음'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('81 / 100'), findsOneWidget);
+    expect(find.text('64 / 100'), findsOneWidget);
+    expect(find.text('93 / 100'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, '정보 보기'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '대표 감자 변경'), findsOneWidget);
     expect(find.text('나의 감자 도감'), findsNothing);
@@ -134,9 +138,7 @@ void main() {
   testWidgets('shows a signed out state for guests', (tester) async {
     await _pumpScreen(
       tester,
-      overrides: [
-        potatoCollectionProvider.overrideWith((ref) async => null),
-      ],
+      overrides: [potatoCollectionProvider.overrideWith((ref) async => null)],
     );
     await tester.pumpAndSettle();
 
@@ -183,6 +185,26 @@ void main() {
 
     expect(repository.interactionAction, PotatoInteractionAction.pat);
     expect(find.text('기분이 좋아졌어요. 성장 거리 50m 추가!'), findsOneWidget);
+  });
+
+  testWidgets('sends the snack care action to the server', (tester) async {
+    final repository = _FakePotatoRepository();
+
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith((ref) async => _collection()),
+        potatoRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('간식 주기'));
+    await tester.tap(find.text('간식 주기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.interactionAction, PotatoInteractionAction.snack);
+    expect(find.text('간식을 먹었어요. 성장 거리 50m 추가!'), findsOneWidget);
   });
 
   testWidgets('shows the server message when potato care is rejected', (
@@ -538,10 +560,7 @@ class _FakePotatoRepository extends PotatoRepository {
     String potatoId,
   ) async {
     updatedPotatoId = potatoId;
-    return PotatoRepresentativeResult(
-      potatoId: potatoId,
-      representative: true,
-    );
+    return PotatoRepresentativeResult(potatoId: potatoId, representative: true);
   }
 
   @override
@@ -560,6 +579,12 @@ class _FakePotatoRepository extends PotatoRepository {
       growthDistanceAdded: 50,
       cooldownSeconds: 1800,
       nextAvailableAt: DateTime.parse('2026-08-20T10:30:00Z'),
+      careStatus: PotatoCareStatus(
+        satiety: 100,
+        moisture: 64,
+        mood: 93,
+        calculatedAt: DateTime.utc(2026, 8, 20, 10),
+      ),
       growthResult: const PotatoGrowthResult(
         potatoId: '2',
         potatoName: '곤드레감자',
@@ -602,6 +627,12 @@ PotatoCollection _collection() {
         growthDistance: 1500,
         growthGoalDistance: 3000,
         representative: false,
+        careStatus: PotatoCareStatus(
+          satiety: 70,
+          moisture: 70,
+          mood: 70,
+          calculatedAt: DateTime.parse('2026-08-20T10:00:00Z'),
+        ),
       ),
       PotatoCollectionItem(
         id: '2',
@@ -618,6 +649,12 @@ PotatoCollection _collection() {
         growthDistance: 4200,
         growthGoalDistance: 4200,
         representative: true,
+        careStatus: PotatoCareStatus(
+          satiety: 81,
+          moisture: 64,
+          mood: 93,
+          calculatedAt: DateTime.parse('2026-08-20T10:00:00Z'),
+        ),
       ),
       const PotatoCollectionItem(
         id: '3',
@@ -659,6 +696,12 @@ PotatoCollection _rewardOnlyCollection() {
         growthDistance: 600,
         growthGoalDistance: 3000,
         representative: true,
+        careStatus: PotatoCareStatus(
+          satiety: 70,
+          moisture: 70,
+          mood: 70,
+          calculatedAt: DateTime.parse('2026-08-20T10:00:00Z'),
+        ),
       ),
     ],
   );

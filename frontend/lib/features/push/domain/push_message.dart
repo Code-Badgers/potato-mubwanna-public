@@ -21,6 +21,7 @@ class PushRouteResolver {
       'MISSIONS' => '/main/missions',
       'COUPONS' => '/coupons',
       'STAMPS' => '/main/stamps',
+      'POTATOES' => '/main/potatoes',
       'MAP' => '/main/map',
       'SPOT' => _spotRoute(data['destinationId']),
       _ => null,

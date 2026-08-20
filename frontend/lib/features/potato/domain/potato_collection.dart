@@ -1,9 +1,4 @@
-enum PotatoRarity {
-  common,
-  rare,
-  epic,
-  legendary,
-}
+enum PotatoRarity { common, rare, epic, legendary }
 
 class PotatoCollection {
   const PotatoCollection({
@@ -61,6 +56,7 @@ class PotatoCollectionItem {
     required this.growthDistance,
     required this.growthGoalDistance,
     required this.representative,
+    this.careStatus,
   });
 
   final String id;
@@ -77,6 +73,7 @@ class PotatoCollectionItem {
   final double growthDistance;
   final double growthGoalDistance;
   final bool representative;
+  final PotatoCareStatus? careStatus;
 
   double get growthRatio {
     if (growthGoalDistance <= 0) {
@@ -105,8 +102,35 @@ class PotatoCollectionItem {
       growthDistance: (json['growthDistance'] as num?)?.toDouble() ?? 0,
       growthGoalDistance: (json['growthGoalDistance'] as num?)?.toDouble() ?? 0,
       representative: json['representative'] as bool? ?? false,
+      careStatus: json['careStatus'] is Map<String, dynamic>
+          ? PotatoCareStatus.fromJson(
+              json['careStatus'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
+}
+
+class PotatoCareStatus {
+  const PotatoCareStatus({
+    required this.satiety,
+    required this.moisture,
+    required this.mood,
+    required this.calculatedAt,
+  });
+
+  final int satiety;
+  final int moisture;
+  final int mood;
+  final DateTime calculatedAt;
+
+  static PotatoCareStatus fromJson(Map<String, dynamic> json) =>
+      PotatoCareStatus(
+        satiety: (json['satiety'] as num?)?.toInt() ?? 0,
+        moisture: (json['moisture'] as num?)?.toInt() ?? 0,
+        mood: (json['mood'] as num?)?.toInt() ?? 0,
+        calculatedAt: DateTime.parse(json['calculatedAt'] as String),
+      );
 }
 
 class PotatoRepresentativeResult {
@@ -147,6 +171,7 @@ class PotatoInteractionResult {
     required this.cooldownSeconds,
     required this.nextAvailableAt,
     required this.growthResult,
+    this.careStatus,
   });
 
   final String potatoId;
@@ -156,6 +181,7 @@ class PotatoInteractionResult {
   final int cooldownSeconds;
   final DateTime nextAvailableAt;
   final PotatoGrowthResult? growthResult;
+  final PotatoCareStatus? careStatus;
 
   static PotatoInteractionResult fromJson(Object? json) {
     final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
@@ -172,6 +198,11 @@ class PotatoInteractionResult {
           (data['growthDistanceAdded'] as num?)?.toDouble() ?? 0,
       cooldownSeconds: (data['cooldownSeconds'] as num?)?.toInt() ?? 0,
       nextAvailableAt: DateTime.parse(data['nextAvailableAt'] as String),
+      careStatus: data['careStatus'] is Map<String, dynamic>
+          ? PotatoCareStatus.fromJson(
+              data['careStatus'] as Map<String, dynamic>,
+            )
+          : null,
       growthResult: growthResultJson is Map<String, dynamic>
           ? PotatoGrowthResult.fromJson(growthResultJson)
           : null,
@@ -271,7 +302,7 @@ class PotatoGrowthSummary {
       monthlyDistanceKm: monthlyDistanceKm ?? this.monthlyDistanceKm,
       remainingDistanceKmForRepresentative:
           remainingDistanceKmForRepresentative ??
-              this.remainingDistanceKmForRepresentative,
+          this.remainingDistanceKmForRepresentative,
     );
   }
 
@@ -284,7 +315,7 @@ class PotatoGrowthSummary {
       monthlyDistanceKm: (data['monthlyDistanceKm'] as num?)?.toDouble() ?? 0,
       remainingDistanceKmForRepresentative:
           (data['remainingDistanceKmForRepresentative'] as num?)?.toDouble() ??
-              0,
+          0,
     );
   }
 }

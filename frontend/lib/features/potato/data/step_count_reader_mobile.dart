@@ -14,11 +14,13 @@ class HealthStepCountReader implements StepCountReader {
   static const _estimatedMetersPerStep = 0.7;
   static const _backgroundPermissionRequestedKey =
       'healthBackgroundPermissionRequested';
+  static const _healthAuthorizationRequestedKey =
+      'healthAuthorizationRequested';
 
   final Health _health;
 
   @override
-  Future<StepCountSnapshot?> readTodaySteps({
+  Future<StepCountReadResult> readTodaySteps({
     StepCountAuthorization authorization =
         StepCountAuthorization.requestIfNeeded,
   }) async {
@@ -27,12 +29,19 @@ class HealthStepCountReader implements StepCountReader {
           ? ActivitySyncSource.healthKit
           : ActivitySyncSource.healthConnect;
       if (Platform.isAndroid) {
+        if (!await _health.isHealthConnectAvailable()) {
+          return const StepCountReadResult(
+            status: StepCountReadStatus.healthPlatformUnavailable,
+          );
+        }
         final activityPermission =
             authorization == StepCountAuthorization.requestIfNeeded
                 ? await Permission.activityRecognition.request()
                 : await Permission.activityRecognition.status;
         if (!activityPermission.isGranted) {
-          return null;
+          return const StepCountReadResult(
+            status: StepCountReadStatus.activityPermissionRequired,
+          );
         }
       }
 
@@ -40,16 +49,17 @@ class HealthStepCountReader implements StepCountReader {
       const types = [HealthDataType.STEPS];
       const permissions = [HealthDataAccess.READ];
       final authorized = authorization == StepCountAuthorization.requestIfNeeded
-          ? await _health.requestAuthorization(
-              types,
-              permissions: permissions,
-            )
-          : await _hasPreviouslyGrantedBackgroundAccess(
+          ? await _requestAuthorization(types, permissions)
+          : await _hasPreviouslyGrantedAccess(
               types,
               permissions,
+              requireBackground: authorization ==
+                  StepCountAuthorization.backgroundPreviouslyGrantedOnly,
             );
       if (!authorized) {
-        return null;
+        return const StepCountReadResult(
+          status: StepCountReadStatus.healthPermissionRequired,
+        );
       }
       if (authorization == StepCountAuthorization.requestIfNeeded &&
           Platform.isAndroid) {
@@ -66,30 +76,77 @@ class HealthStepCountReader implements StepCountReader {
 
       final safeSteps = steps?.clamp(0, 1000000);
       if (safeSteps == null) {
-        return null;
+        return const StepCountReadResult(
+          status: StepCountReadStatus.failed,
+        );
       }
 
-      return StepCountSnapshot(
-        activityDate: startOfToday,
-        steps: safeSteps,
-        distanceMeters: safeSteps * _estimatedMetersPerStep,
-        source: source,
+      return StepCountReadResult.success(
+        StepCountSnapshot(
+          activityDate: startOfToday,
+          steps: safeSteps,
+          distanceMeters: safeSteps * _estimatedMetersPerStep,
+          source: source,
+        ),
+      );
+    } on UnsupportedError {
+      return const StepCountReadResult(
+        status: StepCountReadStatus.healthPlatformUnavailable,
       );
     } catch (_) {
-      return null;
+      return const StepCountReadResult(
+        status: StepCountReadStatus.failed,
+      );
     }
   }
 
-  Future<bool> _hasPreviouslyGrantedBackgroundAccess(
+  @override
+  Future<void> openHealthSettings() async {
+    if (Platform.isAndroid) {
+      if (!await _health.isHealthConnectAvailable()) {
+        await _health.installHealthConnect();
+        return;
+      }
+    }
+    await openAppSettings();
+  }
+
+  Future<bool> _requestAuthorization(
     List<HealthDataType> types,
     List<HealthDataAccess> permissions,
   ) async {
-    final hasStepPermission =
-        await _health.hasPermissions(types, permissions: permissions) == true;
-    if (!hasStepPermission || !Platform.isAndroid) {
-      return hasStepPermission;
+    final authorized = await _health.requestAuthorization(
+      types,
+      permissions: permissions,
+    );
+    if (authorized) {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(_healthAuthorizationRequestedKey, true);
+    }
+    return authorized;
+  }
+
+  Future<bool> _hasPreviouslyGrantedAccess(
+    List<HealthDataType> types,
+    List<HealthDataAccess> permissions, {
+    required bool requireBackground,
+  }) async {
+    if (Platform.isIOS) {
+      // HealthKit은 읽기 권한 상태를 공개하지 않으므로 이전 요청 여부로만
+      // 조회 가능성을 판단하고 실제 데이터 조회 결과를 최종 기준으로 삼는다.
+      final preferences = await SharedPreferences.getInstance();
+      return preferences.getBool(_healthAuthorizationRequestedKey) == true;
     }
 
+    final hasStepPermission =
+        await _health.hasPermissions(types, permissions: permissions) == true;
+    if (!hasStepPermission) {
+      return false;
+    }
+
+    if (!requireBackground) {
+      return true;
+    }
     return await _health.isHealthDataInBackgroundAvailable() &&
         await _health.isHealthDataInBackgroundAuthorized();
   }

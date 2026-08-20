@@ -25,6 +25,9 @@ import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.reward.domain.RewardHistory;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.visit.application.VisitDistancePolicy;
@@ -60,6 +63,7 @@ public class MissionService {
     private final UserVisitRepository userVisitRepository;
     private final VisitDistancePolicy visitDistancePolicy;
     private final LocationUsageLogService locationUsageLogService;
+    private final PushEventPublisher pushEventPublisher;
     private final Clock clock;
 
     @Autowired
@@ -76,7 +80,8 @@ public class MissionService {
         TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
-        LocationUsageLogService locationUsageLogService
+        LocationUsageLogService locationUsageLogService,
+        PushEventPublisher pushEventPublisher
     ) {
         this(
             missionRepository,
@@ -92,6 +97,7 @@ public class MissionService {
             userVisitRepository,
             visitDistancePolicy,
             locationUsageLogService,
+            pushEventPublisher,
             Clock.systemUTC()
         );
     }
@@ -112,6 +118,42 @@ public class MissionService {
         LocationUsageLogService locationUsageLogService,
         Clock clock
     ) {
+        this(
+            missionRepository,
+            missionVerificationPolicyRepository,
+            userMissionRepository,
+            rewardHistoryRepository,
+            couponRepository,
+            userCouponRepository,
+            userRepository,
+            missionEvidenceValidator,
+            missionPhotoStorage,
+            touristSpotRepository,
+            userVisitRepository,
+            visitDistancePolicy,
+            locationUsageLogService,
+            PushEventPublisher.noop(),
+            clock
+        );
+    }
+
+    MissionService(
+        MissionRepository missionRepository,
+        MissionVerificationPolicyRepository missionVerificationPolicyRepository,
+        UserMissionRepository userMissionRepository,
+        RewardHistoryRepository rewardHistoryRepository,
+        CouponRepository couponRepository,
+        UserCouponRepository userCouponRepository,
+        UserRepository userRepository,
+        MissionEvidenceValidator missionEvidenceValidator,
+        MissionPhotoStorage missionPhotoStorage,
+        TouristSpotRepository touristSpotRepository,
+        UserVisitRepository userVisitRepository,
+        VisitDistancePolicy visitDistancePolicy,
+        LocationUsageLogService locationUsageLogService,
+        PushEventPublisher pushEventPublisher,
+        Clock clock
+    ) {
         this.missionRepository = missionRepository;
         this.missionVerificationPolicyRepository = missionVerificationPolicyRepository;
         this.userMissionRepository = userMissionRepository;
@@ -125,6 +167,7 @@ public class MissionService {
         this.userVisitRepository = userVisitRepository;
         this.visitDistancePolicy = visitDistancePolicy;
         this.locationUsageLogService = locationUsageLogService;
+        this.pushEventPublisher = pushEventPublisher;
         this.clock = clock;
     }
 
@@ -213,6 +256,7 @@ public class MissionService {
         ));
         saveTravelRecordForPhotoEvidence(user, photoEvidence, completedAt);
         saveMissionRewardHistory(user, mission, period, completedAt);
+        publishMissionCompletion(userId, mission);
 
         return new MissionVerifyResponse(
             mission.getId(),
@@ -221,6 +265,21 @@ public class MissionService {
             userMission.getCompletedAt(),
             mission.getRewardType(),
             mission.getRewardLabel()
+        );
+    }
+
+    private void publishMissionCompletion(Long userId, Mission mission) {
+        if (mission.getRewardType() == MissionRewardType.COUPON) {
+            return;
+        }
+        pushEventPublisher.publish(
+            userId,
+            new PushNotificationMessage(
+                "미션 완료!",
+                "'" + mission.getTitle() + "' 미션을 완료했어요.",
+                PushDestination.MISSIONS,
+                null
+            )
         );
     }
 

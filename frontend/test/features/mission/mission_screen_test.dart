@@ -21,6 +21,8 @@ import 'package:potato_mubwanna/features/mission/data/mission_upload_repository.
 import 'package:potato_mubwanna/features/mission/domain/mission_challenge.dart';
 import 'package:potato_mubwanna/features/mission/presentation/mission_jumsooni_dialogue.dart';
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
+import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
+import 'package:potato_mubwanna/features/potato/data/step_count_reader_stub.dart';
 
 void main() {
   testWidgets('shows login prompt without loading missions for guests',
@@ -451,6 +453,9 @@ Future<void> _pumpMissionScreen(
         ),
         missionLocationServiceProvider.overrideWithValue(
           locationService ?? _FakeLocationService(),
+        ),
+        stepCountReaderProvider.overrideWithValue(
+          const UnsupportedStepCountReader(),
         ),
       ],
       child: MaterialApp(

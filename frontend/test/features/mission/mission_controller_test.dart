@@ -5,6 +5,21 @@ import 'package:potato_mubwanna/features/mission/data/mission_repository.dart';
 import 'package:potato_mubwanna/features/mission/domain/mission_challenge.dart';
 
 void main() {
+  test('미션 조회 전에 최신 걸음 동기화를 실행한다', () async {
+    final operations = <String>[];
+    final controller = MissionController(
+      _FakeMissionRepository(
+        _itemMission,
+        onFetch: () => operations.add('fetch'),
+      ),
+      beforeLoad: () async => operations.add('sync'),
+    );
+
+    await controller.load();
+
+    expect(operations, ['sync', 'fetch']);
+  });
+
   test('쿠폰 보상 미션 완료 후 쿠폰 목록 갱신을 요청한다', () async {
     var refreshCount = 0;
     final controller = MissionController(
@@ -40,12 +55,16 @@ void main() {
 }
 
 class _FakeMissionRepository extends MissionRepository {
-  _FakeMissionRepository(this.mission) : super(dio: Dio());
+  _FakeMissionRepository(this.mission, {this.onFetch}) : super(dio: Dio());
 
   final MissionChallenge mission;
+  final void Function()? onFetch;
 
   @override
-  Future<List<MissionChallenge>> fetchMissions() async => [mission];
+  Future<List<MissionChallenge>> fetchMissions() async {
+    onFetch?.call();
+    return [mission];
+  }
 
   @override
   Future<MissionCompletionResult> verifyMission(

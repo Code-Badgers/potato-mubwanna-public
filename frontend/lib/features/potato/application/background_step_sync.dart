@@ -121,9 +121,10 @@ Future<BackgroundStepSyncOutcome> _runBackgroundStepSync() async {
 
   return BackgroundStepSyncService(
     readRefreshToken: tokenStorage.readRefreshToken,
-    readAuthorizedSteps: () => stepCountReader.readTodaySteps(
-      authorization: StepCountAuthorization.previouslyGrantedOnly,
-    ),
+    readAuthorizedSteps: () async => (await stepCountReader.readTodaySteps(
+      authorization: StepCountAuthorization.backgroundPreviouslyGrantedOnly,
+    ))
+        .snapshot,
     synchronizeActivity: repository.syncDailyActivity,
     savePendingGrowth: pendingGrowthStore.save,
   ).synchronize();

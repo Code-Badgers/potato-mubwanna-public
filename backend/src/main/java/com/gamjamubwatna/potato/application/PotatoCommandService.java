@@ -16,10 +16,14 @@ import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoInteraction;
 import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +40,8 @@ public class PotatoCommandService {
     private final UserPotatoInteractionRepository userPotatoInteractionRepository;
     private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
+    private final PotatoCareStatusPolicy potatoCareStatusPolicy;
+    private final PushEventPublisher pushEventPublisher;
     private final Clock clock;
 
     @Autowired
@@ -43,10 +49,19 @@ public class PotatoCommandService {
         UserPotatoRepository userPotatoRepository,
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy,
+        PushEventPublisher pushEventPublisher
     ) {
-        this(userPotatoRepository, userPotatoInteractionRepository, userDailyActivityRepository, userRepository,
-            Clock.systemUTC());
+        this(
+            userPotatoRepository,
+            userPotatoInteractionRepository,
+            userDailyActivityRepository,
+            userRepository,
+            potatoCareStatusPolicy,
+            pushEventPublisher,
+            Clock.systemUTC()
+        );
     }
 
     PotatoCommandService(
@@ -54,12 +69,16 @@ public class PotatoCommandService {
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
         UserRepository userRepository,
+        PotatoCareStatusPolicy potatoCareStatusPolicy,
+        PushEventPublisher pushEventPublisher,
         Clock clock
     ) {
         this.userPotatoRepository = userPotatoRepository;
         this.userPotatoInteractionRepository = userPotatoInteractionRepository;
         this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
+        this.potatoCareStatusPolicy = potatoCareStatusPolicy;
+        this.pushEventPublisher = pushEventPublisher;
         this.clock = clock;
     }
 
@@ -134,6 +153,7 @@ public class PotatoCommandService {
             userId,
             additionalGrowthDistance
         );
+        publishLevelUp(userId, growthResult);
         return PotatoDailyActivitySyncResponse.from(savedActivity, growthResult);
     }
 
@@ -164,18 +184,43 @@ public class PotatoCommandService {
 
         int previousLevel = representative.getLevel();
         representative.addGrowthDistance(action.growthDistance());
-        userPotatoInteractionRepository.save(new UserPotatoInteraction(
-            representative,
-            action,
-            action.growthDistance(),
-            now
-        ));
+        List<UserPotatoInteraction> interactions = new ArrayList<>(
+            userPotatoInteractionRepository.findByUserPotatoIdIn(List.of(representative.getId()))
+        );
+        UserPotatoInteraction savedInteraction = userPotatoInteractionRepository.save(
+            new UserPotatoInteraction(
+                representative,
+                action,
+                action.growthDistance(),
+                now
+            )
+        );
+        interactions.add(savedInteraction);
 
-        return PotatoInteractionResponse.from(
+        PotatoInteractionResponse response = PotatoInteractionResponse.from(
             representative,
             action,
             now.plus(action.cooldown()),
-            previousLevel
+            previousLevel,
+            potatoCareStatusPolicy.calculate(representative, interactions, now)
+        );
+        publishLevelUp(userId, response.growthResult());
+        return response;
+    }
+
+    private void publishLevelUp(Long userId, PotatoGrowthResultResponse growthResult) {
+        if (growthResult == null || !growthResult.leveledUp()) {
+            return;
+        }
+        pushEventPublisher.publish(
+            userId,
+            new PushNotificationMessage(
+                "감자가 성장했어요!",
+                "대표 감자 '" + growthResult.potatoName() + "'가 Lv."
+                    + growthResult.currentLevel() + "로 성장했어요.",
+                PushDestination.POTATOES,
+                null
+            )
         );
     }
 

@@ -37,6 +37,9 @@ import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.reward.domain.RewardHistory;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
@@ -96,6 +99,9 @@ class MissionServiceTest {
     @Mock
     private LocationUsageLogService locationUsageLogService;
 
+    @Mock
+    private PushEventPublisher pushEventPublisher;
+
     private FakeMissionPhotoStorage missionPhotoStorage;
     private MissionService missionService;
 
@@ -116,6 +122,7 @@ class MissionServiceTest {
             userVisitRepository,
             new VisitDistancePolicy(),
             locationUsageLogService,
+            pushEventPublisher,
             Clock.fixed(Instant.parse("2026-07-01T00:00:00Z"), ZoneOffset.UTC)
         );
     }
@@ -218,6 +225,11 @@ class MissionServiceTest {
         ArgumentCaptor<RewardHistory> rewardCaptor = ArgumentCaptor.forClass(RewardHistory.class);
         verify(rewardHistoryRepository).save(rewardCaptor.capture());
         assertMissionRewardHistory(rewardCaptor.getValue(), mission);
+        ArgumentCaptor<PushNotificationMessage> pushCaptor =
+            ArgumentCaptor.forClass(PushNotificationMessage.class);
+        verify(pushEventPublisher).publish(eq(1L), pushCaptor.capture());
+        assertThat(pushCaptor.getValue().destination()).isEqualTo(PushDestination.MISSIONS);
+        assertThat(pushCaptor.getValue().body()).contains(mission.getTitle());
     }
 
     @Test
@@ -767,6 +779,7 @@ class MissionServiceTest {
         assertThat(issuedCoupon.getExpiresAt()).isEqualTo(Instant.parse("2026-07-31T00:00:00Z"));
         assertThat(issuedCoupon.displayStatus(Instant.parse("2026-07-01T00:00:00Z")))
             .isEqualTo(CouponDisplayStatus.AVAILABLE);
+        verifyNoInteractions(pushEventPublisher);
     }
 
     @Test
