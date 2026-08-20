@@ -16,6 +16,9 @@ import com.gamjamubwatna.potato.domain.UserPotato;
 import com.gamjamubwatna.potato.domain.UserPotatoInteraction;
 import com.gamjamubwatna.potato.domain.UserPotatoInteractionRepository;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -36,6 +39,7 @@ public class PotatoCommandService {
     private final UserPotatoInteractionRepository userPotatoInteractionRepository;
     private final UserDailyActivityRepository userDailyActivityRepository;
     private final UserRepository userRepository;
+    private final PushEventPublisher pushEventPublisher;
     private final Clock clock;
 
     @Autowired
@@ -43,10 +47,17 @@ public class PotatoCommandService {
         UserPotatoRepository userPotatoRepository,
         UserPotatoInteractionRepository userPotatoInteractionRepository,
         UserDailyActivityRepository userDailyActivityRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        PushEventPublisher pushEventPublisher
     ) {
-        this(userPotatoRepository, userPotatoInteractionRepository, userDailyActivityRepository, userRepository,
-            Clock.systemUTC());
+        this(
+            userPotatoRepository,
+            userPotatoInteractionRepository,
+            userDailyActivityRepository,
+            userRepository,
+            pushEventPublisher,
+            Clock.systemUTC()
+        );
     }
 
     PotatoCommandService(
@@ -56,10 +67,29 @@ public class PotatoCommandService {
         UserRepository userRepository,
         Clock clock
     ) {
+        this(
+            userPotatoRepository,
+            userPotatoInteractionRepository,
+            userDailyActivityRepository,
+            userRepository,
+            PushEventPublisher.noop(),
+            clock
+        );
+    }
+
+    PotatoCommandService(
+        UserPotatoRepository userPotatoRepository,
+        UserPotatoInteractionRepository userPotatoInteractionRepository,
+        UserDailyActivityRepository userDailyActivityRepository,
+        UserRepository userRepository,
+        PushEventPublisher pushEventPublisher,
+        Clock clock
+    ) {
         this.userPotatoRepository = userPotatoRepository;
         this.userPotatoInteractionRepository = userPotatoInteractionRepository;
         this.userDailyActivityRepository = userDailyActivityRepository;
         this.userRepository = userRepository;
+        this.pushEventPublisher = pushEventPublisher;
         this.clock = clock;
     }
 
@@ -134,6 +164,7 @@ public class PotatoCommandService {
             userId,
             additionalGrowthDistance
         );
+        publishLevelUp(userId, growthResult);
         return PotatoDailyActivitySyncResponse.from(savedActivity, growthResult);
     }
 
@@ -171,11 +202,29 @@ public class PotatoCommandService {
             now
         ));
 
-        return PotatoInteractionResponse.from(
+        PotatoInteractionResponse response = PotatoInteractionResponse.from(
             representative,
             action,
             now.plus(action.cooldown()),
             previousLevel
+        );
+        publishLevelUp(userId, response.growthResult());
+        return response;
+    }
+
+    private void publishLevelUp(Long userId, PotatoGrowthResultResponse growthResult) {
+        if (growthResult == null || !growthResult.leveledUp()) {
+            return;
+        }
+        pushEventPublisher.publish(
+            userId,
+            new PushNotificationMessage(
+                "감자가 성장했어요!",
+                "대표 감자 '" + growthResult.potatoName() + "'가 Lv."
+                    + growthResult.currentLevel() + "로 성장했어요.",
+                PushDestination.POTATOES,
+                null
+            )
         );
     }
 

@@ -8,6 +8,9 @@ import com.gamjamubwatna.mission.domain.MissionRepository;
 import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.stamp.application.VisitStampIssuanceService;
@@ -19,6 +22,8 @@ import com.gamjamubwatna.visit.domain.UserVisitRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +41,7 @@ public class VisitVerificationService {
     private final MissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
     private final LocationUsageLogService locationUsageLogService;
+    private final PushEventPublisher pushEventPublisher;
     private final Clock clock;
 
     @Autowired
@@ -48,7 +54,8 @@ public class VisitVerificationService {
         VisitPotatoAcquisitionService visitPotatoAcquisitionService,
         MissionRepository missionRepository,
         UserMissionRepository userMissionRepository,
-        LocationUsageLogService locationUsageLogService
+        LocationUsageLogService locationUsageLogService,
+        PushEventPublisher pushEventPublisher
     ) {
         this(
             userRepository,
@@ -60,6 +67,7 @@ public class VisitVerificationService {
             missionRepository,
             userMissionRepository,
             locationUsageLogService,
+            pushEventPublisher,
             Clock.systemUTC()
         );
     }
@@ -76,6 +84,34 @@ public class VisitVerificationService {
         LocationUsageLogService locationUsageLogService,
         Clock clock
     ) {
+        this(
+            userRepository,
+            touristSpotRepository,
+            userVisitRepository,
+            visitDistancePolicy,
+            visitStampIssuanceService,
+            visitPotatoAcquisitionService,
+            missionRepository,
+            userMissionRepository,
+            locationUsageLogService,
+            PushEventPublisher.noop(),
+            clock
+        );
+    }
+
+    VisitVerificationService(
+        UserRepository userRepository,
+        TouristSpotRepository touristSpotRepository,
+        UserVisitRepository userVisitRepository,
+        VisitDistancePolicy visitDistancePolicy,
+        VisitStampIssuanceService visitStampIssuanceService,
+        VisitPotatoAcquisitionService visitPotatoAcquisitionService,
+        MissionRepository missionRepository,
+        UserMissionRepository userMissionRepository,
+        LocationUsageLogService locationUsageLogService,
+        PushEventPublisher pushEventPublisher,
+        Clock clock
+    ) {
         this.userRepository = userRepository;
         this.touristSpotRepository = touristSpotRepository;
         this.userVisitRepository = userVisitRepository;
@@ -85,6 +121,7 @@ public class VisitVerificationService {
         this.missionRepository = missionRepository;
         this.userMissionRepository = userMissionRepository;
         this.locationUsageLogService = locationUsageLogService;
+        this.pushEventPublisher = pushEventPublisher;
         this.clock = clock;
     }
 
@@ -123,6 +160,16 @@ public class VisitVerificationService {
             .map(UnlockedMissionResponse::from)
             .orElse(null);
 
+        pushEventPublisher.publish(
+            userId,
+            visitCompletedMessage(
+                spot,
+                stampIssued,
+                potatoAcquisition.newlyAcquired(),
+                unlockedMission != null
+            )
+        );
+
         return new VisitVerifyResponse(
             spot.getId(),
             true,
@@ -133,6 +180,41 @@ public class VisitVerificationService {
             potatoAcquisition.potato(),
             unlockedMission != null,
             unlockedMission
+        );
+    }
+
+    private PushNotificationMessage visitCompletedMessage(
+        TouristSpot spot,
+        boolean stampIssued,
+        boolean potatoAcquired,
+        boolean missionUnlocked
+    ) {
+        StringBuilder body = new StringBuilder(spot.getName())
+            .append(" 방문 인증이 완료됐어요.");
+        List<String> results = new ArrayList<>();
+        List<String> acquisitions = new ArrayList<>();
+        if (stampIssued) {
+            acquisitions.add("스탬프");
+        }
+        if (potatoAcquired) {
+            acquisitions.add("감자");
+        }
+        if (!acquisitions.isEmpty()) {
+            results.add(String.join("·", acquisitions) + " 획득");
+        }
+        if (missionUnlocked) {
+            results.add("새 미션");
+        }
+        if (!results.isEmpty()) {
+            body.append(' ')
+                .append(String.join(", ", results))
+                .append("도 확인해 보세요.");
+        }
+        return new PushNotificationMessage(
+            "방문 인증 완료",
+            body.toString(),
+            PushDestination.SPOT,
+            spot.getId()
         );
     }
 
