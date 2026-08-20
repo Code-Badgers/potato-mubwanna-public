@@ -14,9 +14,7 @@ import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
-import 'package:potato_mubwanna/features/mypage/application/user_activity_summary_controller.dart';
 import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
-import 'package:potato_mubwanna/features/mypage/domain/user_activity_summary.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
 import 'package:potato_mubwanna/features/notice/presentation/screen/notice_screen.dart';
@@ -55,19 +53,19 @@ void main() {
       ),
     );
 
-    expect(find.text('로그인이 필요한 서비스예요'), findsOneWidget);
+    expect(find.text('강원도 여행자'), findsOneWidget);
     expect(find.text('감자여행자'), findsNothing);
     expect(find.text('256,842'), findsNothing);
-    expect(find.text('보상함'), findsNothing);
+    expect(find.text('보상함'), findsOneWidget);
     expect(find.text('로그아웃'), findsNothing);
 
-    await tester.tap(find.text('로그인하러 가기'));
+    await tester.tap(find.text('로그인하고 기록 저장하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('renders activity summary and account actions', (tester) async {
+  testWidgets('renders traveler profile and account actions', (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -85,21 +83,15 @@ void main() {
 
     expect(find.text('마이'), findsNothing);
     expect(find.text('감자여행자'), findsOneWidget);
+    expect(find.text('강원도 여행자'), findsOneWidget);
+    expect(find.text('GANGWON TRAVELER ID'), findsOneWidget);
     expect(find.text('강원 감자 여행자'), findsOneWidget);
-    expect(find.text('Lv.2'), findsNothing);
-    expect(find.text('6,420 / 10,000'), findsNothing);
-
-    expect(find.text('누적 걸음 수'), findsOneWidget);
-    expect(find.text('256,842'), findsOneWidget);
-    expect(find.text('누적 스탬프 수'), findsOneWidget);
-    expect(find.text('보유 감자 수'), findsOneWidget);
-    expect(find.text('12'), findsOneWidget);
-    expect(find.text('7'), findsOneWidget);
-    expect(find.text('-'), findsNothing);
+    expect(find.text('GW-00001'), findsOneWidget);
+    expect(find.text('READY'), findsOneWidget);
 
     expect(find.text('보상함'), findsOneWidget);
     expect(find.text('여행 기록'), findsOneWidget);
-    expect(find.text('감자 도감'), findsNothing);
+    expect(find.text('감자 도감'), findsOneWidget);
     expect(find.text('스탬프 투어'), findsOneWidget);
     expect(find.text('내 미션'), findsNothing);
 
@@ -112,27 +104,30 @@ void main() {
     expect(find.text('회원 탈퇴'), findsNothing);
   });
 
-  testWidgets('shows activity summary loading placeholders', (tester) async {
-    final completer = Completer<UserActivitySummary?>();
+  testWidgets('shows traveler profile placeholders while loading',
+      (tester) async {
+    final completer = Completer<UserProfile?>();
     await tester.pumpWidget(
       ProviderScope(
         overrides: _myPageProviderOverrides(overrides: [
-          userActivitySummaryProvider.overrideWith((ref) => completer.future),
+          userProfileProvider.overrideWith((ref) => completer.future),
         ]),
         child: const MaterialApp(home: MyPageScreen()),
       ),
     );
     await tester.pump();
 
-    expect(find.text('…'), findsNWidgets(3));
+    expect(find.text('감자여행자'), findsOneWidget);
+    expect(find.text('GW-READY'), findsOneWidget);
+    expect(find.text('READY'), findsOneWidget);
   });
 
-  testWidgets('shows an activity summary retry action on failure',
+  testWidgets('falls back to a ready traveler profile on loading failure',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: _myPageProviderOverrides(overrides: [
-          userActivitySummaryProvider.overrideWith(
+          userProfileProvider.overrideWith(
             (ref) async => throw Exception('network unavailable'),
           ),
         ]),
@@ -141,8 +136,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('-'), findsNWidgets(3));
-    expect(find.text('활동 요약 다시 시도'), findsOneWidget);
+    expect(find.text('감자여행자'), findsOneWidget);
+    expect(find.text('GW-READY'), findsOneWidget);
+    expect(find.text('READY'), findsOneWidget);
   });
 
   testWidgets('clips account menu ink responses to the menu shape',
@@ -169,12 +165,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is Material && widget.clipBehavior == Clip.antiAlias,
-      ),
-      findsOneWidget,
-    );
+    for (final key in [
+      'mypage-menu-coupons',
+      'mypage-menu-settings',
+      'mypage-menu-notices',
+    ]) {
+      expect(
+        find.ancestor(
+          of: find.byKey(ValueKey(key)),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Material && widget.clipBehavior == Clip.antiAlias,
+          ),
+        ),
+        findsOneWidget,
+      );
+    }
 
     for (final label in ['설정', '공지사항']) {
       expect(
@@ -234,7 +240,7 @@ void main() {
     await tester.tap(find.text('보상함'));
     await tester.pumpAndSettle();
 
-    expect(find.text('사용 가능한 쿠폰이 없어요.'), findsOneWidget);
+    expect(find.text('준비 중인 보상이에요'), findsOneWidget);
     expect(router.canPop(), isTrue);
 
     router.pop();
@@ -412,8 +418,8 @@ void main() {
     await tester.tap(noticeMenu);
     await tester.pumpAndSettle();
 
-    expect(find.text('감자 스팟은 계속 다듬고 있어요'), findsOneWidget);
-    expect(find.text('방문 인증은 현장 위치를 기준으로 해요'), findsOneWidget);
+    expect(find.text('감자 스팟 데이터는 계속 보정됩니다'), findsOneWidget);
+    expect(find.text('방문 인증은 현장 위치를 기준으로 합니다'), findsOneWidget);
   });
 }
 
@@ -424,13 +430,6 @@ List<Override> _myPageProviderOverrides({
   return [
     authControllerProvider.overrideWith(
       (ref) => authController ?? _AuthenticatedAuthController(),
-    ),
-    userActivitySummaryProvider.overrideWith(
-      (ref) async => const UserActivitySummary(
-        totalSteps: 256842,
-        stampCount: 12,
-        ownedPotatoCount: 7,
-      ),
     ),
     userProfileProvider.overrideWith(
       (ref) async => const UserProfile(

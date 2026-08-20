@@ -22,21 +22,21 @@ void main() {
       ),
     );
 
-    final continueButton = tester
-        .widget<FilledButton>(find.widgetWithText(FilledButton, '동의하고 계속하기'));
+    final continueButton =
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '계속하기'));
     expect(continueButton.onPressed, isNull);
 
-    await tester.tap(find.text('[필수] 서비스 이용약관'));
+    await tester.tap(find.text('서비스 이용약관'));
     await tester.pump();
-    final serviceTermsOnlyButton = tester
-        .widget<FilledButton>(find.widgetWithText(FilledButton, '동의하고 계속하기'));
+    final serviceTermsOnlyButton =
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '계속하기'));
     expect(serviceTermsOnlyButton.onPressed, isNull);
 
-    await tester.tap(find.text('[필수] 만 14세 이상입니다'));
+    await tester.tap(find.text('만 14세 이상입니다'));
     await tester.pump();
-    await tester.tap(find.text('[선택] 개인위치정보 이용 동의'));
+    await tester.tap(find.text('개인위치정보 이용 동의'));
     await tester.pump();
-    await tester.tap(find.text('동의하고 계속하기'));
+    await tester.tap(find.text('계속하기'));
     await tester.pumpAndSettle();
 
     expect(store.requiredAcceptCalls, 1);
@@ -63,10 +63,10 @@ void main() {
     await tester.tap(find.text('전체 동의'));
     await tester.pump();
     final continueButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '동의하고 계속하기'),
+      find.widgetWithText(FilledButton, '계속하기'),
     );
     expect(continueButton.onPressed, isNotNull);
-    await tester.tap(find.text('동의하고 계속하기'));
+    await tester.tap(find.text('계속하기'));
     await tester.pumpAndSettle();
 
     expect(store.locationValues, [true]);
