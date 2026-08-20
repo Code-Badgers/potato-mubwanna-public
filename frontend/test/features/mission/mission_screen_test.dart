@@ -52,12 +52,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('로그인이 필요한 서비스예요'), findsOneWidget);
-    expect(find.text('여행 미션에 도전하려면 로그인해주세요.'), findsOneWidget);
+    expect(find.text('점순이의 미션'), findsOneWidget);
+    expect(
+      find.text('둘러보기는 바로 가능해요. 미션 기록과 보상 저장은 로그인 후 이어집니다.'),
+      findsOneWidget,
+    );
     expect(find.text('다시 시도'), findsNothing);
     expect(repository.fetchCallCount, 0);
 
-    await tester.tap(find.text('로그인하러 가기'));
+    await tester.tap(find.text('로그인하고 기록 저장하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('login destination'), findsOneWidget);
@@ -82,13 +85,13 @@ void main() {
     expect(find.text('이벤트'), findsNothing);
 
     await tester.scrollUntilVisible(
-      find.text('감자가 기다리고 있어요'),
+      find.text('천천히 걸어볼까요?'),
       160,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('감자가 기다리고 있어요'), findsOneWidget);
-    expect(find.text('이 정도는 알아야죠'), findsOneWidget);
-    expect(find.text('숨은 표식을 찾아봐요'), findsOneWidget);
+    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
+    expect(find.text('강원도 이야기 풀어볼까요?'), findsOneWidget);
+    expect(find.text('작은 표식을 찾아봐요'), findsOneWidget);
 
     expect(find.text('시작하기'), findsNothing);
     expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
@@ -101,7 +104,7 @@ void main() {
       (tester) async {
     await _pumpMissionScreen(tester);
 
-    await _openMission(tester, '이 정도는 알아야죠');
+    await _openMission(tester, '강원도 이야기 풀어볼까요?');
 
     expect(find.text('미션 상세'), findsOneWidget);
     expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
@@ -119,7 +122,7 @@ void main() {
     await tester.pumpAndSettle();
 
     _expectCompletionDialog('1004');
-    expect(find.text('황금감자 성장 아이템을 획득했어요.'), findsOneWidget);
+    expect(find.text('미션 참여 기록이 저장됐어요.'), findsOneWidget);
 
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
@@ -134,7 +137,7 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _openMission(tester, '이 정도는 알아야죠');
+    await _openMission(tester, '강원도 이야기 풀어볼까요?');
 
     await _tapVisibleText(tester, '옥수수감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
@@ -150,7 +153,7 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _openMission(tester, '감자가 기다리고 있어요');
+    await _openMission(tester, '천천히 걸어볼까요?');
 
     await tester.tap(find.widgetWithText(FilledButton, '걸음 인증하기'));
     await tester.pumpAndSettle();
@@ -327,7 +330,7 @@ void main() {
       ),
     );
 
-    await _openMission(tester, '이 정도는 알아야죠');
+    await _openMission(tester, '강원도 이야기 풀어볼까요?');
 
     await _tapVisibleText(tester, '곤드레감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
@@ -381,9 +384,9 @@ void main() {
 
     expect(find.text('스탬프 1개 획득하기'), findsNothing);
     expect(find.text('[시즌 한정] 얼음나라 산천어 미션'), findsNothing);
-    expect(find.text('감자가 기다리고 있어요'), findsOneWidget);
-    expect(find.text('이 정도는 알아야죠'), findsOneWidget);
-    expect(find.text('숨은 표식을 찾아봐요'), findsOneWidget);
+    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
+    expect(find.text('강원도 이야기 풀어볼까요?'), findsOneWidget);
+    expect(find.text('작은 표식을 찾아봐요'), findsOneWidget);
   });
 
   testWidgets('shows visit mission entry banner from spot verification',
@@ -403,9 +406,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('오늘의 미션'), findsNothing);
-    expect(find.text('감자가 기다리고 있어요'), findsOneWidget);
-    expect(find.text('이 정도는 알아야죠'), findsOneWidget);
-    expect(find.text('숨은 표식을 찾아봐요'), findsOneWidget);
+    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
+    expect(find.text('강원도 이야기 풀어볼까요?'), findsOneWidget);
+    expect(find.text('작은 표식을 찾아봐요'), findsOneWidget);
   });
 
   testWidgets('opens visit unlocked mission detail from mission id',

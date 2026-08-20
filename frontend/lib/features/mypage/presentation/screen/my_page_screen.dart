@@ -1047,6 +1047,7 @@ class _AccountMenu extends StatelessWidget {
 
   static const _items = [
     _MenuItem(
+      key: ValueKey('mypage-menu-coupons'),
       icon: Icons.card_giftcard_outlined,
       label: '보상함',
       description: '받은 쿠폰과 보상',
@@ -1054,6 +1055,7 @@ class _AccountMenu extends StatelessWidget {
       accentColor: AppColors.secondary,
     ),
     _MenuItem(
+      key: ValueKey('mypage-menu-settings'),
       icon: Icons.settings_outlined,
       label: '설정',
       description: '계정과 앱 관리',
@@ -1061,6 +1063,7 @@ class _AccountMenu extends StatelessWidget {
       accentColor: AppColors.primaryDark,
     ),
     _MenuItem(
+      key: ValueKey('mypage-menu-notices'),
       icon: Icons.campaign_outlined,
       label: '공지사항',
       description: '서비스 소식 확인',
@@ -1105,50 +1108,54 @@ class _NoticeActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-      child: InkWell(
-        key: const ValueKey('mypage-menu-notices'),
-        onTap: onTap,
+    return Container(
+      decoration: _myPageGlassDecoration(alpha: 0.82).copyWith(
         borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-        child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: _myPageGlassDecoration(alpha: 0.82).copyWith(
-            borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-          ),
-          child: Row(
-            children: [
-              Icon(item.icon, color: item.accentColor, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  item.label,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: item.key,
+          onTap: onTap,
+          child: SizedBox(
+            height: 58,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Icon(item.icon, color: item.accentColor, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.label,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
                   ),
-                ),
+                  Text(
+                    item.description,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textSecondary,
+                    size: 22,
+                  ),
+                ],
               ),
-              Text(
-                item.description,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
-                size: 22,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1172,6 +1179,7 @@ class _QuickAction {
 
 class _MenuItem {
   const _MenuItem({
+    required this.key,
     required this.icon,
     required this.label,
     required this.description,
@@ -1179,6 +1187,7 @@ class _MenuItem {
     required this.accentColor,
   });
 
+  final Key key;
   final IconData icon;
   final String label;
   final String description;

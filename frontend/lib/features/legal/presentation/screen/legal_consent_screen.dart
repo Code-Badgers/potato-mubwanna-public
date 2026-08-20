@@ -256,11 +256,10 @@ class _AllAgreementTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint.withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return Material(
+      color: AppColors.primaryTint.withValues(alpha: 0.86),
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
       child: CheckboxListTile(
         value: value,
         onChanged: onChanged,

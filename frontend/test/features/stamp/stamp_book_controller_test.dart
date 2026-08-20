@@ -35,7 +35,9 @@ void main() {
     final subscription = container.listen(stampBookProvider, (_, __) {});
     addTearDown(subscription.close);
 
-    expect(await container.read(stampBookProvider.future), isNull);
+    final signedOutBook = await container.read(stampBookProvider.future);
+    expect(signedOutBook?.progress.totalCount, 29);
+    expect(signedOutBook?.progress.acquiredCount, 0);
     expect(repository.fetchCount, 0);
 
     await authController.refreshSession();
@@ -47,7 +49,9 @@ void main() {
 
     await authController.logout();
     await container.pump();
-    expect(await container.read(stampBookProvider.future), isNull);
+    final loggedOutBook = await container.read(stampBookProvider.future);
+    expect(loggedOutBook?.progress.totalCount, 29);
+    expect(loggedOutBook?.progress.acquiredCount, 0);
 
     await authController.refreshSession();
     await container.pump();
