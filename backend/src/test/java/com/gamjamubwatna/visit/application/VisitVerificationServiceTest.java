@@ -3,6 +3,7 @@ package com.gamjamubwatna.visit.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,6 +23,9 @@ import com.gamjamubwatna.potato.api.PotatoAcquisitionResponse;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
+import com.gamjamubwatna.push.application.PushEventPublisher;
+import com.gamjamubwatna.push.application.PushNotificationMessage;
+import com.gamjamubwatna.push.domain.PushDestination;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
@@ -37,6 +41,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class VisitVerificationServiceTest {
@@ -49,6 +54,7 @@ class VisitVerificationServiceTest {
     private MissionRepository missionRepository;
     private UserMissionRepository userMissionRepository;
     private LocationUsageLogService locationUsageLogService;
+    private PushEventPublisher pushEventPublisher;
     private VisitVerificationService visitVerificationService;
 
     @BeforeEach
@@ -61,6 +67,7 @@ class VisitVerificationServiceTest {
         missionRepository = mock(MissionRepository.class);
         userMissionRepository = mock(UserMissionRepository.class);
         locationUsageLogService = mock(LocationUsageLogService.class);
+        pushEventPublisher = mock(PushEventPublisher.class);
         visitVerificationService = new VisitVerificationService(
             userRepository,
             touristSpotRepository,
@@ -71,6 +78,7 @@ class VisitVerificationServiceTest {
             missionRepository,
             userMissionRepository,
             locationUsageLogService,
+            pushEventPublisher,
             Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
         );
         when(missionRepository.findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(any(), any()))
@@ -127,6 +135,12 @@ class VisitVerificationServiceTest {
             Instant.parse("2026-07-22T00:00:00Z"),
             true
         );
+        ArgumentCaptor<PushNotificationMessage> pushCaptor =
+            ArgumentCaptor.forClass(PushNotificationMessage.class);
+        verify(pushEventPublisher).publish(eq(1L), pushCaptor.capture());
+        assertThat(pushCaptor.getValue().destination()).isEqualTo(PushDestination.SPOT);
+        assertThat(pushCaptor.getValue().destinationId()).isEqualTo(10L);
+        assertThat(pushCaptor.getValue().body()).contains("스탬프·감자 획득");
     }
 
     @Test
