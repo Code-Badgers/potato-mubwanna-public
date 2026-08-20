@@ -24,7 +24,7 @@ void main() {
     expect(find.text('랠리북'), findsNothing);
     expect(find.text('스탬프 투어'), findsNothing);
     expect(find.text('강원도 지도 위에 도장을 모아보세요'), findsNothing);
-    expect(find.text('8/18'), findsOneWidget);
+    expect(find.text('패스포트  2/3'), findsOneWidget);
     expect(find.text('12개 달성까지 4개 남았어요'), findsNothing);
     expect(find.text('다음 스탬프 추천'), findsNothing);
     expect(find.text('지도의 시군을 눌러 스탬프 상태를 확인해보세요.'), findsNothing);
@@ -40,25 +40,21 @@ void main() {
       find.byKey(const ValueKey('rallybook-spot-marker-103')),
       findsOneWidget,
     );
-    expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
-    expect(find.text('강원 18개 시군 스탬프 투어'), findsOneWidget);
+    expect(find.text('여행할 명소를 골라보세요'), findsOneWidget);
+    expect(find.text('강원 여행 패스포트'), findsOneWidget);
     expect(find.text('지도에서 깃발 선택'), findsNothing);
-    expect(find.text('스탬프 찍기'), findsNothing);
+    expect(find.text('방문 인증하기'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-101')));
     await tester.pumpAndSettle();
 
-    expect(find.text('여행할 지역을 골라보세요'), findsNothing);
+    expect(find.text('여행할 명소를 골라보세요'), findsNothing);
     expect(find.text('정선 5일장'), findsWidgets);
-    expect(find.text('정선 · 스탬프 완료'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('attraction-stamp-정선 5일장')),
-      findsOneWidget,
-    );
+    expect(find.text('정선 · 도장 획득'), findsOneWidget);
     expect(find.text('대표 스팟 보기'), findsNothing);
     expect(find.text('오디오 준비중'), findsNothing);
     expect(find.text('스탬프 준비중'), findsNothing);
-    expect(find.text('스탬프 찍기'), findsOneWidget);
+    expect(find.text('방문 인증하기'), findsOneWidget);
     expect(find.text('투어 진행률'), findsNothing);
   });
 
@@ -77,18 +73,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-102')));
     await tester.pumpAndSettle();
     expect(find.text('남이섬'), findsWidgets);
-    expect(find.text('춘천 · 스탬프 완료'), findsOneWidget);
+    expect(find.text('춘천 · 도장 획득'), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey('rallybook-city-spot-103')),
-    );
+    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-103')));
     await tester.pumpAndSettle();
     expect(find.text('소양강 스카이워크'), findsWidgets);
-    expect(find.text('남이섬'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('attraction-stamp-소양강 스카이워크')),
-      findsOneWidget,
-    );
+    expect(find.text('춘천 · 도장 획득'), findsOneWidget);
   });
 
   testWidgets('opens the selected stamp spot detail', (tester) async {
@@ -124,7 +114,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-101')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('스탬프 찍기'));
+    await tester.tap(find.text('방문 인증하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('상세 101'), findsOneWidget);
@@ -162,7 +152,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('8/18'));
+    await tester.tap(find.byTooltip('강원 여행 패스포트 보기'));
     await tester.pumpAndSettle();
 
     expect(find.text('시군별 스탬프 카드'), findsOneWidget);
@@ -170,8 +160,8 @@ void main() {
     router.pop();
     await tester.pumpAndSettle();
 
-    expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
-    expect(find.text('8/18'), findsOneWidget);
+    expect(find.text('여행할 명소를 골라보세요'), findsOneWidget);
+    expect(find.text('패스포트  2/3'), findsOneWidget);
   });
 
   testWidgets('renders city stamp card grid', (tester) async {
@@ -184,19 +174,22 @@ void main() {
       ProviderScope(
         overrides: [
           stampBookProvider.overrideWith((ref) async => _stampBook()),
+          stampRallybookSpotsProvider.overrideWith(
+            (ref) async => _rallybookSpots,
+          ),
         ],
         child: const MaterialApp(home: CityStampGridScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('시군별 스탬프'), findsOneWidget);
-    expect(find.text('강원 18개 시군 수집률'), findsOneWidget);
-    expect(find.text('8 / 18'), findsOneWidget);
-    expect(find.text('강릉시'), findsOneWidget);
-    expect(find.text('정선군'), findsOneWidget);
-    expect(find.text('완료'), findsWidgets);
-    expect(find.text('미획득'), findsWidgets);
+    expect(find.text('강원 여행 패스포트'), findsOneWidget);
+    expect(find.text('명소에서 인증하면 스탬프가 채워져요'), findsOneWidget);
+    expect(find.text('2 / 3'), findsOneWidget);
+    expect(find.text('춘천'), findsWidgets);
+    expect(find.text('정선'), findsOneWidget);
+    expect(find.text('남이섬'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsOneWidget);
   });
 
   testWidgets('keeps stamp tour visible when rallybook spots fail to load', (
@@ -213,8 +206,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('8/18'), findsOneWidget);
-    expect(find.text('여행할 지역을 골라보세요'), findsOneWidget);
+    expect(find.text('패스포트  2/29'), findsOneWidget);
+    expect(find.text('여행할 명소를 골라보세요'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stamp-next-target-error')),
       findsNothing,
@@ -354,7 +347,11 @@ StampBook _stampBook({
           RallybookStamp(
             stampId: index + 1,
             cityName: cityNames[index],
-            stampName: '감자 ${index + 1}',
+            stampName: switch (cityNames[index]) {
+              '정선군' => '정선 5일장',
+              '춘천시' => '남이섬',
+              _ => '감자 ${index + 1}',
+            },
             stampImage: null,
             acquired: index < acquiredCount,
             acquiredAt: index < acquiredCount

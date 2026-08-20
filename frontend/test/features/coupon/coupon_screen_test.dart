@@ -43,10 +43,10 @@ void main() {
       ),
     );
 
-    expect(find.text('로그인이 필요한 서비스예요'), findsOneWidget);
+    expect(find.text('제휴 보상은 준비 중입니다'), findsOneWidget);
     expect(find.text('감자빵 1개 교환권'), findsNothing);
 
-    await tester.tap(find.text('로그인하러 가기'));
+    await tester.tap(find.text('로그인하고 보상 기록 저장하기'));
     await tester.pumpAndSettle();
     expect(find.text('login destination'), findsOneWidget);
   });
@@ -190,7 +190,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('사용 가능한 쿠폰이 없어요.'), findsOneWidget);
+    expect(find.text('준비 중인 보상이에요'), findsOneWidget);
   });
 
   testWidgets('shows reward history with Korean type and source labels', (
@@ -295,7 +295,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('아직 받은 보상이 없어요.'), findsOneWidget);
+    expect(find.text('아직 받은 보상이 없어요'), findsOneWidget);
   });
 
   testWidgets('shows reward history loading while the request is pending', (
