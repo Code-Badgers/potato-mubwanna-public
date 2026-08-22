@@ -240,6 +240,7 @@ void main() {
 
     expect(renderedSpots.map((spot) => spot.id).toSet(), {'1', '2', '3', '4'});
     expect(find.text('내 동선 1곳'), findsOneWidget);
+    expect(find.text('내 동선 1곳 저장됨'), findsNothing);
   });
 
   testWidgets('shows feedback and increases route count when bookmarking', (
@@ -380,6 +381,47 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('route-drag-2')), findsNothing);
+  });
+
+  testWidgets('route mode chip toggles back to the default spot sheet', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['1', '2']);
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id).toSet(), {'1', '2', '3', '4'});
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsNothing);
+    expect(find.text('정선 5일장'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('route mode reorders saved spots and refreshes numbering', (

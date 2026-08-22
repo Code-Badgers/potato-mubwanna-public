@@ -482,9 +482,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               _RouteModeChip(
                                 favoriteCount: favoriteSpotIds.length,
                                 selected: _isRouteMode,
-                                onTap: () => _enterRouteMode(
-                                  orderedFavoriteSpots,
-                                ),
+                                onTap: _isRouteMode
+                                    ? _exitRouteMode
+                                    : () => _enterRouteMode(
+                                          orderedFavoriteSpots,
+                                        ),
                               ),
                               if (recommendationSourceSpotId != null) ...[
                                 const SizedBox(height: 10),
@@ -526,7 +528,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             selectedSpot: selectedSpot,
                             routeSpots: recommendedRouteSpots,
                             routeDistanceKm: recommendedRouteDistanceKm,
-                            favoriteCount: favoriteSpotIds.length,
                             isFavorite:
                                 favoriteSpotIds.contains(selectedSpot.id),
                             onNavigationPressed: () =>
@@ -567,7 +568,6 @@ class _RouteRecommendationSheet extends StatelessWidget {
     required this.selectedSpot,
     required this.routeSpots,
     required this.routeDistanceKm,
-    required this.favoriteCount,
     required this.isFavorite,
     required this.onNavigationPressed,
     required this.onRouteNavigationPressed,
@@ -578,7 +578,6 @@ class _RouteRecommendationSheet extends StatelessWidget {
   final MapSpot selectedSpot;
   final List<MapSpot> routeSpots;
   final double? routeDistanceKm;
-  final int favoriteCount;
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
   final VoidCallback onRouteNavigationPressed;
@@ -625,7 +624,6 @@ class _RouteRecommendationSheet extends StatelessWidget {
                 const SizedBox(height: 8),
                 _SelectedSpotSummary(
                   spot: selectedSpot,
-                  favoriteCount: favoriteCount,
                   isFavorite: isFavorite,
                   onNavigationPressed: onNavigationPressed,
                   onFavoritePressed: onFavoritePressed,
@@ -1164,7 +1162,6 @@ class _SheetDragHandle extends StatelessWidget {
 class _SelectedSpotSummary extends StatelessWidget {
   const _SelectedSpotSummary({
     required this.spot,
-    required this.favoriteCount,
     required this.isFavorite,
     required this.onNavigationPressed,
     required this.onFavoritePressed,
@@ -1172,7 +1169,6 @@ class _SelectedSpotSummary extends StatelessWidget {
   });
 
   final MapSpot spot;
-  final int favoriteCount;
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
   final Future<void> Function() onFavoritePressed;
@@ -1233,11 +1229,6 @@ class _SelectedSpotSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (favoriteCount > 0) ...[
-          const SizedBox(height: 10),
-          _FavoriteRouteLine(count: favoriteCount),
-        ],
-        const SizedBox(height: 14),
         Row(
           children: [
             SizedBox(
@@ -1875,39 +1866,6 @@ class _CongestionBadge extends StatelessWidget {
           fontWeight: FontWeight.w900,
           letterSpacing: 0,
         ),
-      ),
-    );
-  }
-}
-
-class _FavoriteRouteLine extends StatelessWidget {
-  const _FavoriteRouteLine({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.route_rounded, color: _rareGold, size: 18),
-          const SizedBox(width: 7),
-          Text(
-            '내 동선 $count곳 저장됨',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
       ),
     );
   }
