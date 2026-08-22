@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +24,21 @@ public class LegalConsentController {
 
     public LegalConsentController(LegalConsentService legalConsentService) {
         this.legalConsentService = legalConsentService;
+    }
+
+    @GetMapping
+    public ResponseEntity<AuthApiResponse<LegalConsentSnapshotResponse>> getSnapshot(
+        Authentication authentication
+    ) {
+        try {
+            LegalConsentSnapshotResponse snapshot = legalConsentService.getSnapshot(
+                userId(authentication)
+            );
+            return ResponseEntity.ok(AuthApiResponse.success(snapshot));
+        } catch (UserProfileAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        }
     }
 
     // 앱의 현재 약관 동의 스냅샷을 멱등하게 서버 이력으로 동기화한다.

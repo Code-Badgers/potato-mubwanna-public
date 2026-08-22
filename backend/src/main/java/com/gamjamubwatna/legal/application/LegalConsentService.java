@@ -2,6 +2,7 @@ package com.gamjamubwatna.legal.application;
 
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.auth.domain.UserRepository;
+import com.gamjamubwatna.legal.api.LegalConsentSnapshotResponse;
 import com.gamjamubwatna.legal.api.LegalConsentSyncRequest;
 import com.gamjamubwatna.legal.domain.LegalConsentEvent;
 import com.gamjamubwatna.legal.domain.LegalConsentEventRepository;
@@ -73,6 +74,26 @@ public class LegalConsentService {
             request.healthDataConsentVersion(),
             now
         );
+    }
+
+    @Transactional(readOnly = true)
+    public LegalConsentSnapshotResponse getSnapshot(Long userId) {
+        userRepository.findById(userId)
+            .orElseThrow(() -> new UserProfileAuthenticationException("사용자를 찾을 수 없습니다."));
+
+        return new LegalConsentSnapshotResponse(
+            latestAcceptedVersion(userId, LegalConsentType.REQUIRED_DOCUMENTS),
+            latestAcceptedVersion(userId, LegalConsentType.PERSONAL_LOCATION),
+            latestAcceptedVersion(userId, LegalConsentType.HEALTH_DATA)
+        );
+    }
+
+    private String latestAcceptedVersion(Long userId, LegalConsentType type) {
+        return eventRepository
+            .findFirstByUserIdAndTypeOrderByRecordedAtDescIdDesc(userId, type)
+            .filter(LegalConsentEvent::isAccepted)
+            .map(LegalConsentEvent::getDocumentVersion)
+            .orElse(null);
     }
 
     private void synchronizeOptional(
