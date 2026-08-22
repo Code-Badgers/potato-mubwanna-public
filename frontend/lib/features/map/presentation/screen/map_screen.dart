@@ -456,11 +456,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       children: [
                         Positioned.fill(
                           child: _PotatoMapPreview(
-                            key: ValueKey(
-                              'map-${_isRouteMode ? 'route' : 'category'}-${_categories[_selectedCategoryIndex].label}',
-                            ),
                             spots: activeMapSpots,
                             routePolyline: activeRoutePolyline,
+                            routeSpotIds: _isRouteMode
+                                ? orderedFavoriteSpots
+                                    .map((spot) => spot.id)
+                                    .toList(growable: false)
+                                : const [],
                             favoriteSpotIds: favoriteSpotIds,
                             currentLocation: _currentLocation,
                             onSpotSelected: _selectSpotById,
@@ -1721,6 +1723,7 @@ class _PotatoMapPreview extends StatelessWidget {
     super.key,
     required this.spots,
     required this.routePolyline,
+    required this.routeSpotIds,
     required this.favoriteSpotIds,
     required this.currentLocation,
     required this.onSpotSelected,
@@ -1729,6 +1732,7 @@ class _PotatoMapPreview extends StatelessWidget {
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String> onSpotSelected;
@@ -1747,6 +1751,7 @@ class _PotatoMapPreview extends StatelessWidget {
                   KakaoMapView(
                     spots: spots,
                     routePolyline: routePolyline,
+                    routeSpotIds: routeSpotIds,
                     favoriteSpotIds: favoriteSpotIds,
                     currentLocation: currentLocation,
                     onSpotSelected: onSpotSelected,

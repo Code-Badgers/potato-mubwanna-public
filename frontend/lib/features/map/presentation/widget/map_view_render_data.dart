@@ -48,6 +48,23 @@ bool hasSameRoutePolyline(
   return true;
 }
 
+bool hasSameRouteSpotIds(
+  List<String> previousRouteSpotIds,
+  List<String> nextRouteSpotIds,
+) {
+  if (previousRouteSpotIds.length != nextRouteSpotIds.length) {
+    return false;
+  }
+
+  for (var index = 0; index < previousRouteSpotIds.length; index++) {
+    if (previousRouteSpotIds[index] != nextRouteSpotIds[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool hasSameMapPoint(
   FavoriteSpotRoutePoint? previousPoint,
   FavoriteSpotRoutePoint? nextPoint,

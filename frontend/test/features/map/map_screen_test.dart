@@ -100,11 +100,11 @@ void main() {
     expect(find.text('대표 메뉴'), findsNothing);
   });
 
-  testWidgets('recreates the map around the first spot after filtering', (
+  testWidgets('updates map spots without recreating the map after filtering', (
     tester,
   ) async {
     var mountCount = 0;
-    final mountedSpotIds = <List<String>>[];
+    final renderedSpotIds = <List<String>>[];
 
     await tester.pumpWidget(
       ProviderScope(
@@ -120,9 +120,11 @@ void main() {
             hasMapConfiguration: true,
             mapViewBuilder: (spots, onSpotSelected) => _MapMountProbe(
               spotIds: spots.map((spot) => spot.id).toList(),
-              onMounted: (spotIds) {
+              onMounted: () {
                 mountCount += 1;
-                mountedSpotIds.add(spotIds);
+              },
+              onRendered: (spotIds) {
+                renderedSpotIds.add(spotIds);
               },
             ),
           ),
@@ -132,14 +134,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(mountCount, 1);
-    expect(mountedSpotIds.single, ['1', '2', '3', '4']);
+    expect(renderedSpotIds.single, ['1', '2', '3', '4']);
 
     await tester.tap(find.text('카페·디저트'));
     await tester.pumpAndSettle();
 
     expect(find.text('감자 카페'), findsOneWidget);
-    expect(mountCount, 2);
-    expect(mountedSpotIds.last, ['2']);
+    expect(mountCount, 1);
+    expect(renderedSpotIds.last, ['2']);
   });
 
   testWidgets('opens detail for the currently selected map marker', (
@@ -489,6 +491,40 @@ void main() {
     );
   });
 
+  testWidgets('route mode fits compact mobile width without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(hasMapConfiguration: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('내 동선'), findsOneWidget);
+    expect(find.byKey(const ValueKey('route-row-1')), findsOneWidget);
+  });
+
   testWidgets('opens Kakao Map directions for the selected spot', (
     tester,
   ) async {
@@ -835,10 +871,15 @@ void main() {
 }
 
 class _MapMountProbe extends StatefulWidget {
-  const _MapMountProbe({required this.spotIds, required this.onMounted});
+  const _MapMountProbe({
+    required this.spotIds,
+    required this.onMounted,
+    required this.onRendered,
+  });
 
   final List<String> spotIds;
-  final ValueChanged<List<String>> onMounted;
+  final VoidCallback onMounted;
+  final ValueChanged<List<String>> onRendered;
 
   @override
   State<_MapMountProbe> createState() => _MapMountProbeState();
@@ -848,7 +889,14 @@ class _MapMountProbeState extends State<_MapMountProbe> {
   @override
   void initState() {
     super.initState();
-    widget.onMounted(widget.spotIds);
+    widget.onMounted();
+    widget.onRendered(widget.spotIds);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MapMountProbe oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    widget.onRendered(widget.spotIds);
   }
 
   @override

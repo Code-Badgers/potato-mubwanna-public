@@ -21,6 +21,7 @@ class KakaoMapView extends StatefulWidget {
     super.key,
     required this.spots,
     this.routePolyline = const [],
+    this.routeSpotIds = const [],
     this.favoriteSpotIds = const {},
     this.currentLocation,
     this.onSpotSelected,
@@ -28,6 +29,7 @@ class KakaoMapView extends StatefulWidget {
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String>? onSpotSelected;
@@ -132,6 +134,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         hasSameRoutePolyline(
           oldWidget.routePolyline,
           widget.routePolyline,
+        ) &&
+        hasSameRouteSpotIds(
+          oldWidget.routeSpotIds,
+          widget.routeSpotIds,
         ) &&
         hasSameMapPoint(
           oldWidget.currentLocation,
@@ -252,6 +258,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 
   void _injectKakaoMapScript() {
     final mapElementId = jsonEncode(_viewType);
+    final routeOrder = <String, int>{
+      for (var index = 0; index < widget.routeSpotIds.length; index += 1)
+        widget.routeSpotIds[index]: index + 1,
+    };
     final spots = jsonEncode(widget.spots
         .map((spot) => {
               'name': spot.name,
@@ -259,6 +269,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
               'lat': spot.latitude,
               'lng': spot.longitude,
               'favorite': widget.favoriteSpotIds.contains(spot.id),
+              'routeIndex': routeOrder[spot.id] ?? 0,
               'markerColor': widget.favoriteSpotIds.contains(spot.id)
                   ? '#F6C23E'
                   : spot.markerColorHex,
@@ -401,6 +412,29 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           markerEmoji.style.fontSize = '33px';
           markerEmoji.style.lineHeight = '1';
           markerEmoji.style.transform = 'translateY(1px)';
+
+          if (spot.routeIndex && spot.routeIndex > 0) {
+            const routeBadge = document.createElement('span');
+            routeBadge.textContent = String(spot.routeIndex);
+            routeBadge.style.position = 'absolute';
+            routeBadge.style.right = '2px';
+            routeBadge.style.bottom = '4px';
+            routeBadge.style.width = '24px';
+            routeBadge.style.height = '24px';
+            routeBadge.style.borderRadius = '999px';
+            routeBadge.style.background = '#FFFFFF';
+            routeBadge.style.border = '2px solid #509B64';
+            routeBadge.style.boxShadow = '0 4px 10px rgba(32,35,26,0.16)';
+            routeBadge.style.color = '#20231A';
+            routeBadge.style.fontSize = '13px';
+            routeBadge.style.fontWeight = '900';
+            routeBadge.style.zIndex = '2';
+            routeBadge.style.display = 'flex';
+            routeBadge.style.alignItems = 'center';
+            routeBadge.style.justifyContent = 'center';
+            routeBadge.style.fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+            markerBody.appendChild(routeBadge);
+          }
 
           const markerTip = document.createElement('span');
           markerTip.style.position = 'absolute';
