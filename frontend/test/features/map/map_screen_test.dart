@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/map/application/map_spot_controller.dart';
 import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
 import 'package:potato_mubwanna/features/map/domain/favorite_spot_route.dart';
@@ -376,6 +377,35 @@ void main() {
     expect(find.textContaining('KAKAO_NATIVE_APP_KEY'), findsNothing);
   });
 
+  for (final failure in _networkFailures) {
+    testWidgets(
+      'shows retry UI for ${failure.label} map loading failure',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              mapSpotsProvider.overrideWith(
+                (ref) => Future<List<MapSpot>>.error(failure.error),
+              ),
+              favoriteSpotControllerProvider.overrideWith(
+                (ref) => _favoriteController(),
+              ),
+              favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+            ],
+            child: const MaterialApp(home: MapScreen()),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('감자 스팟 정보를 불러오지 못했습니다.'), findsOneWidget);
+        expect(find.text('네트워크 연결을 확인한 뒤 다시 시도해주세요.'), findsOneWidget);
+        expect(find.text('다시 시도'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
+  }
+
   testWidgets('distinguishes missing map configuration from an API failure', (
     tester,
   ) async {
@@ -573,6 +603,34 @@ class _MapMountProbeState extends State<_MapMountProbe> {
   @override
   Widget build(BuildContext context) => const SizedBox.expand();
 }
+
+class _NetworkFailureFixture {
+  const _NetworkFailureFixture(this.label, this.error);
+
+  final String label;
+  final Object error;
+}
+
+final _networkFailures = [
+  _NetworkFailureFixture(
+    'timeout',
+    DioException(
+      requestOptions: RequestOptions(path: '/spots'),
+      type: DioExceptionType.connectionTimeout,
+    ),
+  ),
+  _NetworkFailureFixture(
+    'connection error',
+    DioException(
+      requestOptions: RequestOptions(path: '/spots'),
+      type: DioExceptionType.connectionError,
+    ),
+  ),
+  const _NetworkFailureFixture(
+    '500 response',
+    ApiException(message: '서버 오류가 발생했습니다.', statusCode: 500),
+  ),
+];
 
 FavoriteSpotController _favoriteController([Set<String> spotIds = const {}]) {
   return FavoriteSpotController(
