@@ -12,8 +12,10 @@ public interface StampRepository extends JpaRepository<Stamp, Long> {
 
     List<Stamp> findAllByOrderByDisplayOrderAsc();
 
-    // 같은 지역의 서로 다른 스팟이 동시에 인증돼도 스탬프는 한 번만 지급한다.
+    // 같은 관광지의 인증 요청이 동시에 처리돼도 패스포트 스탬프는 한 번만 지급한다.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT stamp FROM Stamp stamp WHERE stamp.cityName = :cityName")
-    Optional<Stamp> findByCityNameForUpdate(@Param("cityName") String cityName);
+    @Query("SELECT stamp FROM Stamp stamp WHERE stamp.touristSpot.id = :touristSpotId")
+    Optional<Stamp> findByTouristSpotIdForUpdate(
+        @Param("touristSpotId") Long touristSpotId
+    );
 }

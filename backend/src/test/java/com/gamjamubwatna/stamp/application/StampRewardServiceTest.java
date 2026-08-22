@@ -209,8 +209,8 @@ class StampRewardServiceTest {
         User user = user(1L);
         Coupon coupon = new Coupon(
             "CP_STAMP_18_COMPLETE_10000",
-            "강원 감자 랠리 완주 10,000원 할인권",
-            "강원 감자 랠리 완주 기념으로 제휴점에서 10,000원 할인받을 수 있습니다.",
+            "강원 관광지 18곳 달성 10,000원 할인권",
+            "강원 관광지 18곳 달성 기념으로 제휴점에서 10,000원 할인받을 수 있습니다.",
             10000,
             "강원 감자 제휴점",
             30
@@ -227,7 +227,7 @@ class StampRewardServiceTest {
         StampRewardClaimResponse result = stampRewardService.claimReward(1L, 18);
 
         assertThat(result.targetCount()).isEqualTo(18);
-        assertThat(result.couponName()).isEqualTo("강원 감자 랠리 완주 10,000원 할인권");
+        assertThat(result.couponName()).isEqualTo("강원 관광지 18곳 달성 10,000원 할인권");
         ArgumentCaptor<RewardHistory> historyCaptor = ArgumentCaptor.forClass(RewardHistory.class);
         verify(rewardHistoryRepository).saveAndFlush(historyCaptor.capture());
         assertThat(historyCaptor.getValue().getSourceId()).isEqualTo(18L);

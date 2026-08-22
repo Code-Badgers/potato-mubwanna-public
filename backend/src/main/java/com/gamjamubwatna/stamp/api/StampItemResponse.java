@@ -6,6 +6,7 @@ import java.time.Instant;
 
 public record StampItemResponse(
     Long stampId,
+    Long spotId,
     String cityName,
     String stampName,
     String stampImage,
@@ -16,6 +17,7 @@ public record StampItemResponse(
     public static StampItemResponse from(Stamp stamp, UserStamp userStamp) {
         return new StampItemResponse(
             stamp.getId(),
+            stamp.getTouristSpot().getId(),
             stamp.getCityName(),
             stamp.getStampName(),
             stamp.getStampImage(),

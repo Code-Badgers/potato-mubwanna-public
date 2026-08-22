@@ -44,12 +44,13 @@ class StampControllerTest {
     @Test
     void returnsAuthenticatedUsersStampBook() throws Exception {
         when(stampQueryService.getStampBook(eq(1L))).thenReturn(new StampBookResponse(
-            18,
+            29,
             1,
             List.of(new StampItemResponse(
                 1L,
+                101L,
                 "강릉시",
-                "하지감자",
+                "경포대",
                 null,
                 true,
                 Instant.parse("2026-06-30T00:00:00Z")
@@ -60,8 +61,10 @@ class StampControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
-            .andExpect(jsonPath("$.data.totalCount").value(18))
+            .andExpect(jsonPath("$.data.totalCount").value(29))
             .andExpect(jsonPath("$.data.acquiredCount").value(1))
+            .andExpect(jsonPath("$.data.stamps[0].spotId").value(101))
+            .andExpect(jsonPath("$.data.stamps[0].stampName").value("경포대"))
             .andExpect(jsonPath("$.data.stamps[0].cityName").value("강릉시"))
             .andExpect(jsonPath("$.data.stamps[0].acquired").value(true));
     }

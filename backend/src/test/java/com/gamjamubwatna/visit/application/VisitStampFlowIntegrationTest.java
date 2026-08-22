@@ -11,6 +11,8 @@ import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.stamp.api.StampBookResponse;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
 import com.gamjamubwatna.stamp.application.StampQueryService;
+import com.gamjamubwatna.stamp.domain.Stamp;
+import com.gamjamubwatna.stamp.domain.StampRepository;
 import com.gamjamubwatna.stamp.domain.UserStampRepository;
 import com.gamjamubwatna.visit.api.VisitVerifyRequest;
 import com.gamjamubwatna.visit.api.VisitVerifyResponse;
@@ -45,6 +47,9 @@ class VisitStampFlowIntegrationTest {
     private UserStampRepository userStampRepository;
 
     @Autowired
+    private StampRepository stampRepository;
+
+    @Autowired
     private UserPotatoRepository userPotatoRepository;
 
     @Autowired
@@ -54,7 +59,7 @@ class VisitStampFlowIntegrationTest {
     private StampQueryService stampQueryService;
 
     @Test
-    void issuesOneRegionalStampAcrossMultipleVerifiedSpots() {
+    void issuesSeparatePassportStampsForMultipleSpotsInSameCity() {
         Instant now = Instant.parse("2026-07-23T00:00:00Z");
         User user = userRepository.save(new User(
             AuthProvider.KAKAO,
@@ -66,6 +71,20 @@ class VisitStampFlowIntegrationTest {
         ));
         TouristSpot firstSpot = saveSpot("visit-stamp-flow-1", "정선 감자마을", now);
         TouristSpot secondSpot = saveSpot("visit-stamp-flow-2", "정선 5일장", now);
+        stampRepository.save(new Stamp(
+            "PASSPORT_SPOT_visit-stamp-flow-1",
+            firstSpot,
+            null,
+            101,
+            now
+        ));
+        stampRepository.save(new Stamp(
+            "PASSPORT_SPOT_visit-stamp-flow-2",
+            secondSpot,
+            null,
+            102,
+            now
+        ));
 
         VisitVerifyResponse first = verify(user, firstSpot);
         StampBookResponse stampBook = stampQueryService.getStampBook(user.getId());
@@ -77,11 +96,11 @@ class VisitStampFlowIntegrationTest {
         assertThat(first.acquiredPotato()).isNotNull();
         assertThat(stampBook.acquiredCount()).isEqualTo(1);
         assertThat(rewardStatus.acquiredCount()).isEqualTo(1);
-        assertThat(second.stampIssued()).isFalse();
+        assertThat(second.stampIssued()).isTrue();
         assertThat(second.potatoAcquired()).isFalse();
         assertThat(second.acquiredPotato().alreadyOwned()).isTrue();
         assertThat(userVisitRepository.count()).isEqualTo(2);
-        assertThat(userStampRepository.countByUserId(user.getId())).isEqualTo(1);
+        assertThat(userStampRepository.countByUserId(user.getId())).isEqualTo(2);
         assertThat(userPotatoRepository.countByUserId(user.getId())).isEqualTo(1);
     }
 

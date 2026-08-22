@@ -11,6 +11,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest(properties = {
     "spring.datasource.url=jdbc:h2:mem:stamp_migration;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH",
@@ -29,15 +30,21 @@ class StampMigrationTest {
     private DataSource dataSource;
 
     @Test
-    void seedsEighteenGangwonStampsInDisplayOrder() {
+    @Transactional
+    void seedsTwentyNinePassportSpotStampsInDisplayOrder() {
         List<Stamp> stamps = stampRepository.findAllByOrderByDisplayOrderAsc();
 
-        assertThat(stamps).hasSize(18);
-        assertThat(stamps.getFirst().getCityName()).isEqualTo("강릉시");
-        assertThat(stamps.getLast().getCityName()).isEqualTo("철원군");
+        assertThat(stamps).hasSize(29);
+        assertThat(stamps).extracting(Stamp::getStampName)
+            .contains("남이섬", "소양강 스카이워크", "경포대", "정선 5일장");
+        assertThat(stamps).allSatisfy(stamp -> {
+            assertThat(stamp.getTouristSpot()).isNotNull();
+            assertThat(stamp.getCityName()).isEqualTo(stamp.getTouristSpot().getCityName());
+            assertThat(stamp.getStampName()).isEqualTo(stamp.getTouristSpot().getName());
+        });
         assertThat(stamps)
             .extracting(Stamp::getDisplayOrder)
-            .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 18).boxed().toList());
+            .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 29).boxed().toList());
     }
 
     @Test

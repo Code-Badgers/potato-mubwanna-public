@@ -29,12 +29,9 @@ public class VisitStampIssuanceService {
         if (!Boolean.TRUE.equals(touristSpot.getStampEnabled())) {
             return false;
         }
-        String cityName = touristSpot.getCityName();
-        if (cityName == null || cityName.isBlank()) {
-            return false;
-        }
-
-        Stamp stamp = stampRepository.findByCityNameForUpdate(cityName).orElse(null);
+        Stamp stamp = stampRepository.findByTouristSpotIdForUpdate(
+            touristSpot.getId()
+        ).orElse(null);
         if (stamp == null || userStampRepository.existsByUserIdAndStampId(
             user.getId(),
             stamp.getId()
