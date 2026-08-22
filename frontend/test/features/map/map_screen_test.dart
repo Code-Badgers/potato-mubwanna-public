@@ -424,6 +424,47 @@ void main() {
     expect(find.text('정선 5일장'), findsAtLeastNWidgets(1));
   });
 
+  testWidgets('category filter exits route mode and shows category spots', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['1', '2', '3']);
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsOneWidget);
+
+    await tester.tap(find.text('카페·디저트'));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['2']);
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsNothing);
+    expect(find.text('감자 카페'), findsAtLeastNWidgets(1));
+  });
+
   testWidgets('route mode reorders saved spots and refreshes numbering', (
     tester,
   ) async {
@@ -605,47 +646,6 @@ void main() {
     );
   });
 
-  testWidgets('opens the complete recommended route in Kakao Map', (
-    tester,
-  ) async {
-    Uri? launchedUri;
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          mapSpotsProvider.overrideWith((ref) async => _spots),
-          favoriteSpotControllerProvider.overrideWith(
-            (ref) => _favoriteController({'1', '2', '3'}),
-          ),
-          favoriteSpotRouteProvider.overrideWith((ref) async => _route),
-        ],
-        child: MaterialApp(
-          home: MapScreen(
-            hasMapConfiguration: true,
-            mapUriLauncher: (uri) async {
-              launchedUri = uri;
-              return true;
-            },
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final routeButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '이 동선 따라가기'),
-    );
-    routeButton.onPressed!();
-    await tester.pump();
-
-    expect(launchedUri?.pathSegments.take(3), ['link', 'by', 'car']);
-    expect(
-      launchedUri?.pathSegments
-          .skip(3)
-          .map((segment) => segment.split(',').first),
-      ['정선 5일장', '감자 체험장', '감자 카페'],
-    );
-  });
-
   testWidgets('shows an error when Kakao Map cannot be opened', (
     tester,
   ) async {
@@ -762,7 +762,7 @@ void main() {
     expect(find.text('감자 스팟 정보를 불러오지 못했습니다.'), findsNothing);
   });
 
-  testWidgets('uses backend recommended route when available', (tester) async {
+  testWidgets('uses backend route order only in route mode', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -779,11 +779,33 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('추천 동선'), findsOneWidget);
-    expect(find.text('3곳 · 직선 12.3km'), findsOneWidget);
-    expect(find.text('정선 5일장'), findsWidgets);
-    expect(find.text('감자 체험장'), findsOneWidget);
-    expect(find.text('감자 카페'), findsOneWidget);
+    expect(find.text('추천 동선'), findsNothing);
+    expect(find.text('이 동선 따라가기'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-1')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-3')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-2')),
+        matching: find.text('3'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('highlights visit recommendations and selects their markers', (
