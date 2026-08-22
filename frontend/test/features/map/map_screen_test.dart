@@ -434,7 +434,7 @@ void main() {
         overrides: [
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
-            (ref) => _favoriteController({'1', '2', '3'}),
+            (ref) => _toggleableFavoriteController({'1', '2', '3'}),
           ),
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
@@ -1025,6 +1025,13 @@ class _FakeMapSpotRepository extends MapSpotRepository {
   @override
   Future<FavoriteSpotToggleResult> removeFavoriteSpot(String spotId) async {
     return FavoriteSpotToggleResult(spotId: spotId, favorite: false);
+  }
+
+  @override
+  Future<FavoriteSpotRoute> updateFavoriteSpotOrder(
+    List<String> spotIds,
+  ) async {
+    return _emptyRoute;
   }
 }
 

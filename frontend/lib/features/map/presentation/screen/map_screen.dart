@@ -273,12 +273,48 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     int newIndex,
     List<MapSpot> routeSpots,
   ) {
+    final previousOrder = _routeSpotOrder;
     final nextOrder = routeSpots.map((spot) => spot.id).toList();
     final movedSpotId = nextOrder.removeAt(oldIndex);
     nextOrder.insert(newIndex, movedSpotId);
     setState(() {
       _routeSpotOrder = nextOrder;
     });
+    unawaited(_persistRouteSpotOrder(nextOrder, previousOrder));
+  }
+
+  Future<void> _persistRouteSpotOrder(
+    List<String> nextOrder,
+    List<String> previousOrder,
+  ) async {
+    try {
+      await ref
+          .read(favoriteSpotControllerProvider.notifier)
+          .reorder(nextOrder);
+      ref.invalidate(favoriteSpotRouteProvider);
+    } on FavoriteSpotToggleException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _routeSpotOrder = previousOrder;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _routeSpotOrder = previousOrder;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('내 동선 순서를 저장하지 못했습니다.'),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleFavoriteSpot(
