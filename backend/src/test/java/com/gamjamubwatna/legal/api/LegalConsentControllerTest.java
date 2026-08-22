@@ -1,10 +1,12 @@
 package com.gamjamubwatna.legal.api;
 
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,6 +31,26 @@ class LegalConsentControllerTest {
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @Test
+    void returnsAuthenticatedUsersLatestConsentSnapshot() throws Exception {
+        when(legalConsentService.getSnapshot(1L)).thenReturn(
+            new LegalConsentSnapshotResponse(
+                "2026-08-15-v2",
+                "2026-08-14-v1",
+                null
+            )
+        );
+
+        mockMvc.perform(get("/users/me/legal-consents").with(user("user:1")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.requiredDocumentsVersion").value("2026-08-15-v2"))
+            .andExpect(jsonPath("$.data.personalLocationConsentVersion").value("2026-08-14-v1"))
+            .andExpect(jsonPath("$.data.healthDataConsentVersion").isEmpty());
+
+        verify(legalConsentService).getSnapshot(1L);
+    }
 
     @Test
     void synchronizesAuthenticatedUsersConsentSnapshot() throws Exception {
@@ -67,5 +89,11 @@ class LegalConsentControllerTest {
                 .content("{}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void rejectsConsentSnapshotLookupWithoutAuthenticatedPrincipal() throws Exception {
+        mockMvc.perform(get("/users/me/legal-consents"))
+            .andExpect(status().isUnauthorized());
     }
 }

@@ -2,6 +2,7 @@ package com.gamjamubwatna.legal.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.gamjamubwatna.legal.api.LegalConsentSnapshotResponse;
 import com.gamjamubwatna.legal.api.LegalConsentSyncRequest;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +72,28 @@ class LegalAuditIntegrationTest {
             LIMIT 1
             """, Boolean.class);
         assertThat(latestLocationAccepted).isFalse();
+    }
+
+    @Test
+    void returnsOnlyLatestAcceptedConsentVersions() {
+        legalConsentService.synchronize(
+            3001L,
+            new LegalConsentSyncRequest(
+                "2026-08-15-v2",
+                "2026-08-14-v1",
+                "2026-08-14-v1"
+            )
+        );
+        legalConsentService.synchronize(
+            3001L,
+            new LegalConsentSyncRequest("2026-08-15-v2", null, "2026-08-14-v1")
+        );
+
+        LegalConsentSnapshotResponse snapshot = legalConsentService.getSnapshot(3001L);
+
+        assertThat(snapshot.requiredDocumentsVersion()).isEqualTo("2026-08-15-v2");
+        assertThat(snapshot.personalLocationConsentVersion()).isNull();
+        assertThat(snapshot.healthDataConsentVersion()).isEqualTo("2026-08-14-v1");
     }
 
     @Test

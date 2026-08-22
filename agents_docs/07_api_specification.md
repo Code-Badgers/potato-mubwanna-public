@@ -202,7 +202,67 @@ Response:
 - 업로드 이미지가 없거나 사진 미션 완료 기록과 관광지가 연결되지 않으면 `uploadedImageUrl=null`을 반환한다.
 - `uploadedImageUrl`은 인증이 필요한 API 상대 경로이며 공개 정적 파일 URL로 사용하지 않는다.
 
-### 2.4 내 푸시 토큰 등록/갱신
+### 2.4 내 약관 동의 동기화
+
+```http
+PUT /api/users/me/legal-consents
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "requiredDocumentsVersion": "2026-08-15-v2",
+  "personalLocationConsentVersion": "2026-08-14-v1",
+  "healthDataConsentVersion": null
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": null
+}
+```
+
+- `requiredDocumentsVersion`은 필수이며 현재 필수 약관과 만 14세 이상 확인 버전을 전달한다.
+- 선택 동의 버전이 `null`이면 이전 최신 이벤트가 수락 상태일 때 철회 이벤트를 기록한다.
+- 최신 이벤트와 버전·수락 상태가 같으면 새 이력을 만들지 않는다.
+
+### 2.5 내 약관 동의 조회
+
+```http
+GET /api/users/me/legal-consents
+Authorization: Bearer {accessToken}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "requiredDocumentsVersion": "2026-08-15-v2",
+    "personalLocationConsentVersion": "2026-08-14-v1",
+    "healthDataConsentVersion": null
+  }
+}
+```
+
+- 각 동의 유형에서 `recordedAt`, 이벤트 ID 역순의 최신 이벤트를 기준으로 한다.
+- 최신 이벤트가 수락 상태이면 `documentVersion`, 철회 상태이거나 이력이 없으면 `null`을 반환한다.
+- 앱은 동기화되지 않은 로컬 변경이 있으면 `PUT`을 우선하고, 그렇지 않으면 이 응답을 로컬에 복원한다.
+- 서버 문서 버전이 앱의 현재 버전과 다르면 앱은 해당 항목을 미동의로 처리한다.
+- 서버 필수 동의가 비어 있고 앱에 현재 버전의 유효한 필수 동의가 있으면 기존 설치 보호를 위해 로컬 스냅샷을 `PUT`한다.
+- 조회나 동기화의 일시 실패는 로그인 성공을 막지 않으며 다음 인증 시 재시도한다.
+
+### 2.6 내 푸시 토큰 등록/갱신
 
 ```http
 POST /api/users/me/push-tokens
@@ -239,7 +299,7 @@ Response:
 - 같은 `token`을 다시 등록하면 사용자, platform, 갱신 시각을 최신 값으로 idempotent upsert한다.
 - registration token 원문은 서버 로그에 남기지 않는다.
 
-### 2.5 내 푸시 토큰 삭제
+### 2.7 내 푸시 토큰 삭제
 
 ```http
 DELETE /api/users/me/push-tokens
@@ -270,7 +330,7 @@ Response:
 - 회원 탈퇴 시 사용자 token은 FK cascade로 삭제한다.
 - 서버 발송에서 FCM이 registration token을 무효로 판정하면 해당 token을 즉시 삭제하고, 장기간 갱신되지 않은 token은 다음 등록 시 정리한다.
 
-### 2.6 푸시 알림 라우팅 payload
+### 2.8 푸시 알림 라우팅 payload
 
 FCM data payload는 다음 목적지만 허용한다.
 
