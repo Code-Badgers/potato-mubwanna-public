@@ -45,11 +45,24 @@ class StampBookScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: stampBook.when(
-          data: (value) => value == null
-              ? const _SignedOutState()
-              : _StampBookBody(
+          data: (value) {
+            if (value == null) {
+              return const _SignedOutState();
+            }
+
+            // 실패를 로컬 관광지로 덮으면 서버 장애가 정상 랠리북처럼 보이므로
+            // 성공한 서버 목록이 있을 때만 실제 투어 화면을 렌더링한다.
+            return rallybookSpots.when(
+              data: (spots) {
+                final values = spots ?? const <RallybookSpot>[];
+                if (values.isEmpty) {
+                  return const _StampBookStatusBody(
+                    child: _RallybookSpotsEmpty(),
+                  );
+                }
+                return _StampBookBody(
                   stampBook: value,
-                  rallybookSpots: rallybookSpots,
+                  rallybookSpots: values,
                   isRewardClaiming: rewardClaim.isLoading,
                   onClaimReward: () {
                     final targetCount = value.nextReward.claimableTargetCount;
@@ -60,7 +73,18 @@ class StampBookScreen extends ConsumerWidget {
                         .read(stampRewardClaimProvider.notifier)
                         .claim(targetCount);
                   },
+                );
+              },
+              loading: () => const _StampBookStatusBody(
+                child: _RallybookSpotsLoading(),
+              ),
+              error: (_, __) => _StampBookStatusBody(
+                child: _RallybookSpotsError(
+                  onRetry: () => ref.invalidate(stampRallybookSpotsProvider),
                 ),
+              ),
+            );
+          },
           loading: () => const _StampBookStatusBody(
             child: Center(child: CircularProgressIndicator()),
           ),
@@ -87,12 +111,35 @@ class PassportStampGridScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: stampBook.when(
-          data: (value) => value == null
-              ? const _SignedOutState()
-              : _PassportStampGridBody(
+          data: (value) {
+            if (value == null) {
+              return const _SignedOutState();
+            }
+
+            // 패스포트 목록도 지도와 같은 서버 관광지 상태를 기준으로 삼는다.
+            return rallybookSpots.when(
+              data: (spots) {
+                final values = spots ?? const <RallybookSpot>[];
+                if (values.isEmpty) {
+                  return const _PassportStampGridStatusBody(
+                    child: _RallybookSpotsEmpty(),
+                  );
+                }
+                return _PassportStampGridBody(
                   progress: value.progress,
-                  rallybookSpots: rallybookSpots,
+                  rallybookSpots: values,
+                );
+              },
+              loading: () => const _PassportStampGridStatusBody(
+                child: _RallybookSpotsLoading(),
+              ),
+              error: (_, __) => _PassportStampGridStatusBody(
+                child: _RallybookSpotsError(
+                  onRetry: () => ref.invalidate(stampRallybookSpotsProvider),
                 ),
+              ),
+            );
+          },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, __) => _StampBookStatusBody(
             child: _StampBookError(
@@ -112,18 +159,12 @@ class _PassportStampGridBody extends StatelessWidget {
   });
 
   final StampProgress progress;
-  final AsyncValue<List<RallybookSpot>?> rallybookSpots;
+  final List<RallybookSpot> rallybookSpots;
 
   @override
   Widget build(BuildContext context) {
-    final spots = rallybookSpots.maybeWhen(
-      data: (values) => values ?? const <RallybookSpot>[],
-      orElse: () => const <RallybookSpot>[],
-    );
-    final entries = spots.isEmpty
-        ? _fallbackPassportEntries(progress.stamps)
-        : _passportEntriesFor(spots, progress.stamps);
-    final totalCount = entries.isEmpty ? 29 : entries.length;
+    final entries = _passportEntriesFor(rallybookSpots, progress.stamps);
+    final totalCount = entries.length;
     final acquiredCount = entries.where((entry) => entry.acquired).length;
     final pages = _paginatePassportEntries(entries);
 
@@ -722,34 +763,6 @@ List<_PassportStampEntry> _passportEntriesFor(
       .toList(growable: false);
 }
 
-List<_PassportStampEntry> _fallbackPassportEntries(
-  List<RallybookStamp> stamps,
-) {
-  if (stamps.isNotEmpty) {
-    return stamps
-        .map(
-          (stamp) => _PassportStampEntry(
-            id: stamp.spotId,
-            cityName: _normalizeCityName(stamp.cityName),
-            landmark: stamp.stampName,
-            acquired: stamp.acquired,
-          ),
-        )
-        .toList(growable: false);
-  }
-
-  return _defaultPassportEntries
-      .map(
-        (entry) => _PassportStampEntry(
-          id: entry.id,
-          cityName: entry.cityName,
-          landmark: entry.landmark,
-          acquired: false,
-        ),
-      )
-      .toList(growable: false);
-}
-
 bool _isPassportSpotAcquired(
   RallybookSpot spot,
   List<RallybookStamp> stamps,
@@ -781,83 +794,6 @@ List<List<_PassportStampEntry>> _paginatePassportEntries(
 
   return pages;
 }
-
-const _defaultPassportEntries = <_PassportStampEntry>[
-  _PassportStampEntry(id: 1, cityName: '춘천', landmark: '남이섬', acquired: false),
-  _PassportStampEntry(
-    id: 2,
-    cityName: '춘천',
-    landmark: '소양강 스카이워크',
-    acquired: false,
-  ),
-  _PassportStampEntry(
-      id: 3, cityName: '원주', landmark: '뮤지엄 산', acquired: false),
-  _PassportStampEntry(id: 4, cityName: '강릉', landmark: '경포대', acquired: false),
-  _PassportStampEntry(id: 5, cityName: '강릉', landmark: '안목해변', acquired: false),
-  _PassportStampEntry(id: 6, cityName: '동해', landmark: '논골담길', acquired: false),
-  _PassportStampEntry(id: 7, cityName: '동해', landmark: '묵호등대', acquired: false),
-  _PassportStampEntry(id: 8, cityName: '태백', landmark: '황지연못', acquired: false),
-  _PassportStampEntry(
-    id: 9,
-    cityName: '속초',
-    landmark: '속초관광수산시장',
-    acquired: false,
-  ),
-  _PassportStampEntry(id: 10, cityName: '속초', landmark: '영금정', acquired: false),
-  _PassportStampEntry(id: 11, cityName: '삼척', landmark: '장호항', acquired: false),
-  _PassportStampEntry(id: 12, cityName: '삼척', landmark: '환선굴', acquired: false),
-  _PassportStampEntry(
-      id: 13, cityName: '홍천', landmark: '비발디파크', acquired: false),
-  _PassportStampEntry(id: 14, cityName: '홍천', landmark: '수타사', acquired: false),
-  _PassportStampEntry(
-      id: 15, cityName: '횡성', landmark: '횡성호수길', acquired: false),
-  _PassportStampEntry(id: 16, cityName: '영월', landmark: '장릉', acquired: false),
-  _PassportStampEntry(id: 17, cityName: '영월', landmark: '청령포', acquired: false),
-  _PassportStampEntry(
-    id: 18,
-    cityName: '평창',
-    landmark: '대관령 양떼목장',
-    acquired: false,
-  ),
-  _PassportStampEntry(
-    id: 19,
-    cityName: '평창',
-    landmark: '이효석문학관',
-    acquired: false,
-  ),
-  _PassportStampEntry(
-      id: 20, cityName: '정선', landmark: '정선 5일장', acquired: false),
-  _PassportStampEntry(id: 21, cityName: '철원', landmark: '고석정', acquired: false),
-  _PassportStampEntry(
-    id: 22,
-    cityName: '화천',
-    landmark: '산천어축제장',
-    acquired: false,
-  ),
-  _PassportStampEntry(id: 23, cityName: '양구', landmark: '두타연', acquired: false),
-  _PassportStampEntry(
-    id: 24,
-    cityName: '양구',
-    landmark: '박수근미술관',
-    acquired: false,
-  ),
-  _PassportStampEntry(
-    id: 25,
-    cityName: '인제',
-    landmark: '원대리 자작나무숲',
-    acquired: false,
-  ),
-  _PassportStampEntry(
-    id: 26,
-    cityName: '고성',
-    landmark: '통일전망대',
-    acquired: false,
-  ),
-  _PassportStampEntry(id: 27, cityName: '고성', landmark: '화진포', acquired: false),
-  _PassportStampEntry(id: 28, cityName: '양양', landmark: '낙산사', acquired: false),
-  _PassportStampEntry(
-      id: 29, cityName: '양양', landmark: '서피비치', acquired: false),
-];
 
 String _passportSketchAssetFor(String cityName, String landmark) {
   final key = '${_normalizeCityName(cityName)} $landmark';
@@ -941,6 +877,126 @@ class _StampBookStatusBody extends StatelessWidget {
   }
 }
 
+class _PassportStampGridStatusBody extends StatelessWidget {
+  const _PassportStampGridStatusBody({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: _PassportHeader(onBack: () => _goBack(context)),
+        ),
+        SliverFillRemaining(hasScrollBody: false, child: child),
+      ],
+    );
+  }
+}
+
+class _RallybookSpotsLoading extends StatelessWidget {
+  const _RallybookSpotsLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      key: ValueKey('rallybook-spots-loading'),
+      child: CircularProgressIndicator(),
+    );
+  }
+}
+
+class _RallybookSpotsEmpty extends StatelessWidget {
+  const _RallybookSpotsEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _RallybookSpotsMessage(
+      key: ValueKey('rallybook-spots-empty'),
+      icon: Icons.location_off_rounded,
+      title: '등록된 랠리북 관광지가 없어요.',
+      description: '관광지 정보가 등록되면 이곳에서 확인할 수 있어요.',
+    );
+  }
+}
+
+class _RallybookSpotsError extends StatelessWidget {
+  const _RallybookSpotsError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _RallybookSpotsMessage(
+      key: const ValueKey('rallybook-spots-error'),
+      icon: Icons.cloud_off_rounded,
+      title: '랠리북 관광지를 불러오지 못했습니다.',
+      description: '네트워크 상태를 확인하고 다시 시도해 주세요.',
+      onRetry: onRetry,
+    );
+  }
+}
+
+class _RallybookSpotsMessage extends StatelessWidget {
+  const _RallybookSpotsMessage({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.onRetry,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.textSecondary, size: 38),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                key: const ValueKey('rallybook-spots-retry'),
+                onPressed: onRetry,
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StampBookBody extends StatelessWidget {
   const _StampBookBody({
     required this.stampBook,
@@ -950,7 +1006,7 @@ class _StampBookBody extends StatelessWidget {
   });
 
   final StampBook stampBook;
-  final AsyncValue<List<RallybookSpot>?> rallybookSpots;
+  final List<RallybookSpot> rallybookSpots;
   final bool isRewardClaiming;
   final VoidCallback onClaimReward;
 
@@ -1093,18 +1149,12 @@ class _StampTourHero extends StatelessWidget {
   });
 
   final StampProgress progress;
-  final AsyncValue<List<RallybookSpot>?> rallybookSpots;
+  final List<RallybookSpot> rallybookSpots;
 
   @override
   Widget build(BuildContext context) {
-    final spots = rallybookSpots.maybeWhen(
-      data: (values) => values ?? const <RallybookSpot>[],
-      orElse: () => const <RallybookSpot>[],
-    );
-    final entries = spots.isEmpty
-        ? _fallbackPassportEntries(progress.stamps)
-        : _passportEntriesFor(spots, progress.stamps);
-    final totalCount = entries.isEmpty ? 29 : entries.length;
+    final entries = _passportEntriesFor(rallybookSpots, progress.stamps);
+    final totalCount = entries.length;
     final acquiredCount = entries.where((entry) => entry.acquired).length;
 
     return Padding(
@@ -1223,7 +1273,7 @@ class _GangwonStampMap extends StatefulWidget {
   });
 
   final StampProgress progress;
-  final AsyncValue<List<RallybookSpot>?> rallybookSpots;
+  final List<RallybookSpot> rallybookSpots;
   final double mapHeight;
   final ValueChanged<RallybookSpot> onSpotTap;
 
@@ -1282,10 +1332,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
     final stampsBySpotId = {
       for (final stamp in widget.progress.stamps) stamp.spotId: stamp,
     };
-    final rallybookSpots = widget.rallybookSpots.maybeWhen(
-      data: (spots) => spots ?? const <RallybookSpot>[],
-      orElse: () => const <RallybookSpot>[],
-    );
+    final rallybookSpots = widget.rallybookSpots;
     final spotsByCity = <String, List<RallybookSpot>>{};
     for (final spot in rallybookSpots) {
       spotsByCity
