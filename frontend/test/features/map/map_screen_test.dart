@@ -416,7 +416,7 @@ void main() {
 
     tester
         .widget<SliverReorderableList>(find.byType(SliverReorderableList))
-        .onReorder!
+        .onReorderItem!
         .call(2, 0);
     await tester.pumpAndSettle();
 

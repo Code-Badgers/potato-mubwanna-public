@@ -273,9 +273,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     List<MapSpot> routeSpots,
   ) {
     final nextOrder = routeSpots.map((spot) => spot.id).toList();
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
     final movedSpotId = nextOrder.removeAt(oldIndex);
     nextOrder.insert(newIndex, movedSpotId);
     setState(() {
@@ -912,7 +909,7 @@ class _FavoriteRouteList extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
           sliver: SliverReorderableList(
             itemCount: routeSpots.length,
-            onReorder: routeSpots.length > 1 ? onReorder : (_, __) {},
+            onReorderItem: routeSpots.length > 1 ? onReorder : (_, __) {},
             itemBuilder: (context, index) {
               final spot = routeSpots[index];
               return _FavoriteRouteTile(
@@ -1720,7 +1717,6 @@ class _RouteModeChip extends StatelessWidget {
 
 class _PotatoMapPreview extends StatelessWidget {
   const _PotatoMapPreview({
-    super.key,
     required this.spots,
     required this.routePolyline,
     required this.routeSpotIds,
