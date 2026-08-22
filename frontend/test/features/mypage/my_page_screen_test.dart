@@ -20,8 +20,10 @@ import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_scre
 import 'package:potato_mubwanna/features/notice/application/notice_controller.dart';
 import 'package:potato_mubwanna/features/notice/domain/notice.dart';
 import 'package:potato_mubwanna/features/notice/presentation/screen/notice_screen.dart';
-import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
+import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
 import 'package:potato_mubwanna/features/potato/data/step_count_reader_stub.dart';
+import 'package:potato_mubwanna/features/potato/domain/potato_collection.dart';
+import 'package:potato_mubwanna/features/settings/presentation/screen/settings_screen.dart';
 import 'package:potato_mubwanna/features/travel_record/application/travel_record_controller.dart';
 import 'package:potato_mubwanna/features/travel_record/domain/travel_record.dart';
 import 'package:potato_mubwanna/features/travel_record/presentation/screen/travel_record_screen.dart';
@@ -338,6 +340,41 @@ void main() {
     expect(find.text('passport stamp cards'), findsOneWidget);
   });
 
+  testWidgets('shows the beginner potato when no catalog potato is acquired',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(overrides: [
+          potatoCollectionProvider.overrideWith(
+            (ref) async => _unacquiredPotatoCollection(),
+          ),
+        ]),
+        child: const MaterialApp(home: MyPageScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final potatoCardsAction =
+        find.byKey(const ValueKey('mypage-quick-action-potato-cards'));
+    await tester.scrollUntilVisible(
+      potatoCardsAction,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(potatoCardsAction);
+    await tester.pumpAndSettle();
+
+    expect(find.text('내 감자 도감'), findsOneWidget);
+    expect(find.text('새싹 감자'), findsOneWidget);
+    expect(find.text('#000'), findsOneWidget);
+    expect(find.text('강릉 감자빵'), findsNothing);
+  });
+
   testWidgets('opens settings from My Page account menu', (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
@@ -463,6 +500,31 @@ final _notices = [
     publishedAt: DateTime.utc(2026, 8, 16),
   ),
 ];
+
+PotatoCollection _unacquiredPotatoCollection() {
+  return const PotatoCollection(
+    totalCount: 1,
+    acquiredCount: 0,
+    items: [
+      PotatoCollectionItem(
+        id: '1',
+        code: 'POTATO_HAJI_GANGNEUNG',
+        name: '강릉 감자빵',
+        region: '강릉시',
+        rarity: PotatoRarity.common,
+        description: '강릉 여행길에서 만나는 감자입니다.',
+        acquisitionHint: '강릉 관광지 방문 인증',
+        imageUrl: null,
+        acquired: false,
+        acquiredAt: null,
+        level: 0,
+        growthDistance: 0,
+        growthGoalDistance: 3000,
+        representative: false,
+      ),
+    ],
+  );
+}
 
 class _IdleAuthController extends AuthController {
   _IdleAuthController()

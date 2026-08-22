@@ -84,6 +84,36 @@ void main() {
     expect(mappedAsset, findsWidgets);
   });
 
+  testWidgets('uses the beginner potato consistently before first acquisition',
+      (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith(
+          (ref) async => _unacquiredCollection(),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('새싹 감자'), findsWidgets);
+    expect(find.text('강릉 감자빵'), findsNothing);
+
+    final detailButton = find.widgetWithText(OutlinedButton, '정보 보기');
+    await tester.ensureVisible(detailButton);
+    await tester.tap(detailButton);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('#000'), findsOneWidget);
+    expect(
+      find.text('아직 여행을 시작하지 않은 작은 감자예요. 첫 스탬프를 찍으면 도감 이야기가 하나씩 열립니다.'),
+      findsWidgets,
+    );
+  });
+
   testWidgets('opens the potato collection sheet from representative action', (
     tester,
   ) async {
@@ -702,6 +732,31 @@ PotatoCollection _rewardOnlyCollection() {
           mood: 70,
           calculatedAt: DateTime.parse('2026-08-20T10:00:00Z'),
         ),
+      ),
+    ],
+  );
+}
+
+PotatoCollection _unacquiredCollection() {
+  return const PotatoCollection(
+    totalCount: 1,
+    acquiredCount: 0,
+    items: [
+      PotatoCollectionItem(
+        id: '1',
+        code: 'POTATO_HAJI_GANGNEUNG',
+        name: '강릉 감자빵',
+        region: '강릉시',
+        rarity: PotatoRarity.common,
+        description: '강릉 여행길에서 만나는 감자입니다.',
+        acquisitionHint: '강릉 관광지 방문 인증',
+        imageUrl: null,
+        acquired: false,
+        acquiredAt: null,
+        level: 0,
+        growthDistance: 0,
+        growthGoalDistance: 3000,
+        representative: false,
       ),
     ],
   );
