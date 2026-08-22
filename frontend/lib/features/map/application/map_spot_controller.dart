@@ -88,6 +88,22 @@ class FavoriteSpotController extends StateNotifier<AsyncValue<Set<String>>> {
     }
   }
 
+  Future<void> reorder(List<String> spotIds) async {
+    await _localStorage.saveSpotOrder(spotIds);
+
+    try {
+      await _repository.updateFavoriteSpotOrder(spotIds);
+    } catch (error, stackTrace) {
+      if (_isAuthenticationError(error)) {
+        return;
+      }
+      Error.throwWithStackTrace(
+        FavoriteSpotToggleException.from(error),
+        stackTrace,
+      );
+    }
+  }
+
   bool _isAuthenticationError(Object error) {
     return error is DioException &&
         (error.response?.statusCode == 401 ||
@@ -99,6 +115,7 @@ class LocalFavoriteSpotStorage {
   const LocalFavoriteSpotStorage();
 
   static const _key = 'favoriteSpotIds';
+  static const _orderKey = 'favoriteSpotOrder';
 
   Future<Set<String>> readSpotIds() async {
     final preferences = await SharedPreferences.getInstance();
@@ -108,6 +125,11 @@ class LocalFavoriteSpotStorage {
   Future<void> saveSpotIds(Set<String> spotIds) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setStringList(_key, spotIds.toList()..sort());
+  }
+
+  Future<void> saveSpotOrder(List<String> spotIds) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setStringList(_orderKey, spotIds);
   }
 }
 

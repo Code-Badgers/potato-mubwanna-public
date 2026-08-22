@@ -14,7 +14,11 @@ import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +52,7 @@ public class FavoriteSpotService {
 
     @Transactional(readOnly = true)
     public FavoriteSpotRouteResponse getFavoriteSpotRoute(Long userId) {
-        List<TouristSpot> routeSpots = recommendedRouteSpots(userId);
+        List<TouristSpot> routeSpots = orderedRouteSpots(userId);
         List<FavoriteSpotRouteWaypointResponse> waypoints = new ArrayList<>();
         double totalDistanceKm = 0;
 
@@ -92,7 +96,8 @@ public class FavoriteSpotService {
             .orElseThrow(() -> new IllegalArgumentException("감자 스팟을 찾을 수 없습니다."));
 
         // 같은 사용자가 같은 스팟을 중복 저장하지 않도록 DB unique key와 서비스 idempotency를 함께 둔다.
-        favoriteSpotRepository.save(new FavoriteSpot(user, spot, Instant.now()));
+        int nextRouteOrder = favoriteSpotRepository.findMaxRouteOrderByUserId(userId) + 1;
+        favoriteSpotRepository.save(new FavoriteSpot(user, spot, Instant.now(), nextRouteOrder));
         return new FavoriteSpotToggleResponse(spotId, true);
     }
 
@@ -103,31 +108,35 @@ public class FavoriteSpotService {
         return new FavoriteSpotToggleResponse(spotId, false);
     }
 
-    private List<TouristSpot> recommendedRouteSpots(Long userId) {
-        List<TouristSpot> favoriteSpots = favoriteSpotRepository.findByUserIdWithTouristSpot(userId)
+    @Transactional
+    public FavoriteSpotRouteResponse updateFavoriteSpotOrder(Long userId, List<Long> spotIds) {
+        if (spotIds == null) {
+            throw new IllegalArgumentException("동선 순서를 확인해주세요.");
+        }
+        List<FavoriteSpot> favoriteSpots = favoriteSpotRepository.findByUserId(userId);
+        if (favoriteSpots.size() != spotIds.size()) {
+            throw new IllegalArgumentException("저장된 동선 장소를 모두 포함해야 합니다.");
+        }
+
+        Map<Long, FavoriteSpot> favoriteSpotBySpotId = favoriteSpots.stream()
+            .collect(Collectors.toMap(favorite -> favorite.getTouristSpot().getId(), Function.identity()));
+        if (new HashSet<>(spotIds).size() != spotIds.size()
+            || !favoriteSpotBySpotId.keySet().equals(new HashSet<>(spotIds))) {
+            throw new IllegalArgumentException("저장된 동선 장소만 순서를 변경할 수 있습니다.");
+        }
+
+        for (int index = 0; index < spotIds.size(); index++) {
+            favoriteSpotBySpotId.get(spotIds.get(index)).updateRouteOrder(index + 1);
+        }
+
+        return getFavoriteSpotRoute(userId);
+    }
+
+    private List<TouristSpot> orderedRouteSpots(Long userId) {
+        return favoriteSpotRepository.findByUserIdWithTouristSpot(userId)
             .stream()
             .map(FavoriteSpot::getTouristSpot)
             .toList();
-        if (favoriteSpots.size() <= 2) {
-            return favoriteSpots;
-        }
-
-        List<TouristSpot> remaining = new ArrayList<>(favoriteSpots);
-        List<TouristSpot> route = new ArrayList<>();
-        TouristSpot current = remaining.remove(0);
-        route.add(current);
-
-        // 외부 길찾기 최적화 전까지는 최근 저장한 장소에서 가까운 장소를 잇는 예측 가능한 MVP 경로를 쓴다.
-        while (!remaining.isEmpty()) {
-            TouristSpot origin = current;
-            TouristSpot next = remaining.stream()
-                .min((first, second) -> Double.compare(distanceKm(origin, first), distanceKm(origin, second)))
-                .orElseThrow();
-            remaining.remove(next);
-            route.add(next);
-            current = next;
-        }
-        return route;
     }
 
     private double distanceKm(TouristSpot from, TouristSpot to) {

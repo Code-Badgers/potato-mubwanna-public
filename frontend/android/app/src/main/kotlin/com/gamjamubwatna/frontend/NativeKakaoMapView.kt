@@ -176,12 +176,13 @@ class NativeKakaoMapView(
             val longitude = (spot["longitude"] as? Number)?.toDouble() ?: return@forEach
             val spotId = spot["id"]?.toString() ?: "${latitude}_${longitude}"
             val isFavorite = spot["favorite"] as? Boolean ?: false
+            val routeIndex = (spot["routeIndex"] as? Number)?.toInt() ?: 0
             val markerColor = spot["markerColor"]?.toString() ?: if (isFavorite) "#F6C23E" else "#56C787"
-            val styleKey = "${markerColor.replace("#", "")}_${if (isFavorite) "favorite" else "normal"}"
+            val styleKey = "${markerColor.replace("#", "")}_${if (isFavorite) "favorite" else "normal"}_$routeIndex"
             val styles = styleCache.getOrPut(styleKey) {
                 val labelStyles = LabelStyles.from(
                     "potato_$styleKey",
-                    LabelStyle.from(markerBitmap(parseColor(markerColor), isFavorite))
+                    LabelStyle.from(markerBitmap(parseColor(markerColor), isFavorite, routeIndex))
                         .setAnchorPoint(0.5f, 1.0f),
                 )
                 labelManager.addLabelStyles(labelStyles) ?: labelStyles
@@ -265,7 +266,7 @@ class NativeKakaoMapView(
         )?.show()
     }
 
-    private fun markerBitmap(strokeColor: Int, isFavorite: Boolean): Bitmap {
+    private fun markerBitmap(strokeColor: Int, isFavorite: Boolean, routeIndex: Int): Bitmap {
         val width = 69
         val height = 78
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -295,6 +296,21 @@ class NativeKakaoMapView(
             textAlign = Paint.Align.CENTER
             textSize = 34.5f
         }
+        val badgeFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.FILL
+        }
+        val badgeStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = parseColor("#509B64")
+            style = Paint.Style.STROKE
+            strokeWidth = 2.4f
+        }
+        val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(32, 35, 26)
+            textAlign = Paint.Align.CENTER
+            textSize = 13.5f
+            isFakeBoldText = true
+        }
 
         canvas.drawOval(
             RectF(13.5f, height - 7.5f, width - 13.5f, height - 3f),
@@ -313,6 +329,14 @@ class NativeKakaoMapView(
         canvas.drawOval(bodyRect, fillPaint)
         canvas.drawOval(bodyRect, strokePaint)
         canvas.drawText("🥔", width / 2f, bodyRect.centerY() + 12f, emojiPaint)
+        if (routeIndex > 0) {
+            val badgeCenterX = bodyRect.right - 10f
+            val badgeCenterY = bodyRect.bottom - 10f
+            canvas.drawCircle(badgeCenterX, badgeCenterY, 12f, badgeFillPaint)
+            canvas.drawCircle(badgeCenterX, badgeCenterY, 12f, badgeStrokePaint)
+            val textOffset = (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f
+            canvas.drawText(routeIndex.toString(), badgeCenterX, badgeCenterY - textOffset, badgeTextPaint)
+        }
         return bitmap
     }
 

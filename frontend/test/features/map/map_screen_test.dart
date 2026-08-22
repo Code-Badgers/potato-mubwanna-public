@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/map/application/map_spot_controller.dart';
 import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
+import 'package:potato_mubwanna/features/map/domain/favorite_spot.dart';
 import 'package:potato_mubwanna/features/map/domain/favorite_spot_route.dart';
 import 'package:potato_mubwanna/features/map/domain/map_spot.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
@@ -99,11 +100,11 @@ void main() {
     expect(find.text('대표 메뉴'), findsNothing);
   });
 
-  testWidgets('recreates the map around the first spot after filtering', (
+  testWidgets('updates map spots without recreating the map after filtering', (
     tester,
   ) async {
     var mountCount = 0;
-    final mountedSpotIds = <List<String>>[];
+    final renderedSpotIds = <List<String>>[];
 
     await tester.pumpWidget(
       ProviderScope(
@@ -119,9 +120,11 @@ void main() {
             hasMapConfiguration: true,
             mapViewBuilder: (spots, onSpotSelected) => _MapMountProbe(
               spotIds: spots.map((spot) => spot.id).toList(),
-              onMounted: (spotIds) {
+              onMounted: () {
                 mountCount += 1;
-                mountedSpotIds.add(spotIds);
+              },
+              onRendered: (spotIds) {
+                renderedSpotIds.add(spotIds);
               },
             ),
           ),
@@ -131,14 +134,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(mountCount, 1);
-    expect(mountedSpotIds.single, ['1', '2', '3', '4']);
+    expect(renderedSpotIds.single, ['1', '2', '3', '4']);
 
     await tester.tap(find.text('카페·디저트'));
     await tester.pumpAndSettle();
 
     expect(find.text('감자 카페'), findsOneWidget);
-    expect(mountCount, 2);
-    expect(mountedSpotIds.last, ['2']);
+    expect(mountCount, 1);
+    expect(renderedSpotIds.last, ['2']);
   });
 
   testWidgets('opens detail for the currently selected map marker', (
@@ -237,6 +240,372 @@ void main() {
 
     expect(renderedSpots.map((spot) => spot.id).toSet(), {'1', '2', '3', '4'});
     expect(find.text('내 동선 1곳'), findsOneWidget);
+    expect(find.text('내 동선 1곳 저장됨'), findsNothing);
+  });
+
+  testWidgets('shows feedback and increases route count when bookmarking', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _toggleableFavoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(hasMapConfiguration: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('내 동선에 추가'));
+    await tester.pump();
+
+    expect(find.text('내 동선에 추가했어요'), findsOneWidget);
+    expect(find.text('내 동선 1곳'), findsOneWidget);
+  });
+
+  testWidgets('shows feedback and decreases route count when unbookmarking', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _toggleableFavoriteController({'1'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(hasMapConfiguration: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('동선에서 제거'));
+    await tester.pump();
+
+    expect(find.text('내 동선에서 삭제했어요'), findsOneWidget);
+    expect(find.text('내 동선 0곳'), findsOneWidget);
+  });
+
+  testWidgets('route mode shows an empty state and returns to default map mode',
+      (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots, isEmpty);
+    expect(find.text('아직 내 동선이 비어 있어요 🥔'), findsOneWidget);
+    expect(find.text('장소 둘러보기'), findsOneWidget);
+
+    tester
+        .widget<FilledButton>(find.byKey(const ValueKey('route-browse-button')))
+        .onPressed!
+        .call();
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id).toSet(), {'1', '2', '3', '4'});
+    expect(find.text('정선 5일장'), findsOneWidget);
+  });
+
+  testWidgets('route mode renders only one saved spot without drag handle', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'2'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['2']);
+    expect(find.byKey(const ValueKey('route-row-2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('route-order-2')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-2')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('route-drag-2')), findsNothing);
+  });
+
+  testWidgets('route mode chip toggles back to the default spot sheet', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['1', '2']);
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id).toSet(), {'1', '2', '3', '4'});
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsNothing);
+    expect(find.text('정선 5일장'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('category filter exits route mode and shows category spots', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _toggleableFavoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['1', '2', '3']);
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsOneWidget);
+
+    await tester.tap(find.text('카페·디저트'));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['2']);
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsNothing);
+    expect(find.text('감자 카페'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('route mode reorders saved spots and refreshes numbering', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['1', '2', '3']);
+
+    tester
+        .widget<SliverReorderableList>(find.byType(SliverReorderableList))
+        .onReorderItem!
+        .call(2, 0);
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id), ['3', '1', '2']);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-3')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-1')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-2')),
+        matching: find.text('3'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('route mode removes a saved spot and recalculates order numbers',
+      (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _toggleableFavoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-remove-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('내 동선에서 삭제했어요'), findsOneWidget);
+    expect(find.text('내 동선 2곳'), findsOneWidget);
+    expect(renderedSpots.map((spot) => spot.id), ['1', '3']);
+    expect(find.byKey(const ValueKey('route-row-2')), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-3')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('route mode fits compact mobile width without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController({'1', '2', '3'}),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(hasMapConfiguration: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('내 동선'), findsOneWidget);
+    expect(find.byKey(const ValueKey('route-row-1')), findsOneWidget);
   });
 
   testWidgets('opens Kakao Map directions for the selected spot', (
@@ -274,47 +643,6 @@ void main() {
       launchedUri.toString(),
       'https://map.kakao.com/link/to/'
       '%EC%A0%95%EC%84%A0%205%EC%9D%BC%EC%9E%A5,37.38,128.66',
-    );
-  });
-
-  testWidgets('opens the complete recommended route in Kakao Map', (
-    tester,
-  ) async {
-    Uri? launchedUri;
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          mapSpotsProvider.overrideWith((ref) async => _spots),
-          favoriteSpotControllerProvider.overrideWith(
-            (ref) => _favoriteController({'1', '2', '3'}),
-          ),
-          favoriteSpotRouteProvider.overrideWith((ref) async => _route),
-        ],
-        child: MaterialApp(
-          home: MapScreen(
-            hasMapConfiguration: true,
-            mapUriLauncher: (uri) async {
-              launchedUri = uri;
-              return true;
-            },
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final routeButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '이 동선 따라가기'),
-    );
-    routeButton.onPressed!();
-    await tester.pump();
-
-    expect(launchedUri?.pathSegments.take(3), ['link', 'by', 'car']);
-    expect(
-      launchedUri?.pathSegments
-          .skip(3)
-          .map((segment) => segment.split(',').first),
-      ['정선 5일장', '감자 체험장', '감자 카페'],
     );
   });
 
@@ -390,7 +718,8 @@ void main() {
               favoriteSpotControllerProvider.overrideWith(
                 (ref) => _favoriteController(),
               ),
-              favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+              favoriteSpotRouteProvider
+                  .overrideWith((ref) async => _emptyRoute),
             ],
             child: const MaterialApp(home: MapScreen()),
           ),
@@ -433,7 +762,7 @@ void main() {
     expect(find.text('감자 스팟 정보를 불러오지 못했습니다.'), findsNothing);
   });
 
-  testWidgets('uses backend recommended route when available', (tester) async {
+  testWidgets('uses backend route order only in route mode', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -450,11 +779,33 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('추천 동선'), findsOneWidget);
-    expect(find.text('3곳 · 직선 12.3km'), findsOneWidget);
-    expect(find.text('정선 5일장'), findsWidgets);
-    expect(find.text('감자 체험장'), findsOneWidget);
-    expect(find.text('감자 카페'), findsOneWidget);
+    expect(find.text('추천 동선'), findsNothing);
+    expect(find.text('이 동선 따라가기'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('route-mode-chip')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-1')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-3')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-order-2')),
+        matching: find.text('3'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('highlights visit recommendations and selects their markers', (
@@ -584,10 +935,15 @@ void main() {
 }
 
 class _MapMountProbe extends StatefulWidget {
-  const _MapMountProbe({required this.spotIds, required this.onMounted});
+  const _MapMountProbe({
+    required this.spotIds,
+    required this.onMounted,
+    required this.onRendered,
+  });
 
   final List<String> spotIds;
-  final ValueChanged<List<String>> onMounted;
+  final VoidCallback onMounted;
+  final ValueChanged<List<String>> onRendered;
 
   @override
   State<_MapMountProbe> createState() => _MapMountProbeState();
@@ -597,7 +953,14 @@ class _MapMountProbeState extends State<_MapMountProbe> {
   @override
   void initState() {
     super.initState();
-    widget.onMounted(widget.spotIds);
+    widget.onMounted();
+    widget.onRendered(widget.spotIds);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MapMountProbe oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    widget.onRendered(widget.spotIds);
   }
 
   @override
@@ -637,6 +1000,54 @@ FavoriteSpotController _favoriteController([Set<String> spotIds = const {}]) {
     MapSpotRepository(dio: Dio()),
     const LocalFavoriteSpotStorage(),
   )..state = AsyncValue.data(spotIds);
+}
+
+FavoriteSpotController _toggleableFavoriteController([
+  Set<String> spotIds = const {},
+]) {
+  return FavoriteSpotController(
+    _FakeMapSpotRepository(),
+    _InMemoryLocalFavoriteSpotStorage(spotIds),
+  )..state = AsyncValue.data(spotIds);
+}
+
+class _FakeMapSpotRepository extends MapSpotRepository {
+  _FakeMapSpotRepository() : super(dio: Dio());
+
+  @override
+  Future<List<FavoriteSpot>> fetchFavoriteSpots() async => const [];
+
+  @override
+  Future<FavoriteSpotToggleResult> addFavoriteSpot(String spotId) async {
+    return FavoriteSpotToggleResult(spotId: spotId, favorite: true);
+  }
+
+  @override
+  Future<FavoriteSpotToggleResult> removeFavoriteSpot(String spotId) async {
+    return FavoriteSpotToggleResult(spotId: spotId, favorite: false);
+  }
+
+  @override
+  Future<FavoriteSpotRoute> updateFavoriteSpotOrder(
+    List<String> spotIds,
+  ) async {
+    return _emptyRoute;
+  }
+}
+
+class _InMemoryLocalFavoriteSpotStorage extends LocalFavoriteSpotStorage {
+  _InMemoryLocalFavoriteSpotStorage(Set<String> spotIds)
+      : _spotIds = {...spotIds};
+
+  Set<String> _spotIds;
+
+  @override
+  Future<Set<String>> readSpotIds() async => _spotIds;
+
+  @override
+  Future<void> saveSpotIds(Set<String> spotIds) async {
+    _spotIds = {...spotIds};
+  }
 }
 
 const _emptyRoute = FavoriteSpotRoute(

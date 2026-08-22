@@ -75,6 +75,20 @@ class MapSpotRepository {
     );
   }
 
+  Future<FavoriteSpotRoute> updateFavoriteSpotOrder(
+    List<String> spotIds,
+  ) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      ApiPaths.favoriteSpotOrder,
+      data: {
+        'spotIds': spotIds.map(int.parse).toList(),
+      },
+    );
+    return FavoriteSpotRoute.fromJson(
+      response.data?['data'] as Map<String, dynamic>? ?? const {},
+    );
+  }
+
   Future<FavoriteSpotToggleResult> addFavoriteSpot(String spotId) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '${ApiPaths.favoriteSpots}/$spotId',

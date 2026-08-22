@@ -52,8 +52,8 @@ class UserAccountWithdrawalIntegrationTest {
             ) VALUES (1001, 2001, 10.0, CURRENT_TIMESTAMP)
             """);
         jdbcTemplate.update("""
-            INSERT INTO favorite_spots (user_id, tourist_spot_id, created_at)
-            VALUES (1001, 2001, CURRENT_TIMESTAMP)
+            INSERT INTO favorite_spots (user_id, tourist_spot_id, created_at, route_order)
+            VALUES (1001, 2001, CURRENT_TIMESTAMP, 1)
             """);
 
         userAccountService.withdraw(1001L);

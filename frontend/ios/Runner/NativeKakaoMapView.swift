@@ -29,7 +29,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private let routeLayerID = "potatoRouteLayer"
   private let routeStyleID = "potatoRoutePolylineStyle"
   private let routeShapeID = "potatoRoutePolyline"
-  private var spotStyleByPoiID: [String: (markerColor: String, isFavorite: Bool)] = [:]
+  private var spotStyleByPoiID: [String: (markerColor: String, isFavorite: Bool, routeIndex: Int)] = [:]
   private var spotIDByPoiID: [String: String] = [:]
   private var currentLocation: [AnyHashable: Any]?
   private var eventHandlers: [DisposableEventHandler] = []
@@ -252,19 +252,30 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       let spotID = Self.stringValue(spot["id"]) ?? UUID().uuidString
       let poiID = "potato-\(spotID)"
       let isFavorite = Self.boolValue(spot["favorite"]) ?? false
+      let routeIndex = Self.intValue(spot["routeIndex"]) ?? 0
       let markerColor = spot["markerColor"] as? String ?? (isFavorite ? "#F6C23E" : "#56C787")
       addPoiStyles(
         labelManager: labelManager,
         markerColor: markerColor,
-        isFavorite: isFavorite
+        isFavorite: isFavorite,
+        routeIndex: routeIndex
       )
-      let styleID = styleIDFor(markerColor: markerColor, isFavorite: isFavorite, sizeKey: "medium")
+      let styleID = styleIDFor(
+        markerColor: markerColor,
+        isFavorite: isFavorite,
+        routeIndex: routeIndex,
+        sizeKey: "medium"
+      )
       let option = PoiOptions(
         styleID: styleID,
         poiID: poiID
       )
       option.clickable = true
-      spotStyleByPoiID[poiID] = (markerColor: markerColor, isFavorite: isFavorite)
+      spotStyleByPoiID[poiID] = (
+        markerColor: markerColor,
+        isFavorite: isFavorite,
+        routeIndex: routeIndex
+      )
       spotIDByPoiID[poiID] = spotID
       let poi = layer?.addPoi(
         option: option,
@@ -295,6 +306,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       let styleID = styleIDFor(
         markerColor: style.markerColor,
         isFavorite: style.isFavorite,
+        routeIndex: style.routeIndex,
         sizeKey: sizeKey
       )
       layer.getPoi(poiID: poiID)?.changeStyle(styleID: styleID, enableTransition: false)
@@ -407,7 +419,12 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     return "small"
   }
 
-  private func addPoiStyles(labelManager: LabelManager, markerColor: String, isFavorite: Bool) {
+  private func addPoiStyles(
+    labelManager: LabelManager,
+    markerColor: String,
+    isFavorite: Bool,
+    routeIndex: Int
+  ) {
     let color = colorFromHex(markerColor) ?? UIColor(red: 0.212, green: 0.851, blue: 0.561, alpha: 1)
     [
       ("small", CGSize(width: 45, height: 51)),
@@ -416,20 +433,31 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     ].forEach { sizeKey, size in
       labelManager.addPoiStyle(
         makePoiStyle(
-          styleID: styleIDFor(markerColor: markerColor, isFavorite: isFavorite, sizeKey: sizeKey),
+          styleID: styleIDFor(
+            markerColor: markerColor,
+            isFavorite: isFavorite,
+            routeIndex: routeIndex,
+            sizeKey: sizeKey
+          ),
           color: color,
           isFavorite: isFavorite,
+          routeIndex: routeIndex,
           size: size
         )
       )
     }
   }
 
-  private func styleIDFor(markerColor: String, isFavorite: Bool, sizeKey: String) -> String {
+  private func styleIDFor(
+    markerColor: String,
+    isFavorite: Bool,
+    routeIndex: Int = 0,
+    sizeKey: String
+  ) -> String {
     let colorKey = markerColor
       .replacingOccurrences(of: "#", with: "")
       .replacingOccurrences(of: " ", with: "")
-    return "potato\(colorKey)\(isFavorite ? "Favorite" : "Normal")\(sizeKey)"
+    return "potato\(colorKey)\(isFavorite ? "Favorite" : "Normal")Route\(routeIndex)\(sizeKey)"
   }
 
   private func colorFromHex(_ hex: String) -> UIColor? {
@@ -451,10 +479,16 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     styleID: String,
     color: UIColor,
     isFavorite: Bool,
+    routeIndex: Int,
     size: CGSize
   ) -> PoiStyle {
     let iconStyle = PoiIconStyle(
-      symbol: makeMarkerImage(color: color, isFavorite: isFavorite, size: size),
+      symbol: makeMarkerImage(
+        color: color,
+        isFavorite: isFavorite,
+        routeIndex: routeIndex,
+        size: size
+      ),
       anchorPoint: CGPoint(x: 0.5, y: 1.0)
     )
     let perLevelStyle = PerLevelPoiStyle(iconStyle: iconStyle, padding: 0, level: 0)
@@ -464,6 +498,7 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private func makeMarkerImage(
     color: UIColor,
     isFavorite: Bool,
+    routeIndex: Int,
     size: CGSize
   ) -> UIImage? {
     let renderer = UIGraphicsImageRenderer(size: size)
@@ -517,6 +552,37 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         height: emojiSize.height
       )
       emoji.draw(in: emojiRect, withAttributes: attributes)
+
+      if routeIndex > 0 {
+        let badgeDiameter = max(18, size.width * 0.35)
+        let badgeRect = CGRect(
+          x: bodyRect.maxX - badgeDiameter + 2,
+          y: bodyRect.maxY - badgeDiameter + 2,
+          width: badgeDiameter,
+          height: badgeDiameter
+        )
+        UIColor.white.setFill()
+        UIBezierPath(ovalIn: badgeRect).fill()
+        UIColor(red: 0.314, green: 0.608, blue: 0.392, alpha: 1).setStroke()
+        let badgePath = UIBezierPath(ovalIn: badgeRect)
+        badgePath.lineWidth = max(1.8, size.width * 0.035)
+        badgePath.stroke()
+
+        let badgeText = "\(routeIndex)" as NSString
+        let badgeFontSize = max(10, size.width * 0.19)
+        let badgeAttributes: [NSAttributedString.Key: Any] = [
+          .font: UIFont.systemFont(ofSize: badgeFontSize, weight: .black),
+          .foregroundColor: UIColor(red: 0.125, green: 0.137, blue: 0.102, alpha: 1),
+        ]
+        let badgeTextSize = badgeText.size(withAttributes: badgeAttributes)
+        let badgeTextRect = CGRect(
+          x: badgeRect.midX - badgeTextSize.width / 2,
+          y: badgeRect.midY - badgeTextSize.height / 2,
+          width: badgeTextSize.width,
+          height: badgeTextSize.height
+        )
+        badgeText.draw(in: badgeTextRect, withAttributes: badgeAttributes)
+      }
     }
   }
 

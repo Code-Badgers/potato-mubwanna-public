@@ -8,6 +8,7 @@ class KakaoMapView extends StatelessWidget {
     super.key,
     required this.spots,
     this.routePolyline = const [],
+    this.routeSpotIds = const [],
     this.favoriteSpotIds = const {},
     this.currentLocation,
     this.onSpotSelected,
@@ -15,6 +16,7 @@ class KakaoMapView extends StatelessWidget {
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String>? onSpotSelected;

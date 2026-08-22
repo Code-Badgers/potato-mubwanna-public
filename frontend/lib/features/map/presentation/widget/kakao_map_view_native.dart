@@ -18,6 +18,7 @@ class KakaoMapView extends StatefulWidget {
     super.key,
     required this.spots,
     this.routePolyline = const [],
+    this.routeSpotIds = const [],
     this.favoriteSpotIds = const {},
     this.currentLocation,
     this.onSpotSelected,
@@ -25,6 +26,7 @@ class KakaoMapView extends StatefulWidget {
 
   final List<MapSpot> spots;
   final List<FavoriteSpotRoutePoint> routePolyline;
+  final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
   final ValueChanged<String>? onSpotSelected;
@@ -36,18 +38,25 @@ class KakaoMapView extends StatefulWidget {
 class _KakaoMapViewState extends State<KakaoMapView> {
   MethodChannel? _channel;
 
-  List<Map<String, Object>> get _spotPayload => widget.spots
-      .map((spot) => {
-            'id': spot.id,
-            'name': spot.name,
-            'latitude': spot.latitude,
-            'longitude': spot.longitude,
-            'favorite': widget.favoriteSpotIds.contains(spot.id),
-            'markerColor': widget.favoriteSpotIds.contains(spot.id)
-                ? '#F6C23E'
-                : spot.markerColorHex,
-          })
-      .toList();
+  List<Map<String, Object>> get _spotPayload {
+    final routeOrder = <String, int>{
+      for (var index = 0; index < widget.routeSpotIds.length; index += 1)
+        widget.routeSpotIds[index]: index + 1,
+    };
+    return widget.spots
+        .map((spot) => {
+              'id': spot.id,
+              'name': spot.name,
+              'latitude': spot.latitude,
+              'longitude': spot.longitude,
+              'favorite': widget.favoriteSpotIds.contains(spot.id),
+              'routeIndex': routeOrder[spot.id] ?? 0,
+              'markerColor': widget.favoriteSpotIds.contains(spot.id)
+                  ? '#F6C23E'
+                  : spot.markerColorHex,
+            })
+        .toList();
+  }
 
   List<Map<String, Object>> get _routePolylinePayload => widget.routePolyline
       .map((point) => {
@@ -73,11 +82,15 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     final channel = _channel;
     if (channel != null) {
       if (!hasSameMapSpotRenderData(
-        oldWidget.spots,
-        oldWidget.favoriteSpotIds,
-        widget.spots,
-        widget.favoriteSpotIds,
-      )) {
+            oldWidget.spots,
+            oldWidget.favoriteSpotIds,
+            widget.spots,
+            widget.favoriteSpotIds,
+          ) ||
+          !hasSameRouteSpotIds(
+            oldWidget.routeSpotIds,
+            widget.routeSpotIds,
+          )) {
         unawaited(channel.invokeMethod<void>('updateSpots', _spotPayload));
       }
       if (!hasSameRoutePolyline(

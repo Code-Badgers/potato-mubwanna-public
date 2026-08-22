@@ -19,8 +19,8 @@ import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -81,23 +81,23 @@ class FavoriteSpotServiceTest {
     }
 
     @Test
-    void getFavoriteSpotRouteConnectsNearestSpotsFromLatestFavorite() {
+    void getFavoriteSpotRouteUsesSavedRouteOrder() {
         User user = user(1L);
         TouristSpot jeongseon = spot(10L, "정선 5일장", "37.3801000", "128.6609000");
         TouristSpot gangneung = spot(20L, "강릉 감자빵 카페", "37.7519000", "128.8961000");
         TouristSpot chuncheon = spot(30L, "춘천 감자밭", "37.8813000", "127.7298000");
         when(favoriteSpotRepository.findByUserIdWithTouristSpot(1L))
             .thenReturn(List.of(
-                new FavoriteSpot(user, jeongseon, Instant.parse("2026-06-21T03:00:00Z")),
-                new FavoriteSpot(user, chuncheon, Instant.parse("2026-06-21T02:00:00Z")),
-                new FavoriteSpot(user, gangneung, Instant.parse("2026-06-21T01:00:00Z"))
+                new FavoriteSpot(user, jeongseon, Instant.parse("2026-06-21T03:00:00Z"), 1),
+                new FavoriteSpot(user, chuncheon, Instant.parse("2026-06-21T02:00:00Z"), 2),
+                new FavoriteSpot(user, gangneung, Instant.parse("2026-06-21T01:00:00Z"), 3)
             ));
 
         FavoriteSpotRouteResponse response = favoriteSpotService.getFavoriteSpotRoute(1L);
 
         assertThat(response.routeName()).isEqualTo("나만의 감자 동선");
         assertThat(response.waypoints()).extracting("spotId")
-            .containsExactly(10L, 20L, 30L);
+            .containsExactly(10L, 30L, 20L);
         assertThat(response.polyline()).hasSize(3);
         assertThat(response.totalDistanceKm()).isGreaterThan(0);
         assertThat(response.estimatedMinutes()).isGreaterThan(0);
@@ -116,6 +116,40 @@ class FavoriteSpotServiceTest {
         assertThat(response.estimatedMinutes()).isZero();
         assertThat(response.waypoints()).isEmpty();
         assertThat(response.polyline()).isEmpty();
+    }
+
+    @Test
+    void updateFavoriteSpotOrderPersistsUserSelectedOrder() {
+        User user = user(1L);
+        FavoriteSpot first = new FavoriteSpot(
+            user,
+            spot(10L, "정선 5일장", "37.3801000", "128.6609000"),
+            Instant.parse("2026-06-21T03:00:00Z"),
+            1
+        );
+        FavoriteSpot second = new FavoriteSpot(
+            user,
+            spot(20L, "강릉 감자빵 카페", "37.7519000", "128.8961000"),
+            Instant.parse("2026-06-21T02:00:00Z"),
+            2
+        );
+        FavoriteSpot third = new FavoriteSpot(
+            user,
+            spot(30L, "춘천 감자밭", "37.8813000", "127.7298000"),
+            Instant.parse("2026-06-21T01:00:00Z"),
+            3
+        );
+        when(favoriteSpotRepository.findByUserId(1L)).thenReturn(List.of(first, second, third));
+        when(favoriteSpotRepository.findByUserIdWithTouristSpot(1L))
+            .thenReturn(List.of(third, first, second));
+
+        FavoriteSpotRouteResponse response = favoriteSpotService.updateFavoriteSpotOrder(1L, List.of(30L, 10L, 20L));
+
+        assertThat(third.getRouteOrder()).isEqualTo(1);
+        assertThat(first.getRouteOrder()).isEqualTo(2);
+        assertThat(second.getRouteOrder()).isEqualTo(3);
+        assertThat(response.waypoints()).extracting("spotId")
+            .containsExactly(30L, 10L, 20L);
     }
 
     private User user(Long id) {
