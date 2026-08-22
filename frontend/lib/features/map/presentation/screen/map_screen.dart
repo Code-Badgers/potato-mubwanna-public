@@ -1004,7 +1004,7 @@ class _FavoriteRouteTile extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
           child: Row(
             children: [
-              _RouteOrderBadge(index: index),
+              _RouteOrderBadge(index: index, spotId: spot.id),
               const SizedBox(width: 10),
               _RouteSpotThumbnail(spot: spot),
               const SizedBox(width: 12),
@@ -1082,14 +1082,15 @@ class _FavoriteRouteTile extends StatelessWidget {
 }
 
 class _RouteOrderBadge extends StatelessWidget {
-  const _RouteOrderBadge({required this.index});
+  const _RouteOrderBadge({required this.index, required this.spotId});
 
   final int index;
+  final String spotId;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      key: ValueKey('route-order-$index'),
+      key: ValueKey('route-order-$spotId'),
       width: 34,
       height: 34,
       alignment: Alignment.center,
