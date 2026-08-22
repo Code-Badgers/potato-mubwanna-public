@@ -41,13 +41,21 @@ public class FavoriteSpot {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "route_order", nullable = false)
+    private int routeOrder;
+
     protected FavoriteSpot() {
     }
 
     public FavoriteSpot(User user, TouristSpot touristSpot, Instant createdAt) {
+        this(user, touristSpot, createdAt, 1);
+    }
+
+    public FavoriteSpot(User user, TouristSpot touristSpot, Instant createdAt, int routeOrder) {
         this.user = user;
         this.touristSpot = touristSpot;
         this.createdAt = createdAt;
+        this.routeOrder = routeOrder;
     }
 
     public TouristSpot getTouristSpot() {
@@ -56,5 +64,13 @@ public class FavoriteSpot {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public int getRouteOrder() {
+        return routeOrder;
+    }
+
+    public void updateRouteOrder(int routeOrder) {
+        this.routeOrder = routeOrder;
     }
 }

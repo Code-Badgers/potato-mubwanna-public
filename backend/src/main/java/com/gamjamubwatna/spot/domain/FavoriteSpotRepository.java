@@ -17,7 +17,16 @@ public interface FavoriteSpotRepository extends JpaRepository<FavoriteSpot, Long
         FROM FavoriteSpot favoriteSpot
         JOIN FETCH favoriteSpot.touristSpot spot
         WHERE favoriteSpot.user.id = :userId
-        ORDER BY favoriteSpot.createdAt DESC
+        ORDER BY favoriteSpot.routeOrder ASC, favoriteSpot.createdAt ASC
         """)
     List<FavoriteSpot> findByUserIdWithTouristSpot(@Param("userId") Long userId);
+
+    List<FavoriteSpot> findByUserId(Long userId);
+
+    @Query("""
+        SELECT COALESCE(MAX(favoriteSpot.routeOrder), 0)
+        FROM FavoriteSpot favoriteSpot
+        WHERE favoriteSpot.user.id = :userId
+        """)
+    int findMaxRouteOrderByUserId(@Param("userId") Long userId);
 }
