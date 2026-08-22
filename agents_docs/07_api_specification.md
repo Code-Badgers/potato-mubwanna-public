@@ -533,13 +533,14 @@ Response:
   "success": true,
   "message": "요청이 성공했습니다.",
   "data": {
-    "totalCount": 18,
+    "totalCount": 29,
     "acquiredCount": 5,
     "stamps": [
       {
         "stampId": 1,
+        "spotId": 101,
         "cityName": "강릉시",
-        "stampName": "강릉 하지감자 스탬프",
+        "stampName": "경포대",
         "stampImage": "https://...",
         "acquired": true,
         "acquiredAt": "2026-06-04T12:00:00"
@@ -548,6 +549,9 @@ Response:
   }
 }
 ```
+
+- 스탬프는 랠리북 관광지와 1:1이며 `spotId`가 방문 인증 대상 관광지를 식별한다.
+- `totalCount`와 `acquiredCount`는 도시가 아니라 관광지 패스포트 스탬프 기준이다.
 
 ### 4.2 GPS 방문 인증
 
@@ -603,6 +607,7 @@ Response:
 Notes:
 
 - `missionAvailable`은 기존 클라이언트 호환을 위해 유지한다.
+- `stampIssued`는 해당 `spotId`의 관광지 패스포트 스탬프가 새로 발급된 경우에만 `true`다.
 - `unlockedMission`은 방문 인증한 관광지와 연결된 활성 미션이 있고 사용자가 아직 완료하지 않은 경우에만 내려준다.
 - `unlockedMission`이 `null`이면 프론트는 기존처럼 미션 CTA를 숨기거나 일반 미션 목록 진입으로 처리한다.
 
@@ -642,15 +647,15 @@ Response:
 
 처리 규칙:
 
-- 사용자가 이미 스탬프를 획득한 시군은 제외한다.
-- 미획득 시군을 스탬프 `displayOrder` 순으로 확인한다.
-- 각 시군에서 `active=true`, `stampEnabled=true`인 관광지를 이름순으로 1곳 선택한다.
-- 최대 3곳을 반환하며, 후보가 없거나 18개 시군 랠리를 완주한 경우 빈 배열을 반환한다.
+- 사용자가 이미 스탬프를 획득한 관광지는 제외한다.
+- 미획득 관광지 스탬프를 `displayOrder` 순으로 확인한다.
+- 같은 시군의 서로 다른 관광지도 각각 독립된 다음 목표가 될 수 있다.
+- 최대 3곳을 반환하며, 후보가 없거나 29개 관광지 패스포트를 완주한 경우 빈 배열을 반환한다.
 - 인증 정보가 없거나 JWT 사용자를 찾을 수 없으면 `401 Unauthorized`를 반환한다.
 
 ### 4.4 랠리북 관광지 카탈로그 조회
 
-강원 18개 시군 랠리북에 노출하도록 선별한 관광지와 공식 좌표를 조회한다.
+강원 랠리북 패스포트에 노출하도록 선별한 29개 관광지와 공식 좌표를 조회한다.
 
 ```http
 GET /api/stamps/rallybook-spots
@@ -681,7 +686,7 @@ Response:
 처리 규칙:
 
 - `active=true`, `stampEnabled=true`, `rallybookFeatured=true`인 관광지만 반환한다.
-- 시군 스탬프 `displayOrder`, 관광지 이름, 관광지 ID 순으로 정렬한다.
+- 관광지 패스포트 스탬프 `displayOrder` 순으로 정렬한다.
 - 좌표는 `tourist_spots`에 저장된 한국관광공사 TourAPI 공식 위도·경도를 그대로 반환한다.
 - 정선 5일장과 아리랑시장은 같은 공식 TourAPI 콘텐츠이므로 한 관광지로 반환한다.
 - 인증 정보가 없거나 JWT 사용자를 찾을 수 없으면 `401 Unauthorized`를 반환한다.
@@ -710,10 +715,13 @@ Response:
 ```
 
 - 보상 기준은 6개, 12개, 18개다.
+- 보상 집계는 관광지 패스포트 스탬프 획득 수를 기준으로 한다.
 - `nextTargetCount`는 현재 획득 수보다 큰 다음 기준이며 기존 조회 의미를 유지한다.
+- 마지막 보상 기준을 지난 경우 `nextTargetCount`는 `null`이고 `remainingCount`는 29개 패스포트 완주까지 남은 개수다.
 - `claimableTargetCount`는 달성했지만 아직 수령하지 않은 가장 낮은 기준이다. 없으면 `null`이다.
 - `claimable`은 `claimableTargetCount`가 있을 때 `true`다.
-- 18개를 모두 획득해 `completed=true`여도 미수령 보상이 있으면 `claimable=true`일 수 있다.
+- `completed`는 29개 관광지 패스포트 스탬프를 모두 획득했을 때만 `true`다.
+- `completed=true`여도 미수령 보상이 있으면 `claimable=true`일 수 있다.
 
 ### 4.6 스탬프 보상 수령
 
@@ -762,7 +770,7 @@ MVP 쿠폰 정책:
 | --- | --- | --- | --- | --- |
 | 6개 | `CP_STAMP_6_LOCAL_3000` | 강원 감자 제휴점 3,000원 할인권 | 3,000원 | 발급 후 30일 |
 | 12개 | `CP_STAMP_12_LOCAL_5000` | 강원 감자 제휴점 5,000원 할인권 | 5,000원 | 발급 후 30일 |
-| 18개 | `CP_STAMP_18_COMPLETE_10000` | 강원 감자 랠리 완주 10,000원 할인권 | 10,000원 | 발급 후 30일 |
+| 18개 | `CP_STAMP_18_COMPLETE_10000` | 강원 관광지 18곳 달성 10,000원 할인권 | 10,000원 | 발급 후 30일 |
 
 ---
 
@@ -1485,7 +1493,7 @@ feature/
 
 ### 4.5 StampBookScreen
 
-- 18개 시군 스탬프 현황
+- 29개 관광지 패스포트 스탬프 현황
 - 수집률 표시
 - 보상 수령 버튼
 
