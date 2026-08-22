@@ -75,8 +75,8 @@ class StampBookScreen extends ConsumerWidget {
   }
 }
 
-class CityStampGridScreen extends ConsumerWidget {
-  const CityStampGridScreen({super.key});
+class PassportStampGridScreen extends ConsumerWidget {
+  const PassportStampGridScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,7 +89,7 @@ class CityStampGridScreen extends ConsumerWidget {
         child: stampBook.when(
           data: (value) => value == null
               ? const _SignedOutState()
-              : _CityStampGridBody(
+              : _PassportStampGridBody(
                   progress: value.progress,
                   rallybookSpots: rallybookSpots,
                 ),
@@ -105,8 +105,8 @@ class CityStampGridScreen extends ConsumerWidget {
   }
 }
 
-class _CityStampGridBody extends StatelessWidget {
-  const _CityStampGridBody({
+class _PassportStampGridBody extends StatelessWidget {
+  const _PassportStampGridBody({
     required this.progress,
     required this.rallybookSpots,
   });
@@ -710,8 +710,7 @@ List<_PassportStampEntry> _passportEntriesFor(
   List<RallybookSpot> spots,
   List<RallybookStamp> stamps,
 ) {
-  final sorted = [...spots]..sort((a, b) => a.spotId.compareTo(b.spotId));
-  return sorted
+  return spots
       .map(
         (spot) => _PassportStampEntry(
           id: spot.spotId,
@@ -726,19 +725,26 @@ List<_PassportStampEntry> _passportEntriesFor(
 List<_PassportStampEntry> _fallbackPassportEntries(
   List<RallybookStamp> stamps,
 ) {
+  if (stamps.isNotEmpty) {
+    return stamps
+        .map(
+          (stamp) => _PassportStampEntry(
+            id: stamp.spotId,
+            cityName: _normalizeCityName(stamp.cityName),
+            landmark: stamp.stampName,
+            acquired: stamp.acquired,
+          ),
+        )
+        .toList(growable: false);
+  }
+
   return _defaultPassportEntries
       .map(
         (entry) => _PassportStampEntry(
           id: entry.id,
           cityName: entry.cityName,
           landmark: entry.landmark,
-          acquired: stamps.any(
-            (stamp) =>
-                stamp.acquired &&
-                _normalizeCityName(stamp.cityName) == entry.cityName &&
-                _normalizeStampText(stamp.stampName)
-                    .contains(_normalizeStampText(entry.landmark)),
-          ),
+          acquired: false,
         ),
       )
       .toList(growable: false);
@@ -748,26 +754,7 @@ bool _isPassportSpotAcquired(
   RallybookSpot spot,
   List<RallybookStamp> stamps,
 ) {
-  final city = _normalizeCityName(spot.cityName);
-  final spotName = _normalizeStampText(spot.spotName);
-  return stamps.any((stamp) {
-    if (!stamp.acquired) {
-      return false;
-    }
-    final stampCity = _normalizeCityName(stamp.cityName);
-    final stampName = _normalizeStampText(stamp.stampName);
-    if (stampName.isEmpty) {
-      return false;
-    }
-    return stampCity == city &&
-        (stampName == spotName ||
-            stampName.contains(spotName) ||
-            spotName.contains(stampName));
-  });
-}
-
-String _normalizeStampText(String value) {
-  return value.replaceAll(RegExp(r'\s+'), '').replaceAll('스탬프', '').trim();
+  return stamps.any((stamp) => stamp.spotId == spot.spotId && stamp.acquired);
 }
 
 List<List<_PassportStampEntry>> _paginatePassportEntries(
@@ -1292,9 +1279,8 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
 
   @override
   Widget build(BuildContext context) {
-    final stampsByCity = {
-      for (final stamp in widget.progress.stamps)
-        _normalizeCityName(stamp.cityName): stamp,
+    final stampsBySpotId = {
+      for (final stamp in widget.progress.stamps) stamp.spotId: stamp,
     };
     final rallybookSpots = widget.rallybookSpots.maybeWhen(
       data: (spots) => spots ?? const <RallybookSpot>[],
@@ -1306,6 +1292,12 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
           .putIfAbsent(_normalizeCityName(spot.cityName), () => [])
           .add(spot);
     }
+    final completedByCity = {
+      for (final entry in spotsByCity.entries)
+        entry.key: entry.value.every(
+          (spot) => stampsBySpotId[spot.spotId]?.acquired ?? false,
+        ),
+    };
     final selectedSpot = _selectedSpotId == null
         ? null
         : _findSpotById(rallybookSpots, _selectedSpotId!);
@@ -1313,7 +1305,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
         ? null
         : _findRegion(_normalizeCityName(selectedSpot.cityName));
     final selectedStamp =
-        selectedRegion == null ? null : stampsByCity[selectedRegion.city];
+        selectedSpot == null ? null : stampsBySpotId[selectedSpot.spotId];
     final selectedCitySpots = selectedRegion == null
         ? const <RallybookSpot>[]
         : spotsByCity[selectedRegion.city] ?? const <RallybookSpot>[];
@@ -1363,7 +1355,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                     onTap: () => _selectSpot(spot),
                     child: _RallybookSpotMapNode(
                       spot: spot,
-                      stamp: stampsByCity[_normalizeCityName(spot.cityName)],
+                      stamp: stampsBySpotId[spot.spotId],
                       selected: selected,
                     ),
                   ),
@@ -1385,7 +1377,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                     },
                     child: CustomPaint(
                       painter: _GangwonMapPainter(
-                        stampsByCity: stampsByCity,
+                        completedByCity: completedByCity,
                         selectedCity: selectedRegion?.city,
                       ),
                       child: const SizedBox.expand(),
@@ -1482,11 +1474,11 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
 
 class _GangwonMapPainter extends CustomPainter {
   const _GangwonMapPainter({
-    required this.stampsByCity,
+    required this.completedByCity,
     required this.selectedCity,
   });
 
-  final Map<String, RallybookStamp> stampsByCity;
+  final Map<String, bool> completedByCity;
   final String? selectedCity;
 
   @override
@@ -1535,8 +1527,8 @@ class _GangwonMapPainter extends CustomPainter {
         continue;
       }
       final path = _regionPath(region, mapRect);
-      final acquired = stampsByCity[region.city]?.acquired ?? false;
-      fillPaint.color = acquired ? const Color(0xFFF1FFF6) : AppColors.surface;
+      final completed = completedByCity[region.city] ?? false;
+      fillPaint.color = completed ? const Color(0xFFF1FFF6) : AppColors.surface;
       canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, thinLinePaint);
     }
@@ -1561,7 +1553,7 @@ class _GangwonMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _GangwonMapPainter oldDelegate) {
-    return oldDelegate.stampsByCity != stampsByCity ||
+    return oldDelegate.completedByCity != completedByCity ||
         oldDelegate.selectedCity != selectedCity;
   }
 }

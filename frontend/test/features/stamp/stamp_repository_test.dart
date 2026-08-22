@@ -44,7 +44,9 @@ void main() {
       requestedPaths,
       containsAll(['/stamps/me', '/stamps/rewards/check']),
     );
-    expect(result.progress.totalCount, 18);
+    expect(result.progress.totalCount, 29);
+    expect(result.progress.stamps.first.spotId, 101);
+    expect(result.progress.stamps.first.stampName, '경포대');
     expect(result.progress.acquiredCount, 8);
     expect(result.progress.stamps.first.cityName, '강릉시');
     expect(result.progress.stamps.first.acquired, isTrue);
@@ -224,21 +226,23 @@ const _stampBookResponse = <String, Object?>{
   'success': true,
   'message': '요청이 성공했습니다.',
   'data': {
-    'totalCount': 18,
+    'totalCount': 29,
     'acquiredCount': 8,
     'stamps': [
       {
         'stampId': 1,
+        'spotId': 101,
         'cityName': '강릉시',
-        'stampName': '하지감자',
+        'stampName': '경포대',
         'stampImage': null,
         'acquired': true,
         'acquiredAt': '2026-06-30T00:00:00Z',
       },
       {
         'stampId': 2,
+        'spotId': 102,
         'cityName': '정선군',
-        'stampName': '곤드레감자',
+        'stampName': '정선 5일장',
         'stampImage': null,
         'acquired': false,
         'acquiredAt': null,

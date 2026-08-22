@@ -293,7 +293,7 @@ void main() {
     expect(find.text('여행 기록'), findsOneWidget);
   });
 
-  testWidgets('opens city stamp cards from the My Page quick action',
+  testWidgets('opens passport stamp cards from the My Page quick action',
       (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
@@ -310,7 +310,7 @@ void main() {
         GoRoute(
           path: '/main/stamps/cities',
           builder: (_, __) => const Scaffold(
-            body: Center(child: Text('city stamp cards')),
+            body: Center(child: Text('passport stamp cards')),
           ),
         ),
       ],
@@ -335,7 +335,7 @@ void main() {
     await tester.tap(stampTourAction);
     await tester.pumpAndSettle();
 
-    expect(find.text('city stamp cards'), findsOneWidget);
+    expect(find.text('passport stamp cards'), findsOneWidget);
   });
 
   testWidgets('opens settings from My Page account menu', (tester) async {

@@ -34,6 +34,7 @@ class StampProgress {
 class RallybookStamp {
   const RallybookStamp({
     required this.stampId,
+    required this.spotId,
     required this.cityName,
     required this.stampName,
     required this.stampImage,
@@ -42,6 +43,7 @@ class RallybookStamp {
   });
 
   final int stampId;
+  final int spotId;
   final String cityName;
   final String stampName;
   final String? stampImage;
@@ -53,6 +55,7 @@ class RallybookStamp {
 
     return RallybookStamp(
       stampId: json['stampId'] as int? ?? 0,
+      spotId: json['spotId'] as int? ?? 0,
       cityName: json['cityName'] as String? ?? '',
       stampName: json['stampName'] as String? ?? '',
       stampImage: json['stampImage'] as String?,
