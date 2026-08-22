@@ -2,6 +2,7 @@ const potatoDefaultAssetPath =
     'assets/characters/potatoes/default_beginner_potato.png';
 
 const _potatoAssetByCode = <String, String>{
+  'POTATO_DEFAULT_BEGINNER': 'default_beginner_potato',
   'POTATO_HAJI_SEED': 'variety_sumi',
   'POTATO_COMMON_SEED': 'food_rest_stop_whole_potato',
   'POTATO_GONDRE_JEONGSEON': 'food_potato_ongsimi',

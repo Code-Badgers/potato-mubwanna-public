@@ -9,6 +9,7 @@ import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../application/potato_collection_controller.dart';
 import '../../domain/potato_collection.dart';
+import '../default_potato.dart';
 import '../potato_asset.dart';
 
 const _potatoPrimary = Color(0xFF56C787);
@@ -19,16 +20,16 @@ const _potatoCardRadius = AppDimens.cardRadius;
 const _defaultPotatoSpeech = '아직은 작아도, 여행길은 잘 따라갈게요';
 const _potatoCareBackgroundPath =
     'assets/characters/potatoes/potato_care_garden_background.png';
-const _defaultPotatoCard = _PotatoCardSkeletonData(
-  name: '새싹 감자',
-  rarity: PotatoRarity.common,
-  region: '강원 여행길',
-  story: '아직 여행을 시작하지 않은 작은 감자예요. 첫 스탬프를 찍으면 도감 이야기가 하나씩 열립니다.',
-  acquisitionLabel: '첫 감자 스팟 방문 전',
+final _defaultPotatoCard = _PotatoCardSkeletonData(
+  name: defaultBeginnerPotato.name,
+  rarity: defaultBeginnerPotato.rarity,
+  region: defaultBeginnerPotato.region,
+  story: defaultBeginnerPotato.description,
+  acquisitionLabel: defaultBeginnerPotato.acquisitionHint,
   acquiredDateLabel: '아직 없음',
-  assetPath: potatoDefaultAssetPath,
+  assetPath: potatoLocalAssetPath(defaultBeginnerPotato.code),
   locked: false,
-  cardNumber: '000',
+  cardNumber: defaultBeginnerPotato.id.padLeft(3, '0'),
 );
 
 String _formatInt(int value) {
@@ -162,7 +163,7 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _PotatoCardDetailSheet(data: _defaultPotatoCard),
+      builder: (_) => _PotatoCardDetailSheet(data: _defaultPotatoCard),
     );
   }
 
@@ -617,7 +618,7 @@ class _PotatoCareStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final potatoName = potato?.name ?? '새싹 감자';
+    final potatoName = potato?.name ?? defaultBeginnerPotato.name;
     final subtitle = potato == null
         ? '첫 여행을 기다리는 단계\n작은 산책부터 천천히 자라요'
         : '강원 여행을 함께하는 대표 감자';

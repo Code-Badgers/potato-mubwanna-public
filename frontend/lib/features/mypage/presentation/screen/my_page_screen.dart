@@ -7,6 +7,7 @@ import '../../../../app/theme/app_design_tokens.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../potato/application/potato_collection_controller.dart';
 import '../../../potato/domain/potato_collection.dart';
+import '../../../potato/presentation/default_potato.dart';
 import '../../../potato/presentation/potato_asset.dart';
 import '../../application/user_profile_controller.dart';
 import '../../domain/user_profile.dart';
@@ -538,20 +539,20 @@ void _showPotatoCardAlbumSheet(BuildContext context) {
 }
 
 List<PotatoCollectionItem> _visiblePotatoCards(PotatoCollection? collection) {
-  final items = collection?.items ?? const <PotatoCollectionItem>[];
+  if (collection == null) {
+    return const <PotatoCollectionItem>[];
+  }
+  final items = collection.items;
   final acquiredCards =
       items.where((item) => item.acquired).toList(growable: false);
   if (acquiredCards.isNotEmpty) {
     return acquiredCards;
   }
-  final representative = collection?.representativePotato;
+  final representative = collection.representativePotato;
   if (representative != null) {
     return [representative];
   }
-  if (items.isNotEmpty) {
-    return [items.first];
-  }
-  return const <PotatoCollectionItem>[];
+  return const [defaultBeginnerPotato];
 }
 
 class _PotatoAlbumContent extends StatefulWidget {

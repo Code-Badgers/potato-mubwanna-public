@@ -9,6 +9,13 @@ void main() {
     );
   });
 
+  test('maps the shared beginner potato to its local asset', () {
+    expect(
+      potatoLocalAssetPath('POTATO_DEFAULT_BEGINNER'),
+      potatoDefaultAssetPath,
+    );
+  });
+
   test('maps reward-only potato codes to available fallback assets', () {
     expect(
       potatoLocalAssetPath('POTATO_COMMON_SEED'),
