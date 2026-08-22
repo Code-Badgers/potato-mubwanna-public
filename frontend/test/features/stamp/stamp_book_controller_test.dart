@@ -176,7 +176,7 @@ void main() {
 
 StampBook _stampBook(int acquiredCount) => StampBook(
       progress: StampProgress(
-        totalCount: 18,
+        totalCount: 29,
         acquiredCount: acquiredCount,
         stamps: const [],
       ),

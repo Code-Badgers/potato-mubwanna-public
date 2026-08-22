@@ -15,7 +15,6 @@ import com.gamjamubwatna.stamp.domain.StampRepository;
 import com.gamjamubwatna.stamp.domain.StampRewardPolicy;
 import com.gamjamubwatna.stamp.domain.UserStamp;
 import com.gamjamubwatna.stamp.domain.UserStampRepository;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,6 +73,7 @@ public class StampQueryService {
     public StampRewardStatusResponse getRewardStatus(Long userId) {
         validateUser(userId);
         int acquiredCount = userStampRepository.countByUserId(userId);
+        int totalCount = Math.toIntExact(stampRepository.count());
         Integer nextTargetCount = StampRewardPolicy.nextTargetCount(acquiredCount);
         Set<Long> claimedTargetCounts = Set.copyOf(
             rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
@@ -89,8 +89,10 @@ public class StampQueryService {
         return new StampRewardStatusResponse(
             acquiredCount,
             nextTargetCount,
-            nextTargetCount == null ? 0 : nextTargetCount - acquiredCount,
-            nextTargetCount == null,
+            nextTargetCount == null
+                ? Math.max(totalCount - acquiredCount, 0)
+                : nextTargetCount - acquiredCount,
+            acquiredCount >= totalCount,
             claimableTargetCount != null,
             claimableTargetCount
         );
@@ -102,21 +104,10 @@ public class StampQueryService {
             .stream()
             .map(userStamp -> userStamp.getStamp().getId())
             .collect(Collectors.toSet());
-        Map<String, TouristSpot> firstSpotByCity = touristSpotRepository
-            .findActiveStampSpots()
-            .stream()
-            // Repository 정렬을 유지해 각 시군에서 이름순 첫 관광지를 대표 목표로 고정한다.
-            .collect(Collectors.toMap(
-                TouristSpot::getCityName,
-                Function.identity(),
-                (first, ignored) -> first
-            ));
-
         return stampRepository.findAllByOrderByDisplayOrderAsc()
             .stream()
             .filter(stamp -> !acquiredStampIds.contains(stamp.getId()))
-            .map(stamp -> firstSpotByCity.get(stamp.getCityName()))
-            .filter(java.util.Objects::nonNull)
+            .map(Stamp::getTouristSpot)
             .limit(NEXT_TARGET_LIMIT)
             .map(StampNextTargetResponse::from)
             .toList();
@@ -124,22 +115,20 @@ public class StampQueryService {
 
     public List<RallybookSpotResponse> getRallybookSpots(Long userId) {
         validateUser(userId);
-        Map<String, Integer> cityDisplayOrders = stampRepository
+        Map<Long, Integer> spotDisplayOrders = stampRepository
             .findAllByOrderByDisplayOrderAsc()
             .stream()
-            .collect(Collectors.toMap(Stamp::getCityName, Stamp::getDisplayOrder));
+            .collect(Collectors.toMap(
+                stamp -> stamp.getTouristSpot().getId(),
+                Stamp::getDisplayOrder
+            ));
 
         return touristSpotRepository.findActiveRallybookSpots()
             .stream()
-            .sorted(
-                Comparator
-                    .comparingInt((TouristSpot spot) -> cityDisplayOrders.getOrDefault(
-                        spot.getCityName(),
-                        Integer.MAX_VALUE
-                    ))
-                    .thenComparing(TouristSpot::getName)
-                    .thenComparing(TouristSpot::getId)
-            )
+            .sorted(java.util.Comparator.comparingInt(spot -> spotDisplayOrders.getOrDefault(
+                spot.getId(),
+                Integer.MAX_VALUE
+            )))
             .map(RallybookSpotResponse::from)
             .toList();
     }

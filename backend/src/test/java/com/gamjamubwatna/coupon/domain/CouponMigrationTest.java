@@ -65,7 +65,7 @@ class CouponMigrationTest {
         assertThat(couponRepository.findByCode("CP_STAMP_18_COMPLETE_10000"))
             .get()
             .extracting(Coupon::getName, Coupon::getBenefitAmount)
-            .containsExactly("강원 감자 랠리 완주 10,000원 할인권", 10000);
+            .containsExactly("강원 관광지 18곳 달성 10,000원 할인권", 10000);
     }
 
     @Test

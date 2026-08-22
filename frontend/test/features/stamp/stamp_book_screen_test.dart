@@ -81,7 +81,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-103')));
     await tester.pumpAndSettle();
     expect(find.text('소양강 스카이워크'), findsWidgets);
-    expect(find.text('춘천 · 도장 획득'), findsOneWidget);
+    expect(find.text('춘천 · 방문 인증 대기'), findsOneWidget);
   });
 
   testWidgets('opens the selected stamp spot detail', (tester) async {
@@ -123,7 +123,7 @@ void main() {
     expect(find.text('상세 101'), findsOneWidget);
   });
 
-  testWidgets('opens city stamp cards from the map progress badge', (
+  testWidgets('opens passport stamp cards from the map progress badge', (
     tester,
   ) async {
     final router = GoRouter(
@@ -167,7 +167,7 @@ void main() {
     expect(find.text('패스포트  2/3'), findsOneWidget);
   });
 
-  testWidgets('renders city stamp card grid', (tester) async {
+  testWidgets('renders passport stamp card grid', (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -181,7 +181,7 @@ void main() {
             (ref) async => _rallybookSpots,
           ),
         ],
-        child: const MaterialApp(home: CityStampGridScreen()),
+        child: const MaterialApp(home: PassportStampGridScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -422,44 +422,28 @@ const _rallybookSpots = <RallybookSpot>[
 ];
 
 StampBook _stampBook({
-  int acquiredCount = 8,
+  int acquiredCount = 2,
   int? claimableTargetCount,
 }) {
-  const cityNames = [
-    '강릉시',
-    '정선군',
-    '평창군',
-    '춘천시',
-    '속초시',
-    '홍천군',
-    '횡성군',
-    '영월군',
-    '원주시',
-    '동해시',
-    '태백시',
-    '삼척시',
-    '양양군',
-    '고성군',
-    '인제군',
-    '양구군',
-    '화천군',
-    '철원군',
+  final passportSpots = <({String cityName, String spotName})>[
+    (cityName: '정선군', spotName: '정선 5일장'),
+    (cityName: '춘천시', spotName: '남이섬'),
+    (cityName: '춘천시', spotName: '소양강 스카이워크'),
+    for (var index = 3; index < 29; index++)
+      (cityName: '시군 $index', spotName: '관광지 ${index + 1}'),
   ];
 
   return StampBook(
     progress: StampProgress(
-      totalCount: cityNames.length,
+      totalCount: passportSpots.length,
       acquiredCount: acquiredCount,
       stamps: [
-        for (var index = 0; index < cityNames.length; index++)
+        for (var index = 0; index < passportSpots.length; index++)
           RallybookStamp(
             stampId: index + 1,
-            cityName: cityNames[index],
-            stampName: switch (cityNames[index]) {
-              '정선군' => '정선 5일장',
-              '춘천시' => '남이섬',
-              _ => '감자 ${index + 1}',
-            },
+            spotId: 101 + index,
+            cityName: passportSpots[index].cityName,
+            stampName: passportSpots[index].spotName,
             stampImage: null,
             acquired: index < acquiredCount,
             acquiredAt: index < acquiredCount

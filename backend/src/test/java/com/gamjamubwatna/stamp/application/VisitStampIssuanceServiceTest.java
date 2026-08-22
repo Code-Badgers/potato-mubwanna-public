@@ -37,11 +37,11 @@ class VisitStampIssuanceServiceTest {
     }
 
     @Test
-    void issuesRegionalStampForFirstVisit() {
+    void issuesPassportStampForFirstSpotVisit() {
         User user = user();
         TouristSpot spot = spot();
         Stamp stamp = stamp();
-        when(stampRepository.findByCityNameForUpdate("정선군"))
+        when(stampRepository.findByTouristSpotIdForUpdate(101L))
             .thenReturn(Optional.of(stamp));
         when(userStampRepository.existsByUserIdAndStampId(1L, 2L)).thenReturn(false);
 
@@ -57,7 +57,7 @@ class VisitStampIssuanceServiceTest {
 
     @Test
     void skipsStampAlreadyOwnedByUser() {
-        when(stampRepository.findByCityNameForUpdate("정선군"))
+        when(stampRepository.findByTouristSpotIdForUpdate(101L))
             .thenReturn(Optional.of(stamp()));
         when(userStampRepository.existsByUserIdAndStampId(1L, 2L)).thenReturn(true);
 
@@ -87,8 +87,8 @@ class VisitStampIssuanceServiceTest {
     }
 
     @Test
-    void skipsCityWithoutConfiguredStamp() {
-        when(stampRepository.findByCityNameForUpdate("정선군"))
+    void skipsSpotWithoutConfiguredPassportStamp() {
+        when(stampRepository.findByTouristSpotIdForUpdate(101L))
             .thenReturn(Optional.empty());
 
         boolean issued = service.issueStamp(
@@ -115,7 +115,7 @@ class VisitStampIssuanceServiceTest {
     }
 
     private TouristSpot spot() {
-        return new TouristSpot(
+        TouristSpot spot = new TouristSpot(
             "visit-stamp-spot",
             12,
             "정선 5일장",
@@ -128,12 +128,14 @@ class VisitStampIssuanceServiceTest {
             "감자,시장",
             Instant.parse("2026-07-01T00:00:00Z")
         );
+        ReflectionTestUtils.setField(spot, "id", 101L);
+        return spot;
     }
 
     private Stamp stamp() {
         Stamp stamp = new Stamp(
-            "정선군",
-            "곤드레감자",
+            "PASSPORT_SPOT_visit-stamp-spot",
+            spot(),
             null,
             2,
             Instant.parse("2026-07-01T00:00:00Z")

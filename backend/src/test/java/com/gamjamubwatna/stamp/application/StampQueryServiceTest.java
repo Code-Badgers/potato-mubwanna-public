@@ -65,20 +65,27 @@ class StampQueryServiceTest {
 
     @Test
     void returnsAllStampsWithUserAcquisitionState() {
-        List<Stamp> stamps = IntStream.rangeClosed(1, 18)
+        List<Stamp> stamps = IntStream.rangeClosed(1, 29)
             .mapToObj(index -> stamp((long) index, "시군 " + index, "감자 " + index, index))
             .toList();
         Instant acquiredAt = Instant.parse("2026-06-30T00:00:00Z");
-        UserStamp acquired = new UserStamp(null, stamps.getFirst(), null, acquiredAt);
+        UserStamp acquired = new UserStamp(
+            null,
+            stamps.getFirst(),
+            stamps.getFirst().getTouristSpot(),
+            acquiredAt
+        );
         when(userRepository.existsById(1L)).thenReturn(true);
         when(stampRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(stamps);
         when(userStampRepository.findByUserIdWithStamp(1L)).thenReturn(List.of(acquired));
 
         StampBookResponse result = stampQueryService.getStampBook(1L);
 
-        assertThat(result.totalCount()).isEqualTo(18);
+        assertThat(result.totalCount()).isEqualTo(29);
         assertThat(result.acquiredCount()).isEqualTo(1);
-        assertThat(result.stamps()).hasSize(18);
+        assertThat(result.stamps()).hasSize(29);
+        assertThat(result.stamps().getFirst().spotId())
+            .isEqualTo(stamps.getFirst().getTouristSpot().getId());
         assertThat(result.stamps().getFirst().acquired()).isTrue();
         assertThat(result.stamps().getFirst().acquiredAt()).isEqualTo(acquiredAt);
         assertThat(result.stamps().get(1).acquired()).isFalse();
@@ -100,44 +107,46 @@ class StampQueryServiceTest {
     }
 
     @Test
-    void returnsThreeOrderedTargetsFromUnacquiredCities() {
-        List<Stamp> stamps = IntStream.rangeClosed(1, 5)
-            .mapToObj(index -> stamp((long) index, "시군 " + index, "감자 " + index, index))
-            .toList();
-        UserStamp acquired = new UserStamp(null, stamps.getFirst(), null, Instant.now());
-        TouristSpot cityTwoLater = touristSpot(22L, "시군 2", "나 관광지");
-        TouristSpot cityTwoFirst = touristSpot(21L, "시군 2", "가 관광지");
-        TouristSpot cityFour = touristSpot(41L, "시군 4", "라 관광지");
-        TouristSpot cityFive = touristSpot(51L, "시군 5", "마 관광지");
+    void returnsThreeOrderedUnacquiredPassportSpotsIncludingSameCity() {
+        List<Stamp> stamps = List.of(
+            stamp(1L, "시군 1", "가 관광지", 1),
+            stamp(2L, "시군 2", "나 관광지", 2),
+            stamp(3L, "시군 2", "다 관광지", 3),
+            stamp(4L, "시군 4", "라 관광지", 4),
+            stamp(5L, "시군 5", "마 관광지", 5)
+        );
+        UserStamp acquired = new UserStamp(
+            null,
+            stamps.getFirst(),
+            stamps.getFirst().getTouristSpot(),
+            Instant.now()
+        );
 
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userStampRepository.findByUserIdWithStamp(1L)).thenReturn(List.of(acquired));
         when(stampRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(stamps);
-        when(touristSpotRepository.findActiveStampSpots()).thenReturn(List.of(
-            cityTwoFirst,
-            cityTwoLater,
-            cityFour,
-            cityFive
-        ));
 
         List<StampNextTargetResponse> result = stampQueryService.getNextTargets(1L);
 
         assertThat(result).hasSize(3);
         assertThat(result)
+            .extracting(StampNextTargetResponse::spotName)
+            .containsExactly("나 관광지", "다 관광지", "라 관광지");
+        assertThat(result)
             .extracting(StampNextTargetResponse::cityName)
-            .containsExactly("시군 2", "시군 4", "시군 5");
-        assertThat(result.getFirst().spotName()).isEqualTo("가 관광지");
+            .containsExactly("시군 2", "시군 2", "시군 4");
     }
 
     @Test
     void returnsEveryRallybookSpotInStampCityOrder() {
-        List<Stamp> stamps = List.of(
-            stamp(1L, "춘천시", "호반감자", 1),
-            stamp(2L, "강릉시", "하지감자", 2)
-        );
         TouristSpot gangneung = touristSpot(31L, "강릉시", "경포대");
         TouristSpot chuncheonLater = touristSpot(12L, "춘천시", "소양강 스카이워크");
         TouristSpot chuncheonFirst = touristSpot(11L, "춘천시", "남이섬");
+        List<Stamp> stamps = List.of(
+            stamp(1L, chuncheonFirst, 1),
+            stamp(2L, chuncheonLater, 2),
+            stamp(3L, gangneung, 3)
+        );
 
         when(userRepository.existsById(1L)).thenReturn(true);
         when(stampRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(stamps);
@@ -169,6 +178,7 @@ class StampQueryServiceTest {
     ) {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userStampRepository.countByUserId(1L)).thenReturn(acquiredCount);
+        when(stampRepository.count()).thenReturn(29L);
         when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
             1L,
             RewardSourceType.STAMP
@@ -188,6 +198,7 @@ class StampQueryServiceTest {
     void returnsLowestAchievedUnclaimedRewardTarget() {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userStampRepository.countByUserId(1L)).thenReturn(18);
+        when(stampRepository.count()).thenReturn(29L);
         when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
             1L,
             RewardSourceType.STAMP
@@ -195,7 +206,7 @@ class StampQueryServiceTest {
 
         StampRewardStatusResponse result = stampQueryService.getRewardStatus(1L);
 
-        assertThat(result.completed()).isTrue();
+        assertThat(result.completed()).isFalse();
         assertThat(result.claimable()).isTrue();
         assertThat(result.claimableTargetCount()).isEqualTo(18);
     }
@@ -204,6 +215,7 @@ class StampQueryServiceTest {
     void keepsLowerTargetClaimableWhenHigherTargetWasClaimedFirst() {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userStampRepository.countByUserId(1L)).thenReturn(12);
+        when(stampRepository.count()).thenReturn(29L);
         when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
             1L,
             RewardSourceType.STAMP
@@ -219,6 +231,7 @@ class StampQueryServiceTest {
     void returnsNoClaimableTargetAfterAllRewardsWereClaimed() {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userStampRepository.countByUserId(1L)).thenReturn(18);
+        when(stampRepository.count()).thenReturn(29L);
         when(rewardHistoryRepository.findSourceIdsByUserIdAndSourceType(
             1L,
             RewardSourceType.STAMP
@@ -226,7 +239,7 @@ class StampQueryServiceTest {
 
         StampRewardStatusResponse result = stampQueryService.getRewardStatus(1L);
 
-        assertThat(result.completed()).isTrue();
+        assertThat(result.completed()).isFalse();
         assertThat(result.claimable()).isFalse();
         assertThat(result.claimableTargetCount()).isNull();
     }
@@ -247,14 +260,21 @@ class StampQueryServiceTest {
             Arguments.of(11, 12, 1, false),
             Arguments.of(12, 18, 6, false),
             Arguments.of(17, 18, 1, false),
-            Arguments.of(18, null, 0, true)
+            Arguments.of(18, null, 11, false),
+            Arguments.of(28, null, 1, false),
+            Arguments.of(29, null, 0, true)
         );
     }
 
     private Stamp stamp(Long id, String cityName, String stampName, int displayOrder) {
+        TouristSpot spot = touristSpot(1000L + id, cityName, stampName);
+        return stamp(id, spot, displayOrder);
+    }
+
+    private Stamp stamp(Long id, TouristSpot spot, int displayOrder) {
         Stamp stamp = new Stamp(
-            cityName,
-            stampName,
+            "PASSPORT_SPOT_" + spot.getContentId(),
+            spot,
             null,
             displayOrder,
             Instant.parse("2026-06-30T00:00:00Z")

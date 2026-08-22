@@ -1,10 +1,14 @@
 package com.gamjamubwatna.stamp.domain;
 
+import com.gamjamubwatna.spot.domain.TouristSpot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
@@ -17,7 +21,14 @@ public class Stamp {
     @Column(name = "stamp_id")
     private Long id;
 
-    @Column(name = "city_name", nullable = false, unique = true, length = 100)
+    @Column(name = "stamp_key", nullable = false, unique = true, length = 100)
+    private String stampKey;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tourist_spot_id", nullable = false, unique = true)
+    private TouristSpot touristSpot;
+
+    @Column(name = "city_name", nullable = false, length = 100)
     private String cityName;
 
     @Column(name = "stamp_name", nullable = false, length = 100)
@@ -39,14 +50,16 @@ public class Stamp {
     }
 
     public Stamp(
-        String cityName,
-        String stampName,
+        String stampKey,
+        TouristSpot touristSpot,
         String stampImage,
         Integer displayOrder,
         Instant now
     ) {
-        this.cityName = cityName;
-        this.stampName = stampName;
+        this.stampKey = stampKey;
+        this.touristSpot = touristSpot;
+        this.cityName = touristSpot.getCityName();
+        this.stampName = touristSpot.getName();
         this.stampImage = stampImage;
         this.displayOrder = displayOrder;
         this.createdAt = now;
@@ -55,6 +68,14 @@ public class Stamp {
 
     public Long getId() {
         return id;
+    }
+
+    public String getStampKey() {
+        return stampKey;
+    }
+
+    public TouristSpot getTouristSpot() {
+        return touristSpot;
     }
 
     public String getCityName() {

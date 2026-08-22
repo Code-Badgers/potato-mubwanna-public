@@ -19,15 +19,11 @@ import com.gamjamubwatna.coupon.domain.UserCouponRepository;
 import com.gamjamubwatna.reward.domain.RewardHistory;
 import com.gamjamubwatna.reward.domain.RewardHistoryRepository;
 import com.gamjamubwatna.reward.domain.RewardSourceType;
-import com.gamjamubwatna.spot.domain.SpotCategory;
-import com.gamjamubwatna.spot.domain.TouristSpot;
-import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.stamp.api.StampRewardStatusResponse;
 import com.gamjamubwatna.stamp.domain.Stamp;
 import com.gamjamubwatna.stamp.domain.StampRepository;
 import com.gamjamubwatna.stamp.domain.UserStamp;
 import com.gamjamubwatna.stamp.domain.UserStampRepository;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -61,9 +57,6 @@ class StampRewardFlowIntegrationTest {
 
     @Autowired
     private UserStampRepository userStampRepository;
-
-    @Autowired
-    private TouristSpotRepository touristSpotRepository;
 
     @MockitoSpyBean
     private RewardHistoryRepository rewardHistoryRepository;
@@ -228,25 +221,12 @@ class StampRewardFlowIntegrationTest {
             null,
             now
         ));
-        TouristSpot touristSpot = touristSpotRepository.save(new TouristSpot(
-            "stamp-flow-spot-" + suffix,
-            12,
-            "스탬프 통합 관광지",
-            SpotCategory.POTATO_RESTAURANT,
-            new BigDecimal("37.3801000"),
-            new BigDecimal("128.6609000"),
-            "강원특별자치도 정선군",
-            "정선군",
-            null,
-            "감자",
-            now
-        ));
         List<Stamp> stamps = stampRepository.findAllByOrderByDisplayOrderAsc()
             .stream()
             .limit(count)
             .toList();
         userStampRepository.saveAll(stamps.stream()
-            .map(stamp -> new UserStamp(user, stamp, touristSpot, now))
+            .map(stamp -> new UserStamp(user, stamp, stamp.getTouristSpot(), now))
             .toList());
         return user;
     }
