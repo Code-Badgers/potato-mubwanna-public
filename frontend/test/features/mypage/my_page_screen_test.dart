@@ -310,7 +310,10 @@ void main() {
     await tester.tap(find.text('여행 기록'));
     await tester.pumpAndSettle();
 
-    expect(find.text('아직 여행 기록이 없어요'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('empty-travel-record-frame-0')),
+      findsOneWidget,
+    );
     expect(router.canPop(), isTrue);
 
     await tester.tap(find.byTooltip('뒤로 가기'));
