@@ -379,6 +379,7 @@ Response:
       "longitude": 128.6609,
       "address": "강원특별자치도 정선군...",
       "cityName": "정선군",
+      "imageUrl": "https://...",
       "congestionLevel": "LOW",
       "stampEnabled": true,
       "menuItems": []
@@ -391,6 +392,7 @@ Response:
       "longitude": 127.7500695,
       "address": "강원특별자치도 춘천시 신북읍 신샘밭로 674",
       "cityName": "춘천시",
+      "imageUrl": "https://...",
       "congestionLevel": "NORMAL",
       "stampEnabled": true,
       "menuItems": [
@@ -409,11 +411,13 @@ Response:
 처리 규칙:
 
 - `menuItems`는 활성 메뉴를 `displayOrder`, 메뉴 ID 순으로 정렬해 장소별 최대 3개 반환한다.
+- `imageUrl`은 프론트가 바로 렌더링할 최종 대표 이미지다. 서버 저장 이미지가 있으면 우선 사용하고, 없으면 TourAPI 대표 이미지/detailImage2 캐시 결과를 사용한다. 외부 이미지 조회에 실패하면 장소 응답은 유지하고 `imageUrl=null`로 반환할 수 있다.
 - 고정 가격이 확인된 메뉴는 `priceWon`에 0 이상의 원화 정수를 반환하고 `priceNote`는 `null`이다.
 - 고정 가격이 없는 메뉴는 `priceWon=null`과 비어 있지 않은 `priceNote`를 반환한다.
 - `verifiedOn`은 저장된 가격을 공개 출처에서 마지막으로 확인한 날짜다.
 - 확인 가능한 메뉴가 없는 장소는 `menuItems=[]`를 반환하며 임의 메뉴나 가격을 생성하지 않는다.
 - 초기 큐레이션 가격은 2026-08-03 Kakao 장소 페이지에서 확인했으며 출처 URL은 서버 DB에 함께 저장한다.
+- 상세 조회의 `imageUrl`도 목록 조회와 같은 대표 이미지 fallback 우선순위를 따른다.
 
 ### 3.2 주변 관광지 조회
 

@@ -48,6 +48,7 @@ class SpotControllerTest {
                 new BigDecimal("128.6609000"),
                 "강원특별자치도 정선군",
                 "정선군",
+                "https://example.com/jeongseon.jpg",
                 CongestionLevel.NORMAL,
                 true,
                 List.of(new SpotMenuItemResponse(
@@ -68,6 +69,7 @@ class SpotControllerTest {
             .andExpect(jsonPath("$.data[0].name").value("정선 감자옹심이"))
             .andExpect(jsonPath("$.data[0].category").value("POTATO_RESTAURANT"))
             .andExpect(jsonPath("$.data[0].cityName").value("정선군"))
+            .andExpect(jsonPath("$.data[0].imageUrl").value("https://example.com/jeongseon.jpg"))
             .andExpect(jsonPath("$.data[0].menuItems[0].name").value("감자옹심이"))
             .andExpect(jsonPath("$.data[0].menuItems[0].priceWon").value(10000))
             .andExpect(jsonPath("$.data[0].menuItems[0].priceNote").isEmpty())

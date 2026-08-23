@@ -1,13 +1,16 @@
 package com.gamjamubwatna.spot.infrastructure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriUtils;
@@ -19,6 +22,7 @@ public class TourApiClient {
     private final RestClient restClient;
     private final String baseUrl;
     private final String searchKeywordPath;
+    private final String detailImagePath;
     private final String serviceKey;
     private final String mobileOs;
     private final String mobileApp;
@@ -29,6 +33,7 @@ public class TourApiClient {
         RestClient.Builder restClientBuilder,
         @Value("${external.tour-api.base-url}") String baseUrl,
         @Value("${external.tour-api.search-keyword-path}") String searchKeywordPath,
+        @Value("${external.tour-api.detail-image-path}") String detailImagePath,
         @Value("${external.tour-api.service-key}") String serviceKey,
         @Value("${external.tour-api.mobile-os}") String mobileOs,
         @Value("${external.tour-api.mobile-app}") String mobileApp,
@@ -38,6 +43,7 @@ public class TourApiClient {
         this.restClient = restClientBuilder.build();
         this.baseUrl = baseUrl;
         this.searchKeywordPath = searchKeywordPath;
+        this.detailImagePath = detailImagePath;
         this.serviceKey = serviceKey;
         this.mobileOs = mobileOs;
         this.mobileApp = mobileApp;
@@ -60,6 +66,25 @@ public class TourApiClient {
             }
         }
         return List.copyOf(uniqueItems.values());
+    }
+
+    public Optional<String> findRepresentativeImage(String contentId) {
+        if (serviceKey == null || serviceKey.isBlank()) {
+            throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
+        }
+        if (contentId == null || contentId.isBlank()) {
+            return Optional.empty();
+        }
+
+        JsonNode response = restClient.get()
+            .uri(detailImageUri(contentId))
+            .retrieve()
+            .body(JsonNode.class);
+
+        return imageCandidates(response).stream()
+            .map(String::trim)
+            .filter(value -> !value.isBlank())
+            .findFirst();
     }
 
     private List<TourApiSpotItem> searchPotatoSpots(String keyword, int pageNo, int numOfRows) {
@@ -93,6 +118,54 @@ public class TourApiClient {
         return URI.create("%s%s?%s".formatted(normalizedBaseUrl(), normalizedPath(), query));
     }
 
+    private URI detailImageUri(String contentId) {
+        String query = String.join("&",
+            "serviceKey=%s".formatted(encodeServiceKey(serviceKey)),
+            "MobileOS=%s".formatted(encode(mobileOs)),
+            "MobileApp=%s".formatted(encode(mobileApp)),
+            "_type=json",
+            "contentId=%s".formatted(encode(contentId)),
+            "imageYN=Y",
+            "subImageYN=Y",
+            "pageNo=1",
+            "numOfRows=10"
+        );
+        return URI.create("%s%s?%s".formatted(normalizedBaseUrl(), normalizedDetailImagePath(), query));
+    }
+
+    private List<String> imageCandidates(JsonNode response) {
+        JsonNode itemNode = response == null
+            ? null
+            : response.path("response").path("body").path("items").path("item");
+        if (itemNode == null || itemNode.isMissingNode() || itemNode.isNull()) {
+            return List.of();
+        }
+
+        List<String> candidates = new ArrayList<>();
+        if (itemNode.isArray()) {
+            itemNode.forEach(item -> candidates.addAll(imageCandidatesFromItem(item)));
+            return candidates;
+        }
+        if (itemNode.isObject()) {
+            return imageCandidatesFromItem(itemNode);
+        }
+        return List.of();
+    }
+
+    private List<String> imageCandidatesFromItem(JsonNode item) {
+        List<String> candidates = new ArrayList<>();
+        addIfText(candidates, item.path("originimgurl"));
+        addIfText(candidates, item.path("imgurl"));
+        addIfText(candidates, item.path("smallimageurl"));
+        return candidates;
+    }
+
+    private void addIfText(List<String> candidates, JsonNode node) {
+        if (node.isTextual()) {
+            candidates.add(node.asText());
+        }
+    }
+
     private List<String> parseKeywords(String value) {
         if (value == null || value.isBlank()) {
             return List.of("감자");
@@ -116,6 +189,13 @@ public class TourApiClient {
             return searchKeywordPath;
         }
         return "/%s".formatted(searchKeywordPath);
+    }
+
+    private String normalizedDetailImagePath() {
+        if (detailImagePath.startsWith("/")) {
+            return detailImagePath;
+        }
+        return "/%s".formatted(detailImagePath);
     }
 
     private String encode(String value) {

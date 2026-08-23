@@ -21,15 +21,21 @@ class SpotServiceTest {
 
     private final TouristSpotRepository touristSpotRepository = mock(TouristSpotRepository.class);
     private final SpotMenuItemRepository spotMenuItemRepository = mock(SpotMenuItemRepository.class);
+    private final SpotImageResolver spotImageResolver = mock(SpotImageResolver.class);
     private final SpotService spotService = new SpotService(
         touristSpotRepository,
-        spotMenuItemRepository
+        spotMenuItemRepository,
+        spotImageResolver
     );
 
     @Test
     void returnsAtMostThreeMenuItemsForEachSpotAndAnEmptyListWithoutMenus() {
         TouristSpot cafe = spot(1L, "감자밭", SpotCategory.POTATO_CAFE);
         TouristSpot attraction = spot(2L, "남이섬", SpotCategory.POTATO_TOUR);
+        when(spotImageResolver.resolveImageUrl(cafe))
+            .thenReturn("https://example.com/cafe.jpg");
+        when(spotImageResolver.resolveImageUrl(attraction))
+            .thenReturn("https://example.com/attraction.jpg");
         when(touristSpotRepository.findActiveSpots(null, null, null))
             .thenReturn(List.of(cafe, attraction));
         when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
@@ -45,6 +51,7 @@ class SpotServiceTest {
         assertThat(responses.get(0).menuItems())
             .extracting(item -> item.name())
             .containsExactly("감자빵", "감자빵 BOX(10ea)", "아메리카노");
+        assertThat(responses.get(0).imageUrl()).isEqualTo("https://example.com/cafe.jpg");
         assertThat(responses.get(1).menuItems()).isEmpty();
     }
 

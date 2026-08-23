@@ -21,7 +21,7 @@ public record SpotDetailResponse(
     Boolean stampEnabled
 ) {
 
-    public static SpotDetailResponse from(TouristSpot spot) {
+    public static SpotDetailResponse from(TouristSpot spot, String imageUrl) {
         return new SpotDetailResponse(
             spot.getId(),
             spot.getContentId(),
@@ -31,7 +31,7 @@ public record SpotDetailResponse(
             spot.getLongitude(),
             spot.getAddress(),
             spot.getCityName(),
-            spot.getImageUrl(),
+            imageUrl,
             spot.getPotatoTags(),
             spot.getCongestionLevel(),
             spot.getVerificationRadiusMeter(),
