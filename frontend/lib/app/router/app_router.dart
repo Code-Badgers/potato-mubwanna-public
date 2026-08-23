@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin_notice/presentation/screen/admin_notice_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/session_startup_coordinator.dart';
 import '../../features/auth/presentation/screen/login_screen.dart';
@@ -81,6 +82,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/notices',
       builder: (context, state) => const NoticeScreen(),
+    ),
+    GoRoute(
+      path: '/admin/notices',
+      builder: (context, state) => const AdminNoticeScreen(),
     ),
     GoRoute(
       path: '/settings',

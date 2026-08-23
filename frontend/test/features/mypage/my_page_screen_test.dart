@@ -7,8 +7,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/core/permissions/permission_service.dart';
 import 'package:potato_mubwanna/core/storage/token_storage.dart';
+import 'package:potato_mubwanna/features/admin_notice/application/admin_notice_controller.dart';
+import 'package:potato_mubwanna/features/admin_notice/domain/admin_notice.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
@@ -107,6 +110,27 @@ void main() {
     expect(find.text('고객센터'), findsNothing);
     expect(find.text('로그아웃'), findsNothing);
     expect(find.text('회원 탈퇴'), findsNothing);
+    expect(find.text('관리자 공지 관리'), findsNothing);
+  });
+
+  testWidgets('shows the admin menu only after the admin API succeeds',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _myPageProviderOverrides(hasAdminAccess: true),
+        child: const MaterialApp(home: MyPageScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('관리자 공지 관리'), findsOneWidget);
+    expect(find.byKey(const ValueKey('mypage-menu-admin-notices')),
+        findsOneWidget);
   });
 
   testWidgets('shows traveler profile placeholders while loading',
@@ -466,6 +490,7 @@ void main() {
 
 List<Override> _myPageProviderOverrides({
   AuthController? authController,
+  bool hasAdminAccess = false,
   List<Override> overrides = const [],
 }) {
   return [
@@ -482,6 +507,13 @@ List<Override> _myPageProviderOverrides({
       ),
     ),
     noticesProvider.overrideWith((ref) async => _notices),
+    adminNoticesProvider.overrideWith(
+      (ref) => hasAdminAccess
+          ? Future.value(const <AdminNotice>[])
+          : Future<List<AdminNotice>>.error(
+              const ApiException(message: '접근 권한이 없습니다.', statusCode: 403),
+            ),
+    ),
     ...overrides,
   ];
 }
