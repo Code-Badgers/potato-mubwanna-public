@@ -42,6 +42,14 @@
 7. Firebase Admin이 활성화되어 있으면 `FirebaseMessaging.sendEachForMulticast`로 발송한다.
 8. FCM이 무효 token으로 판정한 token은 `deleteByTokenIn`으로 삭제한다.
 
+## Flutter token 등록과 auto-init 확인
+
+- 앱 시작 시 Firebase 초기화 후 `FirebaseMessaging.instance.setAutoInitEnabled(false)`로 자동 token 생성을 막는다.
+- 사용자가 알림 권한을 허용하면 `PushNotificationService.synchronize()`에서 `setAutoInitEnabled(true)`를 호출한 뒤 token을 읽어 서버에 등록한다.
+- `FirebaseMessaging.onTokenRefresh`는 새 token을 서버에 등록하고, 로컬에 저장된 이전 token을 `previousToken`으로 전달한다.
+- 로그아웃, 회원 탈퇴, 알림 권한 거부/철회 흐름에서는 서버 token 삭제와 로컬 token 삭제가 호출된다.
+- 따라서 `setAutoInitEnabled(false)` 이후 다시 `true`로 바뀌는 흐름은 존재한다.
+
 ## 운영 환경 설정
 
 필수:
@@ -75,6 +83,7 @@ GOOGLE_APPLICATION_CREDENTIALS=<external-file-path>
 
 ```txt
 ./gradlew test --tests '*push*'
+./gradlew test
 ```
 
-결과: 성공
+결과: 모두 성공
