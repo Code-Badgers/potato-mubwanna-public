@@ -12,12 +12,14 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final store = _RecordingLegalConsentStore();
     var acceptedCalls = 0;
+    var healthAccessCalls = 0;
 
     await tester.pumpWidget(
       MaterialApp(
         home: LegalConsentScreen(
           consentStore: store,
           onAccepted: () async => acceptedCalls++,
+          requestHealthDataAccess: () async => healthAccessCalls++,
         ),
       ),
     );
@@ -42,6 +44,7 @@ void main() {
     expect(store.requiredAcceptCalls, 1);
     expect(store.locationValues, [true]);
     expect(store.healthValues, [false]);
+    expect(healthAccessCalls, 0);
     expect(acceptedCalls, 1);
   });
 
@@ -51,12 +54,18 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final store = _RecordingLegalConsentStore();
+    var acceptedCalls = 0;
+    var healthAccessCalls = 0;
 
     await tester.pumpWidget(
       MaterialApp(
         home: LegalConsentScreen(
           consentStore: store,
-          onAccepted: () async {},
+          onAccepted: () async => acceptedCalls++,
+          requestHealthDataAccess: () async {
+            expect(store.healthValues, [true]);
+            healthAccessCalls++;
+          },
         ),
       ),
     );
@@ -71,6 +80,36 @@ void main() {
 
     expect(store.locationValues, [true]);
     expect(store.healthValues, [true]);
+    expect(healthAccessCalls, 1);
+    expect(acceptedCalls, 1);
+  });
+
+  testWidgets('health system permission failure does not block app entry',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = _RecordingLegalConsentStore();
+    var acceptedCalls = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LegalConsentScreen(
+          consentStore: store,
+          onAccepted: () async => acceptedCalls++,
+          requestHealthDataAccess: () async => throw StateError('denied'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('전체 동의'));
+    await tester.pump();
+    await tester.tap(find.text('계속하기'));
+    await tester.pumpAndSettle();
+
+    expect(store.healthValues, [true]);
+    expect(acceptedCalls, 1);
+    expect(find.text('동의 상태를 저장하지 못했습니다. 다시 시도해주세요.'), findsNothing);
   });
 }
 
