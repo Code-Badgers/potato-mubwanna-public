@@ -23,15 +23,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('대표 감자'), findsNothing);
-    expect(find.text('곤드레감자'), findsWidgets);
+    expect(find.text('???'), findsWidgets);
+    expect(find.text('곤드레감자'), findsNothing);
     expect(find.text('오늘 감자걸음'), findsOneWidget);
     expect(find.text('7,842 / 10,000걸음'), findsOneWidget);
     expect(find.text('수확까지'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
-    expect(find.text('아기'), findsOneWidget);
-    expect(find.text('어린'), findsOneWidget);
-    expect(find.text('통통'), findsOneWidget);
-    expect(find.text('정선 감자'), findsOneWidget);
+    expect(find.text('아기'), findsNothing);
+    expect(find.text('어린'), findsNothing);
+    expect(find.text('통통'), findsNothing);
+    expect(find.text('정선 감자'), findsNothing);
     expect(find.text('81 / 100'), findsOneWidget);
     expect(find.text('64 / 100'), findsOneWidget);
     expect(find.text('93 / 100'), findsOneWidget);
@@ -70,7 +71,7 @@ void main() {
     expect(find.text('대표 감자로 설정'), findsNothing);
   });
 
-  testWidgets('renders reward-only potato code with mapped local asset', (
+  testWidgets('keeps reward-only potato identity hidden before harvest', (
     tester,
   ) async {
     await _pumpScreen(
@@ -87,10 +88,11 @@ void main() {
       return widget is Image &&
           widget.image is AssetImage &&
           (widget.image as AssetImage).assetName ==
-              'assets/characters/potatoes/food_rest_stop_whole_potato.png';
+              'assets/characters/potatoes/growth/potato_growth_stage_1_baby.png';
     });
 
-    expect(find.text('일반 씨앗감자'), findsWidgets);
+    expect(find.text('???'), findsOneWidget);
+    expect(find.text('일반 씨앗감자'), findsNothing);
     expect(mappedAsset, findsWidgets);
   });
 
@@ -108,7 +110,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('새싹 감자'), findsWidgets);
+    expect(find.text('???'), findsWidgets);
+    expect(find.text('새싹 감자'), findsNothing);
     expect(find.text('강릉 감자빵'), findsNothing);
 
     final detailButton = find.widgetWithText(OutlinedButton, '정보 보기');
@@ -141,7 +144,7 @@ void main() {
     expect(find.text('나의 감자 도감'), findsOneWidget);
     expect(find.textContaining('감자를 누르면'), findsNothing);
     expect(find.text('하지감자'), findsOneWidget);
-    expect(find.text('???'), findsOneWidget);
+    expect(find.text('???'), findsWidgets);
     expect(find.widgetWithText(TextButton, '상세'), findsNothing);
     expect(find.widgetWithText(TextButton, '힌트'), findsNothing);
     expect(find.text('대표 감자로 설정'), findsNothing);
@@ -163,7 +166,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, '대표 감자 변경'));
     await tester.pumpAndSettle();
-    final lockedPotato = find.text('???');
+    final lockedPotato = find.text('???').last;
     await tester.ensureVisible(lockedPotato);
     await tester.tap(lockedPotato);
     await tester.pump();
@@ -209,7 +212,7 @@ void main() {
   testWidgets('persists potato care and shows the growth distance', (
     tester,
   ) async {
-    final repository = _FakePotatoRepository();
+    final repository = _FakePotatoRepository(growthDistanceAdded: 1000);
 
     await _pumpScreen(
       tester,
@@ -225,6 +228,7 @@ void main() {
 
     expect(repository.interactionAction, PotatoInteractionAction.pat);
     expect(find.text('잘했어요. 오늘은 조금 더 가까워졌네요'), findsOneWidget);
+    expect(find.text('81%'), findsOneWidget);
   });
 
   testWidgets('sends the snack care action to the server', (tester) async {
@@ -612,9 +616,13 @@ Future<void> _pumpScreen(
 }
 
 class _FakePotatoRepository extends PotatoRepository {
-  _FakePotatoRepository({this.interactionError}) : super(dio: Dio());
+  _FakePotatoRepository({
+    this.interactionError,
+    this.growthDistanceAdded = 50,
+  }) : super(dio: Dio());
 
   final ApiException? interactionError;
+  final double growthDistanceAdded;
   String? updatedPotatoId;
   PotatoInteractionAction? interactionAction;
 
@@ -639,7 +647,7 @@ class _FakePotatoRepository extends PotatoRepository {
       potatoId: '2',
       potatoName: '곤드레감자',
       action: action,
-      growthDistanceAdded: 50,
+      growthDistanceAdded: growthDistanceAdded,
       cooldownSeconds: 1800,
       nextAvailableAt: DateTime.parse('2026-08-20T10:30:00Z'),
       careStatus: PotatoCareStatus(

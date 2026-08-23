@@ -482,6 +482,24 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
   String? _careMessage;
   bool _isCaring = false;
   bool _harvestedLocally = false;
+  double _localHarvestProgressBonus = 0;
+
+  @override
+  void didUpdateWidget(covariant _RepresentativePotatoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldItem = oldWidget.item;
+    final item = widget.item;
+    if (oldItem?.id != item?.id) {
+      _harvestedLocally = false;
+      _localHarvestProgressBonus = 0;
+      return;
+    }
+    if (oldItem?.level != item?.level ||
+        oldItem?.growthDistance != item?.growthDistance ||
+        oldItem?.growthGoalDistance != item?.growthGoalDistance) {
+      _localHarvestProgressBonus = 0;
+    }
+  }
 
   Future<void> _reactToCare(PotatoInteractionAction action) async {
     final onCare = widget.onCare;
@@ -491,11 +509,12 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
 
     setState(() => _isCaring = true);
     try {
-      await onCare(action);
+      final result = await onCare(action);
       if (!mounted) {
         return;
       }
       setState(() {
+        _localHarvestProgressBonus += _harvestProgressDelta(result);
         _careMessage = switch (action) {
           PotatoInteractionAction.pat => '잘했어요. 오늘은 조금 더 가까워졌네요',
           PotatoInteractionAction.water => '물을 줬어요. 싹이 또렷해졌네요',
@@ -522,6 +541,18 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
     }
   }
 
+  double _harvestProgressDelta(PotatoInteractionResult result) {
+    final item = widget.item;
+    if (item == null ||
+        item.growthGoalDistance <= 0 ||
+        item.maxGrowthLevel <= 1) {
+      return 0;
+    }
+    return result.growthDistanceAdded /
+        item.growthGoalDistance /
+        (item.maxGrowthLevel - 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final potato = widget.item;
@@ -531,11 +562,16 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
     final moisture = potato?.careStatus?.moisture ?? 0;
     final mood = potato?.careStatus?.mood ?? 0;
     final growthRatio = widget.growthProgress.clamp(0, 1).toDouble();
-    final harvestProgress = potato?.harvestProgress ?? growthRatio;
+    final baseHarvestProgress = potato?.harvestProgress ?? growthRatio;
+    final harvestProgress = (baseHarvestProgress + _localHarvestProgressBonus)
+        .clamp(0, 1)
+        .toDouble();
     final harvestPercent = (harvestProgress * 100).round();
     final growthStage = potato?.growthStage ?? 1;
     final harvested = _harvestedLocally || (potato?.harvested ?? false);
     final canHarvest = (potato?.canHarvest ?? false) && !harvested;
+    final displayGrowthStage =
+        harvested ? growthStage : growthStage.clamp(1, 3);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -547,7 +583,8 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
           _PotatoCareStage(
             potato: potato,
             level: level,
-            growthStage: growthStage,
+            growthStage: displayGrowthStage,
+            revealIdentity: harvested,
             speech: careMessage ??
                 (potato == null || !potato.acquired
                     ? _defaultPotatoSpeech
@@ -572,11 +609,6 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   satiety: satiety,
                   moisture: moisture,
                   mood: mood,
-                ),
-                const SizedBox(height: 10),
-                _PotatoGrowthStageRail(
-                  item: potato,
-                  currentStage: growthStage,
                 ),
                 const SizedBox(height: 10),
                 _PotatoProgressLine(
@@ -653,19 +685,20 @@ class _PotatoCareStage extends StatelessWidget {
     required this.potato,
     required this.level,
     required this.growthStage,
+    required this.revealIdentity,
     required this.speech,
   });
 
   final PotatoCollectionItem? potato;
   final int level;
   final int growthStage;
+  final bool revealIdentity;
   final String speech;
 
   @override
   Widget build(BuildContext context) {
-    final potatoName = potato?.name ?? defaultBeginnerPotato.name;
-    final subtitle =
-        potato == null ? '첫 여행을 기다리는 단계\n작은 산책부터 천천히 자라요' : '강원 여행을 함께하는 대표 감자';
+    final potatoName =
+        revealIdentity ? (potato?.name ?? defaultBeginnerPotato.name) : '???';
 
     return SizedBox(
       height: 318,
@@ -699,6 +732,7 @@ class _PotatoCareStage extends StatelessWidget {
             ),
             Positioned(
               left: 20,
+              right: 116,
               top: 24,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -715,17 +749,7 @@ class _PotatoCareStage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                      height: 1.36,
-                    ),
-                  ),
+                  _PotatoSpeechBubble(message: speech),
                 ],
               ),
             ),
@@ -733,14 +757,6 @@ class _PotatoCareStage extends StatelessWidget {
               right: 20,
               top: 26,
               child: _PotatoLevelBadge(level: level),
-            ),
-            Positioned(
-              top: 112,
-              left: 20,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _PotatoSpeechBubble(message: speech),
-              ),
             ),
             Positioned(
               left: 28,
@@ -825,138 +841,6 @@ class _PotatoCareStats extends StatelessWidget {
   }
 }
 
-class _PotatoGrowthStageRail extends StatelessWidget {
-  const _PotatoGrowthStageRail({
-    required this.item,
-    required this.currentStage,
-  });
-
-  final PotatoCollectionItem? item;
-  final int currentStage;
-
-  @override
-  Widget build(BuildContext context) {
-    final region = item?.region.trim() ?? '';
-    final finalStageName = region.isNotEmpty
-        ? '${region.replaceAll('시', '').replaceAll('군', '')} 감자'
-        : '최종 감자';
-    final stages = <({String label, String assetPath})>[
-      (
-        label: '아기',
-        assetPath: potatoGrowthStageAssetPaths[1]!,
-      ),
-      (
-        label: '어린',
-        assetPath: potatoGrowthStageAssetPaths[2]!,
-      ),
-      (
-        label: '통통',
-        assetPath: potatoGrowthStageAssetPaths[3]!,
-      ),
-      (
-        label: finalStageName,
-        assetPath: item == null
-            ? potatoDefaultAssetPath
-            : potatoLocalAssetPath(item!.code),
-      ),
-    ];
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-        child: Row(
-          children: [
-            for (var index = 0; index < stages.length; index++) ...[
-              Expanded(
-                child: _PotatoGrowthStageStep(
-                  label: stages[index].label,
-                  assetPath: stages[index].assetPath,
-                  completed: index + 1 < currentStage,
-                  active: index + 1 == currentStage,
-                ),
-              ),
-              if (index != stages.length - 1)
-                Container(
-                  width: 16,
-                  height: 2,
-                  color: index + 1 < currentStage
-                      ? _potatoPrimary.withValues(alpha: 0.52)
-                      : _potatoLine,
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PotatoGrowthStageStep extends StatelessWidget {
-  const _PotatoGrowthStageStep({
-    required this.label,
-    required this.assetPath,
-    required this.completed,
-    required this.active,
-  });
-
-  final String label;
-  final String assetPath;
-  final bool completed;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final color =
-        active || completed ? _potatoPrimary : AppColors.textSecondary;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: active ? 42 : 36,
-          height: active ? 42 : 36,
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: active
-                ? _potatoPrimary.withValues(alpha: 0.16)
-                : const Color(0xFFF4F2EB),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: active ? _potatoPrimary : _potatoLine,
-              width: active ? 1.5 : 1,
-            ),
-          ),
-          child: Image.asset(
-            assetPath,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Icon(
-              completed ? Icons.check_rounded : Icons.eco_rounded,
-              color: color,
-              size: 18,
-            ),
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: color,
-            fontSize: 10,
-            fontWeight: active ? FontWeight.w900 : FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _PotatoHarvestAction extends StatelessWidget {
   const _PotatoHarvestAction({
     required this.item,
@@ -983,13 +867,11 @@ class _PotatoHarvestAction extends StatelessWidget {
             : canHarvest
                 ? '감자 수확하기'
                 : '아직 자라고 있어요';
-    final helper = potato == null
-        ? '첫 감자 스팟을 방문하면 감자밭이 열려요'
-        : harvested
-            ? '수확한 감자는 도감 카드에서 다시 볼 수 있어요'
-            : canHarvest
-                ? '완전히 자란 감자를 카드로 받을 수 있어요'
-                : '조금만 더 돌보면 수확할 수 있어요';
+    final helper = harvested
+        ? '수확한 감자는 도감 카드에서 다시 볼 수 있어요'
+        : canHarvest
+            ? '완전히 자란 감자를 카드로 받을 수 있어요'
+            : '조금만 더 돌보면 수확할 수 있어요';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1002,21 +884,24 @@ class _PotatoHarvestAction extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
         child: Row(
           children: [
-            Expanded(
-              child: Text(
-                helper,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                  height: 1.35,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
+            if (potato != null) ...[
+              Expanded(
+                child: Text(
+                  helper,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
+            ] else
+              const Spacer(),
             FilledButton(
               onPressed: enabled
                   ? harvested
@@ -1355,6 +1240,7 @@ class _PotatoCareBar extends StatelessWidget {
           child: _PotatoCareButton(
             icon: Icons.favorite_rounded,
             label: '쓰다듬기',
+            color: _potatoPrimary,
             enabled: enabled,
             onPressed: () => onCare(PotatoInteractionAction.pat),
           ),
@@ -1364,6 +1250,7 @@ class _PotatoCareBar extends StatelessWidget {
           child: _PotatoCareButton(
             icon: Icons.water_drop_rounded,
             label: '물 주기',
+            color: const Color(0xFF3FA9E6),
             enabled: enabled,
             onPressed: () => onCare(PotatoInteractionAction.water),
           ),
@@ -1373,6 +1260,7 @@ class _PotatoCareBar extends StatelessWidget {
           child: _PotatoCareButton(
             icon: Icons.eco_rounded,
             label: '영양제',
+            color: const Color(0xFF78B95C),
             enabled: enabled,
             onPressed: () => onCare(PotatoInteractionAction.snack),
           ),
@@ -1386,12 +1274,14 @@ class _PotatoCareButton extends StatelessWidget {
   const _PotatoCareButton({
     required this.icon,
     required this.label,
+    required this.color,
     required this.enabled,
     required this.onPressed,
   });
 
   final IconData icon;
   final String label;
+  final Color color;
   final bool enabled;
   final VoidCallback onPressed;
 
@@ -1406,16 +1296,21 @@ class _PotatoCareButton extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             color: enabled
-                ? AppColors.primaryTint.withValues(alpha: 0.72)
+                ? color.withValues(alpha: 0.18)
                 : const Color(0xFFF1F0EC),
             borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: enabled
+                  ? color.withValues(alpha: 0.34)
+                  : const Color(0xFFE0DED6),
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                color: enabled ? _potatoDark : AppColors.textSecondary,
+                color: enabled ? color : AppColors.textSecondary,
                 size: 16,
               ),
               const SizedBox(width: 5),
