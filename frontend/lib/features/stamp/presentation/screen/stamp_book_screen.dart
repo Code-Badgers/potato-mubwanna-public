@@ -1481,10 +1481,10 @@ class _GangwonMapPainter extends CustomPainter {
     }());
 
     final mapRect = _gangwonMapRect(size);
+    final pathCache = _GangwonMapPathCache.forRect(mapRect);
     canvas.drawRect(
         Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
 
-    var fullPath = Path();
     final fillPaint = Paint()..style = PaintingStyle.fill;
     final thinLinePaint = Paint()
       ..color = const Color(0xFFB9E2EA)
@@ -1501,22 +1501,12 @@ class _GangwonMapPainter extends CustomPainter {
     final landmassPaint = Paint()
       ..color = AppColors.primary.withValues(alpha: 0.16)
       ..style = PaintingStyle.fill;
-    final landmassPath = _contextLandmassPath(mapRect);
-    if (landmassPath.computeMetrics().isNotEmpty) {
+    final landmassPath = pathCache.landmassPath;
+    if (!landmassPath.getBounds().isEmpty) {
       canvas.drawPath(landmassPath, landmassPaint);
     }
 
-    for (final region in gangwonMapRegions) {
-      final path = _regionPath(region, mapRect);
-      try {
-        fullPath = fullPath.computeMetrics().isEmpty
-            ? path
-            : Path.combine(PathOperation.union, fullPath, path);
-      } catch (_) {
-        fullPath.addPath(path, Offset.zero);
-      }
-    }
-
+    final fullPath = pathCache.fullPath;
     final coastlinePaint = Paint()
       ..color = const Color(0xFF9FCFE0).withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
@@ -1530,7 +1520,7 @@ class _GangwonMapPainter extends CustomPainter {
       if (region.city == selectedCity) {
         continue;
       }
-      final path = _regionPath(region, mapRect);
+      final path = pathCache.regionPath(region);
       final completed = completedByCity[region.city] ?? false;
       fillPaint.color = completed ? const Color(0xFFF1FFF6) : AppColors.surface;
       canvas.drawPath(path, fillPaint);
@@ -1548,7 +1538,7 @@ class _GangwonMapPainter extends CustomPainter {
     final selectedRegion =
         selectedCity == null ? null : _findRegion(selectedCity!);
     if (selectedRegion != null) {
-      final path = _scaledPath(_regionPath(selectedRegion, mapRect), 1.035);
+      final path = _scaledPath(pathCache.regionPath(selectedRegion), 1.035);
       fillPaint.color = const Color(0xFFE9FBF4);
       canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, selectedLinePaint);
@@ -1771,81 +1761,103 @@ Rect _gangwonMapRect(Size size) {
   ).shift(westContextShift);
 }
 
-Path _regionPath(GangwonMapRegion region, Rect mapRect) {
-  var regionPath = Path();
-  for (final polygon in region.polygons) {
-    if (polygon.length < 3) {
-      continue;
-    }
-    final polygonPath = Path()
-      ..addPolygon(
-        [
-          for (final point in polygon)
-            Offset(
-              mapRect.left + point.dx * mapRect.width,
-              mapRect.top + point.dy * mapRect.height,
-            ),
-        ],
-        true,
-      );
+class _GangwonMapPathCache {
+  _GangwonMapPathCache._({
+    required this.mapRect,
+    required this.regionPaths,
+    required this.fullPath,
+    required this.landmassPath,
+  });
 
-    try {
-      regionPath = regionPath.computeMetrics().isEmpty
-          ? polygonPath
-          : Path.combine(PathOperation.union, regionPath, polygonPath);
-    } catch (_) {
-      regionPath.addPath(polygonPath, Offset.zero);
+  final Rect mapRect;
+  final Map<String, Path> regionPaths;
+  final Path fullPath;
+  final Path landmassPath;
+
+  static _GangwonMapPathCache forRect(Rect mapRect) {
+    final cached = _cachedPath;
+    if (cached != null && _sameRect(cached.mapRect, mapRect)) {
+      return cached;
     }
+
+    final regionPaths = <String, Path>{};
+    final fullPath = _combinedPath([
+      for (final region in gangwonMapRegions)
+        regionPaths[region.city] = _regionPath(region, mapRect),
+    ]);
+    final landmassPath = _combinedPath([
+      for (final region in gangwonContextRegions)
+        _contextRegionPath(region, mapRect),
+    ]);
+
+    final next = _GangwonMapPathCache._(
+      mapRect: mapRect,
+      regionPaths: regionPaths,
+      fullPath: fullPath,
+      landmassPath: landmassPath,
+    );
+    _cachedPath = next;
+    return next;
   }
-  return regionPath;
+
+  Path regionPath(GangwonMapRegion region) =>
+      regionPaths[region.city] ?? Path();
+}
+
+_GangwonMapPathCache? _cachedPath;
+
+bool _sameRect(Rect a, Rect b) {
+  const tolerance = 0.01;
+  return (a.left - b.left).abs() < tolerance &&
+      (a.top - b.top).abs() < tolerance &&
+      (a.width - b.width).abs() < tolerance &&
+      (a.height - b.height).abs() < tolerance;
+}
+
+Path _regionPath(GangwonMapRegion region, Rect mapRect) {
+  return _combinedPath([
+    for (final polygon in region.polygons)
+      if (polygon.length >= 3) _polygonPath(polygon, mapRect),
+  ]);
 }
 
 Path _contextRegionPath(GangwonContextRegion region, Rect mapRect) {
-  var regionPath = Path();
-  for (final polygon in region.polygons) {
-    if (polygon.length < 3) {
-      continue;
-    }
-    final polygonPath = Path()
-      ..addPolygon(
-        [
-          for (final point in polygon)
-            Offset(
-              mapRect.left + point.dx * mapRect.width,
-              mapRect.top + point.dy * mapRect.height,
-            ),
-        ],
-        true,
-      );
-
-    try {
-      regionPath = regionPath.computeMetrics().isEmpty
-          ? polygonPath
-          : Path.combine(PathOperation.union, regionPath, polygonPath);
-    } catch (_) {
-      regionPath.addPath(polygonPath, Offset.zero);
-    }
-  }
-  return regionPath;
+  return _combinedPath([
+    for (final polygon in region.polygons)
+      if (polygon.length >= 3) _polygonPath(polygon, mapRect),
+  ]);
 }
 
-Path _contextLandmassPath(Rect mapRect) {
-  var landmassPath = Path();
-  for (final region in gangwonContextRegions) {
-    final regionPath = _contextRegionPath(region, mapRect);
-    if (regionPath.computeMetrics().isEmpty) {
+Path _polygonPath(List<Offset> polygon, Rect mapRect) {
+  return Path()
+    ..addPolygon(
+      [
+        for (final point in polygon)
+          Offset(
+            mapRect.left + point.dx * mapRect.width,
+            mapRect.top + point.dy * mapRect.height,
+          ),
+      ],
+      true,
+    );
+}
+
+Path _combinedPath(List<Path> paths) {
+  var combined = Path();
+  for (final path in paths) {
+    if (path.getBounds().isEmpty) {
       continue;
     }
 
     try {
-      landmassPath = landmassPath.computeMetrics().isEmpty
-          ? regionPath
-          : Path.combine(PathOperation.union, landmassPath, regionPath);
+      combined = combined.getBounds().isEmpty
+          ? path
+          : Path.combine(PathOperation.union, combined, path);
     } catch (_) {
-      landmassPath.addPath(regionPath, Offset.zero);
+      combined.addPath(path, Offset.zero);
     }
   }
-  return landmassPath;
+  return combined;
 }
 
 var _didLogGangwonContextRegions = false;
@@ -1874,8 +1886,9 @@ Path _scaledPath(Path path, double scale) {
 }
 
 String? _hitTestRegion(Offset position, Rect mapRect) {
+  final pathCache = _GangwonMapPathCache.forRect(mapRect);
   for (final region in gangwonMapRegions.reversed) {
-    if (_regionPath(region, mapRect).contains(position)) {
+    if (pathCache.regionPath(region).contains(position)) {
       return region.city;
     }
   }

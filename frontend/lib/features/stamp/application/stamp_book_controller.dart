@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_controller.dart';
@@ -9,6 +11,14 @@ import '../domain/stamp_book.dart';
 final stampRepositoryProvider = Provider<StampRepository>(
   (ref) => StampRepository(dio: ref.watch(dioClientProvider).dio),
 );
+
+const _stampScreenCacheDuration = Duration(minutes: 5);
+
+void _keepStampScreenDataAlive(Ref<Object?> ref) {
+  final link = ref.keepAlive();
+  final timer = Timer(_stampScreenCacheDuration, link.close);
+  ref.onDispose(timer.cancel);
+}
 
 final stampBookProvider = FutureProvider.autoDispose<StampBook?>((ref) async {
   final authStatus = ref.watch(
@@ -32,7 +42,9 @@ final stampBookProvider = FutureProvider.autoDispose<StampBook?>((ref) async {
     );
   }
 
-  return ref.watch(stampRepositoryProvider).fetchStampBook();
+  final stampBook = await ref.watch(stampRepositoryProvider).fetchStampBook();
+  _keepStampScreenDataAlive(ref);
+  return stampBook;
 });
 
 final stampNextTargetsProvider =
@@ -56,7 +68,9 @@ final stampRallybookSpotsProvider =
     return const <RallybookSpot>[];
   }
 
-  return ref.watch(stampRepositoryProvider).fetchRallybookSpots();
+  final spots = await ref.watch(stampRepositoryProvider).fetchRallybookSpots();
+  _keepStampScreenDataAlive(ref);
+  return spots;
 });
 
 final stampRewardClaimProvider = StateNotifierProvider.autoDispose<

@@ -85,6 +85,43 @@ void main() {
     expect(rewardHistoryRefreshCount, 1);
   });
 
+  test('keeps loaded stamp book data alive across quick page changes',
+      () async {
+    final authController = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: _SessionAuthRepository(),
+    );
+    final repository = _QueuedStampRepository([
+      _stampBook(3),
+      _stampBook(4),
+    ]);
+    final container = ProviderContainer(
+      overrides: [
+        authControllerProvider.overrideWith((ref) => authController),
+        stampRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await authController.refreshSession();
+    await container.pump();
+
+    final subscription = container.listen(stampBookProvider, (_, __) {});
+    expect(
+      (await container.read(stampBookProvider.future))?.progress.acquiredCount,
+      3,
+    );
+
+    subscription.close();
+    await container.pump();
+
+    expect(
+      (await container.read(stampBookProvider.future))?.progress.acquiredCount,
+      3,
+    );
+    expect(repository.fetchCount, 1);
+  });
+
   test('reward claim ignores a second request while the first is pending',
       () async {
     final completer = Completer<StampRewardClaimResult>();
