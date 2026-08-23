@@ -1,5 +1,6 @@
 package com.gamjamubwatna.spot.api;
 
+import com.gamjamubwatna.spot.application.SpotTourInfo;
 import com.gamjamubwatna.spot.domain.CongestionLevel;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
@@ -18,10 +19,16 @@ public record SpotDetailResponse(
     String potatoTags,
     CongestionLevel congestionLevel,
     Integer verificationRadiusMeter,
-    Boolean stampEnabled
+    Boolean stampEnabled,
+    String description,
+    String openingHours,
+    String closedDays,
+    String admissionFee,
+    String parking,
+    String contactPhone
 ) {
 
-    public static SpotDetailResponse from(TouristSpot spot, String imageUrl) {
+    public static SpotDetailResponse from(TouristSpot spot, String imageUrl, SpotTourInfo tourInfo) {
         return new SpotDetailResponse(
             spot.getId(),
             spot.getContentId(),
@@ -35,7 +42,13 @@ public record SpotDetailResponse(
             spot.getPotatoTags(),
             spot.getCongestionLevel(),
             spot.getVerificationRadiusMeter(),
-            spot.getStampEnabled()
+            spot.getStampEnabled(),
+            tourInfo.description(),
+            tourInfo.openingHours(),
+            tourInfo.closedDays(),
+            tourInfo.admissionFee(),
+            tourInfo.parking(),
+            tourInfo.contactPhone()
         );
     }
 }

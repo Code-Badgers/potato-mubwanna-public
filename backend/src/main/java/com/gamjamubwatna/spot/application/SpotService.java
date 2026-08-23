@@ -22,15 +22,18 @@ public class SpotService {
     private final TouristSpotRepository touristSpotRepository;
     private final SpotMenuItemRepository spotMenuItemRepository;
     private final SpotImageResolver spotImageResolver;
+    private final SpotTourInfoResolver spotTourInfoResolver;
 
     public SpotService(
         TouristSpotRepository touristSpotRepository,
         SpotMenuItemRepository spotMenuItemRepository,
-        SpotImageResolver spotImageResolver
+        SpotImageResolver spotImageResolver,
+        SpotTourInfoResolver spotTourInfoResolver
     ) {
         this.touristSpotRepository = touristSpotRepository;
         this.spotMenuItemRepository = spotMenuItemRepository;
         this.spotImageResolver = spotImageResolver;
+        this.spotTourInfoResolver = spotTourInfoResolver;
     }
 
     @Transactional(readOnly = true)
@@ -59,7 +62,11 @@ public class SpotService {
     public SpotDetailResponse getSpot(Long spotId) {
         TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(spotId)
             .orElseThrow(() -> new IllegalArgumentException("감자 스팟을 찾을 수 없습니다."));
-        return SpotDetailResponse.from(spot, spotImageResolver.resolveImageUrl(spot));
+        return SpotDetailResponse.from(
+            spot,
+            spotImageResolver.resolveImageUrl(spot),
+            spotTourInfoResolver.resolve(spot)
+        );
     }
 
     private String blankToNull(String value) {
