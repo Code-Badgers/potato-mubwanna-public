@@ -39,6 +39,9 @@ void main() {
     expect(find.text('시장·상권'), findsOneWidget);
     expect(find.text('여유'), findsOneWidget);
     expect(find.text('#감자전'), findsOneWidget);
+    expect(find.text('관광 해설 오디오'), findsOneWidget);
+    expect(find.text('한국관광공사 오디(Odii) 제공'), findsOneWidget);
+    expect(find.text('점순이 오디오'), findsNothing);
     expect(find.text('정선 5일장 이야기'), findsOneWidget);
     expect(find.byKey(const ValueKey('audio-player-card')), findsOneWidget);
     expect(find.byKey(const ValueKey('visit-verify-button')), findsOneWidget);

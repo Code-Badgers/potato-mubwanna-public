@@ -11,6 +11,8 @@ import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,10 @@ import org.springframework.stereotype.Service;
 public class AudioGuideService {
 
     private static final String KOREAN = "ko";
+    private static final Map<String, List<String>> VERIFIED_ODII_ALIASES_BY_CONTENT_ID = Map.of(
+        "132003",
+        List.of("정선아리랑시장")
+    );
 
     private final TouristSpotRepository touristSpotRepository;
     private final AudioGuideRepository audioGuideRepository;
@@ -57,12 +63,7 @@ public class AudioGuideService {
 
     private AudioGuideResponse fetchAndSave(TouristSpot spot) {
         try {
-            OdiiStory story = odiiApiClient.searchStories(spot.getName()).stream()
-                .filter(this::isKorean)
-                .filter(item -> item.audioUrl() != null && !item.audioUrl().isBlank())
-                .filter(item -> matchScore(item.title(), spot) < Integer.MAX_VALUE)
-                .min(Comparator.comparingInt(item -> matchScore(item.title(), spot)))
-                .orElseThrow(() -> new AudioGuideNotFoundException("이 관광지의 오디오 가이드를 찾을 수 없습니다."));
+            OdiiStory story = findVerifiedStory(spot);
 
             AudioGuide audioGuide = new AudioGuide(
                 spot,
@@ -80,6 +81,34 @@ public class AudioGuideService {
         } catch (OdiiApiException exception) {
             throw new AudioGuideExternalException("오디오 가이드 제공 서비스에 연결할 수 없습니다.", exception);
         }
+    }
+
+    private OdiiStory findVerifiedStory(TouristSpot spot) {
+        for (String searchTerm : searchTerms(spot)) {
+            var story = odiiApiClient.searchStories(searchTerm).stream()
+                .filter(this::isKorean)
+                .filter(item -> item.audioUrl() != null && !item.audioUrl().isBlank())
+                .filter(item -> matchScore(item.title(), spot) < Integer.MAX_VALUE)
+                .min(Comparator.comparingInt(item -> matchScore(item.title(), spot)));
+            if (story.isPresent()) {
+                return story.get();
+            }
+        }
+        throw new AudioGuideNotFoundException("이 관광지의 오디오 가이드를 찾을 수 없습니다.");
+    }
+
+    private List<String> searchTerms(TouristSpot spot) {
+        List<String> aliases = VERIFIED_ODII_ALIASES_BY_CONTENT_ID.getOrDefault(
+            spot.getContentId(),
+            List.of()
+        );
+        if (aliases.isEmpty()) {
+            return List.of(spot.getName());
+        }
+        return java.util.stream.Stream.concat(
+            java.util.stream.Stream.of(spot.getName()),
+            aliases.stream()
+        ).toList();
     }
 
     private AudioGuideResponse saveOrReadConcurrentCache(
@@ -122,6 +151,14 @@ public class AudioGuideService {
         if (normalizedStoryTitle.equals(normalizedSpotName)) {
             return 0;
         }
+        List<String> normalizedAliases = VERIFIED_ODII_ALIASES_BY_CONTENT_ID
+            .getOrDefault(spot.getContentId(), List.of())
+            .stream()
+            .map(this::normalized)
+            .toList();
+        if (normalizedAliases.contains(normalizedStoryTitle)) {
+            return 1;
+        }
         // 동명 관광지가 다른 지역에 많아 부분 일치는 시·군명이 함께 확인될 때만 허용한다.
         String normalizedCityName = normalizedCityName(spot.getCityName());
         if (
@@ -129,7 +166,15 @@ public class AudioGuideService {
                 && normalizedCityName.length() >= 2
                 && normalizedStoryTitle.contains(normalizedCityName)
         ) {
-            return 1;
+            return 2;
+        }
+        // 별칭도 콘텐츠 ID가 확인된 관광지에만 허용하고, 긴 제목은 지역명까지 다시 확인한다.
+        if (
+            normalizedAliases.stream().anyMatch(normalizedStoryTitle::contains)
+                && normalizedCityName.length() >= 2
+                && normalizedStoryTitle.contains(normalizedCityName)
+        ) {
+            return 3;
         }
         return Integer.MAX_VALUE;
     }

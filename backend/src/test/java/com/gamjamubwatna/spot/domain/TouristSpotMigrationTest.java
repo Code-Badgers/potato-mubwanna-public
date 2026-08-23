@@ -142,6 +142,17 @@ class TouristSpotMigrationTest {
     }
 
     @Test
+    void exposesOnlyTheOfficialJeongseonMarketOnTheMap() {
+        List<TouristSpot> spots = touristSpotRepository.findActiveSpots(null, null, null);
+
+        assertThat(spots)
+            .filteredOn(spot -> "정선군".equals(spot.getCityName()))
+            .extracting(TouristSpot::getName)
+            .contains("정선 5일장")
+            .doesNotContain("정선아리랑시장");
+    }
+
+    @Test
     void replacesHandWrittenCoordinatesWithTourApiCoordinates() {
         Map<String, TouristSpot> spotsByName = officialAttractions().stream()
             .collect(Collectors.toMap(TouristSpot::getName, spot -> spot));
@@ -264,6 +275,7 @@ class TouristSpotMigrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data[?(@.name == '정선 5일장')]").isNotEmpty())
+            .andExpect(jsonPath("$.data[?(@.name == '정선아리랑시장')]").isEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '남이섬')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '감자밭')]").isNotEmpty())
             .andExpect(jsonPath("$.data[?(@.name == '감자적1번지')]").isNotEmpty())

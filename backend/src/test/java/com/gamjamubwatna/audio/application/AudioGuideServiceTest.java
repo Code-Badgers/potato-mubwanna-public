@@ -228,8 +228,51 @@ class AudioGuideServiceTest {
     }
 
     @Test
-    void rejectsWhenNoExactAudioGuideExists() {
+    void selectsVerifiedAliasForOfficialJeongseonMarket() {
         TouristSpot spot = spot("정선 5일장");
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty());
+        when(odiiApiClient.searchStories("정선 5일장"))
+            .thenReturn(List.of(story("21", "정선 아리랑시장", "ko", "https://example.com/a.mp3")));
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenAnswer(invocation -> {
+            AudioGuide guide = invocation.getArgument(0);
+            ReflectionTestUtils.setField(guide, "id", 13L);
+            return guide;
+        });
+
+        var response = audioGuideService.getAudioGuide(1L);
+
+        assertThat(response.id()).isEqualTo(13L);
+        assertThat(response.audioUrl()).isEqualTo("https://example.com/a.mp3");
+    }
+
+    @Test
+    void retriesWithVerifiedAliasWhenCanonicalSearchHasNoMatch() {
+        TouristSpot spot = spot("정선 5일장");
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
+        when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
+            .thenReturn(Optional.empty());
+        when(odiiApiClient.searchStories("정선 5일장")).thenReturn(List.of());
+        when(odiiApiClient.searchStories("정선아리랑시장")).thenReturn(List.of(
+            story("21", "정선 아리랑시장", "ko", "https://example.com/alias.mp3")
+        ));
+        when(audioGuideRepository.saveAndFlush(any(AudioGuide.class))).thenAnswer(invocation -> {
+            AudioGuide guide = invocation.getArgument(0);
+            ReflectionTestUtils.setField(guide, "id", 14L);
+            return guide;
+        });
+
+        var response = audioGuideService.getAudioGuide(1L);
+
+        assertThat(response.id()).isEqualTo(14L);
+        assertThat(response.audioUrl()).isEqualTo("https://example.com/alias.mp3");
+    }
+
+    @Test
+    void rejectsJeongseonAliasForUnverifiedContentId() {
+        TouristSpot spot = spot("정선 5일장");
+        ReflectionTestUtils.setField(spot, "contentId", "CURATED:UNVERIFIED");
         when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(spot));
         when(audioGuideRepository.findByTouristSpotIdAndLanguage(1L, "ko"))
             .thenReturn(Optional.empty());
@@ -261,7 +304,7 @@ class AudioGuideServiceTest {
 
     private TouristSpot spot(String name, String cityName) {
         TouristSpot spot = new TouristSpot(
-            "12345",
+            "정선 5일장".equals(name) ? "132003" : "12345",
             12,
             name,
             SpotCategory.POTATO_MARKET,
