@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../../admin_notice/application/admin_notice_controller.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../potato/application/potato_collection_controller.dart';
 import '../../../potato/domain/potato_collection.dart';
@@ -30,6 +31,8 @@ class MyPageScreen extends ConsumerWidget {
     }
 
     final profileState = ref.watch(userProfileProvider);
+    final adminNoticesState = ref.watch(adminNoticesProvider);
+    final hasAdminAccess = adminNoticesState.valueOrNull != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -45,6 +48,9 @@ class MyPageScreen extends ConsumerWidget {
                 onCoupons: () => context.push('/coupons'),
                 onSettings: () => context.push('/settings'),
                 onNotices: () => context.push('/notices'),
+                onAdminNotices: hasAdminAccess
+                    ? () => context.push('/admin/notices')
+                    : null,
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 18)),
@@ -1040,11 +1046,13 @@ class _AccountMenu extends StatelessWidget {
     required this.onCoupons,
     required this.onSettings,
     required this.onNotices,
+    this.onAdminNotices,
   });
 
   final VoidCallback onCoupons;
   final VoidCallback onSettings;
   final VoidCallback onNotices;
+  final VoidCallback? onAdminNotices;
 
   static const _items = [
     _MenuItem(
@@ -1075,22 +1083,35 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final items = [
+      ..._items,
+      if (onAdminNotices != null)
+        const _MenuItem(
+          key: ValueKey('mypage-menu-admin-notices'),
+          icon: Icons.admin_panel_settings_outlined,
+          label: '관리자 공지 관리',
+          description: '공지 작성과 게시',
+          destination: _MenuDestination.adminNotices,
+          accentColor: AppColors.brown,
+        ),
+    ];
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppDimens.pageHorizontalPadding,
       ),
       child: Column(
         children: [
-          for (var index = 0; index < _items.length; index++) ...[
+          for (var index = 0; index < items.length; index++) ...[
             _NoticeActionRow(
-              item: _items[index],
-              onTap: switch (_items[index].destination) {
+              item: items[index],
+              onTap: switch (items[index].destination) {
                 _MenuDestination.coupons => onCoupons,
                 _MenuDestination.settings => onSettings,
                 _MenuDestination.notices => onNotices,
+                _MenuDestination.adminNotices => onAdminNotices,
               },
             ),
-            if (index < _items.length - 1) const SizedBox(height: 10),
+            if (index < items.length - 1) const SizedBox(height: 10),
           ],
         ],
       ),
@@ -1196,7 +1217,7 @@ class _MenuItem {
   final Color accentColor;
 }
 
-enum _MenuDestination { coupons, settings, notices }
+enum _MenuDestination { coupons, settings, notices, adminNotices }
 
 BoxDecoration _myPageGlassDecoration({double alpha = 0.82}) {
   return BoxDecoration(

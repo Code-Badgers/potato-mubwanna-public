@@ -39,4 +39,8 @@ class ApiPaths {
   static String couponUse(int userCouponId) => '/coupons/$userCouponId/use';
   static const rewardHistory = '/rewards/history';
   static const notices = '/notices';
+  static const adminNotices = '/admin/notices';
+  static String adminNotice(int noticeId) => '/admin/notices/$noticeId';
+  static String adminNoticePublication(int noticeId) =>
+      '/admin/notices/$noticeId/publication';
 }
