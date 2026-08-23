@@ -1,7 +1,10 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../app/config/app_environment.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../push/application/push_messaging_client.dart';
@@ -106,8 +109,15 @@ class AuthController extends StateNotifier<AuthState> {
     } on KakaoLoginUnsupportedException catch (error) {
       state = AuthState.failure(error.message);
       return false;
-    } catch (_) {
-      state = const AuthState.failure('카카오 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } on ApiException catch (error) {
+      _recordBackendLoginFailure(error);
+      state = AuthState.failure(_backendLoginFailureMessage(error));
+      return false;
+    } catch (error) {
+      _recordKakaoSdkFailure(error);
+      state = const AuthState.failure(
+        '카카오 인증 단계에서 실패했습니다. 카카오톡 상태와 네트워크를 확인해주세요.',
+      );
       return false;
     }
   }
@@ -132,8 +142,15 @@ class AuthController extends StateNotifier<AuthState> {
     } on KakaoLoginUnsupportedException catch (error) {
       state = AuthState.failure(error.message);
       return false;
-    } catch (_) {
-      state = const AuthState.failure('카카오 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } on ApiException catch (error) {
+      _recordBackendLoginFailure(error);
+      state = AuthState.failure(_backendLoginFailureMessage(error));
+      return false;
+    } catch (error) {
+      _recordKakaoSdkFailure(error);
+      state = const AuthState.failure(
+        '카카오 인증 단계에서 실패했습니다. 카카오톡 상태와 네트워크를 확인해주세요.',
+      );
       return false;
     } finally {
       if (callback != null || AppEnvironment.hasKakaoAuthorizationCallback) {
@@ -206,6 +223,30 @@ class AuthController extends StateNotifier<AuthState> {
     } catch (_) {
       // 로컬 FCM token은 lifecycle 구현에서 폐기하고 인증 종료를 계속한다.
     }
+  }
+
+  String _backendLoginFailureMessage(ApiException error) {
+    final status = error.statusCode;
+    final statusLabel = status == null ? '' : ' ($status)';
+    if (status == 401) {
+      return '카카오 인증은 완료됐지만 서버 로그인에 실패했습니다$statusLabel. 다시 시도해주세요.';
+    }
+    return '카카오 인증은 완료됐지만 서버 로그인에 실패했습니다$statusLabel. ${error.message}';
+  }
+
+  void _recordBackendLoginFailure(ApiException error) {
+    developer.log(
+      'Kakao backend token exchange failed '
+      '(status=${error.statusCode ?? 'none'}, code=${error.code ?? 'none'}).',
+      name: 'auth',
+    );
+  }
+
+  void _recordKakaoSdkFailure(Object error) {
+    developer.log(
+      'Kakao SDK login failed (type=${error.runtimeType}).',
+      name: 'auth',
+    );
   }
 }
 
