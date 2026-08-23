@@ -41,6 +41,35 @@ void main() {
       expect(result.growthResult?.currentLevel, 3);
     },
   );
+
+  test('posts a representative potato harvest and maps its result', () async {
+    RequestOptions? request;
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            request = options;
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: _harvestResponse,
+              ),
+            );
+          },
+        ),
+      );
+
+    final result =
+        await PotatoRepository(dio: dio).harvestRepresentativePotato();
+
+    expect(request?.method, 'POST');
+    expect(request?.path, '/potatoes/me/representative/harvest');
+    expect(result.potatoId, '2');
+    expect(result.potatoName, '곤드레감자');
+    expect(result.harvested, isTrue);
+    expect(result.harvestedAt, DateTime.parse('2026-08-20T12:00:00Z'));
+  });
 }
 
 const _interactionResponse = <String, Object?>{
@@ -67,5 +96,16 @@ const _interactionResponse = <String, Object?>{
       'leveledUp': true,
       'fullyGrown': false,
     },
+  },
+};
+
+const _harvestResponse = <String, Object?>{
+  'success': true,
+  'message': '요청이 성공했습니다.',
+  'data': {
+    'potatoId': 2,
+    'potatoName': '곤드레감자',
+    'harvested': true,
+    'harvestedAt': '2026-08-20T12:00:00Z',
   },
 };

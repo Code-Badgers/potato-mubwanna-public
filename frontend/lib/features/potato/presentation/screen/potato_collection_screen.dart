@@ -34,9 +34,9 @@ final _defaultPotatoCard = _PotatoCardSkeletonData(
 
 String _formatInt(int value) {
   return value.toString().replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (match) => ',',
-  );
+        RegExp(r'\B(?=(\d{3})+(?!\d))'),
+        (match) => ',',
+      );
 }
 
 class PotatoCollectionScreen extends ConsumerStatefulWidget {
@@ -122,23 +122,21 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
   }
 
   Future<void> _showRepresentativePicker(PotatoCollection collection) async {
-    final result =
-        await showModalBottomSheet<
-          ({PotatoCollectionItem item, bool showDetail})
-        >(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (sheetContext) => _RepresentativePotatoSheet(
-            collection: collection,
-            onShowDetail: (item) {
-              Navigator.of(sheetContext).pop((item: item, showDetail: true));
-            },
-            onSelect: (item) {
-              Navigator.of(sheetContext).pop((item: item, showDetail: false));
-            },
-          ),
-        );
+    final result = await showModalBottomSheet<
+        ({PotatoCollectionItem item, bool showDetail})>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _RepresentativePotatoSheet(
+        collection: collection,
+        onShowDetail: (item) {
+          Navigator.of(sheetContext).pop((item: item, showDetail: true));
+        },
+        onSelect: (item) {
+          Navigator.of(sheetContext).pop((item: item, showDetail: false));
+        },
+      ),
+    );
     if (!mounted || result == null) {
       return;
     }
@@ -221,6 +219,14 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
     return result;
   }
 
+  Future<PotatoHarvestResult> _harvestRepresentativePotato() async {
+    final result =
+        await ref.read(potatoRepositoryProvider).harvestRepresentativePotato();
+    ref.invalidate(potatoCollectionProvider);
+    ref.invalidate(potatoGrowthSummaryProvider);
+    return result;
+  }
+
   Future<void> _showGrowthFeedbackAfterCollectionLoads(
     PotatoGrowthResult growthResult,
   ) async {
@@ -280,6 +286,7 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
                       _showRepresentativePicker(collection);
                     },
                     onCare: _interactWithRepresentativePotato,
+                    onHarvest: _harvestRepresentativePotato,
                   ),
                 ),
           loading: () => const _PotatoStatusBody(
@@ -289,9 +296,8 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
           ),
           error: (error, _) => _PotatoStatusBody(
             child: _PotatoErrorState(
-              message: error is ApiException
-                  ? error.message
-                  : '감자 도감을 불러오지 못했습니다.',
+              message:
+                  error is ApiException ? error.message : '감자 도감을 불러오지 못했습니다.',
               onRetry: () => ref.invalidate(potatoCollectionProvider),
             ),
           ),
@@ -359,7 +365,7 @@ class _PotatoGrowthDialog extends StatelessWidget {
               fullyGrown
                   ? '최종 성장 단계 Lv.${growthResult.currentLevel}에 도달했어요.'
                   : 'Lv.${growthResult.previousLevel}에서 '
-                        'Lv.${growthResult.currentLevel}으로 성장했어요.',
+                      'Lv.${growthResult.currentLevel}으로 성장했어요.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.textSecondary,
@@ -403,6 +409,7 @@ class _PotatoCollectionBody extends StatelessWidget {
     required this.onShowDefaultDetail,
     required this.onChangeRepresentative,
     required this.onCare,
+    required this.onHarvest,
   });
 
   final PotatoCollection collection;
@@ -411,7 +418,8 @@ class _PotatoCollectionBody extends StatelessWidget {
   final VoidCallback onShowDefaultDetail;
   final VoidCallback onChangeRepresentative;
   final Future<PotatoInteractionResult> Function(PotatoInteractionAction action)
-  onCare;
+      onCare;
+  final Future<PotatoHarvestResult> Function() onHarvest;
 
   @override
   Widget build(BuildContext context) {
@@ -437,6 +445,7 @@ class _PotatoCollectionBody extends StatelessWidget {
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
                     onCare: representative == null ? null : onCare,
+                    onHarvest: representative == null ? null : onHarvest,
                   ),
                 ],
               ),
@@ -465,6 +474,7 @@ class _RepresentativePotatoCard extends StatefulWidget {
     required this.onShowDetail,
     required this.onChangeRepresentative,
     required this.onCare,
+    required this.onHarvest,
   });
 
   final PotatoCollectionItem? item;
@@ -474,8 +484,8 @@ class _RepresentativePotatoCard extends StatefulWidget {
   final VoidCallback onChangeRepresentative;
   final Future<PotatoInteractionResult> Function(
     PotatoInteractionAction action,
-  )?
-  onCare;
+  )? onCare;
+  final Future<PotatoHarvestResult> Function()? onHarvest;
 
   @override
   State<_RepresentativePotatoCard> createState() =>
@@ -485,6 +495,25 @@ class _RepresentativePotatoCard extends StatefulWidget {
 class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
   String? _careMessage;
   bool _isCaring = false;
+  bool _harvestedLocally = false;
+  double _localHarvestProgressBonus = 0;
+
+  @override
+  void didUpdateWidget(covariant _RepresentativePotatoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldItem = oldWidget.item;
+    final item = widget.item;
+    if (oldItem?.id != item?.id) {
+      _harvestedLocally = false;
+      _localHarvestProgressBonus = 0;
+      return;
+    }
+    if (oldItem?.level != item?.level ||
+        oldItem?.growthDistance != item?.growthDistance ||
+        oldItem?.growthGoalDistance != item?.growthGoalDistance) {
+      _localHarvestProgressBonus = 0;
+    }
+  }
 
   Future<void> _reactToCare(PotatoInteractionAction action) async {
     final onCare = widget.onCare;
@@ -498,13 +527,13 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
       if (!mounted) {
         return;
       }
-      final distance = result.growthDistanceAdded.round();
       setState(() {
+        _localHarvestProgressBonus += _harvestProgressDelta(result);
         _careMessage = switch (action) {
-          PotatoInteractionAction.pat => '기분이 좋아졌어요. 성장 거리 ${distance}m 추가!',
-          PotatoInteractionAction.water => '물을 마셨어요. 성장 거리 ${distance}m 추가!',
-          PotatoInteractionAction.snack => '간식을 먹었어요. 성장 거리 ${distance}m 추가!',
-          PotatoInteractionAction.walk => '산책했어요. 성장 거리 ${distance}m 추가!',
+          PotatoInteractionAction.pat => '잘했어요. 오늘은 조금 더 가까워졌네요',
+          PotatoInteractionAction.water => '물을 줬어요. 싹이 또렷해졌네요',
+          PotatoInteractionAction.snack => '영양제를 줬어요. 제법 잘 자라요',
+          PotatoInteractionAction.walk => '산책했어요. 감자가 한 뼘 더 자랐네요',
         };
       });
     } on ApiException catch (error) {
@@ -526,6 +555,71 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
     }
   }
 
+  Future<void> _harvestPotato(PotatoCollectionItem item) async {
+    final onHarvest = widget.onHarvest;
+    if (onHarvest == null) {
+      return;
+    }
+
+    try {
+      await onHarvest();
+      if (!mounted) {
+        return;
+      }
+      setState(() => _harvestedLocally = true);
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '감자 수확 닫기',
+        barrierColor: Colors.black.withValues(alpha: 0.6),
+        transitionDuration: const Duration(milliseconds: 220),
+        pageBuilder: (_, __, ___) => _PotatoHarvestDialog(item: item),
+        transitionBuilder: (_, animation, __, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(
+                begin: 0.94,
+                end: 1,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('감자를 수확하지 못했습니다. 잠시 후 다시 시도해주세요.')),
+      );
+    }
+  }
+
+  double _harvestProgressDelta(PotatoInteractionResult result) {
+    final item = widget.item;
+    if (item == null ||
+        item.growthGoalDistance <= 0 ||
+        item.maxGrowthLevel <= 1) {
+      return 0;
+    }
+    return result.growthDistanceAdded /
+        item.growthGoalDistance /
+        (item.maxGrowthLevel - 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final potato = widget.item;
@@ -535,7 +629,16 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
     final moisture = potato?.careStatus?.moisture ?? 0;
     final mood = potato?.careStatus?.mood ?? 0;
     final growthRatio = widget.growthProgress.clamp(0, 1).toDouble();
-    final growthPercent = (growthRatio * 100).round();
+    final baseHarvestProgress = potato?.harvestProgress ?? growthRatio;
+    final harvestProgress = (baseHarvestProgress + _localHarvestProgressBonus)
+        .clamp(0, 1)
+        .toDouble();
+    final harvestPercent = (harvestProgress * 100).round();
+    final growthStage = potato?.growthStage ?? 1;
+    final harvested = _harvestedLocally || (potato?.harvested ?? false);
+    final canHarvest = (potato?.canHarvest ?? false) && !harvested;
+    final displayGrowthStage =
+        harvested ? growthStage : growthStage.clamp(1, 3);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -547,8 +650,9 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
           _PotatoCareStage(
             potato: potato,
             level: level,
-            speech:
-                careMessage ??
+            growthStage: displayGrowthStage,
+            revealIdentity: harvested,
+            speech: careMessage ??
                 (potato == null || !potato.acquired
                     ? _defaultPotatoSpeech
                     : _potatoSpeechFor(potato)),
@@ -575,21 +679,34 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                 ),
                 const SizedBox(height: 10),
                 _PotatoProgressLine(
-                  label: '성장 경험치',
-                  valueLabel: '$growthPercent%',
-                  value: growthRatio,
+                  label: '수확까지',
+                  valueLabel: '$harvestPercent%',
+                  value: harvestProgress,
                 ),
                 const SizedBox(height: 12),
                 _PotatoCareBar(
                   onCare: _reactToCare,
-                  enabled:
-                      potato != null &&
+                  enabled: potato != null &&
                       potato.acquired &&
                       widget.onCare != null &&
                       !_isCaring,
                 ),
                 const SizedBox(height: 10),
                 const _PotatoStepGrowthPanel(),
+                const SizedBox(height: 10),
+                _PotatoHarvestAction(
+                  item: potato,
+                  canHarvest: canHarvest,
+                  harvested: harvested,
+                  onHarvest: () {
+                    final item = potato;
+                    if (item == null) {
+                      return;
+                    }
+                    unawaited(_harvestPotato(item));
+                  },
+                  onShowHarvested: widget.onShowDetail,
+                ),
                 const SizedBox(height: 10),
                 _PotatoMainActions(
                   updating: widget.updating,
@@ -609,19 +726,21 @@ class _PotatoCareStage extends StatelessWidget {
   const _PotatoCareStage({
     required this.potato,
     required this.level,
+    required this.growthStage,
+    required this.revealIdentity,
     required this.speech,
   });
 
   final PotatoCollectionItem? potato;
   final int level;
+  final int growthStage;
+  final bool revealIdentity;
   final String speech;
 
   @override
   Widget build(BuildContext context) {
-    final potatoName = potato?.name ?? defaultBeginnerPotato.name;
-    final subtitle = potato == null
-        ? '첫 여행을 기다리는 단계\n작은 산책부터 천천히 자라요'
-        : '강원 여행을 함께하는 대표 감자';
+    final potatoName =
+        revealIdentity ? (potato?.name ?? defaultBeginnerPotato.name) : '???';
 
     return SizedBox(
       height: 318,
@@ -655,6 +774,7 @@ class _PotatoCareStage extends StatelessWidget {
             ),
             Positioned(
               left: 20,
+              right: 116,
               top: 24,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -671,17 +791,7 @@ class _PotatoCareStage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                      height: 1.36,
-                    ),
-                  ),
+                  _PotatoSpeechBubble(message: speech),
                 ],
               ),
             ),
@@ -689,14 +799,6 @@ class _PotatoCareStage extends StatelessWidget {
               right: 20,
               top: 26,
               child: _PotatoLevelBadge(level: level),
-            ),
-            Positioned(
-              top: 112,
-              left: 20,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _PotatoSpeechBubble(message: speech),
-              ),
             ),
             Positioned(
               left: 28,
@@ -709,6 +811,8 @@ class _PotatoCareStage extends StatelessWidget {
                   locked: potato?.acquired != true,
                   size: 258,
                   framed: false,
+                  growthStage: growthStage,
+                  useGrowthStageAsset: true,
                 ),
               ),
             ),
@@ -774,6 +878,199 @@ class _PotatoCareStats extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PotatoHarvestAction extends StatelessWidget {
+  const _PotatoHarvestAction({
+    required this.item,
+    required this.canHarvest,
+    required this.harvested,
+    required this.onHarvest,
+    required this.onShowHarvested,
+  });
+
+  final PotatoCollectionItem? item;
+  final bool canHarvest;
+  final bool harvested;
+  final VoidCallback onHarvest;
+  final VoidCallback? onShowHarvested;
+
+  @override
+  Widget build(BuildContext context) {
+    final potato = item;
+    final enabled = potato != null && (canHarvest || harvested);
+    final label = potato == null
+        ? '아직 자라고 있어요'
+        : harvested
+            ? '획득한 감자 보기'
+            : canHarvest
+                ? '감자 수확하기'
+                : '아직 자라고 있어요';
+    final helper = harvested
+        ? '수확한 감자는 도감 카드에서 다시 볼 수 있어요'
+        : canHarvest
+            ? '완전히 자란 감자를 카드로 받을 수 있어요'
+            : '조금만 더 돌보면 수확할 수 있어요';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: canHarvest
+            ? _potatoPrimary.withValues(alpha: 0.12)
+            : const Color(0xFFF7F5EE),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+        child: Row(
+          children: [
+            if (potato != null) ...[
+              Expanded(
+                child: Text(
+                  helper,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ] else
+              const Spacer(),
+            FilledButton(
+              onPressed: enabled
+                  ? harvested
+                      ? onShowHarvested
+                      : onHarvest
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: _potatoPrimary,
+                disabledBackgroundColor: const Color(0xFFE1DED4),
+                foregroundColor: Colors.white,
+                disabledForegroundColor: AppColors.textSecondary,
+                minimumSize: const Size(132, 42),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PotatoHarvestDialog extends StatelessWidget {
+  const _PotatoHarvestDialog({required this.item});
+
+  final PotatoCollectionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Material(
+        color: Colors.transparent,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFCF2),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 32,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        color: _potatoPrimary.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: _potatoDark,
+                        size: 38,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      '새로운 감자를 수확했습니다',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${item.name} 카드가 도감에 들어왔어요',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _CollectiblePotatoCard(
+                      data: _PotatoCardSkeletonData.fromItem(item),
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        backgroundColor: _potatoPrimary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      child: const Text(
+                        '감자 카드 보기',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -979,50 +1276,36 @@ class _PotatoCareBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _PotatoCareButton(
-                icon: Icons.favorite_rounded,
-                label: '쓰다듬기',
-                enabled: enabled,
-                onPressed: () => onCare(PotatoInteractionAction.pat),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _PotatoCareButton(
-                icon: Icons.water_drop_rounded,
-                label: '물 주기',
-                enabled: enabled,
-                onPressed: () => onCare(PotatoInteractionAction.water),
-              ),
-            ),
-          ],
+        Expanded(
+          child: _PotatoCareButton(
+            icon: Icons.favorite_rounded,
+            label: '쓰다듬기',
+            color: _potatoPrimary,
+            enabled: enabled,
+            onPressed: () => onCare(PotatoInteractionAction.pat),
+          ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _PotatoCareButton(
-                icon: Icons.restaurant_rounded,
-                label: '간식 주기',
-                enabled: enabled,
-                onPressed: () => onCare(PotatoInteractionAction.snack),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _PotatoCareButton(
-                icon: Icons.directions_walk_rounded,
-                label: '산책',
-                enabled: enabled,
-                onPressed: () => onCare(PotatoInteractionAction.walk),
-              ),
-            ),
-          ],
+        const SizedBox(width: 8),
+        Expanded(
+          child: _PotatoCareButton(
+            icon: Icons.water_drop_rounded,
+            label: '물 주기',
+            color: const Color(0xFF3FA9E6),
+            enabled: enabled,
+            onPressed: () => onCare(PotatoInteractionAction.water),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _PotatoCareButton(
+            icon: Icons.eco_rounded,
+            label: '영양제',
+            color: const Color(0xFF78B95C),
+            enabled: enabled,
+            onPressed: () => onCare(PotatoInteractionAction.snack),
+          ),
         ),
       ],
     );
@@ -1033,12 +1316,14 @@ class _PotatoCareButton extends StatelessWidget {
   const _PotatoCareButton({
     required this.icon,
     required this.label,
+    required this.color,
     required this.enabled,
     required this.onPressed,
   });
 
   final IconData icon;
   final String label;
+  final Color color;
   final bool enabled;
   final VoidCallback onPressed;
 
@@ -1053,16 +1338,21 @@ class _PotatoCareButton extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             color: enabled
-                ? AppColors.primaryTint.withValues(alpha: 0.72)
+                ? color.withValues(alpha: 0.18)
                 : const Color(0xFFF1F0EC),
             borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: enabled
+                  ? color.withValues(alpha: 0.34)
+                  : const Color(0xFFE0DED6),
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                color: enabled ? _potatoDark : AppColors.textSecondary,
+                color: enabled ? color : AppColors.textSecondary,
                 size: 16,
               ),
               const SizedBox(width: 5),
@@ -1073,7 +1363,7 @@ class _PotatoCareButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: enabled ? _potatoDark : AppColors.textSecondary,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
@@ -1227,8 +1517,8 @@ class _PotatoCardSkeletonData {
     final story = locked
         ? '이 카드는 아직 뒷면만 보여요. 관련 장소를 방문하면 감자의 이야기가 열립니다.'
         : (item.description.trim().isEmpty
-              ? '${item.region} 여행길에서 열린 감자 카드예요.'
-              : item.description.trim());
+            ? '${item.region} 여행길에서 열린 감자 카드예요.'
+            : item.description.trim());
     final acquiredDate = item.acquiredAt == null
         ? '획득 전'
         : '${item.acquiredAt!.year}.${item.acquiredAt!.month.toString().padLeft(2, '0')}.${item.acquiredAt!.day.toString().padLeft(2, '0')}';
@@ -1240,8 +1530,8 @@ class _PotatoCardSkeletonData {
       story: story,
       acquisitionLabel: locked
           ? (item.acquisitionHint.trim().isEmpty
-                ? '관련 감자 스팟을 방문하면 열립니다.'
-                : item.acquisitionHint.trim())
+              ? '관련 감자 스팟을 방문하면 열립니다.'
+              : item.acquisitionHint.trim())
           : '${item.region}에서 수집',
       acquiredDateLabel: acquiredDate,
       assetPath: potatoLocalAssetPath(item.code),
@@ -1528,7 +1818,7 @@ class _PotatoCardBack extends StatelessWidget {
 
 class _CardShineOverlay extends AnimatedWidget {
   const _CardShineOverlay({required Animation<double> animation})
-    : super(listenable: animation);
+      : super(listenable: animation);
 
   @override
   Widget build(BuildContext context) {
@@ -1700,8 +1990,7 @@ class _PotatoStepGrowthPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryState = ref.watch(potatoGrowthSummaryProvider);
-    final summary =
-        summaryState.valueOrNull ??
+    final summary = summaryState.valueOrNull ??
         const PotatoGrowthSummary(
           todaySteps: 0,
           dailyStepGoal: 10000,
@@ -1760,8 +2049,8 @@ class _PotatoStepGrowthPanel extends ConsumerWidget {
                         isLoading
                             ? '걸음 수를 불러오는 중'
                             : hasError
-                            ? '걸음 수를 다시 확인해주세요'
-                            : stepLabel,
+                                ? '걸음 수를 다시 확인해주세요'
+                                : stepLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1854,19 +2143,28 @@ class _PotatoArtSlot extends StatelessWidget {
     required this.locked,
     required this.size,
     this.framed = true,
+    this.growthStage,
+    this.useGrowthStageAsset = false,
   });
 
   final PotatoCollectionItem? item;
   final bool locked;
   final double size;
   final bool framed;
+  final int? growthStage;
+  final bool useGrowthStageAsset;
 
   @override
   Widget build(BuildContext context) {
     final potato = item;
-    final assetPath = potato == null
-        ? potatoDefaultAssetPath
-        : potatoLocalAssetPath(potato.code);
+    final assetPath = useGrowthStageAsset
+        ? potatoGrowthStageAssetPath(
+            stage: growthStage ?? potato?.growthStage ?? 1,
+            finalPotatoCode: potato?.code ?? defaultBeginnerPotato.code,
+          )
+        : potato == null
+            ? potatoDefaultAssetPath
+            : potatoLocalAssetPath(potato.code);
 
     final image = Image.asset(
       assetPath,
@@ -2322,53 +2620,53 @@ Color _rarityColor(PotatoRarity rarity) {
 Gradient _cardBorderGradient(PotatoRarity rarity) {
   return switch (rarity) {
     PotatoRarity.common => const LinearGradient(
-      colors: [Color(0xFFE8E0D1), Color(0xFFB7AA95), Color(0xFFF7F0E2)],
-    ),
+        colors: [Color(0xFFE8E0D1), Color(0xFFB7AA95), Color(0xFFF7F0E2)],
+      ),
     PotatoRarity.rare => const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFF56C787), Color(0xFFFFD66B), Color(0xFF56C787)],
-    ),
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF56C787), Color(0xFFFFD66B), Color(0xFF56C787)],
+      ),
     PotatoRarity.epic => const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFF7A5AF8), Color(0xFFF6C23E), Color(0xFF56C787)],
-    ),
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF7A5AF8), Color(0xFFF6C23E), Color(0xFF56C787)],
+      ),
     PotatoRarity.legendary => const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0xFFFFF3A1),
-        Color(0xFF6FE6FF),
-        Color(0xFFFF91DF),
-        Color(0xFFFFD66B),
-      ],
-    ),
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFFF3A1),
+          Color(0xFF6FE6FF),
+          Color(0xFFFF91DF),
+          Color(0xFFFFD66B),
+        ],
+      ),
   };
 }
 
 Gradient _cardSurfaceGradient(PotatoRarity rarity) {
   return switch (rarity) {
     PotatoRarity.common => const LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [Color(0xFFFFFCF4), Color(0xFFF6F0E5)],
-    ),
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFFCF4), Color(0xFFF6F0E5)],
+      ),
     PotatoRarity.rare => const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFFFFFFFF), Color(0xFFE9FAEF), Color(0xFFFFF5D8)],
-    ),
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFE9FAEF), Color(0xFFFFF5D8)],
+      ),
     PotatoRarity.epic => const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFFFFFBF3), Color(0xFFF1EAFF), Color(0xFFE8F8EE)],
-    ),
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFBF3), Color(0xFFF1EAFF), Color(0xFFE8F8EE)],
+      ),
     PotatoRarity.legendary => const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFFFFF8D9), Color(0xFFE9FAFF), Color(0xFFFFEFFA)],
-    ),
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFF8D9), Color(0xFFE9FAFF), Color(0xFFFFEFFA)],
+      ),
   };
 }
 

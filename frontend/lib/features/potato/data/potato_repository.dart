@@ -94,6 +94,20 @@ class PotatoRepository {
     return _requireData(apiResponse, statusCode: response.statusCode);
   }
 
+  Future<PotatoHarvestResult> harvestRepresentativePotato() async {
+    final response = await _request(
+      () => _dio.post<Map<String, dynamic>>(
+        ApiPaths.representativePotatoHarvest,
+      ),
+    );
+    final apiResponse = ApiResponse<PotatoHarvestResult>.fromJson(
+      response.data ?? const <String, dynamic>{},
+      PotatoHarvestResult.fromJson,
+    );
+
+    return _requireData(apiResponse, statusCode: response.statusCode);
+  }
+
   T _requireData<T>(ApiResponse<T> response, {required int? statusCode}) {
     if (!response.success || response.data == null) {
       throw ApiException(

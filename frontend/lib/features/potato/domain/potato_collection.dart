@@ -1,5 +1,7 @@
 enum PotatoRarity { common, rare, epic, legendary }
 
+enum PotatoAcquisitionType { growth, mission, visit, stamp, event }
+
 class PotatoCollection {
   const PotatoCollection({
     required this.totalCount,
@@ -56,6 +58,9 @@ class PotatoCollectionItem {
     required this.growthDistance,
     required this.growthGoalDistance,
     required this.representative,
+    this.acquisitionType = PotatoAcquisitionType.growth,
+    this.harvestable = false,
+    this.harvested = false,
     this.careStatus,
   });
 
@@ -73,7 +78,19 @@ class PotatoCollectionItem {
   final double growthDistance;
   final double growthGoalDistance;
   final bool representative;
+  final PotatoAcquisitionType acquisitionType;
+  final bool harvestable;
+  final bool harvested;
   final PotatoCareStatus? careStatus;
+
+  int get maxGrowthLevel {
+    return switch (rarity) {
+      PotatoRarity.common => 3,
+      PotatoRarity.rare => 5,
+      PotatoRarity.epic => 8,
+      PotatoRarity.legendary => 10,
+    };
+  }
 
   double get growthRatio {
     if (growthGoalDistance <= 0) {
@@ -81,6 +98,34 @@ class PotatoCollectionItem {
     }
     return (growthDistance / growthGoalDistance).clamp(0, 1);
   }
+
+  double get harvestProgress {
+    if (!acquired) {
+      return 0;
+    }
+    if (maxGrowthLevel <= 1) {
+      return 1;
+    }
+    final safeLevel = level.clamp(1, maxGrowthLevel);
+    final completedLevelRatio = (safeLevel - 1) / (maxGrowthLevel - 1);
+    final currentLevelRatio =
+        safeLevel >= maxGrowthLevel ? 0.0 : growthRatio / (maxGrowthLevel - 1);
+    return (completedLevelRatio + currentLevelRatio).clamp(0, 1).toDouble();
+  }
+
+  int get growthStage {
+    if (!acquired) {
+      return 1;
+    }
+    if (harvestProgress >= 1) {
+      return 4;
+    }
+    return (harvestProgress * 3).floor().clamp(0, 2) + 1;
+  }
+
+  bool get fullyGrown => acquired && level >= maxGrowthLevel;
+
+  bool get canHarvest => harvestable || (fullyGrown && !harvested);
 
   static PotatoCollectionItem fromJson(Map<String, dynamic> json) {
     final acquiredAtValue = json['acquiredAt'] as String?;
@@ -102,6 +147,11 @@ class PotatoCollectionItem {
       growthDistance: (json['growthDistance'] as num?)?.toDouble() ?? 0,
       growthGoalDistance: (json['growthGoalDistance'] as num?)?.toDouble() ?? 0,
       representative: json['representative'] as bool? ?? false,
+      acquisitionType: potatoAcquisitionTypeFromApi(
+        json['acquisitionType'] as String?,
+      ),
+      harvestable: json['harvestable'] as bool? ?? false,
+      harvested: json['harvested'] as bool? ?? false,
       careStatus: json['careStatus'] is Map<String, dynamic>
           ? PotatoCareStatus.fromJson(
               json['careStatus'] as Map<String, dynamic>,
@@ -109,6 +159,16 @@ class PotatoCollectionItem {
           : null,
     );
   }
+}
+
+PotatoAcquisitionType potatoAcquisitionTypeFromApi(String? value) {
+  return switch (value?.toUpperCase()) {
+    'MISSION' => PotatoAcquisitionType.mission,
+    'VISIT' => PotatoAcquisitionType.visit,
+    'STAMP' => PotatoAcquisitionType.stamp,
+    'EVENT' => PotatoAcquisitionType.event,
+    _ => PotatoAcquisitionType.growth,
+  };
 }
 
 class PotatoCareStatus {
@@ -210,6 +270,33 @@ class PotatoInteractionResult {
   }
 }
 
+class PotatoHarvestResult {
+  const PotatoHarvestResult({
+    required this.potatoId,
+    required this.potatoName,
+    required this.harvested,
+    required this.harvestedAt,
+  });
+
+  final String potatoId;
+  final String potatoName;
+  final bool harvested;
+  final DateTime? harvestedAt;
+
+  static PotatoHarvestResult fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final harvestedAtValue = data['harvestedAt'] as String?;
+    return PotatoHarvestResult(
+      potatoId: data['potatoId']?.toString() ?? '',
+      potatoName: data['potatoName'] as String? ?? '',
+      harvested: data['harvested'] as bool? ?? false,
+      harvestedAt: harvestedAtValue == null || harvestedAtValue.isEmpty
+          ? null
+          : DateTime.parse(harvestedAtValue),
+    );
+  }
+}
+
 class PotatoActivitySyncResult {
   const PotatoActivitySyncResult({required this.growthResult});
 
@@ -302,7 +389,7 @@ class PotatoGrowthSummary {
       monthlyDistanceKm: monthlyDistanceKm ?? this.monthlyDistanceKm,
       remainingDistanceKmForRepresentative:
           remainingDistanceKmForRepresentative ??
-          this.remainingDistanceKmForRepresentative,
+              this.remainingDistanceKmForRepresentative,
     );
   }
 
@@ -315,7 +402,7 @@ class PotatoGrowthSummary {
       monthlyDistanceKm: (data['monthlyDistanceKm'] as num?)?.toDouble() ?? 0,
       remainingDistanceKmForRepresentative:
           (data['remainingDistanceKmForRepresentative'] as num?)?.toDouble() ??
-          0,
+              0,
     );
   }
 }

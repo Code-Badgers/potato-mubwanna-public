@@ -52,4 +52,28 @@ void main() {
       'assets/characters/potatoes/variety_daeseo_atlantic.png',
     );
   });
+
+  test('maps growth stages before final potato character', () {
+    expect(
+      potatoGrowthStageAssetPath(
+        stage: 1,
+        finalPotatoCode: 'POTATO_GONDRE_JEONGSEON',
+      ),
+      'assets/characters/potatoes/growth/potato_growth_stage_1_baby.png',
+    );
+    expect(
+      potatoGrowthStageAssetPath(
+        stage: 3,
+        finalPotatoCode: 'POTATO_GONDRE_JEONGSEON',
+      ),
+      'assets/characters/potatoes/growth/potato_growth_stage_3_chubby.png',
+    );
+    expect(
+      potatoGrowthStageAssetPath(
+        stage: 4,
+        finalPotatoCode: 'POTATO_GONDRE_JEONGSEON',
+      ),
+      'assets/characters/potatoes/food_potato_ongsimi.png',
+    );
+  });
 }

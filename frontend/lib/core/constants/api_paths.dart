@@ -33,6 +33,8 @@ class ApiPaths {
   static const representativePotato = '/potatoes/me/representative';
   static const representativePotatoInteractions =
       '/potatoes/me/representative/interactions';
+  static const representativePotatoHarvest =
+      '/potatoes/me/representative/harvest';
   static const myCoupons = '/coupons/me';
   static String couponDetail(int userCouponId) => '/coupons/$userCouponId';
   static String couponQr(int userCouponId) => '/coupons/$userCouponId/qr';
