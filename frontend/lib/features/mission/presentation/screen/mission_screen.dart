@@ -289,6 +289,21 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       missions,
       excludedMissionId: featuredMission?.id,
     );
+    final todayMissionTotalCount = missions
+        .where((mission) =>
+            mission.active &&
+            mission.status != MissionStatus.locked &&
+            mission.id != featuredMission?.id)
+        .length
+        .clamp(0, _todayMissionLimit)
+        .toInt();
+    // 완료된 카드는 목록에서 제외되므로, 진행 수치는 필터 전 상태로 계산한다.
+    final completedMissionCount = missions
+        .where((mission) =>
+            mission.active && mission.status == MissionStatus.completed)
+        .length
+        .clamp(0, todayMissionTotalCount)
+        .toInt();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -305,6 +320,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               child: _MissionGentleStart(
                 featuredMission: featuredMission,
                 missions: todayMissions,
+                completedCount: completedMissionCount,
+                totalCount: todayMissionTotalCount,
                 onMissionTap: _showMissionDetail,
               ),
             ),
@@ -314,6 +331,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 }
+
+const _todayMissionLimit = 3;
 
 MissionChallenge? _featuredMission(List<MissionChallenge> missions) {
   final candidates = missions
@@ -350,7 +369,9 @@ List<MissionChallenge> _todayMissions(
     for (final mission in candidates) {
       final alreadySelected =
           selected.any((selectedMission) => selectedMission.id == mission.id);
-      if (!alreadySelected && test(mission) && selected.length < 3) {
+      if (!alreadySelected &&
+          test(mission) &&
+          selected.length < _todayMissionLimit) {
         selected.add(mission);
         return;
       }
@@ -367,7 +388,7 @@ List<MissionChallenge> _todayMissions(
       mission.type == MissionType.visit || mission.type == MissionType.stamp);
 
   for (final mission in candidates) {
-    if (selected.length >= 3) {
+    if (selected.length >= _todayMissionLimit) {
       break;
     }
     if (!selected.any((selectedMission) => selectedMission.id == mission.id)) {
@@ -375,10 +396,7 @@ List<MissionChallenge> _todayMissions(
     }
   }
 
-  if (selected.isNotEmpty) {
-    return selected;
-  }
-  return missions.take(3).toList();
+  return selected;
 }
 
 class _VisitMissionEntryBanner extends StatelessWidget {
@@ -719,11 +737,15 @@ class _MissionGentleStart extends StatelessWidget {
   const _MissionGentleStart({
     required this.featuredMission,
     required this.missions,
+    required this.completedCount,
+    required this.totalCount,
     required this.onMissionTap,
   });
 
   final MissionChallenge? featuredMission;
   final List<MissionChallenge> missions;
+  final int completedCount;
+  final int totalCount;
   final ValueChanged<String> onMissionTap;
 
   @override
@@ -741,10 +763,8 @@ class _MissionGentleStart extends StatelessWidget {
             const SizedBox(height: 24),
           ],
           _MissionSectionTitle(
-            completedCount: missions
-                .where((mission) => mission.status == MissionStatus.completed)
-                .length,
-            totalCount: missions.length,
+            completedCount: completedCount,
+            totalCount: totalCount,
           ),
           const SizedBox(height: 12),
           if (missions.isEmpty)

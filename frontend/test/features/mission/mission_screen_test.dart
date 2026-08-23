@@ -77,6 +77,8 @@ void main() {
     expect(find.text('0 / 4'), findsNothing);
     expect(find.text('점순이의 미션'), findsOneWidget);
     expect(find.text('오늘의 일일 미션'), findsOneWidget);
+    expect(find.text('1 / 3'), findsOneWidget);
+    expect(find.text('스탬프 1개 획득하기'), findsNothing);
     expect(find.text('점순이의 미션'), findsOneWidget);
     expect(find.textContaining('코인'), findsNothing);
     expect(find.textContaining('쿠폰'), findsNothing);
@@ -132,6 +134,12 @@ void main() {
     final completedButton = tester
         .widget<FilledButton>(find.widgetWithText(FilledButton, '완료된 미션'));
     expect(completedButton.onPressed, isNull);
+
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 3'), findsOneWidget);
+    expect(find.text('강원도 이야기 풀어볼까요?'), findsNothing);
   });
 
   testWidgets('does not complete quiz mission when selected answer is wrong',
