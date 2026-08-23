@@ -706,7 +706,6 @@ class _MapDiscoveryHome extends StatelessWidget {
       data: (spots) {
         final previewSpots = _previewSpots(spots);
         final courses = buildTravelCourses(spots);
-        final goodNowSpots = _goodNowSpots(spots);
 
         return CustomScrollView(
           key: const ValueKey('map-discovery-home'),
@@ -741,7 +740,7 @@ class _MapDiscoveryHome extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 26, 20, 28),
               sliver: SliverToBoxAdapter(
                 child: _GoodNowSpotSection(
-                  spots: goodNowSpots,
+                  spots: spots,
                   onSpotPressed: onSpotPressed,
                 ),
               ),
@@ -789,22 +788,6 @@ class _MapDiscoveryHome extends StatelessWidget {
       }
     }
     return selected;
-  }
-
-  List<MapSpot> _goodNowSpots(List<MapSpot> spots) {
-    final prioritized = [
-      ...spots.where((spot) => spot.congestionLevel == 'LOW'),
-      ...spots.where((spot) => spot.stampEnabled),
-      ...spots,
-    ];
-    final unique = <String, MapSpot>{};
-    for (final spot in prioritized) {
-      unique.putIfAbsent(spot.id, () => spot);
-      if (unique.length >= 4) {
-        break;
-      }
-    }
-    return unique.values.toList();
   }
 }
 
@@ -983,10 +966,7 @@ class _TravelCourseSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _DiscoverySectionHeader(
-          title: '오늘 어떤 여행이 끌리나요? 🌿',
-          actionLabel: '전체 보기',
-        ),
+        const _DiscoverySectionHeader(title: '오늘 어떤 여행이 끌리나요? 🌿'),
         const SizedBox(height: 12),
         SizedBox(
           height: 340,
@@ -1732,13 +1712,16 @@ class _GoodNowSpotSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final calmSpots = _spotsByCongestion('LOW');
+    final hotSpots = _spotsByCongestion('HIGH');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _DiscoverySectionHeader(title: '지금 가기 좋은 곳 ☀️'),
         const SizedBox(height: 6),
         const Text(
-          '비교적 여유롭게 둘러볼 수 있는 장소를 골라봤어요.',
+          '관광지 집중률 예측을 바탕으로 골라봤어요.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 13,
@@ -1757,16 +1740,167 @@ class _GoodNowSpotSection extends StatelessWidget {
         else
           Column(
             children: [
-              for (var index = 0; index < spots.length; index++) ...[
-                _PopularSpotCard(
-                  spot: spots[index],
-                  onPressed: () => onSpotPressed(spots[index]),
-                ),
-                if (index < spots.length - 1) const SizedBox(height: 10),
-              ],
+              _GoodNowSpotGroup(
+                icon: Icons.spa_rounded,
+                title: '내향인 전용 여유로운 장소',
+                description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
+                badgeLabel: '혼잡도 여유',
+                spots: calmSpots,
+                onSpotPressed: onSpotPressed,
+              ),
+              const SizedBox(height: 14),
+              _GoodNowSpotGroup(
+                icon: Icons.local_fire_department_rounded,
+                title: '외향인 전용 사람 좋아 핫플',
+                description: '활기 있는 분위기를 즐기고 싶을 때 좋아요.',
+                badgeLabel: '방문자 많음',
+                spots: hotSpots,
+                onSpotPressed: onSpotPressed,
+              ),
             ],
           ),
       ],
+    );
+  }
+
+  List<MapSpot> _spotsByCongestion(String level) {
+    final fallbackLevel = level == 'HIGH' ? 'NORMAL' : 'LOW';
+    final prioritized = [
+      ...spots.where((spot) => spot.congestionLevel == level),
+      ...spots.where((spot) => spot.congestionLevel == fallbackLevel),
+      ...spots.where((spot) => spot.stampEnabled),
+      ...spots,
+    ];
+    final unique = <String, MapSpot>{};
+    for (final spot in prioritized) {
+      unique.putIfAbsent(spot.id, () => spot);
+      if (unique.length >= 2) {
+        break;
+      }
+    }
+    return unique.values.toList();
+  }
+}
+
+class _GoodNowSpotGroup extends StatelessWidget {
+  const _GoodNowSpotGroup({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.badgeLabel,
+    required this.spots,
+    required this.onSpotPressed,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final String badgeLabel;
+  final List<MapSpot> spots;
+  final ValueChanged<MapSpot> onSpotPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadows.softCard,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  icon,
+                  color: AppColors.primaryDark,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _GoodNowTag(label: badgeLabel),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var index = 0; index < spots.length; index++) ...[
+            _PopularSpotCard(
+              spot: spots[index],
+              onPressed: () => onSpotPressed(spots[index]),
+            ),
+            if (index < spots.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GoodNowTag extends StatelessWidget {
+  const _GoodNowTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: _mapDark,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
+      ),
     );
   }
 }
@@ -1933,13 +2067,9 @@ String _spotImageAsset(MapSpot spot) {
 }
 
 class _DiscoverySectionHeader extends StatelessWidget {
-  const _DiscoverySectionHeader({
-    required this.title,
-    this.actionLabel,
-  });
+  const _DiscoverySectionHeader({required this.title});
 
   final String title;
-  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1956,18 +2086,6 @@ class _DiscoverySectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        if (actionLabel != null) ...[
-          const SizedBox(width: 12),
-          Text(
-            '$actionLabel >',
-            style: const TextStyle(
-              color: _mapDark,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
       ],
     );
   }

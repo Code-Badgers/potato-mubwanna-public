@@ -74,15 +74,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('지금 가기 좋은 곳 ☀️'), findsOneWidget);
-
     await tester.drag(
       find.byKey(const ValueKey('map-discovery-home')),
-      const Offset(0, 420),
+      const Offset(0, -420),
     );
     await tester.pumpAndSettle();
 
-    await tester
-        .ensureVisible(find.byKey(const ValueKey('open-full-map-button')));
+    expect(find.text('내향인 전용 여유로운 장소'), findsOneWidget);
+    expect(find.text('외향인 전용 사람 좋아 핫플'), findsOneWidget);
+    expect(find.text('혼잡도 여유'), findsAtLeastNWidgets(1));
+    expect(find.text('방문자 많음'), findsAtLeastNWidgets(1));
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('open-full-map-button')),
+      -260,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('open-full-map-button')));
     await tester.pumpAndSettle();
@@ -1323,7 +1330,7 @@ const _spots = [
     longitude: 128.68,
     address: '강원 정선군',
     cityName: '정선',
-    congestionLevel: 'NORMAL',
+    congestionLevel: 'HIGH',
     stampEnabled: true,
   ),
   MapSpot(
