@@ -32,13 +32,14 @@ class PotatoMigrationTest {
     void seedsBasePotatoCatalogInDisplayOrder() {
         List<Potato> potatoes = potatoRepository.findByActiveTrueOrderByDisplayOrderAsc();
 
-        assertThat(potatoes).hasSize(15);
-        assertThat(potatoes.getFirst().getCode()).isEqualTo("POTATO_HAJI_GANGNEUNG");
+        assertThat(potatoes).hasSize(16);
+        assertThat(potatoes.getFirst().getCode()).isEqualTo("POTATO_DEFAULT_BEGINNER");
         assertThat(potatoes.getFirst().getRarity()).isEqualTo(PotatoRarity.COMMON);
         assertThat(potatoes.getLast().getCode()).isEqualTo("POTATO_RARE_SEED");
         assertThat(potatoes)
             .extracting(Potato::getCode)
             .containsExactly(
+                "POTATO_DEFAULT_BEGINNER",
                 "POTATO_HAJI_GANGNEUNG",
                 "POTATO_GONDRE_JEONGSEON",
                 "POTATO_GOLDEN_GANGWON",

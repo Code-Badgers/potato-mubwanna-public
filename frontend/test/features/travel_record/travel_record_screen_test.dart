@@ -100,6 +100,20 @@ void main() {
       find.byKey(const ValueKey('travel-record-image-fallback-1')),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('travel-record-type-2')),
+        matching: find.text('미션'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('travel-record-type-1')),
+        matching: find.text('스탬프'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('travel-record-2')));
     await tester.pumpAndSettle();

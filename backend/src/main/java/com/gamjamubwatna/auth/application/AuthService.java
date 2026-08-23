@@ -11,6 +11,7 @@ import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.auth.infrastructure.KakaoAuthorizationCodeClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserInfo;
+import com.gamjamubwatna.potato.application.StarterPotatoGrantService;
 import java.time.Clock;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final StarterPotatoGrantService starterPotatoGrantService;
     private final Clock clock;
 
     @Autowired
@@ -33,7 +35,8 @@ public class AuthService {
         KakaoAuthorizationCodeClient kakaoAuthorizationCodeClient,
         JwtTokenProvider jwtTokenProvider,
         UserRepository userRepository,
-        RefreshTokenRepository refreshTokenRepository
+        RefreshTokenRepository refreshTokenRepository,
+        StarterPotatoGrantService starterPotatoGrantService
     ) {
         this(
             kakaoUserClient,
@@ -41,6 +44,7 @@ public class AuthService {
             jwtTokenProvider,
             userRepository,
             refreshTokenRepository,
+            starterPotatoGrantService,
             Clock.systemUTC()
         );
     }
@@ -51,6 +55,7 @@ public class AuthService {
         JwtTokenProvider jwtTokenProvider,
         UserRepository userRepository,
         RefreshTokenRepository refreshTokenRepository,
+        StarterPotatoGrantService starterPotatoGrantService,
         Clock clock
     ) {
         this.kakaoUserClient = kakaoUserClient;
@@ -58,6 +63,7 @@ public class AuthService {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.starterPotatoGrantService = starterPotatoGrantService;
         this.clock = clock;
     }
 
@@ -65,6 +71,7 @@ public class AuthService {
     public AuthLoginResponse loginWithKakao(String kakaoAccessToken) {
         KakaoUserInfo kakaoUser = kakaoUserClient.fetchUser(kakaoAccessToken);
         User user = findOrCreateUser(kakaoUser);
+        starterPotatoGrantService.grantIfNeeded(user, Instant.now(clock));
 
         return issueTokens(user);
     }
@@ -96,6 +103,7 @@ public class AuthService {
             throw new IllegalArgumentException("refreshToken 형식이 아닙니다.");
         }
 
+        starterPotatoGrantService.grantIfNeeded(refreshToken.getUser(), now);
         refreshToken.revoke();
         return issueTokens(refreshToken.getUser());
     }

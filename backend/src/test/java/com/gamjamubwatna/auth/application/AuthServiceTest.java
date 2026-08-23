@@ -2,7 +2,9 @@ package com.gamjamubwatna.auth.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +18,7 @@ import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.auth.infrastructure.KakaoAuthorizationCodeClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserClient;
 import com.gamjamubwatna.auth.infrastructure.KakaoUserInfo;
+import com.gamjamubwatna.potato.application.StarterPotatoGrantService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -36,14 +39,8 @@ class AuthServiceTest {
         );
         UserRepository userRepository = mock(UserRepository.class);
         RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
-        User savedUser = new User(
-            AuthProvider.KAKAO,
-            "123",
-            "user@email.com",
-            "감자러버",
-            "https://example.com/profile.png",
-            now
-        );
+        StarterPotatoGrantService starterPotatoGrantService =
+            mock(StarterPotatoGrantService.class);
         when(userRepository.findByProviderAndProviderUserId(AuthProvider.KAKAO, "123"))
             .thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -60,6 +57,7 @@ class AuthServiceTest {
             jwtTokenProvider(now),
             userRepository,
             refreshTokenRepository,
+            starterPotatoGrantService,
             Clock.fixed(now, ZoneOffset.UTC)
         ).loginWithKakao("kakao-access-token");
 
@@ -70,6 +68,7 @@ class AuthServiceTest {
         assertThat(response.user().email()).isEqualTo("user@email.com");
         assertThat(response.user().nickname()).isEqualTo("감자러버");
         assertThat(response.user().profileImage()).isEqualTo("https://example.com/profile.png");
+        verify(starterPotatoGrantService).grantIfNeeded(any(User.class), eq(now));
     }
 
     @Test
@@ -86,6 +85,8 @@ class AuthServiceTest {
         };
         UserRepository userRepository = mock(UserRepository.class);
         RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
+        StarterPotatoGrantService starterPotatoGrantService =
+            mock(StarterPotatoGrantService.class);
         when(userRepository.findByProviderAndProviderUserId(AuthProvider.KAKAO, "123"))
             .thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -100,6 +101,7 @@ class AuthServiceTest {
             jwtTokenProvider(now),
             userRepository,
             refreshTokenRepository,
+            starterPotatoGrantService,
             Clock.fixed(now, ZoneOffset.UTC)
         ).loginWithKakaoAuthorizationCode(
             "authorization-code",
@@ -108,6 +110,7 @@ class AuthServiceTest {
 
         assertThat(response.accessToken()).isNotBlank();
         assertThat(response.user().nickname()).isEqualTo("감자러버");
+        verify(starterPotatoGrantService).grantIfNeeded(any(User.class), any(Instant.class));
     }
 
     @Test
@@ -130,6 +133,8 @@ class AuthServiceTest {
             now.plusSeconds(7200)
         );
         RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
+        StarterPotatoGrantService starterPotatoGrantService =
+            mock(StarterPotatoGrantService.class);
         when(refreshTokenRepository.findByToken(oldRefreshToken))
             .thenReturn(Optional.of(storedRefreshToken));
         when(refreshTokenRepository.save(any(RefreshToken.class)))
@@ -141,6 +146,7 @@ class AuthServiceTest {
             jwtTokenProvider,
             mock(UserRepository.class),
             refreshTokenRepository,
+            starterPotatoGrantService,
             Clock.fixed(now, ZoneOffset.UTC)
         ).refresh(oldRefreshToken);
 
@@ -148,6 +154,7 @@ class AuthServiceTest {
         assertThat(response.accessToken()).isNotBlank();
         assertThat(response.refreshToken()).isNotBlank();
         assertThat(response.refreshToken()).isNotEqualTo(oldRefreshToken);
+        verify(starterPotatoGrantService).grantIfNeeded(user, now);
     }
 
     private JwtTokenProvider jwtTokenProvider(Instant now) {
