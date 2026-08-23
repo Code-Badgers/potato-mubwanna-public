@@ -925,24 +925,6 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
-            left: 18,
-            top: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '강원도 여행 지도',
-                  style: TextStyle(
-                    color: _mapDark,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
-            ),
-          ),
           Positioned(
             left: 18,
             bottom: 18,
@@ -952,8 +934,8 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
               icon: const Icon(Icons.open_in_full_rounded, size: 18),
               label: const Text('지도 크게 보기'),
               style: FilledButton.styleFrom(
-                backgroundColor: _mapPrimary,
-                foregroundColor: Colors.white,
+                backgroundColor: Colors.white,
+                foregroundColor: _mapPrimary,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
                 shape: RoundedRectangleBorder(
