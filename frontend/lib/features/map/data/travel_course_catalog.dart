@@ -129,11 +129,9 @@ class _TravelCoursePlaceSpec {
     required this.editorial,
     required this.featureLabel,
     required this.imageAsset,
-    this.cityKeywords = const [],
   });
 
   final List<String> nameKeywords;
-  final List<String> cityKeywords;
   final Set<String> categories;
   final String editorial;
   final String featureLabel;
@@ -148,9 +146,7 @@ class _TravelCoursePlaceSpec {
       final text = '${spot.name} ${spot.address} ${spot.cityName}';
       final matchesName =
           nameKeywords.isEmpty || nameKeywords.any(text.contains);
-      final matchesCity =
-          cityKeywords.isEmpty || cityKeywords.any(text.contains);
-      if (matchesName && matchesCity) {
+      if (matchesName) {
         return spot;
       }
     }

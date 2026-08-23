@@ -48,19 +48,23 @@ void main() {
     expect(find.text('내 동선 0곳'), findsNothing);
     expect(find.byKey(const ValueKey('discovery-route-button')), findsNothing);
     expect(find.byKey(const ValueKey('preview-route-button')), findsNothing);
-    expect(find.text('취향에 맞는 여행 코스'), findsOneWidget);
+    expect(find.text('오늘 어떤 여행이 끌리나요? 🌿'), findsOneWidget);
     expect(find.text('지도 크게 보기'), findsOneWidget);
     expect(renderedSpots, isEmpty);
 
-    await tester.ensureVisible(find.text('바다와 카페 코스'));
+    expect(find.text('오늘 감자로 배 채워볼까? 🥔'), findsOneWidget);
+    await tester.ensureVisible(find.text('오늘 감자로 배 채워볼까? 🥔'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('바다와 카페 코스'));
+    final courseTitle = find.text('오늘 감자로 배 채워볼까? 🥔');
+    await tester.ensureVisible(courseTitle);
+    await tester.pumpAndSettle();
+    await tester.tap(courseTitle);
     await tester.pumpAndSettle();
 
-    expect(find.text('코스에 담긴 장소'), findsOneWidget);
-    expect(find.textContaining('강원도의 바다를 따라 걷고'), findsOneWidget);
+    expect(find.text('이 코스에 담긴 장소'), findsOneWidget);
+    expect(find.textContaining('따뜻한 옹심이'), findsOneWidget);
 
-    Navigator.of(tester.element(find.text('코스에 담긴 장소'))).pop();
+    Navigator.of(tester.element(find.text('이 코스에 담긴 장소'))).pop();
     await tester.pumpAndSettle();
 
     await tester.drag(
@@ -69,7 +73,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('요즘 많이 찾는 곳'), findsOneWidget);
+    expect(find.text('지금 가기 좋은 곳 ☀️'), findsOneWidget);
 
     await tester.drag(
       find.byKey(const ValueKey('map-discovery-home')),
@@ -77,6 +81,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('open-full-map-button')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('open-full-map-button')));
     await tester.pumpAndSettle();
 
@@ -92,6 +99,63 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('map-discovery-home')), findsOneWidget);
+  });
+
+  testWidgets('adds a travel course to the route and opens route mode', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _toggleableFavoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final courseTitle = find.text('오늘 감자로 배 채워볼까? 🥔');
+    await tester.scrollUntilVisible(
+      courseTitle,
+      360,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('map-discovery-home')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(courseTitle);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('내 동선에 3곳 담기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('내 동선에 3곳 담기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('내 동선에 3곳을 담았어요'), findsOneWidget);
+    expect(find.text('지도에서 여행 순서를 확인해보세요.'), findsOneWidget);
+
+    await tester.tap(find.text('지도에서 확인하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('favorite-route-sheet')), findsOneWidget);
+    expect(find.text('내 동선 3곳'), findsOneWidget);
+    expect(renderedSpots.length, 3);
   });
 
   testWidgets('updates the place card when a different map marker is selected',
