@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/stamp/presentation/model/gangwon_context_region.dart';
 
 void main() {
-  test('contains northern and adjacent regions around Gangwon-do', () {
+  test('contains continuous Korean peninsula landmass around Gangwon-do', () {
     expect(
       gangwonContextRegions.map((region) => region.name),
-      orderedEquals(const ['북한', '경기도', '충청북도', '경상북도']),
+      orderedEquals(const ['한반도 북부', '한반도 남부']),
     );
     expect(
       gangwonContextRegions.every(
@@ -15,19 +15,31 @@ void main() {
     );
   });
 
-  test('places each context region around the expected side of Gangwon-do', () {
-    final northKorea = gangwonContextRegions[0].points;
-    final gyeonggi = gangwonContextRegions[1].points;
-    final chungbuk = gangwonContextRegions[2].points;
-    final gyeongbuk = gangwonContextRegions[3].points;
+  test('keeps northern, western, and southern landmass context visible', () {
+    final northernLandmass = gangwonContextRegions[0].points;
+    final southernLandmass = gangwonContextRegions[1].points;
 
-    expect(northKorea.map((point) => point.dy).reduce(_min), lessThan(0));
-    expect(northKorea.map((point) => point.dy).reduce(_max), lessThan(0.7));
-    expect(gyeonggi.map((point) => point.dx).reduce(_min), lessThan(0));
-    expect(gyeonggi.map((point) => point.dx).reduce(_max), lessThan(0.4));
-    expect(chungbuk.map((point) => point.dy).reduce(_min), greaterThan(0.8));
-    expect(gyeongbuk.map((point) => point.dx).reduce(_min), greaterThan(0.25));
-    expect(gyeongbuk.map((point) => point.dx).reduce(_max), greaterThan(1));
+    expect(northernLandmass.map((point) => point.dy).reduce(_min), lessThan(0));
+    expect(
+      northernLandmass.map((point) => point.dx).reduce(_min),
+      lessThan(0),
+    );
+    expect(
+      northernLandmass.map((point) => point.dx).reduce(_max),
+      greaterThan(1),
+    );
+    expect(
+      southernLandmass.map((point) => point.dx).reduce(_min),
+      lessThan(0),
+    );
+    expect(
+      southernLandmass.map((point) => point.dx).reduce(_max),
+      greaterThan(1),
+    );
+    expect(
+      southernLandmass.map((point) => point.dy).reduce(_max),
+      greaterThan(1),
+    );
   });
 }
 

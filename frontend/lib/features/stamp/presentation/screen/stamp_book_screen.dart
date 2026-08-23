@@ -1498,23 +1498,12 @@ class _GangwonMapPainter extends CustomPainter {
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    final contextFillPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.12)
+    final landmassPaint = Paint()
+      ..color = AppColors.primary.withValues(alpha: 0.13)
       ..style = PaintingStyle.fill;
-    final contextLinePaint = Paint()
-      ..color = AppColors.primaryDark.withValues(alpha: 0.12)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    for (final region in gangwonContextRegions) {
-      final path = _contextRegionPath(region, mapRect);
-      if (path.computeMetrics().isEmpty) {
-        continue;
-      }
-      canvas.drawPath(path, contextFillPaint);
-      canvas.drawPath(path, contextLinePaint);
+    final landmassPath = _contextLandmassPath(mapRect);
+    if (landmassPath.computeMetrics().isNotEmpty) {
+      canvas.drawPath(landmassPath, landmassPaint);
     }
 
     for (final region in gangwonMapRegions) {
@@ -1838,6 +1827,25 @@ Path _contextRegionPath(GangwonContextRegion region, Rect mapRect) {
     }
   }
   return regionPath;
+}
+
+Path _contextLandmassPath(Rect mapRect) {
+  var landmassPath = Path();
+  for (final region in gangwonContextRegions) {
+    final regionPath = _contextRegionPath(region, mapRect);
+    if (regionPath.computeMetrics().isEmpty) {
+      continue;
+    }
+
+    try {
+      landmassPath = landmassPath.computeMetrics().isEmpty
+          ? regionPath
+          : Path.combine(PathOperation.union, landmassPath, regionPath);
+    } catch (_) {
+      landmassPath.addPath(regionPath, Offset.zero);
+    }
+  }
+  return landmassPath;
 }
 
 var _didLogGangwonContextRegions = false;
