@@ -15,6 +15,7 @@
 ### Action
 
 - 백엔드에 `SpotImageResolver`를 추가해 저장된 이미지가 없고 TourAPI `contentId`가 있는 경우에만 `detailImage2`를 조회하도록 했다.
+- TourAPI에서 대표 이미지를 찾은 경우 `tourist_spots.image_url`에 저장해 이후 요청이 외부 API를 반복 호출하지 않도록 했다.
 - `TourApiClient`에 `detailImage2` 호출과 `originimgurl/imgurl/smallimageurl` 후보 선택 로직을 추가했다.
 - 외부 API 실패는 장소 조회 실패로 전파하지 않고 로그만 남긴 뒤 `imageUrl=null`로 처리했다.
 - 프론트 `MapSpot`에 `imageUrl`을 추가하고 여행 코스/장소 카드의 이미지 렌더링 우선순위를 `network image -> local asset -> app placeholder`로 정리했다.
@@ -23,13 +24,14 @@
 
 ### Result
 
-장소/코스 화면은 프론트에서 TourAPI를 직접 호출하지 않고도 서버 응답의 대표 이미지를 사용할 수 있게 되었다. TourAPI 키는 백엔드 환경변수로만 관리하며, 외부 API가 실패해도 장소 데이터는 정상 표시된다.
+장소/코스 화면은 프론트에서 TourAPI를 직접 호출하지 않고도 서버 응답의 대표 이미지를 사용할 수 있게 되었다. 최초 보강된 이미지는 DB에 저장되므로 서버 재시작 이후에도 같은 이미지를 재사용할 수 있다. TourAPI 키는 백엔드 환경변수로만 관리하며, 외부 API가 실패해도 장소 데이터는 정상 표시된다.
 
 ## 테스트
 
 | 항목 | 결과 |
 | --- | --- |
 | `./gradlew test --tests "com.gamjamubwatna.spot.application.SpotImageResolverTest" --tests "com.gamjamubwatna.spot.infrastructure.TourApiClientTest" --tests "com.gamjamubwatna.spot.application.SpotServiceTest" --tests "com.gamjamubwatna.spot.api.SpotControllerTest"` | PASS |
+| `./gradlew test --tests "com.gamjamubwatna.spot.application.SpotImageResolverTest" --tests "com.gamjamubwatna.spot.infrastructure.TourApiClientTest" --tests "com.gamjamubwatna.spot.application.SpotServiceTest" --tests "com.gamjamubwatna.spot.api.SpotControllerTest"` | PASS - DB 저장 캐시 보강 후 재실행 |
 | `./gradlew test` | PASS |
 | `flutter analyze` | PASS |
 | `flutter test test/features/map/map_spot_test.dart test/features/map/spot_recommendation_repository_test.dart test/features/map/travel_course_catalog_test.dart` | PASS |

@@ -14,7 +14,8 @@ import org.junit.jupiter.api.Test;
 class SpotImageResolverTest {
 
     private final TourApiClient tourApiClient = mock(TourApiClient.class);
-    private final SpotImageResolver resolver = new SpotImageResolver(tourApiClient);
+    private final SpotImageCacheWriter spotImageCacheWriter = mock(SpotImageCacheWriter.class);
+    private final SpotImageResolver resolver = new SpotImageResolver(tourApiClient, spotImageCacheWriter);
 
     @Test
     void returnsInternalImageBeforeCallingTourApi() {
@@ -24,6 +25,7 @@ class SpotImageResolverTest {
 
         assertThat(imageUrl).isEqualTo("https://example.com/internal.jpg");
         verify(tourApiClient, never()).findRepresentativeImage("12345");
+        verify(spotImageCacheWriter, never()).cacheResolvedImage(1L, "https://example.com/internal.jpg");
     }
 
     @Test
@@ -35,6 +37,7 @@ class SpotImageResolverTest {
         String imageUrl = resolver.resolveImageUrl(spot);
 
         assertThat(imageUrl).isEqualTo("https://tour.example.com/detail.jpg");
+        verify(spotImageCacheWriter).cacheResolvedImage(1L, "https://tour.example.com/detail.jpg");
     }
 
     @Test
@@ -44,6 +47,7 @@ class SpotImageResolverTest {
 
         verify(tourApiClient, never()).findRepresentativeImage(null);
         verify(tourApiClient, never()).findRepresentativeImage("curated-1");
+        verify(spotImageCacheWriter, never()).cacheResolvedImage(1L, "curated-1");
     }
 
     @Test
@@ -56,10 +60,12 @@ class SpotImageResolverTest {
         assertThat(resolver.resolveImageUrl(spot)).isNull();
 
         verify(tourApiClient).findRepresentativeImage("12345");
+        verify(spotImageCacheWriter, never()).cacheResolvedImage(1L, "12345");
     }
 
     private TouristSpot spot(String imageUrl, String contentId) {
         TouristSpot spot = mock(TouristSpot.class);
+        when(spot.getId()).thenReturn(1L);
         when(spot.getImageUrl()).thenReturn(imageUrl);
         when(spot.getContentId()).thenReturn(contentId);
         return spot;
