@@ -14,17 +14,23 @@ Firebase Console의 동일 프로젝트에 다음 앱을 등록한다.
 - Cloud Messaging API를 활성화한다.
 - iOS 앱은 Apple Developer의 APNs Authentication Key를 Firebase Console에 업로드한다.
 - iOS Runner target에 Push Notifications와 Background Modes의 `Background fetch`, `Remote notifications`가 켜져 있는지 확인한다.
-- Firebase 설정 파일과 service account key는 Git에 커밋하지 않는다.
+- FlutterFire CLI로 생성한 실제 앱 설정 파일은 로컬과 배포 환경에만 둔다.
+- `google-services.json`, `GoogleService-Info.plist`, 실제 값이 들어간 `firebase_options.dart`, Firebase Admin service account key는 Git에 커밋하지 않는다.
 - Web push는 service worker와 VAPID 정책이 확정될 때까지 지원하지 않는다.
 
 ## 2. Flutter 실행 설정
 
-Flutter 앱은 FlutterFire CLI가 생성한 `frontend/lib/firebase_options.dart`의
-`DefaultFirebaseOptions.currentPlatform`을 사용한다.
+Firebase 클라이언트 초기화 코드는 FlutterFire CLI가 생성하는 `DefaultFirebaseOptions.currentPlatform` 구조를 사용한다.
+다만 저장소에는 실제 키가 들어간 생성 파일을 커밋하지 않고, 안전하게 비운 `lib/firebase_options.dart`만 둔다.
+로컬과 배포 빌드에서는 `frontend/.env` 또는 CI secret으로 실제 값을 주입한다.
 
-- Android/iOS에서만 FCM을 초기화한다.
-- Web push는 service worker와 VAPID 정책이 확정될 때까지 지원하지 않는다.
-- Firebase 초기화에 실패해도 앱 시작은 계속하고 push만 비활성화한다.
+```powershell
+flutter run --dart-define-from-file=.env
+```
+
+- 실제 앱 설정 파일이 필요한 기기 QA 환경에서는 `flutterfire configure`를 실행해 로컬 ignored 파일을 생성해도 된다.
+- Firebase 설정이 없는 환경은 FCM만 비활성화하고 계속 실행한다.
+- Web push는 아직 활성화하지 않으며 Android/iOS 앱에서만 FCM을 초기화한다.
 - FCM token 자동 생성은 기본적으로 비활성화되어 있다. 사용자가 알림 권한을 허용하면 앱이 자동 초기화를 켜고 token을 등록한다.
 - Firebase client 설정값은 일반 앱 식별 설정이지만, 서비스 계정 JSON, private key, APNs key는 절대 Git에 커밋하지 않는다.
 

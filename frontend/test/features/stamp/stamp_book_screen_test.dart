@@ -195,7 +195,7 @@ void main() {
     expect(find.text('정선 5일장'), findsOneWidget);
   });
 
-  testWidgets('keeps stamp tour visible when rallybook spots fail to load', (
+  testWidgets('shows rallybook error without fallback spots', (
     tester,
   ) async {
     await _pumpScreen(
@@ -209,12 +209,121 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('패스포트  2/29'), findsOneWidget);
-    expect(find.text('여행할 명소를 골라보세요'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('stamp-next-target-error')),
+      find.byKey(const ValueKey('rallybook-spots-error')),
+      findsOneWidget,
+    );
+    expect(find.text('랠리북 관광지를 불러오지 못했습니다.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rallybook-spots-retry')), findsOneWidget);
+    expect(find.text('패스포트  2/29'), findsNothing);
+    expect(find.text('남이섬'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('rallybook-spot-marker-101')),
       findsNothing,
     );
+  });
+
+  testWidgets('retries rallybook spots after a loading failure', (
+    tester,
+  ) async {
+    var attempts = 0;
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) async {
+          attempts++;
+          if (attempts == 1) {
+            throw Exception('network unavailable');
+          }
+          return _rallybookSpots;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('rallybook-spots-retry')));
+    await tester.pumpAndSettle();
+
+    expect(attempts, 2);
+    expect(find.byKey(const ValueKey('rallybook-spots-error')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('rallybook-spot-marker-101')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('shows an explicit empty state without fallback spots', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) async => const <RallybookSpot>[],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('rallybook-spots-empty')),
+      findsOneWidget,
+    );
+    expect(find.text('등록된 랠리북 관광지가 없어요.'), findsOneWidget);
+    expect(find.text('패스포트  2/29'), findsNothing);
+    expect(find.text('남이섬'), findsNothing);
+  });
+
+  testWidgets('shows rallybook loading without fallback spots', (
+    tester,
+  ) async {
+    final completer = Completer<List<RallybookSpot>?>();
+
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) => completer.future,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('rallybook-spots-loading')),
+      findsOneWidget,
+    );
+    expect(find.text('패스포트  2/29'), findsNothing);
+    expect(find.text('남이섬'), findsNothing);
+  });
+
+  testWidgets('shows the rallybook empty state in the passport grid', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          stampBookProvider.overrideWith((ref) async => _stampBook()),
+          stampRallybookSpotsProvider.overrideWith(
+            (ref) async => const <RallybookSpot>[],
+          ),
+        ],
+        child: const MaterialApp(home: PassportStampGridScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('rallybook-spots-empty')),
+      findsOneWidget,
+    );
+    expect(find.text('등록된 랠리북 관광지가 없어요.'), findsOneWidget);
+    expect(find.text('2 / 29'), findsNothing);
+    expect(find.text('남이섬'), findsNothing);
   });
 
   testWidgets('shows a loading indicator while stamp tour is loading', (
@@ -379,7 +488,7 @@ Future<void> _pumpScreen(
         override,
         rallybookSpotsOverride ??
             stampRallybookSpotsProvider.overrideWith(
-              (ref) async => const <RallybookSpot>[],
+              (ref) async => _rallybookSpots,
             ),
         ...additionalOverrides,
       ],
