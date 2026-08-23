@@ -109,7 +109,9 @@ void main() {
 
     expect(find.text('#000'), findsOneWidget);
     expect(
-      find.text('아직 여행을 시작하지 않은 작은 감자예요. 첫 스탬프를 찍으면 도감 이야기가 하나씩 열립니다.'),
+      find.text(
+        '강원 여행을 시작한 모든 사용자에게 지급되는 첫 감자예요. 돌봄과 걸음으로 함께 키워 보세요.',
+      ),
       findsWidgets,
     );
   });

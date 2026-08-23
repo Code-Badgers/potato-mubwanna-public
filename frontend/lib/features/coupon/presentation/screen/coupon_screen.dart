@@ -152,6 +152,12 @@ class _RewardBoxState extends State<_RewardBox> {
             onChanged: (section) => setState(() => _selectedSection = section),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+          child: _RewardGuideBanner(
+            onTap: () => _showRewardGuide(context),
+          ),
+        ),
         Expanded(
           child: switch (_selectedSection) {
             _RewardBoxSection.coupons => const _CouponInbox(),
@@ -159,6 +165,286 @@ class _RewardBoxState extends State<_RewardBox> {
           },
         ),
       ],
+    );
+  }
+}
+
+class _RewardGuideBanner extends StatelessWidget {
+  const _RewardGuideBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '보상 받는 방법 안내 열기',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const ValueKey('reward-guide-banner'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+          child: Ink(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            decoration: BoxDecoration(
+              color: _couponCream,
+              borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+              border: Border.all(
+                color: _couponGold.withValues(alpha: 0.34),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: _couponGold.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: _couponBrown,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '보상은 어떻게 받을까요?',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        '기본 감자 · 방문 인증 · 패스포트 · 미션',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _showRewardGuide(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => const _RewardGuideSheet(),
+  );
+}
+
+class _RewardGuideSheet extends StatelessWidget {
+  const _RewardGuideSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+        ),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                '보상 받는 방법',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '여행을 시작한 순간부터 받을 수 있는 혜택을 모아봤어요.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const _RewardGuideStep(
+                icon: Icons.eco_rounded,
+                color: _couponPrimary,
+                title: '가입 선물',
+                body: '가입하면 실제 소유할 수 있는 새싹 감자가 지급돼요. 바로 대표 감자로 돌볼 수 있어요.',
+              ),
+              const _RewardGuideStep(
+                icon: Icons.location_on_rounded,
+                color: Color(0xFF4F9F78),
+                title: '관광지 방문 인증',
+                body:
+                    '현장에서 위치로 인증하면 새로운 관광지 감자를 만날 기회가 생겨요. 패스포트 대상 관광지는 스탬프도 함께 쌓여요.',
+              ),
+              const _RewardGuideStep(
+                icon: Icons.menu_book_rounded,
+                color: _couponBrown,
+                title: '패스포트 스탬프',
+                body:
+                    '스탬프 6개·12개·18개를 모으면 스탬프 탭에서 ‘보상 받기’를 눌러 단계별 쿠폰을 받을 수 있어요.',
+              ),
+              const _RewardGuideStep(
+                icon: Icons.flag_rounded,
+                color: Color(0xFF5577B8),
+                title: '미션 완료',
+                body:
+                    '각 미션 카드에 표시된 보상을 확인해 보세요. 사진 미션의 인증샷은 완료 후 여행 기록에 모이고, 쿠폰 보상은 이 보상함에서 확인할 수 있어요.',
+                showDivider: false,
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTint.withValues(alpha: 0.66),
+                  borderRadius: BorderRadius.circular(
+                    AppDimens.compactCardRadius,
+                  ),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.primaryDark,
+                      size: 20,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '쓰다듬기·물 주기·간식·산책과 걸음 수는 대표 감자를 성장시켜요. 쿠폰이나 스탬프를 주는 기능은 아니에요.',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RewardGuideStep extends StatelessWidget {
+  const _RewardGuideStep({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+    this.showDivider = true,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.13),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.only(bottom: showDivider ? 14 : 0),
+              decoration: showDivider
+                  ? const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: AppColors.line),
+                      ),
+                    )
+                  : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    body,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

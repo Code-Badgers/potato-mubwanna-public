@@ -300,8 +300,8 @@ class _TravelRecordTypeStamp extends StatelessWidget {
   final TravelRecord record;
 
   bool get _isMissionPhoto {
-    final category = record.category.toUpperCase();
-    return category.contains('MISSION') || category.contains('PHOTO');
+    final uploadedImageUrl = record.uploadedImageUrl?.trim();
+    return uploadedImageUrl != null && uploadedImageUrl.isNotEmpty;
   }
 
   @override
@@ -314,6 +314,7 @@ class _TravelRecordTypeStamp extends StatelessWidget {
     return Transform.rotate(
       angle: _isMissionPhoto ? -0.08 : 0.02,
       child: Container(
+        key: ValueKey('travel-record-type-${record.visitId}'),
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
         decoration: BoxDecoration(
           color: AppColors.surface.withValues(alpha: 0.78),

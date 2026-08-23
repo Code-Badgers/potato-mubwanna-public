@@ -75,6 +75,30 @@ void main() {
     expect(find.text('기간 만료'), findsOneWidget);
   });
 
+  testWidgets('explains the actual reward earning paths', (tester) async {
+    await _pumpScreen(
+      tester,
+      overrides: [couponListProvider.overrideWith((ref) async => _coupons)],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('보상은 어떻게 받을까요?'), findsOneWidget);
+    expect(find.text('기본 감자 · 방문 인증 · 패스포트 · 미션'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('reward-guide-banner')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('보상 받는 방법'), findsOneWidget);
+    expect(find.text('가입 선물'), findsOneWidget);
+    expect(find.text('관광지 방문 인증'), findsOneWidget);
+    expect(find.text('패스포트 스탬프'), findsOneWidget);
+    expect(find.text('미션 완료'), findsOneWidget);
+    expect(
+      find.textContaining('쿠폰이나 스탬프를 주는 기능은 아니에요.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('opens coupon detail from a coupon card', (tester) async {
     await _pumpScreen(
       tester,
