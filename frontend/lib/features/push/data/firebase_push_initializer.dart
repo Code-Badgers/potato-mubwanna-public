@@ -3,7 +3,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../app/config/app_environment.dart';
-import '../../../firebase_options.dart';
 import '../application/push_messaging_client.dart';
 import 'firebase_push_messaging_client.dart';
 
@@ -16,9 +15,7 @@ class FirebasePushInitializer {
     }
 
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      await Firebase.initializeApp(options: _firebaseOptions());
       await FirebaseMessaging.instance.setAutoInitEnabled(false);
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
       await FirebaseMessaging.instance
@@ -40,7 +37,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (!AppEnvironment.hasFirebaseMessagingConfig || Firebase.apps.isNotEmpty) {
     return;
   }
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  await Firebase.initializeApp(options: _firebaseOptions());
+}
+
+FirebaseOptions _firebaseOptions() {
+  return FirebaseOptions(
+    apiKey: AppEnvironment.firebaseApiKey,
+    appId: AppEnvironment.firebaseAppId,
+    messagingSenderId: AppEnvironment.firebaseMessagingSenderId,
+    projectId: AppEnvironment.firebaseProjectId,
   );
 }
