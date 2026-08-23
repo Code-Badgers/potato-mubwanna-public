@@ -45,7 +45,7 @@ class AdminAccessControlTest {
     @Test
     void rejectsAuthenticatedUserOutsideAdminAllowlist() throws Exception {
         mockMvc.perform(get("/admin/ping")
-                .header("Authorization", "Bearer " + jwtTokenProvider.createAccessToken("1")))
+                .header("Authorization", "Bearer " + jwtTokenProvider.createAccessToken("user:1")))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.message").value("관리자 권한이 필요합니다."));
@@ -54,7 +54,7 @@ class AdminAccessControlTest {
     @Test
     void allowsConfiguredAdminUser() throws Exception {
         mockMvc.perform(get("/admin/ping")
-                .header("Authorization", "Bearer " + jwtTokenProvider.createAccessToken("99")))
+                .header("Authorization", "Bearer " + jwtTokenProvider.createAccessToken("user:99")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("ok"));
     }
