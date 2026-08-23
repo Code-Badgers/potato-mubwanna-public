@@ -45,11 +45,29 @@ public class Notice {
         Instant publishedAt,
         Instant now
     ) {
-        this.title = title;
-        this.content = content;
+        this.title = validatedTitle(title);
+        this.content = validatedContent(content);
         this.published = published;
         this.publishedAt = publishedAt;
         this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    public void updateContent(String title, String content, Instant now) {
+        this.title = validatedTitle(title);
+        this.content = validatedContent(content);
+        this.updatedAt = now;
+    }
+
+    public void changePublication(boolean published, Instant now) {
+        if (this.published == published) {
+            return;
+        }
+
+        this.published = published;
+        if (published) {
+            this.publishedAt = now;
+        }
         this.updatedAt = now;
     }
 
@@ -71,5 +89,27 @@ public class Notice {
 
     public Instant getPublishedAt() {
         return publishedAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    private String validatedTitle(String title) {
+        if (title == null || title.isBlank() || title.length() > 160) {
+            throw new IllegalArgumentException("공지 제목은 1자 이상 160자 이하여야 합니다.");
+        }
+        return title;
+    }
+
+    private String validatedContent(String content) {
+        if (content == null || content.isBlank() || content.length() > 2000) {
+            throw new IllegalArgumentException("공지 내용은 1자 이상 2000자 이하여야 합니다.");
+        }
+        return content;
     }
 }

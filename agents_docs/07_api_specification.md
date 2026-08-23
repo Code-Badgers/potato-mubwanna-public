@@ -1467,6 +1467,65 @@ POST /api/admin/missions
 POST /api/admin/coupons
 ```
 
+### 9.7 공지 전체 목록 조회
+
+```http
+GET /api/admin/notices
+```
+
+- 게시·숨김 상태와 관계없이 전체 공지를 `updatedAt DESC, id DESC`로 반환한다.
+- 응답 item: `id`, `title`, `content`, `published`, `publishedAt`, `createdAt`, `updatedAt`
+
+### 9.8 공지 작성
+
+```http
+POST /api/admin/notices
+```
+
+```json
+{
+  "title": "서비스 점검 안내",
+  "content": "점검 내용",
+  "published": false
+}
+```
+
+- `title`: 필수, 최대 160자
+- `content`: 필수, 최대 2000자
+- `published`: 필수
+- 성공 시 `201 Created`와 생성된 공지를 반환한다.
+
+### 9.9 공지 수정
+
+```http
+PUT /api/admin/notices/{noticeId}
+```
+
+```json
+{
+  "title": "수정된 제목",
+  "content": "수정된 내용"
+}
+```
+
+- 제목과 내용을 전체 교체하며 게시 상태와 발행 시각은 유지한다.
+
+### 9.10 공지 게시 상태 변경
+
+```http
+PATCH /api/admin/notices/{noticeId}/publication
+```
+
+```json
+{
+  "published": true
+}
+```
+
+- 숨김에서 게시로 전환할 때만 `publishedAt`을 현재 시각으로 갱신한다.
+- 같은 상태 재요청은 timestamp를 변경하지 않는다.
+- 존재하지 않는 공지는 `404 Not Found`, 입력 오류는 `400 Bad Request`를 반환한다.
+
 ---
 
 # 08_frontend_architecture.md
