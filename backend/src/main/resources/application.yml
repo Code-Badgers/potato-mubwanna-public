@@ -33,6 +33,8 @@ springdoc:
     path: /docs
 
 auth:
+  admin:
+    user-ids: ${ADMIN_USER_IDS:}
   kakao:
     user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
     token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}

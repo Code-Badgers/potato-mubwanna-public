@@ -35,6 +35,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers(
                     "/auth/kakao",
                     "/auth/kakao/code",
@@ -58,6 +59,15 @@ public class SecurityConfig {
                     objectMapper.writeValue(
                         response.getOutputStream(),
                         AuthApiResponse.failure("인증이 필요합니다.")
+                    );
+                })
+                .accessDeniedHandler((request, response, exception) -> {
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                    objectMapper.writeValue(
+                        response.getOutputStream(),
+                        AuthApiResponse.failure("관리자 권한이 필요합니다.")
                     );
                 })
             )
