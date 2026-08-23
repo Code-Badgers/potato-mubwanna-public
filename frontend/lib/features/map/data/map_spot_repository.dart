@@ -4,6 +4,7 @@ import '../../../core/constants/api_paths.dart';
 import '../domain/favorite_spot.dart';
 import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
+import '../domain/spot_detail.dart';
 import '../domain/spot_recommendation.dart';
 
 class MapSpotRepository {
@@ -48,6 +49,15 @@ class MapSpotRepository {
         .toList();
     recommendations.sort((a, b) => a.externalRank.compareTo(b.externalRank));
     return recommendations;
+  }
+
+  Future<SpotDetail> fetchSpotDetail(String spotId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiPaths.spotDetail(spotId),
+    );
+    return SpotDetail.fromJson(
+      response.data?['data'] as Map<String, dynamic>? ?? const {},
+    );
   }
 
   Future<List<FavoriteSpot>> fetchFavoriteSpots() async {

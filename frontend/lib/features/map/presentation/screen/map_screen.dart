@@ -16,6 +16,7 @@ import '../../application/map_spot_controller.dart';
 import '../../data/travel_course_catalog.dart';
 import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
+import '../../domain/spot_detail.dart';
 import '../../domain/spot_recommendation.dart';
 import '../widget/kakao_map_view.dart';
 import '../widget/map_spot_selection_message.dart';
@@ -2192,7 +2193,7 @@ class _DiscoverySectionStatus extends StatelessWidget {
   }
 }
 
-class _RouteRecommendationSheet extends StatelessWidget {
+class _RouteRecommendationSheet extends ConsumerWidget {
   const _RouteRecommendationSheet({
     super.key,
     required this.selectedSpot,
@@ -2209,10 +2210,11 @@ class _RouteRecommendationSheet extends StatelessWidget {
   final VoidCallback onDetailPressed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasMenu = selectedSpot.menuItems.isNotEmpty;
     final initialChildSize = hasMenu ? 0.42 : 0.28;
     final snapSizes = hasMenu ? const [0.42, 0.68] : const [0.28, 0.56];
+    final spotDetail = ref.watch(spotDetailProvider(selectedSpot.id));
     return DraggableScrollableSheet(
       minChildSize: 0.24,
       initialChildSize: initialChildSize,
@@ -2243,6 +2245,7 @@ class _RouteRecommendationSheet extends StatelessWidget {
                 const SizedBox(height: 8),
                 _SelectedSpotSummary(
                   spot: selectedSpot,
+                  spotDetail: spotDetail,
                   isFavorite: isFavorite,
                   onNavigationPressed: onNavigationPressed,
                   onFavoritePressed: onFavoritePressed,
@@ -2744,6 +2747,7 @@ class _SheetDragHandle extends StatelessWidget {
 class _SelectedSpotSummary extends StatelessWidget {
   const _SelectedSpotSummary({
     required this.spot,
+    required this.spotDetail,
     required this.isFavorite,
     required this.onNavigationPressed,
     required this.onFavoritePressed,
@@ -2751,6 +2755,7 @@ class _SelectedSpotSummary extends StatelessWidget {
   });
 
   final MapSpot spot;
+  final AsyncValue<SpotDetail> spotDetail;
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
   final Future<void> Function() onFavoritePressed;
@@ -2853,6 +2858,11 @@ class _SelectedSpotSummary extends StatelessWidget {
             ),
           ],
         ),
+        if (_showsTourApiInfo(spot))
+          _SpotTourInfoSection(
+            spot: spot,
+            spotDetail: spotDetail,
+          ),
         if (spot.menuItems.isNotEmpty) ...[
           const SizedBox(height: 14),
           _SpotMenuPreview(
@@ -2861,6 +2871,173 @@ class _SelectedSpotSummary extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  bool _showsTourApiInfo(MapSpot spot) {
+    return spot.category == 'POTATO_TOUR' ||
+        spot.category == 'POTATO_SHOP' ||
+        spot.category == 'POTATO_EXPERIENCE';
+  }
+}
+
+class _SpotTourInfoSection extends StatelessWidget {
+  const _SpotTourInfoSection({
+    required this.spot,
+    required this.spotDetail,
+  });
+
+  final MapSpot spot;
+  final AsyncValue<SpotDetail> spotDetail;
+
+  @override
+  Widget build(BuildContext context) {
+    return spotDetail.when(
+      data: (detail) {
+        final imageUrl = detail.imageUrl ?? spot.imageUrl;
+        final hasImage = imageUrl != null && imageUrl.trim().isNotEmpty;
+        if (!detail.hasTourInfo && !hasImage) {
+          return const SizedBox.shrink();
+        }
+        final guideRows = _tourGuideRows(detail).take(3).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: SizedBox(
+                width: double.infinity,
+                height: 164,
+                child: _CourseImage(
+                  imageUrl: imageUrl,
+                  asset: _spotImageAsset(spot),
+                  icon: Icons.landscape_rounded,
+                ),
+              ),
+            ),
+            if (detail.description != null) ...[
+              const SizedBox(height: 16),
+              const Text(
+                '이곳은 어떤 곳인가요?',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                detail.description!,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.48,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+            if (guideRows.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text(
+                '이용 안내',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (final row in guideRows) ...[
+                _TourInfoRow(icon: row.icon, label: row.label),
+                const SizedBox(height: 7),
+              ],
+            ],
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: _SpotTourInfoSkeleton(),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  List<_TourInfoItem> _tourGuideRows(SpotDetail detail) {
+    return [
+      _TourInfoItem(Icons.schedule_rounded, detail.openingHours),
+      _TourInfoItem(Icons.confirmation_number_rounded, detail.admissionFee),
+      _TourInfoItem(Icons.event_busy_rounded, detail.closedDays),
+      _TourInfoItem(Icons.local_parking_rounded, detail.parking),
+      _TourInfoItem(Icons.call_rounded, detail.contactPhone),
+    ]
+        .where((item) => item.label != null && item.label!.trim().isNotEmpty)
+        .toList();
+  }
+}
+
+class _TourInfoItem {
+  const _TourInfoItem(this.icon, this.label);
+
+  final IconData icon;
+  final String? label;
+}
+
+class _TourInfoRow extends StatelessWidget {
+  const _TourInfoRow({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 17, color: _mapDark),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label ?? '',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SpotTourInfoSkeleton extends StatelessWidget {
+  const _SpotTourInfoSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const SizedBox(
+        width: double.infinity,
+        height: 96,
+      ),
     );
   }
 }

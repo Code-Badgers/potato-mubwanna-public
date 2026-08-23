@@ -9,6 +9,7 @@ import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
 import 'package:potato_mubwanna/features/map/domain/favorite_spot.dart';
 import 'package:potato_mubwanna/features/map/domain/favorite_spot_route.dart';
 import 'package:potato_mubwanna/features/map/domain/map_spot.dart';
+import 'package:potato_mubwanna/features/map/domain/spot_detail.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
 
@@ -21,6 +22,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -116,6 +118,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _toggleableFavoriteController(),
@@ -172,6 +175,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -232,6 +236,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -308,6 +313,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -344,6 +350,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController({'2'}),
@@ -375,6 +382,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _toggleableFavoriteController(),
@@ -404,6 +412,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _toggleableFavoriteController({'1'}),
@@ -436,6 +445,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -481,6 +491,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController({'2'}),
@@ -525,6 +536,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController({'1', '2'}),
@@ -567,6 +579,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _toggleableFavoriteController({'1', '2', '3'}),
@@ -609,6 +622,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController({'1', '2', '3'}),
@@ -673,6 +687,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _toggleableFavoriteController({'1', '2', '3'}),
@@ -725,6 +740,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController({'1', '2', '3'}),
@@ -756,6 +772,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -794,6 +811,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -828,6 +846,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith(
             (ref) => Future<List<MapSpot>>.error(Exception('network error')),
           ),
@@ -860,6 +879,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              spotDetailProvider.overrideWith(_testSpotDetail),
               mapSpotsProvider.overrideWith(
                 (ref) => Future<List<MapSpot>>.error(failure.error),
               ),
@@ -894,6 +914,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController(),
@@ -922,6 +943,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
             (ref) => _favoriteController({'1', '2', '3'}),
@@ -975,6 +997,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           spotRecommendationsProvider(
             '1',
@@ -1038,6 +1061,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           spotRecommendationsProvider(
             '1',
@@ -1067,6 +1091,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           spotRecommendationsProvider('1').overrideWith(
             (ref) => Future<List<SpotRecommendation>>.error(
@@ -1173,6 +1198,19 @@ FavoriteSpotController _toggleableFavoriteController([
   )..state = AsyncValue.data(spotIds);
 }
 
+Future<SpotDetail> _testSpotDetail(Ref ref, String spotId) async {
+  return SpotDetail(
+    id: spotId,
+    name: '평창무이예술관',
+    category: 'POTATO_TOUR',
+    cityName: '평창군',
+    imageUrl: 'https://example.com/tour.jpg',
+    description: '폐교를 예술 공간으로 꾸민 평창의 관광지입니다.',
+    openingHours: '10:00 - 18:00',
+    admissionFee: '성인 5,000원',
+  );
+}
+
 class _FakeMapSpotRepository extends MapSpotRepository {
   _FakeMapSpotRepository() : super(dio: Dio());
 
@@ -1194,6 +1232,20 @@ class _FakeMapSpotRepository extends MapSpotRepository {
     List<String> spotIds,
   ) async {
     return _emptyRoute;
+  }
+
+  @override
+  Future<SpotDetail> fetchSpotDetail(String spotId) async {
+    return SpotDetail(
+      id: spotId,
+      name: '평창무이예술관',
+      category: 'POTATO_TOUR',
+      cityName: '평창군',
+      imageUrl: 'https://example.com/tour.jpg',
+      description: '폐교를 예술 공간으로 꾸민 평창의 관광지입니다.',
+      openingHours: '10:00 - 18:00',
+      admissionFee: '성인 5,000원',
+    );
   }
 }
 
