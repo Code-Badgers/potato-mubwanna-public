@@ -20,6 +20,7 @@ import '../../features/notice/presentation/screen/notice_screen.dart';
 import '../../features/onboarding/presentation/screen/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screen/permission_guide_screen.dart';
 import '../../features/potato/presentation/screen/potato_collection_screen.dart';
+import '../../features/potato/application/potato_collection_controller.dart';
 import '../../features/push/application/push_notification_service.dart';
 import '../../features/spot/presentation/screen/spot_detail_screen.dart';
 import '../../features/stamp/presentation/screen/stamp_book_screen.dart';
@@ -42,6 +43,9 @@ final appRouter = GoRouter(
       builder: (context, state) => Consumer(
         builder: (context, ref, child) => LegalConsentScreen(
           consentStore: ref.read(legalConsentStoreProvider),
+          requestHealthDataAccess: () async {
+            await ref.read(stepCountReaderProvider).readTodaySteps();
+          },
           onAccepted: () async {
             final fallbackRoute = await ref
                 .read(sessionStartupCoordinatorProvider)

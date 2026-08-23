@@ -9,11 +9,13 @@ class LegalConsentScreen extends StatefulWidget {
   const LegalConsentScreen({
     required this.onAccepted,
     this.consentStore = const SharedPreferencesLegalConsentStore(),
+    this.requestHealthDataAccess,
     super.key,
   });
 
   final LegalConsentStore consentStore;
   final Future<void> Function() onAccepted;
+  final Future<void> Function()? requestHealthDataAccess;
 
   @override
   State<LegalConsentScreen> createState() => _LegalConsentScreenState();
@@ -63,6 +65,13 @@ class _LegalConsentScreenState extends State<LegalConsentScreen> {
         _personalLocationAccepted,
       );
       await widget.consentStore.setHealthDataConsent(_healthDataAccepted);
+      if (_healthDataAccepted) {
+        try {
+          await widget.requestHealthDataAccess?.call();
+        } catch (_) {
+          // 선택 시스템 권한 실패가 필수 동의 저장과 앱 진입을 막지 않게 한다.
+        }
+      }
       await widget.onAccepted();
       if (mounted) {
         setState(() => _isSaving = false);
