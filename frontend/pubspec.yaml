@@ -53,6 +53,7 @@ flutter:
     - assets/kakao_login_medium_wide.png
     - assets/characters/jumsooni/
     - assets/characters/potatoes/
+    - assets/characters/potatoes/growth/
     - assets/stamps/
     - assets/stamps/passport/
     - assets/stamps/passport/spots/

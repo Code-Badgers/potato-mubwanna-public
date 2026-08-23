@@ -1,6 +1,12 @@
 const potatoDefaultAssetPath =
     'assets/characters/potatoes/default_beginner_potato.png';
 
+const potatoGrowthStageAssetPaths = <int, String>{
+  1: 'assets/characters/potatoes/growth/potato_growth_stage_1_baby.png',
+  2: 'assets/characters/potatoes/growth/potato_growth_stage_2_young.png',
+  3: 'assets/characters/potatoes/growth/potato_growth_stage_3_chubby.png',
+};
+
 const _potatoAssetByCode = <String, String>{
   'POTATO_DEFAULT_BEGINNER': 'default_beginner_potato',
   'POTATO_HAJI_SEED': 'variety_sumi',
@@ -55,4 +61,14 @@ String potatoLocalAssetPath(String code) {
     return potatoDefaultAssetPath;
   }
   return 'assets/characters/potatoes/$assetName.png';
+}
+
+String potatoGrowthStageAssetPath({
+  required int stage,
+  required String finalPotatoCode,
+}) {
+  if (stage >= 4) {
+    return potatoLocalAssetPath(finalPotatoCode);
+  }
+  return potatoGrowthStageAssetPaths[stage] ?? potatoGrowthStageAssetPaths[1]!;
 }
