@@ -129,7 +129,16 @@ class _SpotDetailBody extends ConsumerWidget {
               const SizedBox(height: 30),
               const _SectionTitle(
                 icon: Icons.headphones_rounded,
-                title: '점순이 오디오',
+                title: '관광 해설 오디오',
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '한국관광공사 오디(Odii) 제공',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 12),
               audioGuide.when(
