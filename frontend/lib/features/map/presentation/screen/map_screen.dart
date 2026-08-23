@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_design_tokens.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../domain/favorite_spot_route.dart';
@@ -32,6 +33,7 @@ class MapScreen extends ConsumerStatefulWidget {
     this.mapViewBuilder,
     this.mapUriLauncher = launchExternalMapUri,
     this.recommendationSourceSpotId,
+    this.showFullMapInitially = false,
     super.key,
   });
 
@@ -39,6 +41,7 @@ class MapScreen extends ConsumerStatefulWidget {
   final MapViewBuilder? mapViewBuilder;
   final MapUriLauncher mapUriLauncher;
   final String? recommendationSourceSpotId;
+  final bool showFullMapInitially;
 
   @override
   ConsumerState<MapScreen> createState() => _MapScreenState();
@@ -48,6 +51,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   int _selectedCategoryIndex = 0;
   String? _selectedSpotId;
   bool _isRouteMode = false;
+  bool _showFullMap = false;
   List<String> _routeSpotOrder = const [];
   FavoriteSpotRoutePoint? _currentLocation;
 
@@ -211,6 +215,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void initState() {
     super.initState();
+    _showFullMap = widget.showFullMapInitially ||
+        widget.recommendationSourceSpotId != null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_loadCurrentLocation());
     });
@@ -264,6 +270,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   void _exitRouteMode() {
     setState(() {
+      _isRouteMode = false;
+    });
+  }
+
+  void _openFullMap() {
+    setState(() {
+      _showFullMap = true;
+    });
+  }
+
+  void _returnToDiscoveryHome() {
+    setState(() {
+      _showFullMap = false;
       _isRouteMode = false;
     });
   }
@@ -392,159 +411,1195 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             : ref
                 .watch(spotRecommendationsProvider(recommendationSourceSpotId));
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: spotsState.when(
-                  data: (spots) {
-                    final hasMapConfiguration = widget.hasMapConfiguration ??
-                        (kIsWeb
-                            ? AppEnvironment.kakaoJavaScriptKey.isNotEmpty
-                            : AppEnvironment.kakaoNativeAppKey.isNotEmpty);
-                    if (!hasMapConfiguration) {
-                      return const _MapConfigurationError();
-                    }
+    if (!_showFullMap) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: _MapDiscoveryHome(
+            spotsState: spotsState,
+            onOpenFullMap: _openFullMap,
+            onSpotPressed: (spot) {
+              setState(() {
+                _showFullMap = true;
+                _selectedSpotId = spot.id;
+              });
+            },
+            onAddCourseToRoute: (spots) => _addCourseToRoute(
+              spots,
+              favoriteSpotIds,
+            ),
+          ),
+        ),
+      );
+    }
 
-                    final recommendations = recommendationState.valueOrNull ??
-                        const <SpotRecommendation>[];
-                    final displaySpots = _mergeRecommendations(
-                      spots,
-                      recommendations,
-                    );
-                    final visibleSpots = _visibleSpots(
-                      displaySpots,
-                      favoriteSpotIds,
-                    );
-                    final selectedSpot = _selectedSpot(
-                      visibleSpots,
-                      preferredSpotId: recommendations.isEmpty
-                          ? null
-                          : recommendations.first.spotId,
-                    );
-                    final backendRoute = favoriteSpotRouteState.valueOrNull;
-                    final orderedFavoriteSpots = _orderedFavoriteSpots(
-                      displaySpots,
-                      favoriteSpotIds,
-                      backendRoute,
-                      selectedSpot,
-                    );
-                    final activeMapSpots =
-                        _isRouteMode ? orderedFavoriteSpots : visibleSpots;
-                    final activeRoutePolyline = _isRouteMode
-                        ? orderedFavoriteSpots
-                            .map(
-                              (spot) => FavoriteSpotRoutePoint(
-                                latitude: spot.latitude,
-                                longitude: spot.longitude,
-                              ),
-                            )
-                            .toList()
-                        : const <FavoriteSpotRoutePoint>[];
-                    return Stack(
-                      children: [
-                        Positioned.fill(
-                          child: _PotatoMapPreview(
-                            spots: activeMapSpots,
-                            routePolyline: activeRoutePolyline,
-                            routeSpotIds: _isRouteMode
-                                ? orderedFavoriteSpots
-                                    .map((spot) => spot.id)
-                                    .toList(growable: false)
-                                : const [],
-                            favoriteSpotIds: favoriteSpotIds,
-                            currentLocation: _currentLocation,
-                            onSpotSelected: _selectSpotById,
-                            mapViewBuilder: widget.mapViewBuilder,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _returnToDiscoveryHome();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: spotsState.when(
+                    data: (spots) {
+                      final hasMapConfiguration = widget.hasMapConfiguration ??
+                          (kIsWeb
+                              ? AppEnvironment.kakaoJavaScriptKey.isNotEmpty
+                              : AppEnvironment.kakaoNativeAppKey.isNotEmpty);
+                      if (!hasMapConfiguration) {
+                        return const _MapConfigurationError();
+                      }
+
+                      final recommendations = recommendationState.valueOrNull ??
+                          const <SpotRecommendation>[];
+                      final displaySpots = _mergeRecommendations(
+                        spots,
+                        recommendations,
+                      );
+                      final visibleSpots = _visibleSpots(
+                        displaySpots,
+                        favoriteSpotIds,
+                      );
+                      final selectedSpot = _selectedSpot(
+                        visibleSpots,
+                        preferredSpotId: recommendations.isEmpty
+                            ? null
+                            : recommendations.first.spotId,
+                      );
+                      final backendRoute = favoriteSpotRouteState.valueOrNull;
+                      final orderedFavoriteSpots = _orderedFavoriteSpots(
+                        displaySpots,
+                        favoriteSpotIds,
+                        backendRoute,
+                        selectedSpot,
+                      );
+                      final activeMapSpots =
+                          _isRouteMode ? orderedFavoriteSpots : visibleSpots;
+                      final activeRoutePolyline = _isRouteMode
+                          ? orderedFavoriteSpots
+                              .map(
+                                (spot) => FavoriteSpotRoutePoint(
+                                  latitude: spot.latitude,
+                                  longitude: spot.longitude,
+                                ),
+                              )
+                              .toList()
+                          : const <FavoriteSpotRoutePoint>[];
+                      return Stack(
+                        children: [
+                          Positioned.fill(
+                            child: _PotatoMapPreview(
+                              spots: activeMapSpots,
+                              routePolyline: activeRoutePolyline,
+                              routeSpotIds: _isRouteMode
+                                  ? orderedFavoriteSpots
+                                      .map((spot) => spot.id)
+                                      .toList(growable: false)
+                                  : const [],
+                              favoriteSpotIds: favoriteSpotIds,
+                              currentLocation: _currentLocation,
+                              onSpotSelected: _selectSpotById,
+                              mapViewBuilder: widget.mapViewBuilder,
+                            ),
                           ),
-                        ),
-                        Positioned(
-                          left: 12,
-                          right: 12,
-                          top: 18,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _CategoryFilterBar(
-                                categories: _categories,
-                                selectedIndex: _selectedCategoryIndex,
-                                onSelected: _selectCategory,
-                              ),
-                              const SizedBox(height: 10),
-                              _RouteModeChip(
-                                favoriteCount: favoriteSpotIds.length,
-                                selected: _isRouteMode,
-                                onTap: _isRouteMode
-                                    ? _exitRouteMode
-                                    : () => _enterRouteMode(
-                                          orderedFavoriteSpots,
-                                        ),
-                              ),
-                              if (recommendationSourceSpotId != null) ...[
+                          Positioned(
+                            left: 12,
+                            right: 12,
+                            top: 18,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _CategoryFilterBar(
+                                  categories: _categories,
+                                  selectedIndex: _selectedCategoryIndex,
+                                  onSelected: _selectCategory,
+                                ),
                                 const SizedBox(height: 10),
-                                _RecommendationStatusChip(
-                                  state: recommendationState,
-                                  onRetry: () => ref.invalidate(
-                                    spotRecommendationsProvider(
-                                      recommendationSourceSpotId,
+                                _RouteModeChip(
+                                  favoriteCount: favoriteSpotIds.length,
+                                  selected: _isRouteMode,
+                                  onTap: _isRouteMode
+                                      ? _exitRouteMode
+                                      : () => _enterRouteMode(
+                                            orderedFavoriteSpots,
+                                          ),
+                                ),
+                                if (recommendationSourceSpotId != null) ...[
+                                  const SizedBox(height: 10),
+                                  _RecommendationStatusChip(
+                                    state: recommendationState,
+                                    onRetry: () => ref.invalidate(
+                                      spotRecommendationsProvider(
+                                        recommendationSourceSpotId,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ],
-                            ],
-                          ),
-                        ),
-                        if (_isRouteMode)
-                          _FavoriteRouteSheet(
-                            routeSpots: orderedFavoriteSpots,
-                            currentLocation: _currentLocation,
-                            onBrowsePressed: _exitRouteMode,
-                            onReorder: (oldIndex, newIndex) =>
-                                _reorderRouteSpot(
-                              oldIndex,
-                              newIndex,
-                              orderedFavoriteSpots,
                             ),
-                            onFavoritePressed: (spot) => _toggleFavoriteSpot(
-                              spot.id,
-                              wasFavorite: true,
-                            ),
-                          )
-                        else if (selectedSpot == null)
-                          const Positioned.fill(
-                            child: _EmptySpotMessage(),
-                          )
-                        else
-                          _RouteRecommendationSheet(
-                            key: ValueKey('route-sheet-${selectedSpot.id}'),
-                            selectedSpot: selectedSpot,
-                            isFavorite:
-                                favoriteSpotIds.contains(selectedSpot.id),
-                            onNavigationPressed: () =>
-                                _openSpotNavigation(selectedSpot),
-                            onFavoritePressed: () async {
-                              await _toggleFavoriteSpot(
-                                selectedSpot.id,
-                                wasFavorite:
-                                    favoriteSpotIds.contains(selectedSpot.id),
-                              );
-                            },
-                            onDetailPressed: () {
-                              context.push('/spots/${selectedSpot.id}');
-                            },
                           ),
-                      ],
-                    );
-                  },
-                  loading: () => const _MapLoading(),
-                  error: (_, __) => _MapDataError(
-                    onRetry: () => ref.invalidate(mapSpotsProvider),
+                          Positioned(
+                            right: 12,
+                            top: recommendationSourceSpotId == null ? 86 : 132,
+                            child: _FullMapHomeButton(
+                              onTap: _returnToDiscoveryHome,
+                            ),
+                          ),
+                          Positioned(
+                            right: 18,
+                            bottom: _isRouteMode ? 360 : 252,
+                            child: _FullMapLocateButton(
+                              onTap: () => unawaited(_loadCurrentLocation()),
+                            ),
+                          ),
+                          if (_isRouteMode)
+                            _FavoriteRouteSheet(
+                              routeSpots: orderedFavoriteSpots,
+                              currentLocation: _currentLocation,
+                              onBrowsePressed: _exitRouteMode,
+                              onReorder: (oldIndex, newIndex) =>
+                                  _reorderRouteSpot(
+                                oldIndex,
+                                newIndex,
+                                orderedFavoriteSpots,
+                              ),
+                              onFavoritePressed: (spot) => _toggleFavoriteSpot(
+                                spot.id,
+                                wasFavorite: true,
+                              ),
+                            )
+                          else if (selectedSpot == null)
+                            const Positioned.fill(
+                              child: _EmptySpotMessage(),
+                            )
+                          else
+                            _RouteRecommendationSheet(
+                              key: ValueKey('route-sheet-${selectedSpot.id}'),
+                              selectedSpot: selectedSpot,
+                              isFavorite:
+                                  favoriteSpotIds.contains(selectedSpot.id),
+                              onNavigationPressed: () =>
+                                  _openSpotNavigation(selectedSpot),
+                              onFavoritePressed: () async {
+                                await _toggleFavoriteSpot(
+                                  selectedSpot.id,
+                                  wasFavorite:
+                                      favoriteSpotIds.contains(selectedSpot.id),
+                                );
+                              },
+                              onDetailPressed: () {
+                                context.push('/spots/${selectedSpot.id}');
+                              },
+                            ),
+                        ],
+                      );
+                    },
+                    loading: () => const _MapLoading(),
+                    error: (_, __) => _MapDataError(
+                      onRetry: () => ref.invalidate(mapSpotsProvider),
+                    ),
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addCourseToRoute(
+    List<MapSpot> courseSpots,
+    Set<String> favoriteSpotIds,
+  ) async {
+    final newSpots = courseSpots
+        .where((spot) => !favoriteSpotIds.contains(spot.id))
+        .toList();
+    if (newSpots.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이미 내 동선에 담긴 코스예요')),
+      );
+      return;
+    }
+
+    try {
+      for (final spot in newSpots) {
+        await ref.read(favoriteSpotControllerProvider.notifier).toggle(spot.id);
+      }
+      ref.invalidate(favoriteSpotRouteProvider);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('내 동선에 ${newSpots.length}곳을 담았어요')),
+      );
+    } on FavoriteSpotToggleException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('코스를 내 동선에 담지 못했습니다.')),
+      );
+    }
+  }
+}
+
+class _MapDiscoveryHome extends StatelessWidget {
+  const _MapDiscoveryHome({
+    required this.spotsState,
+    required this.onOpenFullMap,
+    required this.onSpotPressed,
+    required this.onAddCourseToRoute,
+  });
+
+  final AsyncValue<List<MapSpot>> spotsState;
+  final VoidCallback onOpenFullMap;
+  final ValueChanged<MapSpot> onSpotPressed;
+  final Future<void> Function(List<MapSpot> spots) onAddCourseToRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    return spotsState.when(
+      data: (spots) {
+        final previewSpots = _previewSpots(spots);
+        final courses = _travelCourses(spots);
+        final popularSpots = _popularSpots(spots);
+
+        return CustomScrollView(
+          key: const ValueKey('map-discovery-home'),
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
+              sliver: SliverToBoxAdapter(
+                child: _DiscoveryHeroHeader(),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverToBoxAdapter(
+                child: _DiscoveryMapPreviewCard(
+                  spots: previewSpots,
+                  onOpenFullMap: onOpenFullMap,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 26, 0, 0),
+              sliver: SliverToBoxAdapter(
+                child: _TravelCourseSection(
+                  courses: courses,
+                  onAddCourseToRoute: onAddCourseToRoute,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 26, 20, 28),
+              sliver: SliverToBoxAdapter(
+                child: _PopularSpotSection(
+                  spots: popularSpots,
+                  onSpotPressed: onSpotPressed,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const _DiscoverySectionStatus(
+        icon: Icons.travel_explore_rounded,
+        title: '강원 여행 지도를 준비하고 있어요',
+        description: '가볍게 둘러볼 장소를 불러오는 중입니다.',
+      ),
+      error: (_, __) => const Padding(
+        padding: EdgeInsets.all(20),
+        child: _DiscoverySectionStatus(
+          icon: Icons.cloud_off_rounded,
+          title: '여행 정보를 불러오지 못했습니다',
+          description: '네트워크 연결을 확인한 뒤 다시 시도해주세요.',
+        ),
+      ),
+    );
+  }
+
+  List<MapSpot> _previewSpots(List<MapSpot> spots) {
+    final selected = <MapSpot>[];
+    for (final category in [
+      'POTATO_CAFE',
+      'POTATO_RESTAURANT',
+      'POTATO_TOUR',
+      'POTATO_EXPERIENCE',
+    ]) {
+      final spot = spots.where((spot) => spot.category == category).firstOrNull;
+      if (spot != null && !selected.any((item) => item.id == spot.id)) {
+        selected.add(spot);
+      }
+    }
+    if (selected.length < 4) {
+      for (final spot in spots) {
+        if (selected.length >= 4) {
+          break;
+        }
+        if (!selected.any((item) => item.id == spot.id)) {
+          selected.add(spot);
+        }
+      }
+    }
+    return selected;
+  }
+
+  List<_TravelCourse> _travelCourses(List<MapSpot> spots) {
+    final seaCafe = _spotsByKeywords(
+      spots,
+      categories: const {'POTATO_CAFE', 'POTATO_TOUR'},
+      keywords: const ['해변', '바다', '안목', '경포', '서피', '카페'],
+    );
+    final potatoFood = _spotsByKeywords(
+      spots,
+      categories: const {'POTATO_RESTAURANT', 'POTATO_SNACK', 'POTATO_CAFE'},
+      keywords: const ['감자', '옹심이', '감자빵', '감자전'],
+    );
+    final walk = _spotsByKeywords(
+      spots,
+      categories: const {'POTATO_TOUR', 'POTATO_EXPERIENCE'},
+      keywords: const ['숲', '길', '산책', '목장', '호수', '섬'],
+    );
+
+    return [
+      _TravelCourse(
+        title: '바다와 카페 코스',
+        description: '시원한 바다와 감성 카페를 가볍게 잇는 코스',
+        icon: Icons.waves_rounded,
+        tags: const ['강릉', '속초', '양양'],
+        spots: seaCafe,
+      ),
+      _TravelCourse(
+        title: '감자 먹거리 코스',
+        description: '감자 요리와 디저트를 한 번에 즐겨보세요',
+        icon: Icons.restaurant_rounded,
+        tags: const ['감자빵', '감자전', '옹심이'],
+        spots: potatoFood,
+      ),
+      _TravelCourse(
+        title: '가볍게 걷는 산책 코스',
+        description: '자연 속에서 천천히 걷기 좋은 장소 모음',
+        icon: Icons.park_rounded,
+        tags: const ['남이섬', '홍천', '대관령'],
+        spots: walk,
+      ),
+    ];
+  }
+
+  List<MapSpot> _spotsByKeywords(
+    List<MapSpot> spots, {
+    required Set<String> categories,
+    required List<String> keywords,
+  }) {
+    final matches = spots
+        .where((spot) {
+          final text = '${spot.name} ${spot.address} ${spot.cityName}';
+          return categories.contains(spot.category) &&
+              keywords.any((keyword) => text.contains(keyword));
+        })
+        .take(3)
+        .toList();
+    if (matches.isNotEmpty) {
+      return matches;
+    }
+    return spots
+        .where((spot) => categories.contains(spot.category))
+        .take(3)
+        .toList();
+  }
+
+  List<MapSpot> _popularSpots(List<MapSpot> spots) {
+    final prioritized = [
+      ...spots.where((spot) => spot.stampEnabled),
+      ...spots.where((spot) => !spot.stampEnabled),
+    ];
+    final unique = <String, MapSpot>{};
+    for (final spot in prioritized) {
+      unique.putIfAbsent(spot.id, () => spot);
+      if (unique.length >= 4) {
+        break;
+      }
+    }
+    return unique.values.toList();
+  }
+}
+
+class _DiscoveryHeroHeader extends StatelessWidget {
+  const _DiscoveryHeroHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '오늘은 어디로 떠나볼까요?',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          '강원도 여행 코스 짜기',
+          style: TextStyle(
+            color: _mapPrimary,
+            fontSize: 31,
+            fontWeight: FontWeight.w900,
+            height: 1.08,
+            letterSpacing: 0,
+          ),
+        ),
+        SizedBox(height: 10),
+        Text(
+          '추천 장소를 발견하고 내 동선에 담아보세요',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DiscoveryMapPreviewCard extends StatelessWidget {
+  const _DiscoveryMapPreviewCard({
+    required this.spots,
+    required this.onOpenFullMap,
+  });
+
+  final List<MapSpot> spots;
+  final VoidCallback onOpenFullMap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('map-discovery-preview-card'),
+      height: 286,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadows.softCard,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _DiscoveryMapPreviewPainter(
+                spots: spots,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            top: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '강원도 여행 지도',
+                  style: TextStyle(
+                    color: _mapDark,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  '내 여행을 한눈에 계획해보세요',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+                  ),
+                  child: const Text(
+                    '추천 명소 미리보기',
+                    style: TextStyle(
+                      color: _mapDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 18,
+            bottom: 18,
+            child: FilledButton.icon(
+              key: const ValueKey('open-full-map-button'),
+              onPressed: onOpenFullMap,
+              icon: const Icon(Icons.open_in_full_rounded, size: 18),
+              label: const Text('지도 크게 보기'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _mapPrimary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FullMapHomeButton extends StatelessWidget {
+  const _FullMapHomeButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      key: const ValueKey('full-map-home-button'),
+      color: Colors.white.withValues(alpha: 0.96),
+      borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+      elevation: 4,
+      shadowColor: Colors.black.withValues(alpha: 0.12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.keyboard_arrow_left_rounded, color: _mapDark),
+              SizedBox(width: 2),
+              Text(
+                '여행 홈',
+                style: TextStyle(
+                  color: _mapDark,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FullMapLocateButton extends StatelessWidget {
+  const _FullMapLocateButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      key: const ValueKey('full-map-locate-button'),
+      color: Colors.white.withValues(alpha: 0.96),
+      shape: const CircleBorder(),
+      elevation: 5,
+      shadowColor: Colors.black.withValues(alpha: 0.13),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: const SizedBox.square(
+          dimension: 52,
+          child: Icon(
+            Icons.my_location_rounded,
+            color: _mapDark,
+            size: 26,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoveryMapPreviewPainter extends CustomPainter {
+  const _DiscoveryMapPreviewPainter({
+    required this.spots,
+  });
+
+  final List<MapSpot> spots;
+
+  static const _pinOffsets = [
+    Offset(0.68, 0.24),
+    Offset(0.74, 0.52),
+    Offset(0.50, 0.58),
+    Offset(0.42, 0.34),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final background = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFEAF7EF), Color(0xFFCFEAF8)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, background);
+
+    final landPaint = Paint()..color = const Color(0xFFF7FBF4);
+    final coastPaint = Paint()
+      ..color = const Color(0xFFB9E3C9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final riverPaint = Paint()
+      ..color = const Color(0xFFBFE3F2).withValues(alpha: 0.7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+
+    final land = Path()
+      ..moveTo(0, size.height * 0.18)
+      ..quadraticBezierTo(
+        size.width * 0.25,
+        size.height * 0.05,
+        size.width * 0.45,
+        size.height * 0.17,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.66,
+        size.height * 0.29,
+        size.width,
+        size.height * 0.13,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(land, landPaint);
+    canvas.drawPath(land, coastPaint);
+
+    for (final point in [
+      Offset(size.width * 0.18, size.height * 0.76),
+      Offset(size.width * 0.36, size.height * 0.62),
+      Offset(size.width * 0.58, size.height * 0.73),
+    ]) {
+      canvas.drawCircle(
+        point,
+        32,
+        Paint()..color = const Color(0xFFDCEEDB).withValues(alpha: 0.8),
+      );
+    }
+
+    final river = Path()
+      ..moveTo(size.width * 0.22, size.height * 0.42)
+      ..cubicTo(
+        size.width * 0.36,
+        size.height * 0.48,
+        size.width * 0.42,
+        size.height * 0.62,
+        size.width * 0.56,
+        size.height * 0.68,
+      )
+      ..cubicTo(
+        size.width * 0.66,
+        size.height * 0.72,
+        size.width * 0.73,
+        size.height * 0.64,
+        size.width * 0.82,
+        size.height * 0.70,
+      );
+    canvas.drawPath(river, riverPaint);
+
+    for (var index = 0; index < spots.take(4).length; index++) {
+      final offset = _pinOffsets[index];
+      final center = Offset(size.width * offset.dx, size.height * offset.dy);
+      _drawPotatoPin(canvas, center, spots[index].categoryLabel);
+    }
+
+    _drawRegionLabel(canvas, size, '춘천', const Offset(0.28, 0.50));
+    _drawRegionLabel(canvas, size, '평창', const Offset(0.58, 0.60));
+    _drawRegionLabel(canvas, size, '강릉', const Offset(0.76, 0.42));
+    _drawRegionLabel(canvas, size, '속초', const Offset(0.70, 0.22));
+  }
+
+  void _drawPotatoPin(Canvas canvas, Offset center, String categoryLabel) {
+    final shadow = Paint()
+      ..color = Colors.black.withValues(alpha: 0.12)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(0, 28),
+        width: 34,
+        height: 10,
+      ),
+      shadow,
+    );
+
+    final pin = Path()
+      ..addOval(Rect.fromCircle(center: center, radius: 23))
+      ..moveTo(center.dx - 9, center.dy + 18)
+      ..lineTo(center.dx, center.dy + 35)
+      ..lineTo(center.dx + 9, center.dy + 18)
+      ..close();
+    canvas.drawPath(pin, Paint()..color = _mapPrimary);
+    canvas.drawCircle(center, 18, Paint()..color = Colors.white);
+
+    final icon = switch (categoryLabel) {
+      '식당' => Icons.restaurant_rounded,
+      '카페·디저트' => Icons.local_cafe_rounded,
+      '체험' => Icons.directions_walk_rounded,
+      '시장·상권' => Icons.storefront_rounded,
+      _ => Icons.landscape_rounded,
+    };
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          fontSize: 20,
+          color: _mapDark,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      center - Offset(textPainter.width / 2, textPainter.height / 2),
+    );
+  }
+
+  void _drawRegionLabel(
+    Canvas canvas,
+    Size size,
+    String label,
+    Offset anchor,
+  ) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        size.width * anchor.dx - textPainter.width / 2,
+        size.height * anchor.dy - textPainter.height / 2,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiscoveryMapPreviewPainter oldDelegate) {
+    return oldDelegate.spots != spots;
+  }
+}
+
+class _TravelCourseSection extends StatelessWidget {
+  const _TravelCourseSection({
+    required this.courses,
+    required this.onAddCourseToRoute,
+  });
+
+  final List<_TravelCourse> courses;
+  final Future<void> Function(List<MapSpot> spots) onAddCourseToRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _DiscoverySectionHeader(title: '취향에 맞는 여행 코스'),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 274,
+          child: courses.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.only(right: 20),
+                  child: _DiscoverySectionStatus(
+                    icon: Icons.route_rounded,
+                    title: '추천 코스를 준비하지 못했어요',
+                    description: '장소 데이터가 모이면 코스를 보여드릴게요.',
+                  ),
+                )
+              : ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(right: 20),
+                  itemBuilder: (context, index) {
+                    final course = courses[index];
+                    return _TravelCourseCard(
+                      course: course,
+                      onAddPressed: course.spots.isEmpty
+                          ? null
+                          : () => onAddCourseToRoute(course.spots),
+                    );
+                  },
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemCount: courses.length,
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TravelCourseCard extends StatelessWidget {
+  const _TravelCourseCard({
+    required this.course,
+    required this.onAddPressed,
+  });
+
+  final _TravelCourse course;
+  final VoidCallback? onAddPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 248,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: AppShadows.softCard,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 78,
+            decoration: BoxDecoration(
+              color: AppColors.primaryTint,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: 12,
+                  bottom: 10,
+                  child: Icon(
+                    course.icon,
+                    size: 48,
+                    color: _mapDark.withValues(alpha: 0.22),
+                  ),
+                ),
+                const Positioned(
+                  left: 14,
+                  top: 14,
+                  child: Text(
+                    '🥔',
+                    style: TextStyle(fontSize: 26),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            course.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final tag in course.tags.take(3)) _CourseTag(label: tag),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            course.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+          const Spacer(),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onAddPressed,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('내 동선에 담기'),
+              style: TextButton.styleFrom(
+                foregroundColor: _mapDark,
+                textStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CourseTag extends StatelessWidget {
+  const _CourseTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.brown,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+}
+
+class _PopularSpotSection extends StatelessWidget {
+  const _PopularSpotSection({
+    required this.spots,
+    required this.onSpotPressed,
+  });
+
+  final List<MapSpot> spots;
+  final ValueChanged<MapSpot> onSpotPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _DiscoverySectionHeader(title: '요즘 많이 찾는 곳'),
+        const SizedBox(height: 12),
+        if (spots.isEmpty)
+          const _DiscoverySectionStatus(
+            icon: Icons.place_outlined,
+            title: '표시할 장소가 없습니다',
+            description: '관광지 데이터가 준비되면 이곳에 보여드릴게요.',
+          )
+        else
+          Column(
+            children: [
+              for (var index = 0; index < spots.length; index++) ...[
+                _PopularSpotCard(
+                  spot: spots[index],
+                  onPressed: () => onSpotPressed(spots[index]),
+                ),
+                if (index < spots.length - 1) const SizedBox(height: 10),
+              ],
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _PopularSpotCard extends StatelessWidget {
+  const _PopularSpotCard({
+    required this.spot,
+    required this.onPressed,
+  });
+
+  final MapSpot spot;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 0,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppShadows.softCard,
+          ),
+          child: Row(
+            children: [
+              _RouteSpotThumbnail(spot: spot),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      spot.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${spot.cityName} · ${spot.categoryLabel}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _CongestionBadge(label: spot.congestionLabel),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoverySectionHeader extends StatelessWidget {
+  const _DiscoverySectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 20,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 0,
+      ),
+    );
+  }
+}
+
+class _DiscoverySectionStatus extends StatelessWidget {
+  const _DiscoverySectionStatus({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 28),
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: AppShadows.softCard,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: _mapDark, size: 34),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                height: 1.4,
+                letterSpacing: 0,
               ),
             ),
           ],
@@ -552,6 +1607,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
     );
   }
+}
+
+class _TravelCourse {
+  const _TravelCourse({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.tags,
+    required this.spots,
+  });
+
+  final String title;
+  final String description;
+  final IconData icon;
+  final List<String> tags;
+  final List<MapSpot> spots;
 }
 
 class _RouteRecommendationSheet extends StatelessWidget {

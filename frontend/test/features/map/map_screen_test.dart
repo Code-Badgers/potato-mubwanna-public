@@ -13,7 +13,11 @@ import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
 
 void main() {
-  testWidgets('renders map home discovery UI', (tester) async {
+  testWidgets('renders map discovery home and opens the full Kakao map', (
+    tester,
+  ) async {
+    var renderedSpots = const <MapSpot>[];
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -23,24 +27,60 @@ void main() {
           ),
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
-        child: const MaterialApp(
-          home: MapScreen(hasMapConfiguration: true),
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            mapViewBuilder: (spots, onSpotSelected) {
+              renderedSpots = spots;
+              return const SizedBox.expand();
+            },
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('감자 찾기'), findsNothing);
-    expect(find.text('강원'), findsNothing);
-    expect(find.text('내 동선 0곳'), findsOneWidget);
-    expect(find.text('전체'), findsOneWidget);
-    expect(find.text('관광·쇼핑'), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.text('전체')).dy,
-      lessThan(tester.getTopLeft(find.text('내 동선 0곳')).dy),
+    expect(find.byKey(const ValueKey('map-discovery-home')), findsOneWidget);
+    expect(find.text('오늘은 어디로 떠나볼까요?'), findsOneWidget);
+    expect(find.text('강원도 여행 코스 짜기'), findsOneWidget);
+    expect(find.byKey(const ValueKey('map-discovery-preview-card')),
+        findsOneWidget);
+    expect(find.text('내 동선 0곳'), findsNothing);
+    expect(find.byKey(const ValueKey('discovery-route-button')), findsNothing);
+    expect(find.byKey(const ValueKey('preview-route-button')), findsNothing);
+    expect(find.text('취향에 맞는 여행 코스'), findsOneWidget);
+    expect(find.text('지도 크게 보기'), findsOneWidget);
+    expect(renderedSpots, isEmpty);
+
+    await tester.drag(
+      find.byKey(const ValueKey('map-discovery-home')),
+      const Offset(0, -420),
     );
+    await tester.pumpAndSettle();
+
+    expect(find.text('요즘 많이 찾는 곳'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('map-discovery-home')),
+      const Offset(0, 420),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('open-full-map-button')));
+    await tester.pumpAndSettle();
+
+    expect(renderedSpots.map((spot) => spot.id).toSet(), {'1', '2', '3', '4'});
+    expect(find.text('전체'), findsOneWidget);
+    expect(find.byKey(const ValueKey('full-map-home-button')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('full-map-locate-button')), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
     expect(find.text('상세보기'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('full-map-home-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('map-discovery-home')), findsOneWidget);
   });
 
   testWidgets('updates the place card when a different map marker is selected',
@@ -59,6 +99,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) => Stack(
               children: [
                 for (var index = 0; index < spots.length; index++)
@@ -118,6 +159,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) => _MapMountProbe(
               spotIds: spots.map((spot) => spot.id).toList(),
               onMounted: () {
@@ -154,6 +196,7 @@ void main() {
           path: '/main/map',
           builder: (context, state) => MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) => Stack(
               children: [
                 for (var index = 0; index < spots.length; index++)
@@ -228,6 +271,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
               return const SizedBox.expand();
@@ -256,7 +300,10 @@ void main() {
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: const MaterialApp(
-          home: MapScreen(hasMapConfiguration: true),
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+          ),
         ),
       ),
     );
@@ -282,7 +329,10 @@ void main() {
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: const MaterialApp(
-          home: MapScreen(hasMapConfiguration: true),
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+          ),
         ),
       ),
     );
@@ -313,6 +363,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
               return const SizedBox.expand();
@@ -357,6 +408,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
               return const SizedBox.expand();
@@ -400,6 +452,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
               return const SizedBox.expand();
@@ -441,6 +494,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
               return const SizedBox.expand();
@@ -482,6 +536,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
               return const SizedBox.expand();
@@ -545,6 +600,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
               return const SizedBox.expand();
@@ -594,7 +650,10 @@ void main() {
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: const MaterialApp(
-          home: MapScreen(hasMapConfiguration: true),
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+          ),
         ),
       ),
     );
@@ -624,6 +683,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapUriLauncher: (uri) async {
               launchedUri = uri;
               return true;
@@ -661,6 +721,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             mapUriLauncher: (_) async => false,
           ),
         ),
@@ -693,7 +754,12 @@ void main() {
           ),
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
-        child: const MaterialApp(home: MapScreen()),
+        child: const MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -721,7 +787,12 @@ void main() {
               favoriteSpotRouteProvider
                   .overrideWith((ref) async => _emptyRoute),
             ],
-            child: const MaterialApp(home: MapScreen()),
+            child: const MaterialApp(
+              home: MapScreen(
+                hasMapConfiguration: true,
+                showFullMapInitially: true,
+              ),
+            ),
           ),
         );
         await tester.pump();
@@ -748,7 +819,10 @@ void main() {
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
         child: const MaterialApp(
-          home: MapScreen(hasMapConfiguration: false),
+          home: MapScreen(
+            hasMapConfiguration: false,
+            showFullMapInitially: true,
+          ),
         ),
       ),
     );
@@ -773,7 +847,10 @@ void main() {
           favoriteSpotRouteProvider.overrideWith((ref) async => _route),
         ],
         child: const MaterialApp(
-          home: MapScreen(hasMapConfiguration: true),
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+          ),
         ),
       ),
     );
@@ -828,6 +905,7 @@ void main() {
         child: MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             recommendationSourceSpotId: '1',
             mapViewBuilder: (spots, onSpotSelected) {
               renderedSpots = spots;
@@ -890,6 +968,7 @@ void main() {
         child: const MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             recommendationSourceSpotId: '1',
           ),
         ),
@@ -920,6 +999,7 @@ void main() {
         child: const MaterialApp(
           home: MapScreen(
             hasMapConfiguration: true,
+            showFullMapInitially: true,
             recommendationSourceSpotId: '1',
           ),
         ),
