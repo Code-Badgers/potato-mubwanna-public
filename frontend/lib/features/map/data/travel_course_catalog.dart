@@ -26,6 +26,16 @@ class TravelCourse {
   final List<TravelCourseStop> stops;
 
   List<MapSpot> get spots => stops.map((stop) => stop.spot).toList();
+
+  String? get heroImageUrl {
+    for (final stop in stops) {
+      final imageUrl = stop.spot.imageUrl;
+      if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+        return imageUrl;
+      }
+    }
+    return null;
+  }
 }
 
 class TravelCourseStop {

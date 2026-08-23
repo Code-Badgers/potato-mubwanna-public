@@ -31,6 +31,8 @@ void main() {
     expect(recommendations.first.externalRank, 1);
     expect(recommendations.first.latitude, 37.3681);
     expect(recommendations.first.toMapSpot().isRecommended, isTrue);
+    expect(recommendations.first.toMapSpot().imageUrl,
+        'https://example.com/spot.jpg');
   });
 }
 

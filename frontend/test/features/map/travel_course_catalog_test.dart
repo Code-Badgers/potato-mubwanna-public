@@ -27,6 +27,7 @@ void main() {
       expect(course.stops, hasLength(3));
       expect(course.spots.map((spot) => spot.id).toSet(), hasLength(3));
     }
+    expect(courses.first.heroImageUrl, 'https://example.com/ongshimi.jpg');
   });
 }
 
@@ -39,6 +40,7 @@ const _spots = [
     longitude: 127.92,
     address: '강원 원주시',
     cityName: '원주',
+    imageUrl: 'https://example.com/ongshimi.jpg',
     congestionLevel: 'LOW',
     stampEnabled: true,
   ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1076,6 +1077,7 @@ class _TravelCourseCard extends StatelessWidget {
                   height: 118,
                   width: double.infinity,
                   child: _CourseImage(
+                    imageUrl: course.heroImageUrl,
                     asset: course.heroImageAsset,
                     icon: _courseFallbackIcon(course.id),
                   ),
@@ -1168,6 +1170,35 @@ class _TravelCourseCard extends StatelessWidget {
 
 class _CourseImage extends StatelessWidget {
   const _CourseImage({
+    this.imageUrl,
+    required this.asset,
+    required this.icon,
+  });
+
+  final String? imageUrl;
+  final String asset;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveImageUrl = imageUrl?.trim();
+    if (effectiveImageUrl != null && effectiveImageUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: effectiveImageUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => _CourseImageFallback(icon: icon),
+        errorWidget: (_, __, ___) => _CourseImageAssetFallback(
+          asset: asset,
+          icon: icon,
+        ),
+      );
+    }
+    return _CourseImageAssetFallback(asset: asset, icon: icon);
+  }
+}
+
+class _CourseImageAssetFallback extends StatelessWidget {
+  const _CourseImageAssetFallback({
     required this.asset,
     required this.icon,
   });
@@ -1180,16 +1211,27 @@ class _CourseImage extends StatelessWidget {
     return Image.asset(
       asset,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.primaryTint,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Icon(
-          icon,
-          size: 44,
-          color: _mapDark.withValues(alpha: 0.32),
-        ),
+      errorBuilder: (_, __, ___) => _CourseImageFallback(icon: icon),
+    );
+  }
+}
+
+class _CourseImageFallback extends StatelessWidget {
+  const _CourseImageFallback({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Icon(
+        icon,
+        size: 44,
+        color: _mapDark.withValues(alpha: 0.32),
       ),
     );
   }
@@ -1234,6 +1276,7 @@ class _TravelCourseDetailSheet extends StatelessWidget {
                 height: 210,
                 width: double.infinity,
                 child: _CourseImage(
+                  imageUrl: course.heroImageUrl,
                   asset: course.heroImageAsset,
                   icon: _courseFallbackIcon(course.id),
                 ),
@@ -1473,6 +1516,7 @@ class _CourseStopCard extends StatelessWidget {
               height: 158,
               width: double.infinity,
               child: _CourseImage(
+                imageUrl: stop.spot.imageUrl,
                 asset: stop.imageAsset,
                 icon: Icons.place_rounded,
               ),
@@ -1938,6 +1982,7 @@ class _PopularSpotCard extends StatelessWidget {
                   width: 72,
                   height: 72,
                   child: _CourseImage(
+                    imageUrl: spot.imageUrl,
                     asset: _spotImageAsset(spot),
                     icon: Icons.place_rounded,
                   ),

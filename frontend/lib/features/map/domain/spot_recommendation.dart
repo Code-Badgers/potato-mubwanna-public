@@ -49,6 +49,7 @@ class SpotRecommendation {
       longitude: longitude,
       address: address,
       cityName: cityName,
+      imageUrl: imageUrl,
       congestionLevel: 'NORMAL',
       stampEnabled: false,
       isRecommended: true,

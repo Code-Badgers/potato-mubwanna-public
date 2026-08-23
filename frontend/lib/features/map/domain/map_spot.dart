@@ -9,6 +9,7 @@ class MapSpot {
     required this.cityName,
     required this.congestionLevel,
     required this.stampEnabled,
+    this.imageUrl,
     this.menuItems = const [],
     this.isRecommended = false,
   });
@@ -27,6 +28,7 @@ class MapSpot {
       longitude: _readDouble(json['longitude']),
       address: json['address'] as String? ?? '',
       cityName: json['cityName'] as String? ?? '',
+      imageUrl: _readNullableString(json['imageUrl']),
       congestionLevel: json['congestionLevel'] as String? ?? 'NORMAL',
       stampEnabled: json['stampEnabled'] as bool? ?? true,
       menuItems: menuItems,
@@ -40,6 +42,7 @@ class MapSpot {
   final double longitude;
   final String address;
   final String cityName;
+  final String? imageUrl;
   final String congestionLevel;
   final bool stampEnabled;
   final List<MapSpotMenuItem> menuItems;
@@ -54,6 +57,7 @@ class MapSpot {
       longitude: longitude,
       address: address,
       cityName: cityName,
+      imageUrl: imageUrl,
       congestionLevel: congestionLevel,
       stampEnabled: stampEnabled,
       menuItems: menuItems,
@@ -114,6 +118,14 @@ class MapSpot {
       return double.tryParse(value) ?? 0;
     }
     return 0;
+  }
+
+  static String? _readNullableString(dynamic value) {
+    if (value is! String) {
+      return null;
+    }
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }
 
