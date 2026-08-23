@@ -54,7 +54,7 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('shows visit records and opens the selected spot',
+  testWidgets('shows visit records and opens a photo preview overlay',
       (tester) async {
     await _setMobileViewport(tester);
     final router = GoRouter(
@@ -104,10 +104,24 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('travel-record-2')));
     await tester.pumpAndSettle();
 
-    expect(find.text('spot 20'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('travel-record-preview-card')),
+      findsOneWidget,
+    );
+    expect(find.text('감자 카페'), findsOneWidget);
+    expect(find.text('2026. 07. 27'), findsWidgets);
+    expect(find.text('spot 20'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('travel-record-preview-close')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('travel-record-preview-card')),
+      findsNothing,
+    );
   });
 
-  testWidgets('shows a helpful empty state without visit records',
+  testWidgets('keeps tappable polaroid placeholders without empty copy',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -124,8 +138,35 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('아직 여행 기록이 없어요'), findsOneWidget);
-    expect(find.textContaining('스탬프 방문 인증이나 사진 미션'), findsOneWidget);
+    expect(find.text('아직 여행 기록이 없어요'), findsNothing);
+    expect(find.textContaining('스탬프 방문 인증이나 사진 미션'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('empty-travel-record-frame-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('empty-travel-record-frame-3')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('empty-travel-record-frame-0')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('empty-travel-record-preview-card')),
+      findsOneWidget,
+    );
+    expect(find.text('곧 채워질 여행 사진'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('empty-travel-record-preview-close')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('empty-travel-record-preview-card')),
+      findsNothing,
+    );
   });
 
   testWidgets('shows retry action when visit history fails', (tester) async {
