@@ -53,7 +53,7 @@ void main() {
 
     expect(find.text('여행할 명소를 골라보세요'), findsNothing);
     expect(find.text('정선 5일장'), findsWidgets);
-    expect(find.text('정선 · 도장 획득'), findsOneWidget);
+    expect(find.text('정선 · 도장 획득'), findsNothing);
     expect(find.text('대표 스팟 보기'), findsNothing);
     expect(find.text('오디오 준비중'), findsNothing);
     expect(find.text('스탬프 준비중'), findsNothing);
@@ -76,12 +76,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-102')));
     await tester.pumpAndSettle();
     expect(find.text('남이섬'), findsWidgets);
-    expect(find.text('춘천 · 도장 획득'), findsOneWidget);
+    expect(find.text('춘천 · 도장 획득'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-103')));
     await tester.pumpAndSettle();
     expect(find.text('소양강 스카이워크'), findsWidgets);
-    expect(find.text('춘천 · 방문 인증 대기'), findsOneWidget);
+    expect(find.text('춘천 · 방문 인증 대기'), findsNothing);
   });
 
   testWidgets('opens the selected stamp spot detail', (tester) async {

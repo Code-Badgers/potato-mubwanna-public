@@ -1475,6 +1475,11 @@ class _GangwonMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    assert(() {
+      _logGangwonContextRegionsOnce();
+      return true;
+    }());
+
     final mapRect = _gangwonMapRect(size);
     canvas.drawRect(
         Offset.zero & size, Paint()..color = const Color(0xFFDDF2FA));
@@ -1758,6 +1763,7 @@ class _StampTravelCarPainter extends CustomPainter {
 Rect _gangwonMapRect(Size size) {
   const mapAspectRatio = 1000 / 1180;
   final available = Rect.fromLTWH(10, 34, size.width - 20, size.height - 68);
+  const westContextShift = Offset(18, 0);
   if (available.width / available.height > mapAspectRatio) {
     final width = available.height * mapAspectRatio;
     return Rect.fromLTWH(
@@ -1765,7 +1771,7 @@ Rect _gangwonMapRect(Size size) {
       available.top,
       width,
       available.height,
-    );
+    ).shift(westContextShift);
   }
   final height = available.width / mapAspectRatio;
   return Rect.fromLTWH(
@@ -1773,7 +1779,7 @@ Rect _gangwonMapRect(Size size) {
     available.top + (available.height - height) / 2,
     available.width,
     height,
-  );
+  ).shift(westContextShift);
 }
 
 Path _regionPath(GangwonMapRegion region, Rect mapRect) {
@@ -1806,20 +1812,44 @@ Path _regionPath(GangwonMapRegion region, Rect mapRect) {
 }
 
 Path _contextRegionPath(GangwonContextRegion region, Rect mapRect) {
-  if (region.polygon.length < 3) {
-    return Path();
+  var regionPath = Path();
+  for (final polygon in region.polygons) {
+    if (polygon.length < 3) {
+      continue;
+    }
+    final polygonPath = Path()
+      ..addPolygon(
+        [
+          for (final point in polygon)
+            Offset(
+              mapRect.left + point.dx * mapRect.width,
+              mapRect.top + point.dy * mapRect.height,
+            ),
+        ],
+        true,
+      );
+
+    try {
+      regionPath = regionPath.computeMetrics().isEmpty
+          ? polygonPath
+          : Path.combine(PathOperation.union, regionPath, polygonPath);
+    } catch (_) {
+      regionPath.addPath(polygonPath, Offset.zero);
+    }
   }
-  return Path()
-    ..addPolygon(
-      [
-        for (final point in region.polygon)
-          Offset(
-            mapRect.left + point.dx * mapRect.width,
-            mapRect.top + point.dy * mapRect.height,
-          ),
-      ],
-      true,
-    );
+  return regionPath;
+}
+
+var _didLogGangwonContextRegions = false;
+
+void _logGangwonContextRegionsOnce() {
+  if (_didLogGangwonContextRegions) {
+    return;
+  }
+  _didLogGangwonContextRegions = true;
+  debugPrint(
+    'Stamp context GeoJSON regions: ${gangwonContextRegionNames.join(', ')}',
+  );
 }
 
 Path _scaledPath(Path path, double scale) {
@@ -1881,8 +1911,8 @@ class _StampSpotActionCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 202),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+      constraints: const BoxConstraints(minHeight: 196),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(28),
@@ -1936,10 +1966,9 @@ class _SelectedStampSpotContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
-    final statusText = acquired ? '도장 획득' : '방문 인증 대기';
 
     return SizedBox(
-      height: 168,
+      height: 160,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1973,35 +2002,10 @@ class _SelectedStampSpotContent extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 5),
-          Text(
-            '${region.city} · $statusText',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: acquired ? AppColors.primaryDark : AppColors.brown,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '이 명소에서 인증하면 ${region.city} 스탬프를 받을 수 있어요',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12.5,
-              height: 1.34,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
-          ),
           const Spacer(),
           SizedBox(
             width: double.infinity,
-            height: 42,
+            height: 40,
             child: FilledButton.icon(
               onPressed: onSpotTap,
               style: FilledButton.styleFrom(
@@ -2034,7 +2038,7 @@ class _EmptyStampSpotContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 168,
+      height: 160,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
