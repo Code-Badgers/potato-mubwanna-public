@@ -1499,7 +1499,7 @@ class _GangwonMapPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final landmassPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.13)
+      ..color = AppColors.primary.withValues(alpha: 0.16)
       ..style = PaintingStyle.fill;
     final landmassPath = _contextLandmassPath(mapRect);
     if (landmassPath.computeMetrics().isNotEmpty) {
