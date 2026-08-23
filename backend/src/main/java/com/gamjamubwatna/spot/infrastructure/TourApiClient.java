@@ -2,6 +2,7 @@ package com.gamjamubwatna.spot.infrastructure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.gamjamubwatna.spot.application.SpotTourInfo;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +24,8 @@ public class TourApiClient {
     private final String baseUrl;
     private final String searchKeywordPath;
     private final String detailImagePath;
+    private final String detailCommonPath;
+    private final String detailIntroPath;
     private final String serviceKey;
     private final String mobileOs;
     private final String mobileApp;
@@ -34,6 +37,8 @@ public class TourApiClient {
         @Value("${external.tour-api.base-url}") String baseUrl,
         @Value("${external.tour-api.search-keyword-path}") String searchKeywordPath,
         @Value("${external.tour-api.detail-image-path}") String detailImagePath,
+        @Value("${external.tour-api.detail-common-path}") String detailCommonPath,
+        @Value("${external.tour-api.detail-intro-path}") String detailIntroPath,
         @Value("${external.tour-api.service-key}") String serviceKey,
         @Value("${external.tour-api.mobile-os}") String mobileOs,
         @Value("${external.tour-api.mobile-app}") String mobileApp,
@@ -44,6 +49,8 @@ public class TourApiClient {
         this.baseUrl = baseUrl;
         this.searchKeywordPath = searchKeywordPath;
         this.detailImagePath = detailImagePath;
+        this.detailCommonPath = detailCommonPath;
+        this.detailIntroPath = detailIntroPath;
         this.serviceKey = serviceKey;
         this.mobileOs = mobileOs;
         this.mobileApp = mobileApp;
@@ -76,6 +83,11 @@ public class TourApiClient {
             return Optional.empty();
         }
 
+        Optional<String> representativeImage = findRepresentativeImageFromCommon(contentId);
+        if (representativeImage.isPresent()) {
+            return representativeImage;
+        }
+
         JsonNode response = restClient.get()
             .uri(detailImageUri(contentId))
             .retrieve()
@@ -85,6 +97,54 @@ public class TourApiClient {
             .map(String::trim)
             .filter(value -> !value.isBlank())
             .findFirst();
+    }
+
+    private Optional<String> findRepresentativeImageFromCommon(String contentId) {
+        try {
+            JsonNode commonResponse = restClient.get()
+                .uri(detailCommonUri(contentId))
+                .retrieve()
+                .body(JsonNode.class);
+            return imageCandidatesFromCommon(firstItem(commonResponse)).stream()
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .findFirst();
+        } catch (RuntimeException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public Optional<SpotTourInfo> findSpotTourInfo(String contentId, Integer contentTypeId) {
+        if (serviceKey == null || serviceKey.isBlank()) {
+            throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
+        }
+        if (contentId == null || contentId.isBlank()) {
+            return Optional.empty();
+        }
+
+        JsonNode commonItem = firstItem(restClient.get()
+            .uri(detailCommonUri(contentId))
+            .retrieve()
+            .body(JsonNode.class));
+        JsonNode introItem = contentTypeId == null
+            ? null
+            : firstItem(restClient.get()
+                .uri(detailIntroUri(contentId, contentTypeId))
+                .retrieve()
+                .body(JsonNode.class));
+
+        SpotTourInfo tourInfo = new SpotTourInfo(
+            readFirstText(commonItem, "overview"),
+            readFirstText(introItem, "usetime", "usetimeculture", "usetimeleports", "usetimefestival"),
+            readFirstText(introItem, "restdate", "restdateculture", "restdateleports", "restdatefood"),
+            readFirstText(introItem, "usefee", "usefeeleports", "expagerangeleports"),
+            readFirstText(introItem, "parking", "parkingculture", "parkingleports", "parkingfood"),
+            readFirstText(introItem, "infocenter", "infocenterculture", "infocenterleports", "infocenterfood")
+        );
+        if (isEmpty(tourInfo)) {
+            return Optional.empty();
+        }
+        return Optional.of(tourInfo);
     }
 
     private List<TourApiSpotItem> searchPotatoSpots(String keyword, int pageNo, int numOfRows) {
@@ -133,6 +193,85 @@ public class TourApiClient {
         return URI.create("%s%s?%s".formatted(normalizedBaseUrl(), normalizedDetailImagePath(), query));
     }
 
+    private URI detailCommonUri(String contentId) {
+        String query = String.join("&",
+            "serviceKey=%s".formatted(encodeServiceKey(serviceKey)),
+            "MobileOS=%s".formatted(encode(mobileOs)),
+            "MobileApp=%s".formatted(encode(mobileApp)),
+            "_type=json",
+            "contentId=%s".formatted(encode(contentId)),
+            "defaultYN=Y",
+            "firstImageYN=Y",
+            "addrinfoYN=Y",
+            "mapinfoYN=Y",
+            "overviewYN=Y"
+        );
+        return URI.create("%s%s?%s".formatted(normalizedBaseUrl(), normalizedDetailCommonPath(), query));
+    }
+
+    private URI detailIntroUri(String contentId, Integer contentTypeId) {
+        String query = String.join("&",
+            "serviceKey=%s".formatted(encodeServiceKey(serviceKey)),
+            "MobileOS=%s".formatted(encode(mobileOs)),
+            "MobileApp=%s".formatted(encode(mobileApp)),
+            "_type=json",
+            "contentId=%s".formatted(encode(contentId)),
+            "contentTypeId=%d".formatted(contentTypeId)
+        );
+        return URI.create("%s%s?%s".formatted(normalizedBaseUrl(), normalizedDetailIntroPath(), query));
+    }
+
+    private JsonNode firstItem(JsonNode response) {
+        JsonNode itemNode = response == null
+            ? null
+            : response.path("response").path("body").path("items").path("item");
+        if (itemNode == null || itemNode.isMissingNode() || itemNode.isNull()) {
+            return null;
+        }
+        if (itemNode.isArray()) {
+            return itemNode.isEmpty() ? null : itemNode.get(0);
+        }
+        return itemNode.isObject() ? itemNode : null;
+    }
+
+    private String readFirstText(JsonNode item, String... fieldNames) {
+        if (item == null) {
+            return null;
+        }
+        for (String fieldName : fieldNames) {
+            String cleaned = cleanText(item.path(fieldName).asText(""));
+            if (cleaned != null) {
+                return cleaned;
+            }
+        }
+        return null;
+    }
+
+    private String cleanText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String cleaned = value
+            .replaceAll("(?i)<br\\s*/?>", " ")
+            .replaceAll("<[^>]+>", " ")
+            .replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replaceAll("\\s+", " ")
+            .trim();
+        return cleaned.isBlank() ? null : cleaned;
+    }
+
+    private boolean isEmpty(SpotTourInfo tourInfo) {
+        return tourInfo.description() == null
+            && tourInfo.openingHours() == null
+            && tourInfo.closedDays() == null
+            && tourInfo.admissionFee() == null
+            && tourInfo.parking() == null
+            && tourInfo.contactPhone() == null;
+    }
+
     private List<String> imageCandidates(JsonNode response) {
         JsonNode itemNode = response == null
             ? null
@@ -157,6 +296,16 @@ public class TourApiClient {
         addIfText(candidates, item.path("originimgurl"));
         addIfText(candidates, item.path("imgurl"));
         addIfText(candidates, item.path("smallimageurl"));
+        return candidates;
+    }
+
+    private List<String> imageCandidatesFromCommon(JsonNode item) {
+        if (item == null) {
+            return List.of();
+        }
+        List<String> candidates = new ArrayList<>();
+        addIfText(candidates, item.path("firstimage"));
+        addIfText(candidates, item.path("firstimage2"));
         return candidates;
     }
 
@@ -196,6 +345,20 @@ public class TourApiClient {
             return detailImagePath;
         }
         return "/%s".formatted(detailImagePath);
+    }
+
+    private String normalizedDetailCommonPath() {
+        if (detailCommonPath.startsWith("/")) {
+            return detailCommonPath;
+        }
+        return "/%s".formatted(detailCommonPath);
+    }
+
+    private String normalizedDetailIntroPath() {
+        if (detailIntroPath.startsWith("/")) {
+            return detailIntroPath;
+        }
+        return "/%s".formatted(detailIntroPath);
     }
 
     private String encode(String value) {

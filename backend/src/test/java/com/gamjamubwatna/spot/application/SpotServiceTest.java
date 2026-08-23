@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.gamjamubwatna.spot.api.SpotDetailResponse;
 import com.gamjamubwatna.spot.api.SpotListResponse;
 import com.gamjamubwatna.spot.domain.CongestionLevel;
 import com.gamjamubwatna.spot.domain.SpotCategory;
@@ -22,10 +23,12 @@ class SpotServiceTest {
     private final TouristSpotRepository touristSpotRepository = mock(TouristSpotRepository.class);
     private final SpotMenuItemRepository spotMenuItemRepository = mock(SpotMenuItemRepository.class);
     private final SpotImageResolver spotImageResolver = mock(SpotImageResolver.class);
+    private final SpotTourInfoResolver spotTourInfoResolver = mock(SpotTourInfoResolver.class);
     private final SpotService spotService = new SpotService(
         touristSpotRepository,
         spotMenuItemRepository,
-        spotImageResolver
+        spotImageResolver,
+        spotTourInfoResolver
     );
 
     @Test
@@ -55,6 +58,34 @@ class SpotServiceTest {
         assertThat(responses.get(1).menuItems()).isEmpty();
     }
 
+    @Test
+    void returnsTourApiSpotDetailInformation() {
+        TouristSpot attraction = spot(2L, "평창무이예술관", SpotCategory.POTATO_TOUR);
+        when(touristSpotRepository.findByIdAndActiveTrue(2L))
+            .thenReturn(java.util.Optional.of(attraction));
+        when(spotImageResolver.resolveImageUrl(attraction))
+            .thenReturn("https://example.com/muei.jpg");
+        when(spotTourInfoResolver.resolve(attraction))
+            .thenReturn(new SpotTourInfo(
+                "폐교를 예술 공간으로 꾸민 평창의 문화 관광지입니다.",
+                "10:00 - 18:00",
+                "월요일",
+                "성인 5,000원",
+                "가능",
+                "033-000-0000"
+            ));
+
+        SpotDetailResponse response = spotService.getSpot(2L);
+
+        assertThat(response.imageUrl()).isEqualTo("https://example.com/muei.jpg");
+        assertThat(response.description()).contains("평창의 문화 관광지");
+        assertThat(response.openingHours()).isEqualTo("10:00 - 18:00");
+        assertThat(response.closedDays()).isEqualTo("월요일");
+        assertThat(response.admissionFee()).isEqualTo("성인 5,000원");
+        assertThat(response.parking()).isEqualTo("가능");
+        assertThat(response.contactPhone()).isEqualTo("033-000-0000");
+    }
+
     private TouristSpot spot(Long id, String name, SpotCategory category) {
         TouristSpot spot = mock(TouristSpot.class);
         when(spot.getId()).thenReturn(id);
@@ -62,6 +93,8 @@ class SpotServiceTest {
         when(spot.getCategory()).thenReturn(category);
         when(spot.getLatitude()).thenReturn(new BigDecimal("37.9000000"));
         when(spot.getLongitude()).thenReturn(new BigDecimal("127.7000000"));
+        when(spot.getContentId()).thenReturn("12345");
+        when(spot.getContentTypeId()).thenReturn(12);
         when(spot.getAddress()).thenReturn("강원특별자치도");
         when(spot.getCityName()).thenReturn("춘천시");
         when(spot.getCongestionLevel()).thenReturn(CongestionLevel.NORMAL);

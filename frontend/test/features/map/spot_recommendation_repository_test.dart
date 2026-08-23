@@ -34,6 +34,34 @@ void main() {
     expect(recommendations.first.toMapSpot().imageUrl,
         'https://example.com/spot.jpg');
   });
+
+  test('fetches TourAPI enriched spot detail fields', () async {
+    final requestedPaths = <String>[];
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestedPaths.add(options.path);
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: _spotDetailResponse,
+              ),
+            );
+          },
+        ),
+      );
+
+    final detail = await MapSpotRepository(dio: dio).fetchSpotDetail('7');
+
+    expect(requestedPaths, ['/spots/7']);
+    expect(detail.imageUrl, 'https://tour.example.com/muei.jpg');
+    expect(detail.description, contains('평창의 예술 공간'));
+    expect(detail.openingHours, '10:00 - 18:00');
+    expect(detail.admissionFee, '성인 5,000원');
+    expect(detail.hasTourInfo, isTrue);
+  });
 }
 
 const _recommendationResponse = <String, Object?>{
@@ -74,4 +102,22 @@ const _recommendationResponse = <String, Object?>{
       'externalRank': 1,
     },
   ],
+};
+
+const _spotDetailResponse = <String, Object?>{
+  'success': true,
+  'message': '요청이 성공했습니다.',
+  'data': {
+    'id': 7,
+    'name': '평창무이예술관',
+    'category': 'POTATO_TOUR',
+    'cityName': '평창군',
+    'imageUrl': 'https://tour.example.com/muei.jpg',
+    'description': '평창의 예술 공간입니다.',
+    'openingHours': '10:00 - 18:00',
+    'closedDays': '월요일',
+    'admissionFee': '성인 5,000원',
+    'parking': '가능',
+    'contactPhone': '033-000-0000',
+  },
 };

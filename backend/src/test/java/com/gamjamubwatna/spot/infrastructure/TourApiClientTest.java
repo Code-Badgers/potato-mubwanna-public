@@ -31,6 +31,7 @@ class TourApiClientTest {
 
     @Test
     void findsRepresentativeImageFromDetailImage2() {
+        emptyDetailCommon();
         server.createContext("/detailImage2", exchange -> {
             lastQuery = exchange.getRequestURI().getRawQuery();
             byte[] body = """
@@ -62,7 +63,37 @@ class TourApiClientTest {
     }
 
     @Test
+    void prefersRepresentativeImageFromDetailCommon2() {
+        server.createContext("/detailCommon2", exchange -> {
+            lastQuery = exchange.getRequestURI().getRawQuery();
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "firstimage": "https://tour.example.com/first.jpg",
+                          "firstimage2": "https://tour.example.com/first-thumb.jpg"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+
+        assertThat(client("encoded%2Bkey").findRepresentativeImage("12345"))
+            .contains("https://tour.example.com/first.jpg");
+        assertThat(lastQuery)
+            .contains("contentId=12345")
+            .contains("firstImageYN=Y")
+            .contains("overviewYN=Y");
+    }
+
+    @Test
     void fallsBackToSmallImageWhenOriginalImageIsMissing() {
+        emptyDetailCommon();
         server.createContext("/detailImage2", exchange -> {
             byte[] body = """
                 {
@@ -87,6 +118,7 @@ class TourApiClientTest {
 
     @Test
     void returnsEmptyWhenDetailImage2HasNoImage() {
+        emptyDetailCommon();
         server.createContext("/detailImage2", exchange -> {
             byte[] body = """
                 {
@@ -104,18 +136,89 @@ class TourApiClientTest {
             .isEmpty();
     }
 
+    @Test
+    void findsSpotTourInfoFromDetailCommonAndIntro() {
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "overview": "<b>평창의 예술 공간</b><br>산책하듯 둘러보기 좋은 곳입니다."
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+        server.createContext("/detailIntro2", exchange -> {
+            lastQuery = exchange.getRequestURI().getRawQuery();
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "usetimeculture": "10:00 - 18:00",
+                          "restdateculture": "월요일",
+                          "usefee": "성인 5,000원",
+                          "parkingculture": "가능",
+                          "infocenterculture": "033-000-0000"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+
+        assertThat(client("encoded%2Bkey").findSpotTourInfo("12345", 14))
+            .hasValueSatisfying(info -> {
+                assertThat(info.description()).isEqualTo("평창의 예술 공간 산책하듯 둘러보기 좋은 곳입니다.");
+                assertThat(info.openingHours()).isEqualTo("10:00 - 18:00");
+                assertThat(info.closedDays()).isEqualTo("월요일");
+                assertThat(info.admissionFee()).isEqualTo("성인 5,000원");
+                assertThat(info.parking()).isEqualTo("가능");
+                assertThat(info.contactPhone()).isEqualTo("033-000-0000");
+            });
+        assertThat(lastQuery)
+            .contains("contentId=12345")
+            .contains("contentTypeId=14");
+    }
+
     private TourApiClient client(String serviceKey) {
         return new TourApiClient(
             RestClient.builder(),
             "http://localhost:%d".formatted(server.getAddress().getPort()),
             "/searchKeyword2",
             "/detailImage2",
+            "/detailCommon2",
+            "/detailIntro2",
             serviceKey,
             "ETC",
             "potato-mubwanna",
             "51",
             "감자"
         );
+    }
+
+    private void emptyDetailCommon() {
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": ""
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
     }
 
     private void writeJson(com.sun.net.httpserver.HttpExchange exchange, byte[] body) throws IOException {
