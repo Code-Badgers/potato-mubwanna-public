@@ -121,7 +121,7 @@ void main() {
     );
   });
 
-  testWidgets('keeps polaroid placeholders without empty copy',
+  testWidgets('keeps tappable polaroid placeholders without empty copy',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -147,6 +147,25 @@ void main() {
     expect(
       find.byKey(const ValueKey('empty-travel-record-frame-3')),
       findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('empty-travel-record-frame-0')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('empty-travel-record-preview-card')),
+      findsOneWidget,
+    );
+    expect(find.text('곧 채워질 여행 사진'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('empty-travel-record-preview-close')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('empty-travel-record-preview-card')),
+      findsNothing,
     );
   });
 

@@ -11,6 +11,7 @@
 - 확대 카드와 뒤쪽 보조 프레임을 추가해 선택한 사진에 집중되도록 구성했다.
 - 목록/빈 프레임의 비율과 내부 여백을 인스탁스/폴라로이드에 가깝게 조정했다.
 - 빈 상태의 갤러리 아이콘과 설명 문구는 제거하고 placeholder 앨범만 남겼다.
+- 빈 placeholder 프레임도 탭 가능한 폴라로이드 카드로 바꾸고, 탭 시 그라데이션 placeholder가 확대 모달로 뜨도록 보강했다.
 
 ## 고민한 점
 
@@ -23,7 +24,8 @@
 - 실제 사진과 fallback 사진은 기존 `_TravelRecordPhoto`를 그대로 재사용했다.
 - placeholder는 `_EmptyTravelRecordPhoto`의 gradient를 유지했다.
 - 확대 모달은 `_TravelRecordPreviewModal`, `_TravelRecordPreviewCard`, `_TravelRecordBackdropFrame`으로 분리했다.
-- 테스트에서는 사진 탭 후 preview card가 나타나고 닫기 버튼으로 사라지는지 확인했다.
+- 빈 placeholder 확대는 실제 기록 오버레이와 동일한 scrim/scale 전환을 쓰되, 실제 사진 대신 `_TravelRecordPlaceholderImage`를 사용한다.
+- 테스트에서는 실제 사진과 빈 placeholder를 각각 탭한 뒤 preview card가 나타나고 닫기 버튼으로 사라지는지 확인했다.
 
 ## 실행한 검증
 
@@ -37,6 +39,7 @@ cd frontend && flutter analyze
 ## 결과
 
 - 여행 기록 전용 widget test 통과
+- 빈 placeholder 프레임 클릭 및 확대 모달 닫기 test 통과
 - 마이페이지에서 여행 기록으로 진입하는 test 통과
 - Flutter analyze 통과
 

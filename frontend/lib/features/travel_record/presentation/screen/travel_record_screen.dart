@@ -150,6 +150,35 @@ void _showTravelRecordPreview(BuildContext context, TravelRecord record) {
   );
 }
 
+void _showEmptyTravelRecordPreview(
+  BuildContext context,
+  _EmptyTravelRecordPreview preview,
+) {
+  showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: '여행 기록 미리보기 닫기',
+    barrierColor: Colors.black.withValues(alpha: 0.62),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (_, __, ___) => _EmptyTravelRecordPreviewModal(
+      preview: preview,
+    ),
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.94, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 class _TravelRecordList extends StatelessWidget {
   const _TravelRecordList({
     required this.records,
@@ -254,10 +283,10 @@ enum _TravelRecordFrameVariant {
   bool get isNarrow => this == _TravelRecordFrameVariant.narrow;
 
   double get aspectRatio => switch (this) {
-        _TravelRecordFrameVariant.wide => 1.18,
-        _TravelRecordFrameVariant.portrait => 0.66,
-        _TravelRecordFrameVariant.square => 0.78,
-        _TravelRecordFrameVariant.narrow => 0.62,
+        _TravelRecordFrameVariant.wide => 1.04,
+        _TravelRecordFrameVariant.portrait => 0.58,
+        _TravelRecordFrameVariant.square => 0.7,
+        _TravelRecordFrameVariant.narrow => 0.54,
       };
 
   bool get usesPortraitFrame =>
@@ -392,15 +421,15 @@ class _TravelRecordFramedPhoto extends StatelessWidget {
         final photoInsets = variant.usesPortraitFrame
             ? EdgeInsets.fromLTRB(
                 width * 0.14,
-                height * 0.08,
+                height * 0.07,
                 width * 0.14,
-                height * 0.32,
+                height * 0.37,
               )
             : EdgeInsets.fromLTRB(
                 width * 0.08,
-                height * 0.08,
+                height * 0.07,
                 width * 0.08,
-                height * 0.31,
+                height * 0.38,
               );
 
         return Stack(
@@ -606,7 +635,8 @@ class _TravelRecordPreviewModal extends StatelessWidget {
                           Positioned(
                             bottom: 10,
                             child: IconButton(
-                              key: const ValueKey('travel-record-preview-close'),
+                              key:
+                                  const ValueKey('travel-record-preview-close'),
                               tooltip: '닫기',
                               onPressed: () => Navigator.of(context).pop(),
                               icon: const Icon(Icons.close_rounded),
@@ -777,15 +807,20 @@ class _TravelRecordEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-      children: const [
-        _EmptyTravelArchive(),
+      children: [
+        _EmptyTravelArchive(
+          onFrameSelected: (preview) =>
+              _showEmptyTravelRecordPreview(context, preview),
+        ),
       ],
     );
   }
 }
 
 class _EmptyTravelArchive extends StatelessWidget {
-  const _EmptyTravelArchive();
+  const _EmptyTravelArchive({required this.onFrameSelected});
+
+  final ValueChanged<_EmptyTravelRecordPreview> onFrameSelected;
 
   static const _variants = [
     _TravelRecordFrameVariant.wide,
@@ -823,6 +858,12 @@ class _EmptyTravelArchive extends StatelessWidget {
                 index: index,
                 variant: variant,
                 width: width,
+                onTap: () => onFrameSelected(
+                  _EmptyTravelRecordPreview(
+                    index: index,
+                    variant: variant,
+                  ),
+                ),
               ),
             );
           }
@@ -845,11 +886,13 @@ class _EmptyTravelRecordFrame extends StatelessWidget {
     required this.index,
     required this.variant,
     required this.width,
+    required this.onTap,
   });
 
   final int index;
   final _TravelRecordFrameVariant variant;
   final double width;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -864,14 +907,22 @@ class _EmptyTravelRecordFrame extends StatelessWidget {
 
     return Transform.rotate(
       angle: angle,
-      child: SizedBox(
-        key: ValueKey('empty-travel-record-frame-$index'),
-        width: width,
-        child: AspectRatio(
-          aspectRatio: variant.aspectRatio,
-          child: _EmptyTravelRecordPhoto(
-            index: index,
-            variant: variant,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          key: ValueKey('empty-travel-record-frame-$index'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            width: width,
+            child: AspectRatio(
+              aspectRatio: variant.aspectRatio,
+              child: _EmptyTravelRecordPhoto(
+                index: index,
+                variant: variant,
+              ),
+            ),
           ),
         ),
       ),
@@ -890,8 +941,6 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = _emptyRecordTint(index);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -899,15 +948,15 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
         final photoInsets = variant.usesPortraitFrame
             ? EdgeInsets.fromLTRB(
                 width * 0.16,
-                height * 0.11,
+                height * 0.08,
                 width * 0.16,
-                height * 0.29,
+                height * 0.36,
               )
             : EdgeInsets.fromLTRB(
                 width * 0.09,
-                height * 0.12,
+                height * 0.08,
                 width * 0.09,
-                height * 0.28,
+                height * 0.37,
               );
 
         return Stack(
@@ -936,19 +985,7 @@ class _EmptyTravelRecordPhoto extends StatelessWidget {
                 padding: photoInsets,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(5),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          tint.withValues(alpha: 0.26),
-                          AppColors.primaryTint.withValues(alpha: 0.18),
-                          AppColors.surface.withValues(alpha: 0.9),
-                        ],
-                      ),
-                    ),
-                  ),
+                  child: _TravelRecordPlaceholderImage(index: index),
                 ),
               ),
             ),
@@ -1011,6 +1048,274 @@ class _EmptyTravelRecordStamp extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelRecordPlaceholderImage extends StatelessWidget {
+  const _TravelRecordPlaceholderImage({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = _emptyRecordTint(index);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            tint.withValues(alpha: 0.3),
+            AppColors.primaryTint.withValues(alpha: 0.2),
+            AppColors.surface.withValues(alpha: 0.94),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyTravelRecordPreview {
+  const _EmptyTravelRecordPreview({
+    required this.index,
+    required this.variant,
+  });
+
+  final int index;
+  final _TravelRecordFrameVariant variant;
+
+  bool get isMission => index == 3 || index == 7;
+
+  String get badgeLabel => isMission ? '미션' : '스탬프';
+
+  Color get badgeColor => isMission ? const Color(0xFF4F8CCB) : _travelPrimary;
+
+  IconData get badgeIcon =>
+      isMission ? Icons.flag_rounded : Icons.location_on_rounded;
+}
+
+class _EmptyTravelRecordPreviewModal extends StatelessWidget {
+  const _EmptyTravelRecordPreviewModal({required this.preview});
+
+  final _EmptyTravelRecordPreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(),
+              ),
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 92),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth =
+                        (constraints.maxWidth * 0.78).clamp(260.0, 340.0);
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          Transform.translate(
+                            offset: Offset(-cardWidth * 0.46, -30),
+                            child: Transform.rotate(
+                              angle: -0.12,
+                              child: _EmptyTravelRecordBackdropFrame(
+                                width: cardWidth * 0.7,
+                                preview: preview,
+                                indexOffset: 1,
+                                opacity: 0.26,
+                              ),
+                            ),
+                          ),
+                          Transform.translate(
+                            offset: Offset(cardWidth * 0.45, -22),
+                            child: Transform.rotate(
+                              angle: 0.11,
+                              child: _EmptyTravelRecordBackdropFrame(
+                                width: cardWidth * 0.66,
+                                preview: preview,
+                                indexOffset: 2,
+                                opacity: 0.2,
+                              ),
+                            ),
+                          ),
+                          _EmptyTravelRecordPreviewCard(
+                            width: cardWidth,
+                            preview: preview,
+                          ),
+                          Positioned(
+                            bottom: 10,
+                            child: IconButton(
+                              key: const ValueKey(
+                                'empty-travel-record-preview-close',
+                              ),
+                              tooltip: '닫기',
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.close_rounded),
+                              color: Colors.white,
+                              style: IconButton.styleFrom(
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.18),
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.34),
+                                ),
+                                fixedSize: const Size(48, 48),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyTravelRecordPreviewCard extends StatelessWidget {
+  const _EmptyTravelRecordPreviewCard({
+    required this.width,
+    required this.preview,
+  });
+
+  final double width;
+  final _EmptyTravelRecordPreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('empty-travel-record-preview-card'),
+      width: width,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFCF7),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(
+          color: const Color(0xFFEDE5D8).withValues(alpha: 0.72),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.34),
+            blurRadius: 30,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 0.92,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _TravelRecordPlaceholderImage(index: preview.index),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.1),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.03),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: _EmptyTravelRecordStamp(
+                      label: preview.badgeLabel,
+                      color: preview.badgeColor,
+                      icon: preview.badgeIcon,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            '곧 채워질 여행 사진',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '여행을 남겨보세요',
+            style: TextStyle(
+              color: AppColors.textSecondary.withValues(alpha: 0.86),
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyTravelRecordBackdropFrame extends StatelessWidget {
+  const _EmptyTravelRecordBackdropFrame({
+    required this.width,
+    required this.preview,
+    required this.indexOffset,
+    required this.opacity,
+  });
+
+  final double width;
+  final _EmptyTravelRecordPreview preview;
+  final int indexOffset;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: opacity,
+        child: SizedBox(
+          width: width,
+          child: AspectRatio(
+            aspectRatio: 0.58,
+            child: _EmptyTravelRecordPhoto(
+              index: preview.index + indexOffset,
+              variant: _TravelRecordFrameVariant.portrait,
+            ),
+          ),
         ),
       ),
     );
