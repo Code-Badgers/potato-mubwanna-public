@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,9 +18,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final AdminUserIdPolicy adminUserIdPolicy;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(
+        JwtTokenProvider jwtTokenProvider,
+        @Value("${auth.admin.user-ids:}") String configuredAdminUserIds
+    ) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.adminUserIdPolicy = new AdminUserIdPolicy(configuredAdminUserIds);
     }
 
     @Override
@@ -43,11 +49,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
+            List<SimpleGrantedAuthority> authorities = adminUserIdPolicy.isAdmin(claims.subject())
+                ? List.of(
+                    new SimpleGrantedAuthority("ROLE_USER"),
+                    new SimpleGrantedAuthority("ROLE_ADMIN")
+                )
+                : List.of(new SimpleGrantedAuthority("ROLE_USER"));
+
             UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                     claims.subject(),
                     null,
-                    List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                    authorities
                 );
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (IllegalArgumentException ignored) {

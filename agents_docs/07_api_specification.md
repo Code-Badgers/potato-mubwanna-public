@@ -1424,6 +1424,13 @@ Response:
 
 ## 9. Admin API
 
+모든 Admin API는 `Authorization: Bearer {accessToken}` 인증이 필요하며, access token의
+사용자 ID가 서버의 `ADMIN_USER_IDS` allowlist에 포함된 사용자만 접근할 수 있다.
+`ADMIN_USER_IDS`는 쉼표로 여러 사용자 ID를 구분하며, 비어 있으면 관리자 접근을 허용하지 않는다.
+
+- 미인증 요청: `401 Unauthorized`, `message = "인증이 필요합니다."`
+- 인증됐으나 비관리자 요청: `403 Forbidden`, `message = "관리자 권한이 필요합니다."`
+
 ### 9.1 관광지 등록
 
 ```http
