@@ -52,6 +52,17 @@ void main() {
     expect(find.text('지도 크게 보기'), findsOneWidget);
     expect(renderedSpots, isEmpty);
 
+    await tester.ensureVisible(find.text('바다와 카페 코스'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('바다와 카페 코스'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('코스에 담긴 장소'), findsOneWidget);
+    expect(find.textContaining('강원도의 바다를 따라 걷고'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('코스에 담긴 장소'))).pop();
+    await tester.pumpAndSettle();
+
     await tester.drag(
       find.byKey(const ValueKey('map-discovery-home')),
       const Offset(0, -420),

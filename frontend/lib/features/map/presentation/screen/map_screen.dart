@@ -554,7 +554,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           ),
                           Positioned(
                             left: 14,
-                            bottom: _isRouteMode ? 316 : 208,
+                            bottom: _isRouteMode ? 280 : 184,
                             child: _FullMapHomeButton(
                               onTap: _returnToDiscoveryHome,
                             ),
@@ -925,47 +925,19 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 18,
             top: 16,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '강원도 여행 지도',
                   style: TextStyle(
                     color: _mapDark,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                const Text(
-                  '내 여행을 한눈에 계획해보세요',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(AppDimens.pillRadius),
-                  ),
-                  child: const Text(
-                    '추천 명소 미리보기',
-                    style: TextStyle(
-                      color: _mapDark,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
                   ),
                 ),
               ],
@@ -1010,29 +982,18 @@ class _FullMapHomeButton extends StatelessWidget {
     return Material(
       key: const ValueKey('full-map-home-button'),
       color: Colors.white.withValues(alpha: 0.96),
-      borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+      shape: const CircleBorder(),
       elevation: 4,
       shadowColor: Colors.black.withValues(alpha: 0.12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimens.pillRadius),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.keyboard_arrow_left_rounded, color: _mapDark),
-              SizedBox(width: 2),
-              Text(
-                '여행 홈',
-                style: TextStyle(
-                  color: _mapDark,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
+        customBorder: const CircleBorder(),
+        child: const SizedBox.square(
+          dimension: 52,
+          child: Icon(
+            Icons.keyboard_arrow_left_rounded,
+            color: _mapDark,
+            size: 30,
           ),
         ),
       ),
@@ -1104,6 +1065,11 @@ class _TravelCourseSection extends StatelessWidget {
                     final course = courses[index];
                     return _TravelCourseCard(
                       course: course,
+                      onPressed: () => _showTravelCourseDetail(
+                        context,
+                        course,
+                        onAddCourseToRoute,
+                      ),
                       onAddPressed: course.spots.isEmpty
                           ? null
                           : () => onAddCourseToRoute(course.spots),
@@ -1116,105 +1082,356 @@ class _TravelCourseSection extends StatelessWidget {
       ],
     );
   }
+
+  void _showTravelCourseDetail(
+    BuildContext context,
+    _TravelCourse course,
+    Future<void> Function(List<MapSpot> spots) onAddCourseToRoute,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return _TravelCourseDetailSheet(
+          course: course,
+          onAddPressed: course.spots.isEmpty
+              ? null
+              : () async {
+                  Navigator.of(context).pop();
+                  await onAddCourseToRoute(course.spots);
+                },
+        );
+      },
+    );
+  }
 }
 
 class _TravelCourseCard extends StatelessWidget {
   const _TravelCourseCard({
     required this.course,
+    required this.onPressed,
     required this.onAddPressed,
   });
 
   final _TravelCourse course;
+  final VoidCallback onPressed;
   final VoidCallback? onAddPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 248,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onPressed,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: AppShadows.softCard,
+        child: Container(
+          width: 248,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: AppShadows.softCard,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 78,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTint,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: 12,
+                      bottom: 10,
+                      child: Icon(
+                        course.icon,
+                        size: 48,
+                        color: _mapDark.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    const Positioned(
+                      left: 14,
+                      top: 14,
+                      child: Text(
+                        '🥔',
+                        style: TextStyle(fontSize: 26),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                course.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final tag in course.tags.take(3)) _CourseTag(label: tag),
+                ],
+              ),
+              const SizedBox(height: 9),
+              Text(
+                course.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                  letterSpacing: 0,
+                ),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  const Text(
+                    '코스 보기',
+                    style: TextStyle(
+                      color: _mapDark,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: _mapDark,
+                    size: 18,
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: onAddPressed,
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('담기'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _mapDark,
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 78,
-            decoration: BoxDecoration(
-              color: AppColors.primaryTint,
-              borderRadius: BorderRadius.circular(18),
+    );
+  }
+}
+
+class _TravelCourseDetailSheet extends StatelessWidget {
+  const _TravelCourseDetailSheet({
+    required this.course,
+    required this.onAddPressed,
+  });
+
+  final _TravelCourse course;
+  final Future<void> Function()? onAddPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(22, 4, 22, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.primaryTint,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Icon(course.icon, color: _mapDark, size: 30),
             ),
-            child: Stack(
+            const SizedBox(height: 14),
+            Text(
+              course.title,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _courseDetailDescription(course),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 1.45,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
               children: [
-                Positioned(
-                  right: 12,
-                  bottom: 10,
-                  child: Icon(
-                    course.icon,
-                    size: 48,
-                    color: _mapDark.withValues(alpha: 0.22),
+                for (final tag in course.tags) _CourseTag(label: tag),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              '코스에 담긴 장소',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (course.spots.isEmpty)
+              const _DiscoverySectionStatus(
+                icon: Icons.route_rounded,
+                title: '아직 연결된 장소가 없어요',
+                description: '장소 데이터가 준비되면 코스에 담아둘게요.',
+              )
+            else
+              Column(
+                children: [
+                  for (var index = 0; index < course.spots.length; index++)
+                    _CourseSpotRow(
+                      index: index + 1,
+                      spot: course.spots[index],
+                    ),
+                ],
+              ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onAddPressed == null
+                    ? null
+                    : () => unawaited(onAddPressed!()),
+                icon: const Icon(Icons.bookmark_add_rounded),
+                label: const Text('내 동선에 담기'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _mapPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const Positioned(
-                  left: 14,
-                  top: 14,
-                  child: Text(
-                    '🥔',
-                    style: TextStyle(fontSize: 26),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _courseDetailDescription(_TravelCourse course) {
+    return switch (course.title) {
+      '바다와 카페 코스' =>
+        '강원도의 바다를 따라 걷고, 쉬어가기 좋은 카페를 함께 묶은 코스예요. 부담 없이 반나절 여행으로 둘러보기 좋아요.',
+      '감자 먹거리 코스' => '감자전, 옹심이, 감자빵처럼 감자무봤나의 맛을 가장 잘 느낄 수 있는 먹거리 중심 코스예요.',
+      '가볍게 걷는 산책 코스' => '숲길과 호수, 목장처럼 천천히 걷기 좋은 장소를 모았어요. 감자걸음도 함께 채우기 좋습니다.',
+      _ => course.description,
+    };
+  }
+}
+
+class _CourseSpotRow extends StatelessWidget {
+  const _CourseSpotRow({
+    required this.index,
+    required this.spot,
+  });
+
+  final int index;
+  final MapSpot spot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$index',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  spot.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${spot.cityName} · ${spot.categoryLabel}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            course.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final tag in course.tags.take(3)) _CourseTag(label: tag),
-            ],
-          ),
-          const SizedBox(height: 9),
-          Text(
-            course.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.35,
-              letterSpacing: 0,
-            ),
-          ),
-          const Spacer(),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: onAddPressed,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('내 동선에 담기'),
-              style: TextButton.styleFrom(
-                foregroundColor: _mapDark,
-                textStyle: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
             ),
           ),
         ],

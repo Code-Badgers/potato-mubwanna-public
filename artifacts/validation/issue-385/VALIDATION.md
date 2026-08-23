@@ -24,6 +24,9 @@
 6. Discovery 홈에서는 `내 동선 N곳`과 내 위치 표시를 제거하고, 실제 Kakao Map 전체 화면에 `여행 홈` 복귀 버튼과 내 위치 버튼을 추가했다.
 7. 전체 지도 내 위치 버튼은 현재 위치 마커 표시뿐 아니라 Kakao Map 카메라 이동 명령까지 전달하도록 Android/iOS/Web 브리지를 보강했다.
 8. 하단 Navigation의 `스탬프` 아이콘은 실제 도장 느낌의 아이콘으로, `감자밭` 아이콘은 이미지 asset 대신 같은 Material 아이콘 계열로 교체했다.
+9. 전체 지도에서 Discovery 홈으로 돌아가는 버튼은 텍스트를 제거하고 `<` 아이콘만 남겼으며, 내 위치 버튼과 같은 높이로 정렬했다.
+10. Discovery 홈 Preview 카드의 보조 문구와 `추천 명소 미리보기` 칩을 제거해 지도를 더 조용하게 보이도록 정리했다.
+11. `취향에 맞는 여행 코스` 카드를 누르면 코스 설명과 포함 장소를 확인할 수 있는 Bottom Sheet가 열리도록 추가했다.
 
 ## 발생한 문제와 해결
 
@@ -33,6 +36,8 @@
   - 해결: 기존 기능 회귀 테스트에는 `showFullMapInitially: true` 테스트 전용 진입 옵션을 사용하게 하고, Discovery 홈 신규 테스트를 별도로 추가했다.
 - 문제: `내 동선 0곳` 문구가 Discovery 홈에서 여러 위치에 등장해 테스트가 모호했다.
   - 해결: 주요 진입점에 `ValueKey`를 부여해 의도한 버튼을 명확하게 검증했다.
+- 문제: 코스 상세 Bottom Sheet 테스트에서 작은 테스트 화면 밖에 있는 코스 카드를 바로 탭해 실패했다.
+  - 해결: 실제 사용자 동작처럼 코스 카드가 보이도록 스크롤한 뒤 상세를 열고, Navigator로 Bottom Sheet를 닫도록 테스트를 보정했다.
 
 ## 변경 파일 요약
 
@@ -43,6 +48,8 @@
   - 전체 지도에서 Discovery 홈으로 돌아가는 버튼과 내 위치 버튼 추가
   - 내 위치 버튼 클릭 시 지도 카메라 이동 focus tick 전달
   - 코스 카드와 인기 장소 카드 추가
+  - 코스 카드 선택 시 상세 Bottom Sheet 표시
+  - Discovery Preview 보조 문구와 칩 제거
   - 기존 내 동선 저장 로직 재사용
 - `frontend/lib/features/map/presentation/widget/kakao_map_view_native.dart`
   - 현재 위치 focus 명령을 네이티브 MethodChannel로 전달
@@ -59,6 +66,7 @@
   - 스탬프/감자밭 아이콘을 Material 아이콘 계열로 정리
 - `frontend/test/features/map/map_screen_test.dart`
   - Discovery 홈 렌더링과 전체 지도 진입 테스트 추가
+  - 코스 상세 Bottom Sheet 렌더링 테스트 추가
   - 기존 전체 지도 기능 테스트가 전체 지도 모드에서 시작되도록 보정
 - `frontend/test/shared/widgets/main_shell_test.dart`
   - 하단 탭 라벨 기대값 수정
@@ -68,6 +76,20 @@
 ```bash
 cd frontend
 flutter test test/features/map/map_screen_test.dart test/shared/widgets/main_shell_test.dart
+```
+
+결과: 통과
+
+```bash
+cd frontend
+flutter test test/features/map/map_screen_test.dart test/shared/widgets/main_shell_test.dart
+```
+
+결과: 통과. 코스 카드 선택 시 상세 Bottom Sheet가 열리고, 기존 전체 지도 진입과 지도 회귀 테스트가 함께 통과했다.
+
+```bash
+cd frontend
+flutter analyze
 ```
 
 결과: 통과
