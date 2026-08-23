@@ -24,6 +24,7 @@ class KakaoMapView extends StatefulWidget {
     this.routeSpotIds = const [],
     this.favoriteSpotIds = const {},
     this.currentLocation,
+    this.currentLocationFocusTick = 0,
     this.onSpotSelected,
   });
 
@@ -32,6 +33,7 @@ class KakaoMapView extends StatefulWidget {
   final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
+  final int currentLocationFocusTick;
   final ValueChanged<String>? onSpotSelected;
 
   @override
@@ -45,6 +47,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   late final html.DivElement _mapElement;
   late final html.DivElement _messageElement;
   late final StreamSubscription<html.Event> _spotSelectedSubscription;
+  int _lastInjectedFocusTick = 0;
 
   @override
   void initState() {
@@ -142,7 +145,8 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         hasSameMapPoint(
           oldWidget.currentLocation,
           widget.currentLocation,
-        )) {
+        ) &&
+        oldWidget.currentLocationFocusTick == widget.currentLocationFocusTick) {
       return;
     }
     _injectKakaoMapScript();
@@ -287,6 +291,9 @@ class _KakaoMapViewState extends State<KakaoMapView> {
             'lat': widget.currentLocation!.latitude,
             'lng': widget.currentLocation!.longitude,
           });
+    final shouldFocusCurrentLocation =
+        widget.currentLocationFocusTick > _lastInjectedFocusTick;
+    _lastInjectedFocusTick = widget.currentLocationFocusTick;
 
     final script = html.ScriptElement()
       ..type = 'text/javascript'
@@ -319,7 +326,10 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           mapElement.__potatoRenderRoutePolyline(routePolyline);
         }
         if (mapElement.__potatoRenderCurrentLocation) {
-          mapElement.__potatoRenderCurrentLocation(currentLocation);
+          mapElement.__potatoRenderCurrentLocation(
+            currentLocation,
+            ${jsonEncode(shouldFocusCurrentLocation)}
+          );
         }
         return;
       }
@@ -511,7 +521,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         routePolylineOverlay.setMap(map);
       }
 
-      function renderCurrentLocation(location) {
+      function renderCurrentLocation(location, shouldFocus) {
         if (currentLocationOverlay) {
           currentLocationOverlay.setMap(null);
           currentLocationOverlay = null;
@@ -519,6 +529,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         if (!location) {
           return;
         }
+        const position = new window.kakao.maps.LatLng(location.lat, location.lng);
         const locationElement = document.createElement('span');
         locationElement.style.display = 'block';
         locationElement.style.width = '18px';
@@ -528,12 +539,15 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         locationElement.style.border = '3px solid #FFFFFF';
         locationElement.style.boxShadow = '0 0 0 8px rgba(47,128,237,0.18), 0 8px 18px rgba(32,35,26,0.18)';
         currentLocationOverlay = new window.kakao.maps.CustomOverlay({
-          position: new window.kakao.maps.LatLng(location.lat, location.lng),
+          position: position,
           content: locationElement,
           xAnchor: 0.5,
           yAnchor: 0.5
         });
         currentLocationOverlay.setMap(map);
+        if (shouldFocus) {
+          map.setCenter(position);
+        }
       }
 
       mapElement.__potatoRenderSpots = renderSpots;
@@ -541,15 +555,22 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       mapElement.__potatoRenderCurrentLocation = renderCurrentLocation;
       renderSpots(spots);
       renderRoutePolyline(routePolyline);
-      renderCurrentLocation(currentLocation);
+      renderCurrentLocation(
+        currentLocation,
+        ${jsonEncode(shouldFocusCurrentLocation)}
+      );
 
       window.kakao.maps.event.addListener(map, 'zoom_changed', applyMarkerScale);
 
       map.relayout();
-      map.setCenter(center);
+      if (!${jsonEncode(shouldFocusCurrentLocation)}) {
+        map.setCenter(center);
+      }
       window.setTimeout(function () {
         map.relayout();
-        map.setCenter(center);
+        if (!${jsonEncode(shouldFocusCurrentLocation)}) {
+          map.setCenter(center);
+        }
       }, 100);
 
       mapElement.__potatoKakaoMap = map;

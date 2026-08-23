@@ -73,6 +73,13 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
         result(nil)
         return
       }
+      if call.method == "focusCurrentLocation" {
+        self?.currentLocation = Self.pointMap(from: call.arguments) ?? self?.currentLocation
+        self?.renderCurrentLocation()
+        self?.focusCurrentLocation()
+        result(nil)
+        return
+      }
       result(FlutterMethodNotImplemented)
     }
 
@@ -387,6 +394,21 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
     )
     poi?.show()
     mapView.refresh()
+  }
+
+  private func focusCurrentLocation() {
+    guard
+      let mapView = mapController?.getView("potatoMap") as? KakaoMap,
+      let currentLocation,
+      let latitude = Self.doubleValue(currentLocation["latitude"]),
+      let longitude = Self.doubleValue(currentLocation["longitude"])
+    else {
+      return
+    }
+
+    let target = MapPoint(longitude: longitude, latitude: latitude)
+    let update = CameraUpdate.make(target: target, mapView: mapView)
+    mapView.moveCamera(update, callback: nil)
   }
 
   private func registerRoutePolylineStyleIfNeeded(_ shapeManager: ShapeManager) {

@@ -17,6 +17,7 @@ import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.MapView
 import com.kakao.vectormap.camera.CameraPosition
+import com.kakao.vectormap.camera.CameraUpdateFactory
 import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
@@ -73,6 +74,14 @@ class NativeKakaoMapView(
                     "updateCurrentLocation" -> {
                         currentLocation = pointMap(call.arguments)
                         kakaoMap?.let { renderCurrentLocation(it) }
+                        result.success(null)
+                    }
+                    "focusCurrentLocation" -> {
+                        currentLocation = pointMap(call.arguments) ?: currentLocation
+                        kakaoMap?.let {
+                            renderCurrentLocation(it)
+                            focusCurrentLocation(it)
+                        }
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -264,6 +273,15 @@ class NativeKakaoMapView(
                 LatLng.from(latitude, longitude),
             ).setStyles(registeredStyles),
         )?.show()
+    }
+
+    private fun focusCurrentLocation(kakaoMap: KakaoMap) {
+        val location = currentLocation ?: return
+        val latitude = (location["latitude"] as? Number)?.toDouble() ?: return
+        val longitude = (location["longitude"] as? Number)?.toDouble() ?: return
+        kakaoMap.moveCamera(
+            CameraUpdateFactory.newCenterPosition(LatLng.from(latitude, longitude)),
+        )
     }
 
     private fun markerBitmap(strokeColor: Int, isFavorite: Boolean, routeIndex: Int): Bitmap {

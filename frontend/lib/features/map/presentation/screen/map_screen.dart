@@ -10,8 +10,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
-import '../../../stamp/presentation/model/gangwon_map_projection.dart';
-import '../../../stamp/presentation/model/gangwon_map_region.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../domain/favorite_spot_route.dart';
@@ -56,6 +54,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _showFullMap = false;
   List<String> _routeSpotOrder = const [];
   FavoriteSpotRoutePoint? _currentLocation;
+  int _currentLocationFocusTick = 0;
 
   static const _categories = [
     _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
@@ -224,7 +223,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
   }
 
-  Future<void> _loadCurrentLocation() async {
+  Future<void> _loadCurrentLocation({bool focusMap = false}) async {
     if (kIsWeb) {
       return;
     }
@@ -246,6 +245,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           latitude: position.latitude,
           longitude: position.longitude,
         );
+        if (focusMap) {
+          _currentLocationFocusTick += 1;
+        }
       });
     } catch (_) {
       // 현재 위치는 지도 보조 정보라 실패해도 감자 스팟 탐색 흐름은 유지한다.
@@ -508,6 +510,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                   : const [],
                               favoriteSpotIds: favoriteSpotIds,
                               currentLocation: _currentLocation,
+                              currentLocationFocusTick:
+                                  _currentLocationFocusTick,
                               onSpotSelected: _selectSpotById,
                               mapViewBuilder: widget.mapViewBuilder,
                             ),
@@ -550,16 +554,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           ),
                           Positioned(
                             left: 14,
-                            bottom: _isRouteMode ? 352 : 244,
+                            bottom: _isRouteMode ? 316 : 208,
                             child: _FullMapHomeButton(
                               onTap: _returnToDiscoveryHome,
                             ),
                           ),
                           Positioned(
                             right: 18,
-                            bottom: _isRouteMode ? 316 : 208,
+                            bottom: _isRouteMode ? 280 : 184,
                             child: _FullMapLocateButton(
-                              onTap: () => unawaited(_loadCurrentLocation()),
+                              onTap: () => unawaited(
+                                _loadCurrentLocation(focusMap: true),
+                              ),
                             ),
                           ),
                           if (_isRouteMode)
@@ -913,8 +919,8 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: CustomPaint(
-              painter: _DiscoveryMapPreviewPainter(
+            child: AbsorbPointer(
+              child: KakaoMapView(
                 spots: spots,
               ),
             ),
@@ -1060,231 +1066,6 @@ class _FullMapLocateButton extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _DiscoveryMapPreviewPainter extends CustomPainter {
-  const _DiscoveryMapPreviewPainter({
-    required this.spots,
-  });
-
-  final List<MapSpot> spots;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final background = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFEAF8F0), Color(0xFFD9F0FB)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(Offset.zero & size);
-    canvas.drawRect(Offset.zero & size, background);
-
-    _drawBackgroundTexture(canvas, size);
-
-    final mapRect = _mapRectFor(size);
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.08)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    final provinceFill = Paint()..color = const Color(0xFFF9FCF5);
-    final boundaryPaint = Paint()
-      ..color = const Color(0xFFB6E3D0)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final cityLinePaint = Paint()
-      ..color = const Color(0xFFBFE8D6).withValues(alpha: 0.82)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round;
-
-    final combinedPath = Path();
-    for (final region in gangwonMapRegions) {
-      for (final polygon in region.polygons) {
-        combinedPath.addPath(_pathFromPoints(polygon, mapRect), Offset.zero);
-      }
-    }
-    canvas.drawPath(combinedPath.shift(const Offset(0, 5)), shadowPaint);
-    canvas.drawPath(combinedPath, provinceFill);
-    canvas.drawPath(combinedPath, boundaryPaint..strokeWidth = 3.2);
-
-    for (final region in gangwonMapRegions) {
-      for (final polygon in region.polygons) {
-        canvas.drawPath(_pathFromPoints(polygon, mapRect), cityLinePaint);
-      }
-    }
-
-    for (final region in const [
-      ('춘천', Offset(0.22, 0.52)),
-      ('평창', Offset(0.58, 0.63)),
-      ('강릉', Offset(0.78, 0.51)),
-      ('속초', Offset(0.70, 0.27)),
-    ]) {
-      _drawRegionLabel(canvas, mapRect, region.$1, region.$2);
-    }
-
-    for (final spot in spots.take(4)) {
-      final normalized = projectToGangwonMap(
-        latitude: spot.latitude,
-        longitude: spot.longitude,
-      );
-      if (normalized.dx < -0.08 ||
-          normalized.dx > 1.08 ||
-          normalized.dy < -0.08 ||
-          normalized.dy > 1.08) {
-        continue;
-      }
-      final center = Offset(
-        mapRect.left + normalized.dx * mapRect.width,
-        mapRect.top + normalized.dy * mapRect.height,
-      );
-      _drawPotatoPin(canvas, center, spot.categoryLabel);
-    }
-  }
-
-  Rect _mapRectFor(Size size) {
-    final width = size.width * 0.72;
-    final height = width * 0.86;
-    return Rect.fromLTWH(
-      size.width * 0.22,
-      size.height * 0.12,
-      width,
-      math.min(height, size.height * 0.78),
-    );
-  }
-
-  Path _pathFromPoints(List<Offset> points, Rect rect) {
-    final path = Path();
-    for (var index = 0; index < points.length; index++) {
-      final point = points[index];
-      final offset = Offset(
-        rect.left + point.dx * rect.width,
-        rect.top + point.dy * rect.height,
-      );
-      if (index == 0) {
-        path.moveTo(offset.dx, offset.dy);
-      } else {
-        path.lineTo(offset.dx, offset.dy);
-      }
-    }
-    return path..close();
-  }
-
-  void _drawBackgroundTexture(Canvas canvas, Size size) {
-    final hillPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.22)
-      ..style = PaintingStyle.fill;
-    final hill = Path()
-      ..moveTo(size.width * 0.18, size.height * 0.78)
-      ..quadraticBezierTo(
-        size.width * 0.38,
-        size.height * 0.55,
-        size.width * 0.58,
-        size.height * 0.78,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.78,
-        size.height * 0.92,
-        size.width,
-        size.height * 0.72,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(hill, hillPaint);
-
-    final waterPaint = Paint()
-      ..color = const Color(0xFF9ED7F1).withValues(alpha: 0.2)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-    for (var index = 0; index < 4; index++) {
-      final y = size.height * (0.26 + index * 0.11);
-      canvas.drawLine(
-        Offset(size.width * 0.70, y),
-        Offset(size.width * 0.82, y),
-        waterPaint,
-      );
-    }
-  }
-
-  void _drawPotatoPin(Canvas canvas, Offset center, String categoryLabel) {
-    final shadow = Paint()
-      ..color = Colors.black.withValues(alpha: 0.12)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center.translate(0, 28),
-        width: 34,
-        height: 10,
-      ),
-      shadow,
-    );
-
-    final pin = Path()
-      ..addOval(Rect.fromCircle(center: center, radius: 23))
-      ..moveTo(center.dx - 9, center.dy + 18)
-      ..lineTo(center.dx, center.dy + 35)
-      ..lineTo(center.dx + 9, center.dy + 18)
-      ..close();
-    canvas.drawPath(pin, Paint()..color = _mapPrimary);
-    canvas.drawCircle(center, 18, Paint()..color = Colors.white);
-
-    final icon = switch (categoryLabel) {
-      '식당' => Icons.restaurant_rounded,
-      '카페·디저트' => Icons.local_cafe_rounded,
-      '체험' => Icons.directions_walk_rounded,
-      '시장·상권' => Icons.storefront_rounded,
-      _ => Icons.landscape_rounded,
-    };
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(
-          fontFamily: icon.fontFamily,
-          package: icon.fontPackage,
-          fontSize: 20,
-          color: _mapDark,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    textPainter.paint(
-      canvas,
-      center - Offset(textPainter.width / 2, textPainter.height / 2),
-    );
-  }
-
-  void _drawRegionLabel(
-    Canvas canvas,
-    Rect mapRect,
-    String label,
-    Offset anchor,
-  ) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        mapRect.left + mapRect.width * anchor.dx - textPainter.width / 2,
-        mapRect.top + mapRect.height * anchor.dy - textPainter.height / 2,
-      ),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _DiscoveryMapPreviewPainter oldDelegate) {
-    return oldDelegate.spots != spots;
   }
 }
 
@@ -2593,6 +2374,7 @@ class _PotatoMapPreview extends StatelessWidget {
     required this.routeSpotIds,
     required this.favoriteSpotIds,
     required this.currentLocation,
+    required this.currentLocationFocusTick,
     required this.onSpotSelected,
     this.mapViewBuilder,
   });
@@ -2602,6 +2384,7 @@ class _PotatoMapPreview extends StatelessWidget {
   final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
+  final int currentLocationFocusTick;
   final ValueChanged<String> onSpotSelected;
   final MapViewBuilder? mapViewBuilder;
 
@@ -2621,6 +2404,7 @@ class _PotatoMapPreview extends StatelessWidget {
                     routeSpotIds: routeSpotIds,
                     favoriteSpotIds: favoriteSpotIds,
                     currentLocation: currentLocation,
+                    currentLocationFocusTick: currentLocationFocusTick,
                     onSpotSelected: onSpotSelected,
                   ),
             ),

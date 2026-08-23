@@ -21,6 +21,7 @@ class KakaoMapView extends StatefulWidget {
     this.routeSpotIds = const [],
     this.favoriteSpotIds = const {},
     this.currentLocation,
+    this.currentLocationFocusTick = 0,
     this.onSpotSelected,
   });
 
@@ -29,6 +30,7 @@ class KakaoMapView extends StatefulWidget {
   final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
+  final int currentLocationFocusTick;
   final ValueChanged<String>? onSpotSelected;
 
   @override
@@ -111,6 +113,15 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         unawaited(
           channel.invokeMethod<void>(
             'updateCurrentLocation',
+            _currentLocationPayload,
+          ),
+        );
+      }
+      if (oldWidget.currentLocationFocusTick !=
+          widget.currentLocationFocusTick) {
+        unawaited(
+          channel.invokeMethod<void>(
+            'focusCurrentLocation',
             _currentLocationPayload,
           ),
         );

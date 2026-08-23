@@ -11,6 +11,7 @@ class KakaoMapView extends StatelessWidget {
     this.routeSpotIds = const [],
     this.favoriteSpotIds = const {},
     this.currentLocation,
+    this.currentLocationFocusTick = 0,
     this.onSpotSelected,
   });
 
@@ -19,6 +20,7 @@ class KakaoMapView extends StatelessWidget {
   final List<String> routeSpotIds;
   final Set<String> favoriteSpotIds;
   final FavoriteSpotRoutePoint? currentLocation;
+  final int currentLocationFocusTick;
   final ValueChanged<String>? onSpotSelected;
 
   @override
