@@ -45,7 +45,7 @@ void main() {
 
     expect(find.text('지도'), findsOneWidget);
     expect(find.text('스탬프'), findsOneWidget);
-    expect(find.text('감자'), findsOneWidget);
+    expect(find.text('감자밭'), findsOneWidget);
     expect(find.text('미션'), findsOneWidget);
     expect(find.text('마이'), findsOneWidget);
 

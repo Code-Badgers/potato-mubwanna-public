@@ -70,8 +70,8 @@ class MainBottomNavigation extends StatelessWidget {
 
   static const _destinations = [
     _FooterDestination(icon: Icons.map_rounded, label: '지도'),
-    _FooterDestination(icon: Icons.emoji_events_rounded, label: '스탬프'),
-    _FooterDestination(icon: Icons.eco_rounded, label: '감자'),
+    _FooterDestination(icon: Icons.approval_rounded, label: '스탬프'),
+    _FooterDestination(icon: Icons.egg_alt_rounded, label: '감자밭'),
     _FooterDestination(icon: Icons.flag_rounded, label: '미션'),
     _FooterDestination(icon: Icons.person_rounded, label: '마이'),
   ];
