@@ -26,12 +26,22 @@ void main() {
     expect(find.text('곤드레감자'), findsWidgets);
     expect(find.text('오늘 감자걸음'), findsOneWidget);
     expect(find.text('7,842 / 10,000걸음'), findsOneWidget);
-    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('수확까지'), findsOneWidget);
+    expect(find.text('75%'), findsOneWidget);
+    expect(find.text('아기'), findsOneWidget);
+    expect(find.text('어린'), findsOneWidget);
+    expect(find.text('통통'), findsOneWidget);
+    expect(find.text('정선 감자'), findsOneWidget);
     expect(find.text('81 / 100'), findsOneWidget);
     expect(find.text('64 / 100'), findsOneWidget);
     expect(find.text('93 / 100'), findsOneWidget);
+    expect(find.text('쓰다듬기'), findsOneWidget);
+    expect(find.text('물 주기'), findsOneWidget);
+    expect(find.text('영양제'), findsOneWidget);
+    expect(find.text('산책'), findsNothing);
     expect(find.widgetWithText(OutlinedButton, '정보 보기'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '대표 감자 변경'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '아직 자라고 있어요'), findsOneWidget);
     expect(find.text('나의 감자 도감'), findsNothing);
     expect(find.text('미획득'), findsNothing);
   });
@@ -214,7 +224,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.interactionAction, PotatoInteractionAction.pat);
-    expect(find.text('기분이 좋아졌어요. 성장 거리 50m 추가!'), findsOneWidget);
+    expect(find.text('잘했어요. 오늘은 조금 더 가까워졌네요'), findsOneWidget);
   });
 
   testWidgets('sends the snack care action to the server', (tester) async {
@@ -229,12 +239,35 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('간식 주기'));
-    await tester.tap(find.text('간식 주기'));
+    await tester.ensureVisible(find.text('영양제'));
+    await tester.tap(find.text('영양제'));
     await tester.pumpAndSettle();
 
     expect(repository.interactionAction, PotatoInteractionAction.snack);
-    expect(find.text('간식을 먹었어요. 성장 거리 50m 추가!'), findsOneWidget);
+    expect(find.text('영양제를 줬어요. 제법 잘 자라요'), findsOneWidget);
+  });
+
+  testWidgets('shows harvest reward card when representative is fully grown', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      overrides: [
+        potatoCollectionProvider.overrideWith(
+          (ref) async => _harvestableCollection(),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.widgetWithText(FilledButton, '감자 수확하기'));
+    await tester.tap(find.widgetWithText(FilledButton, '감자 수확하기'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 260));
+
+    expect(find.text('새로운 감자를 수확했습니다'), findsOneWidget);
+    expect(find.text('곤드레감자 카드가 도감에 들어왔어요'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '감자 카드 보기'), findsOneWidget);
   });
 
   testWidgets('shows the server message when potato care is rejected', (
@@ -701,6 +734,37 @@ PotatoCollection _collection() {
         growthDistance: 0,
         growthGoalDistance: 10000,
         representative: false,
+      ),
+    ],
+  );
+}
+
+PotatoCollection _harvestableCollection() {
+  return PotatoCollection(
+    totalCount: 1,
+    acquiredCount: 1,
+    items: [
+      PotatoCollectionItem(
+        id: '2',
+        code: 'POTATO_GONDRE_JEONGSEON',
+        name: '곤드레감자',
+        region: '정선군',
+        rarity: PotatoRarity.rare,
+        description: '정선 장터와 곤드레 향토 음식 이야기를 품은 희귀 감자입니다.',
+        acquisitionHint: '정선 5일장 미션 완료',
+        imageUrl: null,
+        acquired: true,
+        acquiredAt: DateTime.parse('2026-07-02T00:00:00Z'),
+        level: 5,
+        growthDistance: 4200,
+        growthGoalDistance: 4200,
+        representative: true,
+        careStatus: PotatoCareStatus(
+          satiety: 81,
+          moisture: 64,
+          mood: 93,
+          calculatedAt: DateTime.parse('2026-08-20T10:00:00Z'),
+        ),
       ),
     ],
   );
