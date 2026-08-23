@@ -5,7 +5,7 @@ void main() {
   test('contains continuous Korean peninsula landmass around Gangwon-do', () {
     expect(
       gangwonContextRegions.map((region) => region.name),
-      orderedEquals(const ['한반도 북부', '한반도 남부']),
+      orderedEquals(const ['한반도 북부', '한반도 남부', '경기도']),
     );
     expect(
       gangwonContextRegions.every(
@@ -18,6 +18,7 @@ void main() {
   test('keeps northern, western, and southern landmass context visible', () {
     final northernLandmass = gangwonContextRegions[0].points;
     final southernLandmass = gangwonContextRegions[1].points;
+    final gyeonggi = gangwonContextRegions[2].points;
 
     expect(northernLandmass.map((point) => point.dy).reduce(_min), lessThan(0));
     expect(
@@ -39,6 +40,18 @@ void main() {
     expect(
       southernLandmass.map((point) => point.dy).reduce(_max),
       greaterThan(1),
+    );
+    expect(
+      gyeonggi.map((point) => point.dx).reduce(_min),
+      lessThan(0),
+    );
+    expect(
+      gyeonggi.map((point) => point.dx).reduce(_max),
+      greaterThan(0.2),
+    );
+    expect(
+      gyeonggi.map((point) => point.dy).reduce(_min),
+      lessThan(0.3),
     );
   });
 }

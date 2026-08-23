@@ -1,12 +1,13 @@
 # Stamp tour landmass context
 
 `gangwon_adjacent_provinces.geojson` contains a non-interactive Korean
-peninsula landmass context around Gangwon-do. The stamp tour uses this layer
-only as faint geographic context so Gangwon-do does not look like an isolated
-island on the blue map background.
+peninsula landmass context around Gangwon-do. It also includes a Gyeonggi-do
+polygon from the province boundary source so the west side of the stamp map is
+filled with real adjacent map geometry instead of an arbitrary color patch.
 
-- Source file: Natural Earth `ne_10m_admin_0_countries`
-- Included features: Korean peninsula north and south landmass
+- Source files: Natural Earth `ne_10m_admin_0_countries`, user-provided
+  `TL_SCCO_CTPRVN.json`
+- Included features: Korean peninsula north and south landmass, Gyeonggi-do
 - Coordinate reference system: WGS84 longitude/latitude
 - Transformation: country landmass polygons are projected to the same Korea
   2000 coordinate system as the stamp tour map, lightly simplified, and
@@ -17,6 +18,6 @@ island on the blue map background.
 
 The Flutter coordinate constants in
 `lib/features/stamp/presentation/model/gangwon_context_region.dart` are
-generated from the same source. Gangwon-do remains the only interactive layer;
-the peninsula landmass is rendered as a single non-interactive background with
-no internal administrative boundaries.
+generated from the same sources. Gangwon-do remains the only interactive layer;
+the peninsula landmass and Gyeonggi-do detail are rendered as a single
+non-interactive background with no visible internal administrative boundaries.
