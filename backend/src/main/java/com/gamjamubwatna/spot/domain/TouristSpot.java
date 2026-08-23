@@ -189,6 +189,14 @@ public class TouristSpot {
         this.updatedAt = now;
     }
 
+    public void cacheImageUrl(String imageUrl, Instant now) {
+        if (imageUrl == null || imageUrl.isBlank() || (this.imageUrl != null && !this.imageUrl.isBlank())) {
+            return;
+        }
+        this.imageUrl = imageUrl;
+        this.updatedAt = now;
+    }
+
     public Long getId() {
         return id;
     }

@@ -81,6 +81,7 @@ external:
   tour-api:
     base-url: ${TOUR_API_BASE_URL:https://apis.data.go.kr/B551011/KorService2}
     search-keyword-path: ${TOUR_API_SEARCH_KEYWORD_PATH:/searchKeyword2}
+    detail-image-path: ${TOUR_API_DETAIL_IMAGE_PATH:/detailImage2}
     service-key: ${TOUR_API_SERVICE_KEY:}
     mobile-os: ${TOUR_API_MOBILE_OS:ETC}
     mobile-app: ${TOUR_API_MOBILE_APP:potato-mubwanna}

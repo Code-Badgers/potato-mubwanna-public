@@ -11,6 +11,7 @@ void main() {
       'longitude': 127.7500695,
       'address': '강원특별자치도 춘천시',
       'cityName': '춘천시',
+      'imageUrl': ' https://example.com/spot.jpg ',
       'congestionLevel': 'NORMAL',
       'stampEnabled': true,
       'menuItems': [
@@ -30,6 +31,7 @@ void main() {
     });
 
     expect(spot.menuItems, hasLength(2));
+    expect(spot.imageUrl, 'https://example.com/spot.jpg');
     expect(spot.menuItems[0].priceLabel, '3,300원');
     expect(spot.menuItems[0].verifiedOnLabel, '2026.08.03');
     expect(spot.menuItems[1].priceLabel, '변동가격');
@@ -49,5 +51,6 @@ void main() {
     });
 
     expect(spot.menuItems, isEmpty);
+    expect(spot.imageUrl, isNull);
   });
 }

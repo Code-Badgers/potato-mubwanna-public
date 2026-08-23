@@ -14,6 +14,7 @@ public record SpotListResponse(
     BigDecimal longitude,
     String address,
     String cityName,
+    String imageUrl,
     CongestionLevel congestionLevel,
     Boolean stampEnabled,
     List<SpotMenuItemResponse> menuItems
@@ -21,6 +22,7 @@ public record SpotListResponse(
 
     public static SpotListResponse from(
         TouristSpot spot,
+        String imageUrl,
         List<SpotMenuItemResponse> menuItems
     ) {
         return new SpotListResponse(
@@ -31,6 +33,7 @@ public record SpotListResponse(
             spot.getLongitude(),
             spot.getAddress(),
             spot.getCityName(),
+            imageUrl,
             spot.getCongestionLevel(),
             spot.getStampEnabled(),
             List.copyOf(menuItems)
