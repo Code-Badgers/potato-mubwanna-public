@@ -56,6 +56,7 @@ push:
   firebase:
     enabled: ${FIREBASE_ADMIN_ENABLED:false}
     project-id: ${FIREBASE_PROJECT_ID:}
+    service-account-base64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:}
   token:
     stale-days: ${PUSH_TOKEN_STALE_DAYS:60}
 

@@ -1,6 +1,8 @@
 package com.gamjamubwatna.push.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -77,6 +79,26 @@ class PushNotificationServiceTest {
         PushSendResult result = service.sendToUser(1L, message());
 
         assertThat(result).isEqualTo(new PushSendResult(true, 0, 0, 0, 0));
+    }
+
+    @Test
+    void propagatesGatewayFailureWithoutDeletingTokens() {
+        User user = user();
+        UserPushToken token = token(user, "first-token", PushPlatform.ANDROID);
+        PushNotificationMessage message = message();
+        when(pushMessageGateway.isEnabled()).thenReturn(true);
+        when(pushTokenRepository.findAllByUserId(1L)).thenReturn(List.of(token));
+        when(pushMessageGateway.send(List.of("first-token"), message))
+            .thenThrow(new PushDeliveryException("Firebase send failed", null));
+        PushNotificationService service = new PushNotificationService(
+            pushTokenRepository,
+            pushMessageGateway
+        );
+
+        assertThatThrownBy(() -> service.sendToUser(1L, message))
+            .isInstanceOf(PushDeliveryException.class)
+            .hasMessage("Firebase send failed");
+        verify(pushTokenRepository, never()).deleteByTokenIn(Set.of("first-token"));
     }
 
     private PushNotificationMessage message() {

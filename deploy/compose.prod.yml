@@ -64,6 +64,7 @@ services:
       MISSION_UPLOAD_LOCAL_DIR: /app/data/mission-uploads
       FIREBASE_ADMIN_ENABLED: ${FIREBASE_ADMIN_ENABLED:-false}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
       PUSH_TOKEN_STALE_DAYS: ${PUSH_TOKEN_STALE_DAYS:-60}
     volumes:
       - mission_uploads:/app/data/mission-uploads
