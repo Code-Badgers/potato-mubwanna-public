@@ -3255,6 +3255,7 @@ class _CongestionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedLabel = label.startsWith('혼잡도') ? label : '혼잡도 $label';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
@@ -3262,7 +3263,7 @@ class _CongestionBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        '혼잡도 $label',
+        normalizedLabel,
         style: const TextStyle(
           color: _mapDark,
           fontSize: 12,

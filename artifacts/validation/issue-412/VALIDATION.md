@@ -18,6 +18,7 @@
 - `TourApiClient`에 `detailImage2` 호출과 `originimgurl/imgurl/smallimageurl` 후보 선택 로직을 추가했다.
 - 외부 API 실패는 장소 조회 실패로 전파하지 않고 로그만 남긴 뒤 `imageUrl=null`로 처리했다.
 - 프론트 `MapSpot`에 `imageUrl`을 추가하고 여행 코스/장소 카드의 이미지 렌더링 우선순위를 `network image -> local asset -> app placeholder`로 정리했다.
+- 혼잡도 배지는 라벨에 이미 `혼잡도`가 포함된 경우 중복 prefix를 붙이지 않도록 정리했다.
 - API 문서에 `/spots` 목록과 상세의 `imageUrl` fallback 규칙을 추가했다.
 
 ### Result
@@ -33,8 +34,10 @@
 | `flutter analyze` | PASS |
 | `flutter test test/features/map/map_spot_test.dart test/features/map/spot_recommendation_repository_test.dart test/features/map/travel_course_catalog_test.dart` | PASS |
 | `flutter test` | PASS |
+| `flutter test test/features/map/travel_course_catalog_test.dart test/features/map/map_spot_test.dart test/features/map/spot_recommendation_repository_test.dart` | PASS |
 
 ## 남은 확인
 
 - 운영 환경에 `TOUR_API_SERVICE_KEY`가 설정되어 있어야 `detailImage2` fallback이 동작한다.
+- 지도 메인/코스 카드 이미지가 실제 TourAPI 이미지로 바뀌려면 해당 장소가 숫자형 TourAPI `contentId`를 가지고 있거나 DB `image_url`이 채워져 있어야 한다.
 - 실제 TourAPI 응답의 이미지 라이선스/출처 메타데이터를 별도 표기해야 하는 정책이 생기면 스키마 확장을 검토해야 한다.
