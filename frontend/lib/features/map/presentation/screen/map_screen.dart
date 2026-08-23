@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../../stamp/presentation/model/gangwon_map_projection.dart';
+import '../../../stamp/presentation/model/gangwon_map_region.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../domain/favorite_spot_route.dart';
@@ -547,15 +549,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             ),
                           ),
                           Positioned(
-                            right: 12,
-                            top: recommendationSourceSpotId == null ? 86 : 132,
+                            left: 14,
+                            bottom: _isRouteMode ? 352 : 244,
                             child: _FullMapHomeButton(
                               onTap: _returnToDiscoveryHome,
                             ),
                           ),
                           Positioned(
                             right: 18,
-                            bottom: _isRouteMode ? 360 : 252,
+                            bottom: _isRouteMode ? 316 : 208,
                             child: _FullMapLocateButton(
                               onTap: () => unawaited(_loadCurrentLocation()),
                             ),
@@ -1068,98 +1070,143 @@ class _DiscoveryMapPreviewPainter extends CustomPainter {
 
   final List<MapSpot> spots;
 
-  static const _pinOffsets = [
-    Offset(0.68, 0.24),
-    Offset(0.74, 0.52),
-    Offset(0.50, 0.58),
-    Offset(0.42, 0.34),
-  ];
-
   @override
   void paint(Canvas canvas, Size size) {
     final background = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFEAF7EF), Color(0xFFCFEAF8)],
+        colors: [Color(0xFFEAF8F0), Color(0xFFD9F0FB)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, background);
 
-    final landPaint = Paint()..color = const Color(0xFFF7FBF4);
-    final coastPaint = Paint()
-      ..color = const Color(0xFFB9E3C9)
+    _drawBackgroundTexture(canvas, size);
+
+    final mapRect = _mapRectFor(size);
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    final provinceFill = Paint()..color = const Color(0xFFF9FCF5);
+    final boundaryPaint = Paint()
+      ..color = const Color(0xFFB6E3D0)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
+      ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    final riverPaint = Paint()
-      ..color = const Color(0xFFBFE3F2).withValues(alpha: 0.7)
+    final cityLinePaint = Paint()
+      ..color = const Color(0xFFBFE8D6).withValues(alpha: 0.82)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
 
-    final land = Path()
-      ..moveTo(0, size.height * 0.18)
+    final combinedPath = Path();
+    for (final region in gangwonMapRegions) {
+      for (final polygon in region.polygons) {
+        combinedPath.addPath(_pathFromPoints(polygon, mapRect), Offset.zero);
+      }
+    }
+    canvas.drawPath(combinedPath.shift(const Offset(0, 5)), shadowPaint);
+    canvas.drawPath(combinedPath, provinceFill);
+    canvas.drawPath(combinedPath, boundaryPaint..strokeWidth = 3.2);
+
+    for (final region in gangwonMapRegions) {
+      for (final polygon in region.polygons) {
+        canvas.drawPath(_pathFromPoints(polygon, mapRect), cityLinePaint);
+      }
+    }
+
+    for (final region in const [
+      ('춘천', Offset(0.22, 0.52)),
+      ('평창', Offset(0.58, 0.63)),
+      ('강릉', Offset(0.78, 0.51)),
+      ('속초', Offset(0.70, 0.27)),
+    ]) {
+      _drawRegionLabel(canvas, mapRect, region.$1, region.$2);
+    }
+
+    for (final spot in spots.take(4)) {
+      final normalized = projectToGangwonMap(
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+      );
+      if (normalized.dx < -0.08 ||
+          normalized.dx > 1.08 ||
+          normalized.dy < -0.08 ||
+          normalized.dy > 1.08) {
+        continue;
+      }
+      final center = Offset(
+        mapRect.left + normalized.dx * mapRect.width,
+        mapRect.top + normalized.dy * mapRect.height,
+      );
+      _drawPotatoPin(canvas, center, spot.categoryLabel);
+    }
+  }
+
+  Rect _mapRectFor(Size size) {
+    final width = size.width * 0.72;
+    final height = width * 0.86;
+    return Rect.fromLTWH(
+      size.width * 0.22,
+      size.height * 0.12,
+      width,
+      math.min(height, size.height * 0.78),
+    );
+  }
+
+  Path _pathFromPoints(List<Offset> points, Rect rect) {
+    final path = Path();
+    for (var index = 0; index < points.length; index++) {
+      final point = points[index];
+      final offset = Offset(
+        rect.left + point.dx * rect.width,
+        rect.top + point.dy * rect.height,
+      );
+      if (index == 0) {
+        path.moveTo(offset.dx, offset.dy);
+      } else {
+        path.lineTo(offset.dx, offset.dy);
+      }
+    }
+    return path..close();
+  }
+
+  void _drawBackgroundTexture(Canvas canvas, Size size) {
+    final hillPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.22)
+      ..style = PaintingStyle.fill;
+    final hill = Path()
+      ..moveTo(size.width * 0.18, size.height * 0.78)
       ..quadraticBezierTo(
-        size.width * 0.25,
-        size.height * 0.05,
-        size.width * 0.45,
-        size.height * 0.17,
+        size.width * 0.38,
+        size.height * 0.55,
+        size.width * 0.58,
+        size.height * 0.78,
       )
       ..quadraticBezierTo(
-        size.width * 0.66,
-        size.height * 0.29,
+        size.width * 0.78,
+        size.height * 0.92,
         size.width,
-        size.height * 0.13,
+        size.height * 0.72,
       )
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
       ..close();
-    canvas.drawPath(land, landPaint);
-    canvas.drawPath(land, coastPaint);
+    canvas.drawPath(hill, hillPaint);
 
-    for (final point in [
-      Offset(size.width * 0.18, size.height * 0.76),
-      Offset(size.width * 0.36, size.height * 0.62),
-      Offset(size.width * 0.58, size.height * 0.73),
-    ]) {
-      canvas.drawCircle(
-        point,
-        32,
-        Paint()..color = const Color(0xFFDCEEDB).withValues(alpha: 0.8),
+    final waterPaint = Paint()
+      ..color = const Color(0xFF9ED7F1).withValues(alpha: 0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    for (var index = 0; index < 4; index++) {
+      final y = size.height * (0.26 + index * 0.11);
+      canvas.drawLine(
+        Offset(size.width * 0.70, y),
+        Offset(size.width * 0.82, y),
+        waterPaint,
       );
     }
-
-    final river = Path()
-      ..moveTo(size.width * 0.22, size.height * 0.42)
-      ..cubicTo(
-        size.width * 0.36,
-        size.height * 0.48,
-        size.width * 0.42,
-        size.height * 0.62,
-        size.width * 0.56,
-        size.height * 0.68,
-      )
-      ..cubicTo(
-        size.width * 0.66,
-        size.height * 0.72,
-        size.width * 0.73,
-        size.height * 0.64,
-        size.width * 0.82,
-        size.height * 0.70,
-      );
-    canvas.drawPath(river, riverPaint);
-
-    for (var index = 0; index < spots.take(4).length; index++) {
-      final offset = _pinOffsets[index];
-      final center = Offset(size.width * offset.dx, size.height * offset.dy);
-      _drawPotatoPin(canvas, center, spots[index].categoryLabel);
-    }
-
-    _drawRegionLabel(canvas, size, '춘천', const Offset(0.28, 0.50));
-    _drawRegionLabel(canvas, size, '평창', const Offset(0.58, 0.60));
-    _drawRegionLabel(canvas, size, '강릉', const Offset(0.76, 0.42));
-    _drawRegionLabel(canvas, size, '속초', const Offset(0.70, 0.22));
   }
 
   void _drawPotatoPin(Canvas canvas, Offset center, String categoryLabel) {
@@ -1211,7 +1258,7 @@ class _DiscoveryMapPreviewPainter extends CustomPainter {
 
   void _drawRegionLabel(
     Canvas canvas,
-    Size size,
+    Rect mapRect,
     String label,
     Offset anchor,
   ) {
@@ -1229,8 +1276,8 @@ class _DiscoveryMapPreviewPainter extends CustomPainter {
     textPainter.paint(
       canvas,
       Offset(
-        size.width * anchor.dx - textPainter.width / 2,
-        size.height * anchor.dy - textPainter.height / 2,
+        mapRect.left + mapRect.width * anchor.dx - textPainter.width / 2,
+        mapRect.top + mapRect.height * anchor.dy - textPainter.height / 2,
       ),
     );
   }
