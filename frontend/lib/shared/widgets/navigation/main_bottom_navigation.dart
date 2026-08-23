@@ -38,6 +38,7 @@ class MainBottomNavigation extends StatelessWidget {
                       return Expanded(
                         child: _FooterItem(
                           icon: destination.icon,
+                          assetPath: destination.assetPath,
                           label: destination.label,
                           isSelected: selectedIndex == index,
                           onTap: () => context.go(_paths[index]),
@@ -71,7 +72,11 @@ class MainBottomNavigation extends StatelessWidget {
   static const _destinations = [
     _FooterDestination(icon: Icons.map_rounded, label: '지도'),
     _FooterDestination(icon: Icons.emoji_events_rounded, label: '스탬프'),
-    _FooterDestination(icon: Icons.eco_rounded, label: '감자도감'),
+    _FooterDestination(
+      icon: Icons.eco_rounded,
+      assetPath: 'assets/characters/potatoes/default_beginner_potato.png',
+      label: '감자밭',
+    ),
     _FooterDestination(icon: Icons.flag_rounded, label: '미션'),
     _FooterDestination(icon: Icons.person_rounded, label: '마이'),
   ];
@@ -80,12 +85,14 @@ class MainBottomNavigation extends StatelessWidget {
 class _FooterItem extends StatelessWidget {
   const _FooterItem({
     required this.icon,
+    this.assetPath,
     required this.label,
     required this.isSelected,
     required this.onTap,
   });
 
   final IconData icon;
+  final String? assetPath;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
@@ -113,7 +120,19 @@ class _FooterItem extends StatelessWidget {
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(AppDimens.pillRadius),
               ),
-              child: Icon(icon, color: foregroundColor, size: 21),
+              child: assetPath == null
+                  ? Icon(icon, color: foregroundColor, size: 21)
+                  : Center(
+                      child: Image.asset(
+                        assetPath!,
+                        width: 23,
+                        height: 23,
+                        fit: BoxFit.contain,
+                        opacity: AlwaysStoppedAnimation<double>(
+                          isSelected ? 1 : 0.72,
+                        ),
+                      ),
+                    ),
             ),
             const SizedBox(height: 3),
             Text(
@@ -138,8 +157,10 @@ class _FooterDestination {
   const _FooterDestination({
     required this.icon,
     required this.label,
+    this.assetPath,
   });
 
   final IconData icon;
   final String label;
+  final String? assetPath;
 }
