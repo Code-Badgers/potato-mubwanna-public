@@ -83,6 +83,11 @@ public class TourApiClient {
             return Optional.empty();
         }
 
+        Optional<String> representativeImage = findRepresentativeImageFromCommon(contentId);
+        if (representativeImage.isPresent()) {
+            return representativeImage;
+        }
+
         JsonNode response = restClient.get()
             .uri(detailImageUri(contentId))
             .retrieve()
@@ -92,6 +97,21 @@ public class TourApiClient {
             .map(String::trim)
             .filter(value -> !value.isBlank())
             .findFirst();
+    }
+
+    private Optional<String> findRepresentativeImageFromCommon(String contentId) {
+        try {
+            JsonNode commonResponse = restClient.get()
+                .uri(detailCommonUri(contentId))
+                .retrieve()
+                .body(JsonNode.class);
+            return imageCandidatesFromCommon(firstItem(commonResponse)).stream()
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .findFirst();
+        } catch (RuntimeException ignored) {
+            return Optional.empty();
+        }
     }
 
     public Optional<SpotTourInfo> findSpotTourInfo(String contentId, Integer contentTypeId) {
@@ -276,6 +296,16 @@ public class TourApiClient {
         addIfText(candidates, item.path("originimgurl"));
         addIfText(candidates, item.path("imgurl"));
         addIfText(candidates, item.path("smallimageurl"));
+        return candidates;
+    }
+
+    private List<String> imageCandidatesFromCommon(JsonNode item) {
+        if (item == null) {
+            return List.of();
+        }
+        List<String> candidates = new ArrayList<>();
+        addIfText(candidates, item.path("firstimage"));
+        addIfText(candidates, item.path("firstimage2"));
         return candidates;
     }
 

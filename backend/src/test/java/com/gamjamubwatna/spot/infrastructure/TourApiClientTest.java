@@ -31,6 +31,7 @@ class TourApiClientTest {
 
     @Test
     void findsRepresentativeImageFromDetailImage2() {
+        emptyDetailCommon();
         server.createContext("/detailImage2", exchange -> {
             lastQuery = exchange.getRequestURI().getRawQuery();
             byte[] body = """
@@ -62,7 +63,37 @@ class TourApiClientTest {
     }
 
     @Test
+    void prefersRepresentativeImageFromDetailCommon2() {
+        server.createContext("/detailCommon2", exchange -> {
+            lastQuery = exchange.getRequestURI().getRawQuery();
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "firstimage": "https://tour.example.com/first.jpg",
+                          "firstimage2": "https://tour.example.com/first-thumb.jpg"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+
+        assertThat(client("encoded%2Bkey").findRepresentativeImage("12345"))
+            .contains("https://tour.example.com/first.jpg");
+        assertThat(lastQuery)
+            .contains("contentId=12345")
+            .contains("firstImageYN=Y")
+            .contains("overviewYN=Y");
+    }
+
+    @Test
     void fallsBackToSmallImageWhenOriginalImageIsMissing() {
+        emptyDetailCommon();
         server.createContext("/detailImage2", exchange -> {
             byte[] body = """
                 {
@@ -87,6 +118,7 @@ class TourApiClientTest {
 
     @Test
     void returnsEmptyWhenDetailImage2HasNoImage() {
+        emptyDetailCommon();
         server.createContext("/detailImage2", exchange -> {
             byte[] body = """
                 {
@@ -172,6 +204,21 @@ class TourApiClientTest {
             "51",
             "감자"
         );
+    }
+
+    private void emptyDetailCommon() {
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": ""
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
     }
 
     private void writeJson(com.sun.net.httpserver.HttpExchange exchange, byte[] body) throws IOException {
