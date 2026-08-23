@@ -1501,6 +1501,7 @@ class _GangwonMapPainter extends CustomPainter {
     final landmassPaint = Paint()
       ..color = AppColors.primary.withValues(alpha: 0.16)
       ..style = PaintingStyle.fill;
+    canvas.drawPath(_westLandmassWashPath(size, mapRect), landmassPaint);
     final landmassPath = _contextLandmassPath(mapRect);
     if (landmassPath.computeMetrics().isNotEmpty) {
       canvas.drawPath(landmassPath, landmassPaint);
@@ -1846,6 +1847,31 @@ Path _contextLandmassPath(Rect mapRect) {
     }
   }
   return landmassPath;
+}
+
+Path _westLandmassWashPath(Size size, Rect mapRect) {
+  final edgeX = mapRect.left + mapRect.width * 0.34;
+  return Path()
+    ..moveTo(0, 0)
+    ..lineTo(edgeX, 0)
+    ..cubicTo(
+      edgeX - 18,
+      size.height * 0.2,
+      edgeX - 56,
+      size.height * 0.42,
+      edgeX - 44,
+      size.height * 0.58,
+    )
+    ..cubicTo(
+      edgeX - 24,
+      size.height * 0.76,
+      edgeX - 64,
+      size.height * 0.9,
+      edgeX - 20,
+      size.height,
+    )
+    ..lineTo(0, size.height)
+    ..close();
 }
 
 var _didLogGangwonContextRegions = false;
