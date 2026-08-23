@@ -137,6 +137,24 @@ public class PotatoController {
         }
     }
 
+    // 완전히 성장한 대표 감자를 수확해 도감/대표 감자 화면에서 획득 상태로 고정한다.
+    @PostMapping("/me/representative/harvest")
+    public ResponseEntity<AuthApiResponse<PotatoHarvestResponse>> harvestRepresentativePotato(
+        Authentication authentication
+    ) {
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(
+                potatoCommandService.harvestRepresentativePotato(userId(authentication))
+            ));
+        } catch (PotatoAuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure("인증 정보를 확인할 수 없습니다."));
+        } catch (PotatoInteractionException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(AuthApiResponse.failure(exception.getMessage()));
+        }
+    }
+
     private Long userId(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw invalidPrincipal();

@@ -270,6 +270,33 @@ class PotatoInteractionResult {
   }
 }
 
+class PotatoHarvestResult {
+  const PotatoHarvestResult({
+    required this.potatoId,
+    required this.potatoName,
+    required this.harvested,
+    required this.harvestedAt,
+  });
+
+  final String potatoId;
+  final String potatoName;
+  final bool harvested;
+  final DateTime? harvestedAt;
+
+  static PotatoHarvestResult fromJson(Object? json) {
+    final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final harvestedAtValue = data['harvestedAt'] as String?;
+    return PotatoHarvestResult(
+      potatoId: data['potatoId']?.toString() ?? '',
+      potatoName: data['potatoName'] as String? ?? '',
+      harvested: data['harvested'] as bool? ?? false,
+      harvestedAt: harvestedAtValue == null || harvestedAtValue.isEmpty
+          ? null
+          : DateTime.parse(harvestedAtValue),
+    );
+  }
+}
+
 class PotatoActivitySyncResult {
   const PotatoActivitySyncResult({required this.growthResult});
 

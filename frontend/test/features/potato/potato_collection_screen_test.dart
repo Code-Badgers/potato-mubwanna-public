@@ -254,12 +254,15 @@ void main() {
   testWidgets('shows harvest reward card when representative is fully grown', (
     tester,
   ) async {
+    final repository = _FakePotatoRepository();
+
     await _pumpScreen(
       tester,
       overrides: [
         potatoCollectionProvider.overrideWith(
           (ref) async => _harvestableCollection(),
         ),
+        potatoRepositoryProvider.overrideWithValue(repository),
       ],
     );
     await tester.pumpAndSettle();
@@ -269,6 +272,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 260));
 
+    expect(repository.harvestedRepresentative, isTrue);
     expect(find.text('새로운 감자를 수확했습니다'), findsOneWidget);
     expect(find.text('곤드레감자 카드가 도감에 들어왔어요'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '감자 카드 보기'), findsOneWidget);
@@ -625,6 +629,7 @@ class _FakePotatoRepository extends PotatoRepository {
   final double growthDistanceAdded;
   String? updatedPotatoId;
   PotatoInteractionAction? interactionAction;
+  bool harvestedRepresentative = false;
 
   @override
   Future<PotatoRepresentativeResult> updateRepresentativePotato(
@@ -664,6 +669,17 @@ class _FakePotatoRepository extends PotatoRepository {
         leveledUp: false,
         fullyGrown: false,
       ),
+    );
+  }
+
+  @override
+  Future<PotatoHarvestResult> harvestRepresentativePotato() async {
+    harvestedRepresentative = true;
+    return PotatoHarvestResult(
+      potatoId: '2',
+      potatoName: '곤드레감자',
+      harvested: true,
+      harvestedAt: DateTime.parse('2026-08-20T12:00:00Z'),
     );
   }
 }

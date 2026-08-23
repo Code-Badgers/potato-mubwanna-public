@@ -21,7 +21,10 @@ public record UserPotatoCollectionItemResponse(
     double growthDistance,
     double growthGoalDistance,
     PotatoCareStatusResponse careStatus,
-    boolean representative
+    boolean representative,
+    String acquisitionType,
+    boolean harvestable,
+    boolean harvested
 ) {
 
     public static UserPotatoCollectionItemResponse from(
@@ -45,7 +48,10 @@ public record UserPotatoCollectionItemResponse(
             acquired ? userPotato.getGrowthDistance() : 0.0,
             potato.getGrowthGoalDistance(),
             careStatus == null ? null : PotatoCareStatusResponse.from(careStatus),
-            acquired && userPotato.isRepresentative()
+            acquired && userPotato.isRepresentative(),
+            "GROWTH",
+            acquired && userPotato.canHarvest(),
+            acquired && userPotato.isHarvested()
         );
     }
 }

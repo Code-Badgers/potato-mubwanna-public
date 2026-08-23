@@ -246,6 +246,27 @@ class PotatoControllerTest {
     }
 
     @Test
+    void harvestsRepresentativePotato() throws Exception {
+        when(potatoCommandService.harvestRepresentativePotato(eq(1L)))
+            .thenReturn(new PotatoHarvestResponse(
+                1L,
+                "새싹감자",
+                true,
+                Instant.parse("2026-07-21T10:00:00Z")
+            ));
+
+        mockMvc.perform(post("/potatoes/me/representative/harvest")
+                .with(user("user:1"))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.potatoId").value(1))
+            .andExpect(jsonPath("$.data.potatoName").value("새싹감자"))
+            .andExpect(jsonPath("$.data.harvested").value(true))
+            .andExpect(jsonPath("$.data.harvestedAt").value("2026-07-21T10:00:00Z"));
+    }
+
+    @Test
     void rejectsPotatoInteractionDuringCooldown() throws Exception {
         when(potatoCommandService.interactWithRepresentativePotato(
             eq(1L),
@@ -317,6 +338,9 @@ class PotatoControllerTest {
                 70,
                 Instant.parse("2026-07-21T10:00:00Z")
             ),
+            true,
+            "GROWTH",
+            false,
             true
         );
     }

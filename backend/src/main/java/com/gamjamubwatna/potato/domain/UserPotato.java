@@ -50,6 +50,9 @@ public class UserPotato {
     @Column(name = "representative", nullable = false)
     private boolean representative;
 
+    @Column(name = "harvested_at")
+    private Instant harvestedAt;
+
     protected UserPotato() {
     }
 
@@ -67,6 +70,25 @@ public class UserPotato {
         this.level = level;
         this.growthDistance = growthDistance;
         this.representative = representative;
+        this.harvestedAt = null;
+    }
+
+    public UserPotato(
+        User user,
+        Potato potato,
+        Instant acquiredAt,
+        int level,
+        double growthDistance,
+        boolean representative,
+        Instant harvestedAt
+    ) {
+        this.user = user;
+        this.potato = potato;
+        this.acquiredAt = acquiredAt;
+        this.level = level;
+        this.growthDistance = growthDistance;
+        this.representative = representative;
+        this.harvestedAt = harvestedAt;
     }
 
     public Long getId() {
@@ -97,8 +119,33 @@ public class UserPotato {
         return representative;
     }
 
+    public Instant getHarvestedAt() {
+        return harvestedAt;
+    }
+
+    public boolean isHarvested() {
+        return harvestedAt != null;
+    }
+
     public boolean isFullyGrown() {
         return level >= potato.getMaxGrowthLevel();
+    }
+
+    public boolean canHarvest() {
+        return isFullyGrown() && !isHarvested();
+    }
+
+    public void harvest(Instant harvestedAt) {
+        if (harvestedAt == null) {
+            throw new IllegalArgumentException("수확 시각을 확인할 수 없습니다.");
+        }
+        if (!isFullyGrown()) {
+            throw new IllegalStateException("완전히 성장한 감자만 수확할 수 있습니다.");
+        }
+        if (isHarvested()) {
+            return;
+        }
+        this.harvestedAt = harvestedAt;
     }
 
     public void addGrowthDistance(double additionalDistance) {

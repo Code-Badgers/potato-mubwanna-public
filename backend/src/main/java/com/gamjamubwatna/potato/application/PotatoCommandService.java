@@ -5,6 +5,7 @@ import com.gamjamubwatna.auth.domain.UserRepository;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncRequest;
 import com.gamjamubwatna.potato.api.PotatoDailyActivitySyncResponse;
 import com.gamjamubwatna.potato.api.PotatoGrowthResultResponse;
+import com.gamjamubwatna.potato.api.PotatoHarvestResponse;
 import com.gamjamubwatna.potato.api.PotatoInteractionRequest;
 import com.gamjamubwatna.potato.api.PotatoInteractionResponse;
 import com.gamjamubwatna.potato.api.PotatoRepresentativeResponse;
@@ -206,6 +207,25 @@ public class PotatoCommandService {
         );
         publishLevelUp(userId, response.growthResult());
         return response;
+    }
+
+    @Transactional
+    public PotatoHarvestResponse harvestRepresentativePotato(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new PotatoAuthenticationException("사용자를 찾을 수 없습니다.");
+        }
+
+        UserPotato representative = userPotatoRepository.findByUserId(userId)
+            .stream()
+            .filter(UserPotato::isRepresentative)
+            .findFirst()
+            .orElseThrow(() -> new PotatoInteractionException("대표 감자를 먼저 설정해주세요."));
+        if (!representative.isFullyGrown()) {
+            throw new PotatoInteractionException("아직 수확할 수 없습니다. 조금만 더 키워주세요.");
+        }
+
+        representative.harvest(Instant.now(clock));
+        return PotatoHarvestResponse.from(representative);
     }
 
     private void publishLevelUp(Long userId, PotatoGrowthResultResponse growthResult) {

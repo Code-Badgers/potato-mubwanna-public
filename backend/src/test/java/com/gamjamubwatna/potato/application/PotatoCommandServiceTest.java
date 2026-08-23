@@ -455,6 +455,34 @@ class PotatoCommandServiceTest {
             .hasMessage("대표 감자를 먼저 설정해주세요.");
     }
 
+    @Test
+    void harvestsFullyGrownRepresentativePotato() {
+        UserPotato representative =
+            userPotato(1L, potato(1L, "새싹감자"), 3, 3000.0, true, null);
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
+
+        var result = potatoCommandService.harvestRepresentativePotato(1L);
+
+        assertThat(result.potatoId()).isEqualTo(1L);
+        assertThat(result.potatoName()).isEqualTo("새싹감자");
+        assertThat(result.harvested()).isTrue();
+        assertThat(result.harvestedAt()).isEqualTo(Instant.parse("2026-07-21T10:00:00Z"));
+        assertThat(representative.isHarvested()).isTrue();
+    }
+
+    @Test
+    void rejectsHarvestBeforeRepresentativePotatoIsFullyGrown() {
+        UserPotato representative =
+            userPotato(1L, potato(1L, "새싹감자"), 2, 1500.0, true, null);
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
+
+        assertThatThrownBy(() -> potatoCommandService.harvestRepresentativePotato(1L))
+            .isInstanceOf(PotatoInteractionException.class)
+            .hasMessage("아직 수확할 수 없습니다. 조금만 더 키워주세요.");
+    }
+
     private UserPotato userPotato(Long id, Potato potato, boolean representative) {
         return userPotato(id, potato, 2, 1500.0, representative);
     }
@@ -466,13 +494,25 @@ class PotatoCommandServiceTest {
         double growthDistance,
         boolean representative
     ) {
+        return userPotato(id, potato, level, growthDistance, representative, Instant.parse("2026-07-01T00:00:00Z"));
+    }
+
+    private UserPotato userPotato(
+        Long id,
+        Potato potato,
+        int level,
+        double growthDistance,
+        boolean representative,
+        Instant harvestedAt
+    ) {
         UserPotato userPotato = new UserPotato(
             mock(User.class),
             potato,
             Instant.parse("2026-07-01T00:00:00Z"),
             level,
             growthDistance,
-            representative
+            representative,
+            harvestedAt
         );
         ReflectionTestUtils.setField(userPotato, "id", id);
         return userPotato;

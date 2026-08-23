@@ -219,6 +219,14 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
     return result;
   }
 
+  Future<PotatoHarvestResult> _harvestRepresentativePotato() async {
+    final result =
+        await ref.read(potatoRepositoryProvider).harvestRepresentativePotato();
+    ref.invalidate(potatoCollectionProvider);
+    ref.invalidate(potatoGrowthSummaryProvider);
+    return result;
+  }
+
   Future<void> _showGrowthFeedbackAfterCollectionLoads(
     PotatoGrowthResult growthResult,
   ) async {
@@ -278,6 +286,7 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
                       _showRepresentativePicker(collection);
                     },
                     onCare: _interactWithRepresentativePotato,
+                    onHarvest: _harvestRepresentativePotato,
                   ),
                 ),
           loading: () => const _PotatoStatusBody(
@@ -400,6 +409,7 @@ class _PotatoCollectionBody extends StatelessWidget {
     required this.onShowDefaultDetail,
     required this.onChangeRepresentative,
     required this.onCare,
+    required this.onHarvest,
   });
 
   final PotatoCollection collection;
@@ -409,6 +419,7 @@ class _PotatoCollectionBody extends StatelessWidget {
   final VoidCallback onChangeRepresentative;
   final Future<PotatoInteractionResult> Function(PotatoInteractionAction action)
       onCare;
+  final Future<PotatoHarvestResult> Function() onHarvest;
 
   @override
   Widget build(BuildContext context) {
@@ -434,6 +445,7 @@ class _PotatoCollectionBody extends StatelessWidget {
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
                     onCare: representative == null ? null : onCare,
+                    onHarvest: representative == null ? null : onHarvest,
                   ),
                 ],
               ),
@@ -462,6 +474,7 @@ class _RepresentativePotatoCard extends StatefulWidget {
     required this.onShowDetail,
     required this.onChangeRepresentative,
     required this.onCare,
+    required this.onHarvest,
   });
 
   final PotatoCollectionItem? item;
@@ -472,6 +485,7 @@ class _RepresentativePotatoCard extends StatefulWidget {
   final Future<PotatoInteractionResult> Function(
     PotatoInteractionAction action,
   )? onCare;
+  final Future<PotatoHarvestResult> Function()? onHarvest;
 
   @override
   State<_RepresentativePotatoCard> createState() =>
@@ -538,6 +552,59 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
       if (mounted) {
         setState(() => _isCaring = false);
       }
+    }
+  }
+
+  Future<void> _harvestPotato(PotatoCollectionItem item) async {
+    final onHarvest = widget.onHarvest;
+    if (onHarvest == null) {
+      return;
+    }
+
+    try {
+      await onHarvest();
+      if (!mounted) {
+        return;
+      }
+      setState(() => _harvestedLocally = true);
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '감자 수확 닫기',
+        barrierColor: Colors.black.withValues(alpha: 0.6),
+        transitionDuration: const Duration(milliseconds: 220),
+        pageBuilder: (_, __, ___) => _PotatoHarvestDialog(item: item),
+        transitionBuilder: (_, animation, __, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(
+                begin: 0.94,
+                end: 1,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('감자를 수확하지 못했습니다. 잠시 후 다시 시도해주세요.')),
+      );
     }
   }
 
@@ -631,37 +698,12 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   item: potato,
                   canHarvest: canHarvest,
                   harvested: harvested,
-                  onHarvest: () async {
+                  onHarvest: () {
                     final item = potato;
                     if (item == null) {
                       return;
                     }
-                    setState(() => _harvestedLocally = true);
-                    await showGeneralDialog<void>(
-                      context: context,
-                      barrierDismissible: true,
-                      barrierLabel: '감자 수확 닫기',
-                      barrierColor: Colors.black.withValues(alpha: 0.6),
-                      transitionDuration: const Duration(milliseconds: 220),
-                      pageBuilder: (_, __, ___) =>
-                          _PotatoHarvestDialog(item: item),
-                      transitionBuilder: (_, animation, __, child) {
-                        final curved = CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutCubic,
-                        );
-                        return FadeTransition(
-                          opacity: curved,
-                          child: ScaleTransition(
-                            scale: Tween<double>(
-                              begin: 0.94,
-                              end: 1,
-                            ).animate(curved),
-                            child: child,
-                          ),
-                        );
-                      },
-                    );
+                    unawaited(_harvestPotato(item));
                   },
                   onShowHarvested: widget.onShowDetail,
                 ),
