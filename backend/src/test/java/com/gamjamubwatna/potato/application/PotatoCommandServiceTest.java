@@ -388,10 +388,10 @@ class PotatoCommandServiceTest {
         UserPotato representative = userPotato(1L, potato(1L, "새싹감자"), 2, 2950.0, true);
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
-        when(userPotatoInteractionRepository.findTopByUserPotatoIdAndActionOrderByInteractedAtDesc(
+        when(userPotatoInteractionRepository.findByUserPotatoIdAndActionOrderByInteractedAtDesc(
             1L,
             PotatoInteractionAction.PAT
-        )).thenReturn(Optional.empty());
+        )).thenReturn(List.of());
         when(userPotatoInteractionRepository.save(any(UserPotatoInteraction.class)))
             .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -419,7 +419,19 @@ class PotatoCommandServiceTest {
     @Test
     void rejectsInteractionDuringCooldown() {
         UserPotato representative = userPotato(1L, potato(1L, "새싹감자"), 1, 0.0, true);
-        UserPotatoInteraction lastInteraction = new UserPotatoInteraction(
+        UserPotatoInteraction firstInteraction = new UserPotatoInteraction(
+            representative,
+            PotatoInteractionAction.WATER,
+            120.0,
+            Instant.parse("2026-07-21T09:10:00Z")
+        );
+        UserPotatoInteraction secondInteraction = new UserPotatoInteraction(
+            representative,
+            PotatoInteractionAction.WATER,
+            120.0,
+            Instant.parse("2026-07-21T09:20:00Z")
+        );
+        UserPotatoInteraction thirdInteraction = new UserPotatoInteraction(
             representative,
             PotatoInteractionAction.WATER,
             120.0,
@@ -427,10 +439,10 @@ class PotatoCommandServiceTest {
         );
         when(userRepository.existsById(1L)).thenReturn(true);
         when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
-        when(userPotatoInteractionRepository.findTopByUserPotatoIdAndActionOrderByInteractedAtDesc(
+        when(userPotatoInteractionRepository.findByUserPotatoIdAndActionOrderByInteractedAtDesc(
             1L,
             PotatoInteractionAction.WATER
-        )).thenReturn(Optional.of(lastInteraction));
+        )).thenReturn(List.of(thirdInteraction, secondInteraction, firstInteraction));
 
         assertThatThrownBy(() -> potatoCommandService.interactWithRepresentativePotato(
             1L,
@@ -440,6 +452,41 @@ class PotatoCommandServiceTest {
             .hasMessage("아직 다시 돌볼 수 없습니다. 잠시 후 다시 시도해주세요.");
 
         verify(userPotatoInteractionRepository, never()).save(any(UserPotatoInteraction.class));
+    }
+
+    @Test
+    void allowsInteractionUntilConsecutiveUseLimitIsReached() {
+        UserPotato representative = userPotato(1L, potato(1L, "새싹감자"), 1, 0.0, true);
+        UserPotatoInteraction firstInteraction = new UserPotatoInteraction(
+            representative,
+            PotatoInteractionAction.WATER,
+            120.0,
+            Instant.parse("2026-07-21T09:20:00Z")
+        );
+        UserPotatoInteraction secondInteraction = new UserPotatoInteraction(
+            representative,
+            PotatoInteractionAction.WATER,
+            120.0,
+            Instant.parse("2026-07-21T09:30:00Z")
+        );
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of(representative));
+        when(userPotatoInteractionRepository.findByUserPotatoIdAndActionOrderByInteractedAtDesc(
+            1L,
+            PotatoInteractionAction.WATER
+        )).thenReturn(List.of(secondInteraction, firstInteraction));
+        when(userPotatoInteractionRepository.save(any(UserPotatoInteraction.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PotatoInteractionResponse result = potatoCommandService.interactWithRepresentativePotato(
+            1L,
+            new PotatoInteractionRequest(PotatoInteractionAction.WATER)
+        );
+
+        assertThat(result.action()).isEqualTo(PotatoInteractionAction.WATER);
+        assertThat(result.cooldownSeconds()).isEqualTo(3600);
+        assertThat(result.nextAvailableAt()).isEqualTo(Instant.parse("2026-07-21T11:00:00Z"));
+        verify(userPotatoInteractionRepository).save(any(UserPotatoInteraction.class));
     }
 
     @Test

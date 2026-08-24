@@ -34,7 +34,7 @@ void main() {
       expect(result.potatoId, '2');
       expect(result.action, PotatoInteractionAction.water);
       expect(result.growthDistanceAdded, 120);
-      expect(result.cooldownSeconds, 7200);
+      expect(result.cooldownSeconds, 3600);
       expect(result.careStatus?.satiety, 61);
       expect(result.careStatus?.moisture, 100);
       expect(result.careStatus?.mood, 72);
@@ -80,7 +80,7 @@ const _interactionResponse = <String, Object?>{
     'potatoName': '곤드레감자',
     'action': 'WATER',
     'growthDistanceAdded': 120.0,
-    'cooldownSeconds': 7200,
+    'cooldownSeconds': 3600,
     'nextAvailableAt': '2026-08-20T12:00:00Z',
     'careStatus': {
       'satiety': 61,

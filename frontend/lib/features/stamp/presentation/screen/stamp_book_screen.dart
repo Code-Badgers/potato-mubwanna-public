@@ -1238,6 +1238,9 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
   int? _selectedSpotId;
   String? _travelFromCity;
   late final AnimationController _travelController;
+  List<RallybookStamp>? _cachedStamps;
+  List<RallybookSpot>? _cachedSpots;
+  _StampMapDerivedData? _cachedDerivedData;
 
   @override
   void initState() {
@@ -1280,25 +1283,17 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
 
   @override
   Widget build(BuildContext context) {
-    final stampsBySpotId = {
-      for (final stamp in widget.progress.stamps) stamp.spotId: stamp,
-    };
     final rallybookSpots = widget.rallybookSpots.maybeWhen(
       data: (spots) => spots ?? const <RallybookSpot>[],
       orElse: () => const <RallybookSpot>[],
     );
-    final spotsByCity = <String, List<RallybookSpot>>{};
-    for (final spot in rallybookSpots) {
-      spotsByCity
-          .putIfAbsent(_normalizeCityName(spot.cityName), () => [])
-          .add(spot);
-    }
-    final completedByCity = {
-      for (final entry in spotsByCity.entries)
-        entry.key: entry.value.every(
-          (spot) => stampsBySpotId[spot.spotId]?.acquired ?? false,
-        ),
-    };
+    final derivedData = _derivedDataFor(
+      rallybookSpots,
+      widget.progress.stamps,
+    );
+    final stampsBySpotId = derivedData.stampsBySpotId;
+    final spotsByCity = derivedData.spotsByCity;
+    final completedByCity = derivedData.completedByCity;
     final selectedSpot = _selectedSpotId == null
         ? null
         : _findSpotById(rallybookSpots, _selectedSpotId!);
@@ -1462,6 +1457,56 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
       ],
     );
   }
+
+  _StampMapDerivedData _derivedDataFor(
+    List<RallybookSpot> spots,
+    List<RallybookStamp> stamps,
+  ) {
+    final cached = _cachedDerivedData;
+    if (identical(_cachedSpots, spots) &&
+        identical(_cachedStamps, stamps) &&
+        cached != null) {
+      return cached;
+    }
+
+    final stampsBySpotId = {
+      for (final stamp in stamps) stamp.spotId: stamp,
+    };
+    final spotsByCity = <String, List<RallybookSpot>>{};
+    for (final spot in spots) {
+      spotsByCity
+          .putIfAbsent(_normalizeCityName(spot.cityName), () => [])
+          .add(spot);
+    }
+    final completedByCity = {
+      for (final entry in spotsByCity.entries)
+        entry.key: entry.value.every(
+          (spot) => stampsBySpotId[spot.spotId]?.acquired ?? false,
+        ),
+    };
+
+    final next = _StampMapDerivedData(
+      stampsBySpotId: stampsBySpotId,
+      spotsByCity: spotsByCity,
+      completedByCity: completedByCity,
+    );
+    _cachedSpots = spots;
+    _cachedStamps = stamps;
+    _cachedDerivedData = next;
+    return next;
+  }
+}
+
+class _StampMapDerivedData {
+  const _StampMapDerivedData({
+    required this.stampsBySpotId,
+    required this.spotsByCity,
+    required this.completedByCity,
+  });
+
+  final Map<int, RallybookStamp> stampsBySpotId;
+  final Map<String, List<RallybookSpot>> spotsByCity;
+  final Map<String, bool> completedByCity;
 }
 
 class _GangwonMapPainter extends CustomPainter {

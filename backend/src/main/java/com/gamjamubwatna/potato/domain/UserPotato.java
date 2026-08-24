@@ -3,6 +3,8 @@ package com.gamjamubwatna.potato.domain;
 import com.gamjamubwatna.auth.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -50,6 +52,10 @@ public class UserPotato {
     @Column(name = "representative", nullable = false)
     private boolean representative;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "acquisition_type", nullable = false, length = 30)
+    private PotatoAcquisitionType acquisitionType;
+
     @Column(name = "harvested_at")
     private Instant harvestedAt;
 
@@ -70,6 +76,26 @@ public class UserPotato {
         this.level = level;
         this.growthDistance = growthDistance;
         this.representative = representative;
+        this.acquisitionType = PotatoAcquisitionType.GROWTH;
+        this.harvestedAt = null;
+    }
+
+    public UserPotato(
+        User user,
+        Potato potato,
+        Instant acquiredAt,
+        int level,
+        double growthDistance,
+        boolean representative,
+        PotatoAcquisitionType acquisitionType
+    ) {
+        this.user = user;
+        this.potato = potato;
+        this.acquiredAt = acquiredAt;
+        this.level = level;
+        this.growthDistance = growthDistance;
+        this.representative = representative;
+        this.acquisitionType = acquisitionType == null ? PotatoAcquisitionType.GROWTH : acquisitionType;
         this.harvestedAt = null;
     }
 
@@ -88,6 +114,7 @@ public class UserPotato {
         this.level = level;
         this.growthDistance = growthDistance;
         this.representative = representative;
+        this.acquisitionType = PotatoAcquisitionType.GROWTH;
         this.harvestedAt = harvestedAt;
     }
 
@@ -117,6 +144,10 @@ public class UserPotato {
 
     public boolean isRepresentative() {
         return representative;
+    }
+
+    public PotatoAcquisitionType getAcquisitionType() {
+        return acquisitionType == null ? PotatoAcquisitionType.GROWTH : acquisitionType;
     }
 
     public Instant getHarvestedAt() {

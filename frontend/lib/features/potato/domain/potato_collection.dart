@@ -214,8 +214,7 @@ class PotatoRepresentativeResult {
 enum PotatoInteractionAction {
   pat('PAT'),
   water('WATER'),
-  snack('SNACK'),
-  walk('WALK');
+  snack('SNACK');
 
   const PotatoInteractionAction(this.apiValue);
 

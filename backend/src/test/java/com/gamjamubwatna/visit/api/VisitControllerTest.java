@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.potato.api.PotatoAcquisitionResponse;
+import com.gamjamubwatna.potato.domain.PotatoAcquisitionType;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.visit.application.VisitDuplicateException;
 import com.gamjamubwatna.visit.application.VisitVerificationException;
@@ -57,6 +58,7 @@ class VisitControllerTest {
                     "황금감자",
                     "강원특별자치도",
                     PotatoRarity.EPIC,
+                    PotatoAcquisitionType.VISIT.name(),
                     false
                 ),
                 false,
@@ -81,6 +83,7 @@ class VisitControllerTest {
             .andExpect(jsonPath("$.data.potatoAcquired").value(true))
             .andExpect(jsonPath("$.data.acquiredPotato.name").value("황금감자"))
             .andExpect(jsonPath("$.data.acquiredPotato.rarity").value("EPIC"))
+            .andExpect(jsonPath("$.data.acquiredPotato.acquisitionType").value("VISIT"))
             .andExpect(jsonPath("$.data.acquiredPotato.alreadyOwned").value(false))
             .andExpect(jsonPath("$.data.missionAvailable").value(false));
     }

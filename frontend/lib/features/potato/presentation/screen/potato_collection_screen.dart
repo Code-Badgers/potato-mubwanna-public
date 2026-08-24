@@ -533,7 +533,6 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
           PotatoInteractionAction.pat => '잘했어요. 오늘은 조금 더 가까워졌네요',
           PotatoInteractionAction.water => '물을 줬어요. 싹이 또렷해졌네요',
           PotatoInteractionAction.snack => '영양제를 줬어요. 제법 잘 자라요',
-          PotatoInteractionAction.walk => '산책했어요. 감자가 한 뼘 더 자랐네요',
         };
       });
     } on ApiException catch (error) {

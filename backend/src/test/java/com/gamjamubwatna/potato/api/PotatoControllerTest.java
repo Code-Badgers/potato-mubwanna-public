@@ -75,6 +75,7 @@ class PotatoControllerTest {
             .andExpect(jsonPath("$.data.acquiredCount").value(1))
             .andExpect(jsonPath("$.data.items[0].acquired").value(true))
             .andExpect(jsonPath("$.data.items[0].level").value(2))
+            .andExpect(jsonPath("$.data.items[0].acquisitionType").value("GROWTH"))
             .andExpect(jsonPath("$.data.items[0].representative").value(true));
     }
 
@@ -312,6 +313,7 @@ class PotatoControllerTest {
             PotatoRarity.COMMON,
             "강릉 여행길에서 처음 만나기 좋은 기본 감자입니다.",
             "강릉 감자 스팟 방문 인증",
+            "VISIT",
             null,
             3000.0
         );

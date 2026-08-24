@@ -49,7 +49,7 @@ public record UserPotatoCollectionItemResponse(
             potato.getGrowthGoalDistance(),
             careStatus == null ? null : PotatoCareStatusResponse.from(careStatus),
             acquired && userPotato.isRepresentative(),
-            "GROWTH",
+            potato.getAcquisitionType().name(),
             acquired && userPotato.canHarvest(),
             acquired && userPotato.isHarvested()
         );

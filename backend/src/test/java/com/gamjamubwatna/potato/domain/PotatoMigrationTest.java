@@ -35,6 +35,8 @@ class PotatoMigrationTest {
         assertThat(potatoes).hasSize(16);
         assertThat(potatoes.getFirst().getCode()).isEqualTo("POTATO_DEFAULT_BEGINNER");
         assertThat(potatoes.getFirst().getRarity()).isEqualTo(PotatoRarity.COMMON);
+        assertThat(potatoes.getFirst().getAcquisitionType())
+            .isEqualTo(PotatoAcquisitionType.GROWTH);
         assertThat(potatoes.getLast().getCode()).isEqualTo("POTATO_RARE_SEED");
         assertThat(potatoes)
             .extracting(Potato::getCode)
@@ -56,6 +58,24 @@ class PotatoMigrationTest {
                 "POTATO_HOBAN_CHUNCHEON",
                 "POTATO_RARE_SEED"
             );
+    }
+
+    @Test
+    void classifiesPotatoCatalogAcquisitionTypes() {
+        List<Potato> potatoes = potatoRepository.findByActiveTrueOrderByDisplayOrderAsc();
+
+        assertThat(potatoes)
+            .filteredOn(potato -> potato.getCode().equals("POTATO_HAJI_GANGNEUNG"))
+            .extracting(Potato::getAcquisitionType)
+            .containsExactly(PotatoAcquisitionType.VISIT);
+        assertThat(potatoes)
+            .filteredOn(potato -> potato.getCode().equals("POTATO_LEGEND_PYEONGCHANG"))
+            .extracting(Potato::getAcquisitionType)
+            .containsExactly(PotatoAcquisitionType.MISSION);
+        assertThat(potatoes)
+            .filteredOn(potato -> potato.getCode().equals("POTATO_GONDRE_JEONGSEON"))
+            .extracting(Potato::getAcquisitionType)
+            .containsExactly(PotatoAcquisitionType.STAMP);
     }
 
     @Test

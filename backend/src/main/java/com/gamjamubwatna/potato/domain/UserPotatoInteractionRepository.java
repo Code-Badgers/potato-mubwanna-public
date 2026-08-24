@@ -12,5 +12,10 @@ public interface UserPotatoInteractionRepository extends JpaRepository<UserPotat
         PotatoInteractionAction action
     );
 
+    List<UserPotatoInteraction> findByUserPotatoIdAndActionOrderByInteractedAtDesc(
+        Long userPotatoId,
+        PotatoInteractionAction action
+    );
+
     List<UserPotatoInteraction> findByUserPotatoIdIn(Collection<Long> userPotatoIds);
 }

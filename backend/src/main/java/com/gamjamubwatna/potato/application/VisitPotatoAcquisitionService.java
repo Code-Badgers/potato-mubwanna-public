@@ -3,6 +3,7 @@ package com.gamjamubwatna.potato.application;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.potato.api.PotatoAcquisitionResponse;
 import com.gamjamubwatna.potato.domain.Potato;
+import com.gamjamubwatna.potato.domain.PotatoAcquisitionType;
 import com.gamjamubwatna.potato.domain.PotatoRepository;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.potato.domain.UserPotato;
@@ -55,12 +56,20 @@ public class VisitPotatoAcquisitionService {
 
         if (!alreadyOwned) {
             boolean firstPotato = ownedPotatoes.isEmpty();
-            userPotatoRepository.save(new UserPotato(user, potato, acquiredAt, 1, 0.0, firstPotato));
+            userPotatoRepository.save(new UserPotato(
+                user,
+                potato,
+                acquiredAt,
+                1,
+                0.0,
+                firstPotato,
+                PotatoAcquisitionType.VISIT
+            ));
         }
 
         return new PotatoAcquisitionResult(
             !alreadyOwned,
-            PotatoAcquisitionResponse.from(potato, alreadyOwned)
+            PotatoAcquisitionResponse.from(potato, alreadyOwned, PotatoAcquisitionType.VISIT)
         );
     }
 
