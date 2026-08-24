@@ -11,6 +11,7 @@ public record PotatoCatalogItemResponse(
     PotatoRarity rarity,
     String description,
     String acquisitionHint,
+    String acquisitionType,
     String imageUrl,
     double growthGoalDistance
 ) {
@@ -24,6 +25,7 @@ public record PotatoCatalogItemResponse(
             potato.getRarity(),
             potato.getDescription(),
             potato.getAcquisitionHint(),
+            potato.getAcquisitionType().name(),
             potato.getImageUrl(),
             potato.getGrowthGoalDistance()
         );

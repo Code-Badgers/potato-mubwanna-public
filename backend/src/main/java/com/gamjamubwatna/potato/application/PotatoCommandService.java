@@ -272,15 +272,26 @@ public class PotatoCommandService {
         PotatoInteractionAction action,
         Instant now
     ) {
-        Optional<UserPotatoInteraction> lastInteraction = userPotatoInteractionRepository
-            .findTopByUserPotatoIdAndActionOrderByInteractedAtDesc(representative.getId(), action);
-        if (lastInteraction.isEmpty()) {
+        List<UserPotatoInteraction> recentInteractions = userPotatoInteractionRepository
+            .findByUserPotatoIdAndActionOrderByInteractedAtDesc(representative.getId(), action);
+        if (recentInteractions.isEmpty()) {
             return;
         }
 
         Duration cooldown = action.cooldown();
-        Instant nextAvailableAt = lastInteraction.get().getInteractedAt().plus(cooldown);
-        if (now.isBefore(nextAvailableAt)) {
+        Instant latestInteractedAt = recentInteractions.getFirst().getInteractedAt();
+        Instant nextAvailableAt = latestInteractedAt.plus(cooldown);
+        if (!now.isBefore(nextAvailableAt)) {
+            return;
+        }
+
+        Instant cooldownWindowStart = now.minus(cooldown);
+        long interactionsDuringCooldown = recentInteractions.stream()
+            .filter(interaction -> !interaction.getInteractedAt().isBefore(cooldownWindowStart))
+            .count();
+
+        // 같은 액션은 정해진 횟수까지 연속 허용하고, 한도를 채운 뒤 마지막 사용 시각 기준으로 쉰다.
+        if (interactionsDuringCooldown >= action.consecutiveUseLimit()) {
             throw new PotatoInteractionCooldownException(
                 "아직 다시 돌볼 수 없습니다. 잠시 후 다시 시도해주세요.",
                 nextAvailableAt

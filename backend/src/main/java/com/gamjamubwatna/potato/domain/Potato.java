@@ -38,6 +38,10 @@ public class Potato {
     @Column(name = "acquisition_hint", nullable = false, length = 255)
     private String acquisitionHint;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "acquisition_type", nullable = false, length = 30)
+    private PotatoAcquisitionType acquisitionType;
+
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
@@ -78,6 +82,7 @@ public class Potato {
         this.rarity = rarity;
         this.description = description;
         this.acquisitionHint = acquisitionHint;
+        this.acquisitionType = PotatoAcquisitionType.GROWTH;
         this.imageUrl = imageUrl;
         this.growthGoalDistance = growthGoalDistance;
         this.displayOrder = displayOrder;
@@ -112,6 +117,10 @@ public class Potato {
 
     public String getAcquisitionHint() {
         return acquisitionHint;
+    }
+
+    public PotatoAcquisitionType getAcquisitionType() {
+        return acquisitionType == null ? PotatoAcquisitionType.GROWTH : acquisitionType;
     }
 
     public String getImageUrl() {

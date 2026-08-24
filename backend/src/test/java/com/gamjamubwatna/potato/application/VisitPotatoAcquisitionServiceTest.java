@@ -11,6 +11,7 @@ import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
 import com.gamjamubwatna.potato.domain.Potato;
+import com.gamjamubwatna.potato.domain.PotatoAcquisitionType;
 import com.gamjamubwatna.potato.domain.PotatoRepository;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.potato.domain.UserPotato;
@@ -61,6 +62,26 @@ class VisitPotatoAcquisitionServiceTest {
         assertThat(result.potato().rarity()).isEqualTo(PotatoRarity.EPIC);
         assertThat(result.potato().alreadyOwned()).isFalse();
         verify(userPotatoRepository).save(any(UserPotato.class));
+    }
+
+    @Test
+    void storesVisitAcquisitionTypeForVisitRewardPotato() {
+        User user = user();
+        Potato common = potato(1L, "하지감자", PotatoRarity.COMMON);
+        when(potatoRepository.findByActiveTrueOrderByDisplayOrderAsc()).thenReturn(List.of(common));
+        when(userPotatoRepository.findByUserId(1L)).thenReturn(List.of());
+        when(userPotatoRepository.save(any(UserPotato.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.acquireForVisit(
+            user,
+            spot(CongestionLevel.HIGH),
+            Instant.parse("2026-07-26T00:00:00Z")
+        );
+
+        var captor = org.mockito.ArgumentCaptor.forClass(UserPotato.class);
+        verify(userPotatoRepository).save(captor.capture());
+        assertThat(captor.getValue().getAcquisitionType()).isEqualTo(PotatoAcquisitionType.VISIT);
     }
 
     @Test
