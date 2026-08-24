@@ -29,6 +29,13 @@ void main() {
     }
     expect(courses.first.heroImageUrl, 'https://example.com/ongshimi.jpg');
   });
+
+  test('reuses resolved courses for unchanged spot data', () {
+    final first = buildTravelCourses(_spots);
+    final second = buildTravelCourses(_spots);
+
+    expect(identical(first, second), isTrue);
+  });
 }
 
 const _spots = [

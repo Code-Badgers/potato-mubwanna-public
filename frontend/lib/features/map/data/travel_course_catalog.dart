@@ -164,10 +164,42 @@ class _TravelCoursePlaceSpec {
   }
 }
 
+final _travelCourseCache = <String, List<TravelCourse>>{};
+
 List<TravelCourse> buildTravelCourses(List<MapSpot> spots) {
-  return _travelCourseDefinitions
+  final cacheKey = _travelCourseCacheKey(spots);
+  final cached = _travelCourseCache[cacheKey];
+  if (cached != null) {
+    return cached;
+  }
+
+  final courses = _travelCourseDefinitions
       .map((definition) => definition.resolve(spots))
-      .toList();
+      .toList(growable: false);
+
+  if (_travelCourseCache.length >= 8) {
+    _travelCourseCache.clear();
+  }
+  _travelCourseCache[cacheKey] = courses;
+  return courses;
+}
+
+String _travelCourseCacheKey(List<MapSpot> spots) {
+  if (spots.isEmpty) {
+    return 'empty';
+  }
+  return spots
+      .map(
+        (spot) => [
+          spot.id,
+          spot.name,
+          spot.category,
+          spot.cityName,
+          spot.imageUrl ?? '',
+          spot.congestionLevel,
+        ].join(':'),
+      )
+      .join('|');
 }
 
 const _foodCategories = {
