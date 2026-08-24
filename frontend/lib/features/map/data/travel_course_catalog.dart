@@ -41,15 +41,19 @@ class TravelCourse {
 class TravelCourseStop {
   const TravelCourseStop({
     required this.spot,
+    required this.heading,
     required this.editorial,
     required this.featureLabel,
     required this.imageAsset,
+    required this.transitionText,
   });
 
   final MapSpot spot;
+  final String heading;
   final String editorial;
   final String featureLabel;
   final String imageAsset;
+  final String transitionText;
 }
 
 class _TravelCourseDefinition {
@@ -91,9 +95,11 @@ class _TravelCourseDefinition {
       stops.add(
         TravelCourseStop(
           spot: spot,
+          heading: spec.heading ?? spec.featureLabel,
           editorial: spec.editorial,
           featureLabel: spec.featureLabel,
           imageAsset: spec.imageAsset,
+          transitionText: spec.transitionText,
         ),
       );
     }
@@ -136,16 +142,20 @@ class _TravelCoursePlaceSpec {
   const _TravelCoursePlaceSpec({
     required this.nameKeywords,
     required this.categories,
+    this.heading,
     required this.editorial,
     required this.featureLabel,
     required this.imageAsset,
+    this.transitionText = '',
   });
 
   final List<String> nameKeywords;
   final Set<String> categories;
+  final String? heading;
   final String editorial;
   final String featureLabel;
   final String imageAsset;
+  final String transitionText;
 
   MapSpot? match(List<MapSpot> spots, Set<String> usedSpotIds) {
     for (final spot in spots) {
@@ -238,11 +248,13 @@ const _travelCourseDefinitions = [
       _TravelCoursePlaceSpec(
         nameKeywords: ['감자', '옹심이', '전'],
         categories: _foodCategories,
+        heading: '첫 끼는 따뜻하게',
         editorial:
             '강원도 감자 여행은 든든한 한 끼에서 시작해요. 고소하고 따뜻한 맛을 먼저 채워두면 다음 걸음도 가벼워집니다.',
         featureLabel: '감자 요리',
         imageAsset:
             'assets/stamps/passport/spots/passport_spot_20_jeongseon_market.png',
+        transitionText: '배를 든든히 채웠다면, 이제 골목의 온도를 느껴볼 차례예요.',
       ),
       _TravelCoursePlaceSpec(
         nameKeywords: ['시장', '5일장', '중앙시장'],
@@ -277,10 +289,12 @@ const _travelCourseDefinitions = [
       _TravelCoursePlaceSpec(
         nameKeywords: ['시장', '5일장', '중앙시장'],
         categories: _tourCategories,
+        heading: '사람 냄새 나는 시작',
         editorial: '사람들이 모이는 곳에는 그 지역의 리듬이 있어요. 가볍게 둘러보며 강원도의 오늘을 만나보세요.',
         featureLabel: '시장 산책',
         imageAsset:
             'assets/stamps/passport/spots/passport_spot_09_sokcho_market.png',
+        transitionText: '활기를 조금 담았다면, 바다 가까운 거리로 걸음을 옮겨봐요.',
       ),
       _TravelCoursePlaceSpec(
         nameKeywords: ['해변', '서피', '안목', '거리'],
@@ -315,10 +329,12 @@ const _travelCourseDefinitions = [
       _TravelCoursePlaceSpec(
         nameKeywords: ['뮤지엄', '미술관', '아트'],
         categories: _tourCategories,
+        heading: '공간이 먼저 말을 거는 곳',
         editorial: '공간 자체가 기억에 남는 곳이에요. 천천히 둘러보다 보면 여행 사진도 자연스럽게 채워집니다.',
         featureLabel: '문화 공간',
         imageAsset:
             'assets/stamps/passport/spots/passport_spot_03_museum_san.png',
+        transitionText: '사진을 충분히 남겼다면, 잠깐 쉬어갈 수 있는 곳으로 이어가요.',
       ),
       _TravelCoursePlaceSpec(
         nameKeywords: ['카페', '감자빵', '안목'],
@@ -353,10 +369,12 @@ const _travelCourseDefinitions = [
       _TravelCoursePlaceSpec(
         nameKeywords: ['자작', '숲', '수타사'],
         categories: _tourCategories,
+        heading: '말보다 바람이 좋은 날',
         editorial: '사람 많은 곳보다 나무 사이 바람이 더 반가운 날이 있죠. 조용히 걸으며 마음을 정리하기 좋아요.',
         featureLabel: '숲길 산책',
         imageAsset:
             'assets/stamps/passport/spots/passport_spot_25_wondaeri_birch_forest.png',
+        transitionText: '조용한 숲길 뒤에는 물가를 따라 속도를 조금 더 낮춰봐요.',
       ),
       _TravelCoursePlaceSpec(
         nameKeywords: ['호수', '청령포', '두타연'],
@@ -391,10 +409,12 @@ const _travelCourseDefinitions = [
       _TravelCoursePlaceSpec(
         nameKeywords: ['안목', '해변', '카페'],
         categories: _seaCategories,
+        heading: '커피보다 먼저 보이는 바다',
         editorial: '바다를 보며 쉬고 싶다면 첫 목적지로 좋아요. 커피 한 잔과 파도 소리만으로도 충분합니다.',
         featureLabel: '오션뷰 카페',
         imageAsset:
             'assets/stamps/passport/spots/passport_spot_05_anmok_beach.png',
+        transitionText: '파도 소리를 들었다면, 조금 더 가까운 해안 풍경으로 이동해요.',
       ),
       _TravelCoursePlaceSpec(
         nameKeywords: ['영금정', '등대', '항'],
@@ -429,10 +449,12 @@ const _travelCourseDefinitions = [
       _TravelCoursePlaceSpec(
         nameKeywords: ['뮤지엄', '미술관', '건축'],
         categories: _tourCategories,
+        heading: '선과 여백이 예쁜 공간',
         editorial: '선과 여백이 예쁜 공간은 사진을 어렵지 않게 만들어줘요. 천천히 걸으며 마음에 드는 구도를 찾아보세요.',
         featureLabel: '건축 감성',
         imageAsset:
             'assets/stamps/passport/spots/passport_spot_03_museum_san.png',
+        transitionText: '공간의 사진을 담았다면 이번에는 넓게 열린 풍경을 만나러 가요.',
       ),
       _TravelCoursePlaceSpec(
         nameKeywords: ['낙산', '전망대', '고석정', '경포'],
