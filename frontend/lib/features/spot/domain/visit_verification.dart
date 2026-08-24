@@ -103,6 +103,7 @@ class VisitAcquiredPotato {
     required this.name,
     required this.region,
     required this.rarity,
+    required this.acquisitionType,
     required this.alreadyOwned,
   });
 
@@ -111,6 +112,7 @@ class VisitAcquiredPotato {
   final String name;
   final String region;
   final String rarity;
+  final String acquisitionType;
   final bool alreadyOwned;
 
   factory VisitAcquiredPotato.fromJson(Object? json) {
@@ -121,6 +123,7 @@ class VisitAcquiredPotato {
       name: data['name'] as String? ?? '',
       region: data['region'] as String? ?? '',
       rarity: data['rarity'] as String? ?? 'COMMON',
+      acquisitionType: data['acquisitionType'] as String? ?? 'VISIT',
       alreadyOwned: data['alreadyOwned'] as bool? ?? false,
     );
   }

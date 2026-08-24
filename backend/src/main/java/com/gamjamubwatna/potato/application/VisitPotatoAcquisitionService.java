@@ -69,7 +69,7 @@ public class VisitPotatoAcquisitionService {
 
         return new PotatoAcquisitionResult(
             !alreadyOwned,
-            PotatoAcquisitionResponse.from(potato, alreadyOwned)
+            PotatoAcquisitionResponse.from(potato, alreadyOwned, PotatoAcquisitionType.VISIT)
         );
     }
 

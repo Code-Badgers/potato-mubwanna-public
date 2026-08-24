@@ -27,6 +27,7 @@ void main() {
     expect(result.potatoAcquired, isTrue);
     expect(result.acquiredPotato?.name, '황금감자');
     expect(result.acquiredPotato?.rarityLabel, '영웅');
+    expect(result.acquiredPotato?.acquisitionType, 'VISIT');
     expect(result.acquiredPotato?.alreadyOwned, isFalse);
     expect(result.missionAvailable, isTrue);
     expect(result.unlockedMission?.id, '1004');
@@ -129,6 +130,7 @@ const _successResponse = <String, Object?>{
       'name': '황금감자',
       'region': '강원특별자치도',
       'rarity': 'EPIC',
+      'acquisitionType': 'VISIT',
       'alreadyOwned': false,
     },
     'missionAvailable': true,

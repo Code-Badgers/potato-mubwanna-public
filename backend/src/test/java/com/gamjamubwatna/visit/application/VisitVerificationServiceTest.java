@@ -22,6 +22,7 @@ import com.gamjamubwatna.mission.domain.UserMissionRepository;
 import com.gamjamubwatna.potato.api.PotatoAcquisitionResponse;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService;
 import com.gamjamubwatna.potato.application.VisitPotatoAcquisitionService.PotatoAcquisitionResult;
+import com.gamjamubwatna.potato.domain.PotatoAcquisitionType;
 import com.gamjamubwatna.potato.domain.PotatoRarity;
 import com.gamjamubwatna.push.application.PushEventPublisher;
 import com.gamjamubwatna.push.application.PushNotificationMessage;
@@ -104,6 +105,7 @@ class VisitVerificationServiceTest {
                     "황금감자",
                     "강원특별자치도",
                     PotatoRarity.EPIC,
+                    PotatoAcquisitionType.VISIT.name(),
                     false
                 )
             ));
@@ -124,6 +126,7 @@ class VisitVerificationServiceTest {
         assertThat(result.stampIssued()).isTrue();
         assertThat(result.potatoAcquired()).isTrue();
         assertThat(result.acquiredPotato().name()).isEqualTo("황금감자");
+        assertThat(result.acquiredPotato().acquisitionType()).isEqualTo("VISIT");
         assertThat(result.acquiredPotato().alreadyOwned()).isFalse();
         assertThat(result.missionAvailable()).isFalse();
         assertThat(result.unlockedMission()).isNull();
