@@ -70,6 +70,7 @@ jobs:
           ./backend/gradlew -p backend test build --no-daemon
           docker compose --env-file deploy/.env.example -f deploy/compose.prod.yml config --quiet
           bash deploy/tests/deploy-backend-test.sh
+          bash deploy/tests/sync-tour-api-secret-test.sh
           bash deploy/tests/caddy-config-test.sh
           bash deploy/tests/nginx-legal-page-test.sh
 
@@ -79,6 +80,12 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           role-session-name: github-actions-backend-deploy
           aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync TourAPI production secret
+        shell: bash
+        env:
+          TOUR_API_SERVICE_KEY: ${{ secrets.TOUR_API_SERVICE_KEY }}
+        run: bash deploy/sync-tour-api-secret.sh
 
       - name: Resolve local image tag
         id: image

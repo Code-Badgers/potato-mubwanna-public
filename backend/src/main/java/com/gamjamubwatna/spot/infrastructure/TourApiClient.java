@@ -13,9 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriUtils;
 import org.springframework.web.client.RestClient;
@@ -157,16 +157,18 @@ public class TourApiClient {
             return Optional.empty();
         }
 
-        JsonNode commonItem = firstItem(restClient.get()
-            .uri(detailCommonUri(contentId))
-            .retrieve()
-            .body(JsonNode.class));
+        JsonNode commonItem = fetchDetailItem(
+            "detailCommon2",
+            contentId,
+            detailCommonUri(contentId)
+        );
         JsonNode introItem = contentTypeId == null
             ? null
-            : firstItem(restClient.get()
-                .uri(detailIntroUri(contentId, contentTypeId))
-                .retrieve()
-                .body(JsonNode.class));
+            : fetchDetailItem(
+                "detailIntro2",
+                contentId,
+                detailIntroUri(contentId, contentTypeId)
+            );
 
         SpotTourInfo tourInfo = new SpotTourInfo(
             readFirstText(commonItem, "overview"),
@@ -192,6 +194,25 @@ public class TourApiClient {
     private void logMissingServiceKey() {
         if (missingServiceKeyLogged.compareAndSet(false, true)) {
             log.warn("TourAPI enrichment unavailable: TOUR_API_SERVICE_KEY is not configured");
+        }
+    }
+
+    private JsonNode fetchDetailItem(String endpoint, String contentId, URI uri) {
+        try {
+            return firstItem(restClient.get()
+                .uri(uri)
+                .retrieve()
+                .body(JsonNode.class));
+        } catch (RuntimeException exception) {
+            // 공통/소개 API는 서로 독립된 데이터이므로 한쪽 장애가 다른 쪽의
+            // 정상 필드까지 숨기지 않게 하고, 키가 포함될 수 있는 예외 메시지는 기록하지 않는다.
+            log.warn(
+                "TourAPI detail response skipped. endpoint={}, contentId={}, errorType={}",
+                endpoint,
+                contentId,
+                exception.getClass().getSimpleName()
+            );
+            return null;
         }
     }
 

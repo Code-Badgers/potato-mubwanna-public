@@ -54,6 +54,7 @@ jobs:
         run: |
           docker compose --env-file .env.example -f compose.prod.yml config --quiet
           bash tests/deploy-backend-test.sh
+          bash tests/sync-tour-api-secret-test.sh
           bash tests/caddy-config-test.sh
           bash tests/nginx-legal-page-test.sh
 

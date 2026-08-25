@@ -321,6 +321,74 @@ class TourApiClientTest {
             .contains("numOfRows=10");
     }
 
+    @Test
+    void returnsIntroInfoWhenDetailCommonHasAnUnexpectedResponse() {
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] body = "<OpenAPI_ServiceResponse><error>invalid response</error></OpenAPI_ServiceResponse>"
+                .getBytes(StandardCharsets.UTF_8);
+            writeResponse(exchange, "application/xml", 200, body);
+        });
+        server.createContext("/detailIntro2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "usetime": "09:00 - 18:00",
+                          "restdate": "연중무휴",
+                          "parking": "가능",
+                          "infocenter": "033-000-0000"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+
+        assertThat(client("encoded%2Bkey").findSpotTourInfo("12345", 12))
+            .hasValueSatisfying(info -> {
+                assertThat(info.description()).isNull();
+                assertThat(info.openingHours()).isEqualTo("09:00 - 18:00");
+                assertThat(info.closedDays()).isEqualTo("연중무휴");
+                assertThat(info.parking()).isEqualTo("가능");
+                assertThat(info.contactPhone()).isEqualTo("033-000-0000");
+            });
+    }
+
+    @Test
+    void returnsCommonInfoWhenDetailIntroFails() {
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "overview": "공통 소개는 정상입니다."
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+        server.createContext("/detailIntro2", exchange -> {
+            byte[] body = "upstream failure".getBytes(StandardCharsets.UTF_8);
+            writeResponse(exchange, "text/plain", 503, body);
+        });
+
+        assertThat(client("encoded%2Bkey").findSpotTourInfo("12345", 12))
+            .hasValueSatisfying(info -> {
+                assertThat(info.description()).isEqualTo("공통 소개는 정상입니다.");
+                assertThat(info.openingHours()).isNull();
+                assertThat(info.closedDays()).isNull();
+            });
+    }
+
     private TourApiClient client(String serviceKey) {
         return new TourApiClient(
             RestClient.builder(),
@@ -353,8 +421,17 @@ class TourApiClientTest {
     }
 
     private void writeJson(com.sun.net.httpserver.HttpExchange exchange, byte[] body) throws IOException {
-        exchange.getResponseHeaders().add("Content-Type", "application/json");
-        exchange.sendResponseHeaders(200, body.length);
+        writeResponse(exchange, "application/json", 200, body);
+    }
+
+    private void writeResponse(
+        com.sun.net.httpserver.HttpExchange exchange,
+        String contentType,
+        int statusCode,
+        byte[] body
+    ) throws IOException {
+        exchange.getResponseHeaders().add("Content-Type", contentType);
+        exchange.sendResponseHeaders(statusCode, body.length);
         exchange.getResponseBody().write(body);
         exchange.close();
     }
