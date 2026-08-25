@@ -6,6 +6,7 @@
 - Travel course details now open as a full blog-style route page instead of a compact bottom sheet.
 - Existing full Kakao map entry, route saving, route mode, place detail, category filter, and navigation behavior were preserved.
 - Follow-up fixes keep travel course cards shorter, use a broader course image selection from API-backed `imageUrl` data, and normalize course detail stop images to one landscape ratio.
+- Map discovery/course imagery no longer falls back to stamp tour passport assets; missing API images now use the map page's neutral placeholder only.
 
 ## Changed Files
 
@@ -26,6 +27,10 @@
   - Result: PASS after follow-up course image/card ratio fixes.
 - `frontend`: `/Users/mac/Documents/flutter/bin/flutter analyze`
   - Result: PASS after follow-up course image/card ratio fixes.
+- `frontend`: `/Users/mac/Documents/flutter/bin/flutter test test/features/map/travel_course_catalog_test.dart test/features/map/map_screen_test.dart`
+  - Result: PASS after removing stamp tour asset fallback from map imagery.
+- `frontend`: `/Users/mac/Documents/flutter/bin/flutter analyze`
+  - Result: PASS after removing stamp tour asset fallback from map imagery.
 
 ## Notes
 

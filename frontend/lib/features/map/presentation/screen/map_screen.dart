@@ -1071,7 +1071,6 @@ class _TravelCourseCard extends StatelessWidget {
                       width: double.infinity,
                       child: _CourseImage(
                         imageUrl: course.heroImageUrl,
-                        asset: course.heroImageAsset,
                         icon: _courseFallbackIcon(course.id),
                       ),
                     ),
@@ -1187,12 +1186,10 @@ class _TravelCourseCard extends StatelessWidget {
 class _CourseImage extends StatelessWidget {
   const _CourseImage({
     this.imageUrl,
-    required this.asset,
     required this.icon,
   });
 
   final String? imageUrl;
-  final String asset;
   final IconData icon;
 
   @override
@@ -1203,32 +1200,10 @@ class _CourseImage extends StatelessWidget {
         imageUrl: effectiveImageUrl,
         fit: BoxFit.cover,
         placeholder: (_, __) => _CourseImageFallback(icon: icon),
-        errorWidget: (_, __, ___) => _CourseImageAssetFallback(
-          asset: asset,
-          icon: icon,
-        ),
+        errorWidget: (_, __, ___) => _CourseImageFallback(icon: icon),
       );
     }
-    return _CourseImageAssetFallback(asset: asset, icon: icon);
-  }
-}
-
-class _CourseImageAssetFallback extends StatelessWidget {
-  const _CourseImageAssetFallback({
-    required this.asset,
-    required this.icon,
-  });
-
-  final String asset;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      asset,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _CourseImageFallback(icon: icon),
-    );
+    return _CourseImageFallback(icon: icon);
   }
 }
 
@@ -1333,7 +1308,6 @@ class _TravelCourseDetailPage extends StatelessWidget {
                 children: [
                   _CourseImage(
                     imageUrl: course.heroImageUrl,
-                    asset: course.heroImageAsset,
                     icon: _courseFallbackIcon(course.id),
                   ),
                   DecoratedBox(
@@ -1659,7 +1633,6 @@ class _CourseStopCard extends StatelessWidget {
         aspectRatio: 1.72,
         child: _CourseImage(
           imageUrl: stop.spot.imageUrl,
-          asset: stop.imageAsset,
           icon: Icons.place_rounded,
         ),
       ),
@@ -2150,7 +2123,6 @@ class _PopularSpotCard extends StatelessWidget {
                   height: 72,
                   child: _CourseImage(
                     imageUrl: spot.imageUrl,
-                    asset: _spotImageAsset(spot),
                     icon: Icons.place_rounded,
                   ),
                 ),
@@ -2199,83 +2171,6 @@ class _PopularSpotCard extends StatelessWidget {
       ),
     );
   }
-}
-
-String _spotImageAsset(MapSpot spot) {
-  final text = '${spot.name} ${spot.address} ${spot.cityName}';
-  if (text.contains('소양강')) {
-    return 'assets/stamps/passport/spots/passport_spot_02_soyang_skywalk.png';
-  }
-  if (text.contains('뮤지엄') || text.contains('미술관')) {
-    return 'assets/stamps/passport/spots/passport_spot_03_museum_san.png';
-  }
-  if (text.contains('경포')) {
-    return 'assets/stamps/passport/spots/passport_spot_04_gyeongpodae.png';
-  }
-  if (text.contains('안목') || text.contains('카페')) {
-    return 'assets/stamps/passport/spots/passport_spot_05_anmok_beach.png';
-  }
-  if (text.contains('논골')) {
-    return 'assets/stamps/passport/spots/passport_spot_06_nongoldam_road.png';
-  }
-  if (text.contains('등대')) {
-    return 'assets/stamps/passport/spots/passport_spot_07_mukho_lighthouse.png';
-  }
-  if (text.contains('황지')) {
-    return 'assets/stamps/passport/spots/passport_spot_08_hwangji_pond.png';
-  }
-  if (text.contains('시장') || text.contains('5일장')) {
-    return 'assets/stamps/passport/spots/passport_spot_09_sokcho_market.png';
-  }
-  if (text.contains('영금정')) {
-    return 'assets/stamps/passport/spots/passport_spot_10_yeonggeumjeong.png';
-  }
-  if (text.contains('장호')) {
-    return 'assets/stamps/passport/spots/passport_spot_11_jangho_port.png';
-  }
-  if (text.contains('환선')) {
-    return 'assets/stamps/passport/spots/passport_spot_12_hwanseon_cave.png';
-  }
-  if (text.contains('비발디')) {
-    return 'assets/stamps/passport/spots/passport_spot_13_vivaldi_park.png';
-  }
-  if (text.contains('수타사')) {
-    return 'assets/stamps/passport/spots/passport_spot_14_sutasa.png';
-  }
-  if (text.contains('호수')) {
-    return 'assets/stamps/passport/spots/passport_spot_15_hoengseong_lake_trail.png';
-  }
-  if (text.contains('청령포')) {
-    return 'assets/stamps/passport/spots/passport_spot_17_cheongnyeongpo.png';
-  }
-  if (text.contains('대관령') || text.contains('목장')) {
-    return 'assets/stamps/passport/spots/passport_spot_18_daegwallyeong_sheep_ranch.png';
-  }
-  if (text.contains('문학관')) {
-    return 'assets/stamps/passport/spots/passport_spot_19_lee_hyoseok_museum.png';
-  }
-  if (text.contains('고석정')) {
-    return 'assets/stamps/passport/spots/passport_spot_21_goseokjeong.png';
-  }
-  if (text.contains('자작') || text.contains('숲')) {
-    return 'assets/stamps/passport/spots/passport_spot_25_wondaeri_birch_forest.png';
-  }
-  if (text.contains('전망대')) {
-    return 'assets/stamps/passport/spots/passport_spot_26_unification_observatory.png';
-  }
-  if (text.contains('화진포')) {
-    return 'assets/stamps/passport/spots/passport_spot_27_hwajinpo.png';
-  }
-  if (text.contains('낙산')) {
-    return 'assets/stamps/passport/spots/passport_spot_28_naksansa.png';
-  }
-  if (text.contains('서피')) {
-    return 'assets/stamps/passport/spots/passport_spot_29_surfyy_beach.png';
-  }
-  if (text.contains('남이섬')) {
-    return 'assets/stamps/passport/spots/passport_spot_01_nami_island.png';
-  }
-  return 'assets/stamps/passport/spots/passport_spot_20_jeongseon_market.png';
 }
 
 class _DiscoverySectionHeader extends StatelessWidget {
@@ -3077,7 +2972,6 @@ class _SpotTourInfoSection extends StatelessWidget {
                 height: 164,
                 child: _CourseImage(
                   imageUrl: imageUrl,
-                  asset: _spotImageAsset(spot),
                   icon: Icons.landscape_rounded,
                 ),
               ),

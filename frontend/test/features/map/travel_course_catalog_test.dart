@@ -21,8 +21,6 @@ void main() {
     for (final course in courses) {
       expect(course.categoryTitle, isNotEmpty);
       expect(course.editorialIntro, isNotEmpty);
-      expect(
-          course.heroImageAsset, startsWith('assets/stamps/passport/spots/'));
       expect(course.tags.length, greaterThanOrEqualTo(3));
       expect(course.stops, hasLength(3));
       expect(course.spots.map((spot) => spot.id).toSet(), hasLength(3));
@@ -68,6 +66,25 @@ void main() {
 
     expect(courses.first.title, '오늘 감자로 배 채워볼까? 🥔');
     expect(courses.first.heroImageUrl, 'https://example.com/potato-bread.jpg');
+  });
+
+  test('does not use stamp tour assets as course image fallback', () {
+    final courses = buildTravelCourses([
+      for (final spot in _spots)
+        MapSpot(
+          id: 'empty-image-${spot.id}',
+          name: spot.name,
+          category: spot.category,
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          address: spot.address,
+          cityName: spot.cityName,
+          congestionLevel: spot.congestionLevel,
+          stampEnabled: spot.stampEnabled,
+        ),
+    ]);
+
+    expect(courses.first.heroImageUrl, isNull);
   });
 }
 
