@@ -227,6 +227,56 @@ void main() {
     expect(find.text('대표 메뉴'), findsNothing);
   });
 
+  testWidgets('shows address images tour info and detail menu in spot sheet', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_richSpotDetail),
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+            mapViewBuilder: (spots, onSpotSelected) => Stack(
+              children: [
+                for (var index = 0; index < spots.length; index++)
+                  Positioned(
+                    left: 24 + (index * 64),
+                    top: 180,
+                    child: TextButton(
+                      key: ValueKey('rich-marker-${spots[index].id}'),
+                      onPressed: () => onSpotSelected(spots[index].id),
+                      child: Text('마커 ${spots[index].id}'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('rich-marker-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('강원특별자치도 정선군 감자길 12'), findsOneWidget);
+    expect(find.text('이곳은 어떤 곳인가요?'), findsOneWidget);
+    expect(find.textContaining('감자 디저트'), findsOneWidget);
+    expect(find.text('이용 안내'), findsOneWidget);
+    expect(find.text('11:00 - 20:00'), findsOneWidget);
+    expect(find.text('대표 메뉴'), findsOneWidget);
+    expect(find.text('감자라떼'), findsOneWidget);
+    expect(find.text('5,500원'), findsOneWidget);
+  });
+
   testWidgets('updates map spots without recreating the map after filtering', (
     tester,
   ) async {
@@ -1218,10 +1268,38 @@ Future<SpotDetail> _testSpotDetail(Ref ref, String spotId) async {
     name: '평창무이예술관',
     category: 'POTATO_TOUR',
     cityName: '평창군',
+    address: '강원특별자치도 평창군 봉평면',
     imageUrl: 'https://example.com/tour.jpg',
     description: '폐교를 예술 공간으로 꾸민 평창의 관광지입니다.',
     openingHours: '10:00 - 18:00',
     admissionFee: '성인 5,000원',
+  );
+}
+
+Future<SpotDetail> _richSpotDetail(Ref ref, String spotId) async {
+  return SpotDetail(
+    id: spotId,
+    name: '감자 카페',
+    category: 'POTATO_CAFE',
+    cityName: '정선군',
+    address: '강원특별자치도 정선군 감자길 12',
+    imageUrl: 'https://example.com/cafe.jpg',
+    imageUrls: const [
+      'https://example.com/cafe.jpg',
+      'https://example.com/cafe-2.jpg',
+      'https://example.com/cafe-3.jpg',
+    ],
+    description: '감자 디저트를 천천히 맛볼 수 있는 작은 카페입니다.',
+    openingHours: '11:00 - 20:00',
+    closedDays: '화요일',
+    menuItems: const [
+      MapSpotMenuItem(
+        name: '감자라떼',
+        priceWon: 5500,
+        priceNote: null,
+        verifiedOn: '2026-08-03',
+      ),
+    ],
   );
 }
 
@@ -1255,6 +1333,7 @@ class _FakeMapSpotRepository extends MapSpotRepository {
       name: '평창무이예술관',
       category: 'POTATO_TOUR',
       cityName: '평창군',
+      address: '강원특별자치도 평창군 봉평면',
       imageUrl: 'https://example.com/tour.jpg',
       description: '폐교를 예술 공간으로 꾸민 평창의 관광지입니다.',
       openingHours: '10:00 - 18:00',
