@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../data/travel_course_catalog.dart';
@@ -3870,11 +3871,8 @@ class _MapLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(color: AppColors.primaryTint),
-      child: Center(
-        child: CircularProgressIndicator(color: _mapPrimary),
-      ),
+    return const PotatoLoadingView.fullScreen(
+      subtitle: '강원도의 특별한 장소를 불러오고 있어요',
     );
   }
 }

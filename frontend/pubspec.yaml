@@ -54,6 +54,7 @@ flutter:
     - assets/characters/jumsooni/
     - assets/characters/potatoes/
     - assets/characters/potatoes/growth/
+    - assets/loading/
     - assets/stamps/
     - assets/stamps/passport/
     - assets/stamps/passport/spots/
