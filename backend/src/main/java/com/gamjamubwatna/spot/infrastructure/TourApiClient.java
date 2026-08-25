@@ -75,6 +75,16 @@ public class TourApiClient {
         return List.copyOf(uniqueItems.values());
     }
 
+    public List<TourApiSpotItem> searchByKeyword(String keyword, int numOfRows) {
+        if (serviceKey == null || serviceKey.isBlank()) {
+            throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
+        }
+        if (keyword == null || keyword.isBlank() || numOfRows <= 0) {
+            return List.of();
+        }
+        return searchPotatoSpots(keyword.trim(), 1, Math.min(numOfRows, 10));
+    }
+
     public Optional<String> findRepresentativeImage(String contentId) {
         return findRepresentativeImages(contentId, 1).stream().findFirst();
     }
