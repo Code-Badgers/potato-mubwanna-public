@@ -9,7 +9,7 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: PotatoLoadingView.fullScreen(
-          frameInterval: Duration(milliseconds: 220),
+          frameInterval: Duration(milliseconds: 700),
         ),
       ),
     );
@@ -21,8 +21,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.pump(const Duration(milliseconds: 220));
-    await tester.pump(const Duration(milliseconds: 160));
+    await tester.pump(const Duration(milliseconds: 700));
 
     expect(
       find.byKey(const ValueKey('assets/loading/potato_loading_02.png')),

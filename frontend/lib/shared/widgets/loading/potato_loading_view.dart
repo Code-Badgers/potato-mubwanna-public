@@ -11,7 +11,7 @@ class PotatoLoadingView extends StatefulWidget {
     this.message = '감자가 길을 찾는 중이에요',
     this.subtitle,
     this.fullScreen = false,
-    this.frameInterval = const Duration(milliseconds: 220),
+    this.frameInterval = const Duration(milliseconds: 700),
     this.backgroundColor,
   });
 
@@ -19,7 +19,7 @@ class PotatoLoadingView extends StatefulWidget {
     super.key,
     this.message = '감자가 길을 찾는 중이에요',
     this.subtitle,
-    this.frameInterval = const Duration(milliseconds: 220),
+    this.frameInterval = const Duration(milliseconds: 700),
     this.backgroundColor = AppColors.background,
   }) : fullScreen = true;
 
@@ -27,7 +27,7 @@ class PotatoLoadingView extends StatefulWidget {
     super.key,
     this.message = '감자가 길을 찾는 중이에요',
     this.subtitle,
-    this.frameInterval = const Duration(milliseconds: 220),
+    this.frameInterval = const Duration(milliseconds: 700),
     this.backgroundColor,
   }) : fullScreen = false;
 
@@ -134,17 +134,12 @@ class _PotatoLoadingViewState extends State<PotatoLoadingView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 160),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: Image.asset(
-                    frameAsset,
-                    key: ValueKey(frameAsset),
-                    width: frameWidth,
-                    fit: BoxFit.contain,
-                    gaplessPlayback: true,
-                  ),
+                Image.asset(
+                  frameAsset,
+                  key: ValueKey(frameAsset),
+                  width: frameWidth,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
                 ),
                 const SizedBox(height: 18),
                 Text(
