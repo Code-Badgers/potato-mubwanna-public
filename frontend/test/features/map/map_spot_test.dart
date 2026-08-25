@@ -12,8 +12,22 @@ void main() {
       'address': '강원특별자치도 춘천시',
       'cityName': '춘천시',
       'imageUrl': ' https://example.com/spot.jpg ',
+      'imageUrls': [
+        ' https://example.com/spot.jpg ',
+        'https://example.com/google-photo.jpg',
+      ],
       'congestionLevel': 'NORMAL',
       'stampEnabled': true,
+      'phone': '033-000-0000',
+      'website': 'https://example.com',
+      'rating': 4.3,
+      'businessOpeningHours': {
+        'openNow': true,
+        'todayText': '화요일: 오전 11:00~오후 8:00',
+        'weekdayDescriptions': [
+          '화요일: 오전 11:00~오후 8:00',
+        ],
+      },
       'menuItems': [
         {
           'name': '감자빵',
@@ -32,6 +46,19 @@ void main() {
 
     expect(spot.menuItems, hasLength(2));
     expect(spot.imageUrl, 'https://example.com/spot.jpg');
+    expect(spot.imageUrls, [
+      'https://example.com/spot.jpg',
+      'https://example.com/google-photo.jpg',
+    ]);
+    expect(spot.effectiveImageUrls, [
+      'https://example.com/spot.jpg',
+      'https://example.com/google-photo.jpg',
+    ]);
+    expect(spot.phone, '033-000-0000');
+    expect(spot.website, 'https://example.com');
+    expect(spot.rating, 4.3);
+    expect(spot.businessOpeningHours?.openNow, isTrue);
+    expect(spot.todayOpeningText, '화요일: 오전 11:00~오후 8:00');
     expect(spot.menuItems[0].priceLabel, '3,300원');
     expect(spot.menuItems[0].verifiedOnLabel, '2026.08.03');
     expect(spot.menuItems[1].priceLabel, '변동가격');

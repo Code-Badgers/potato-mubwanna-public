@@ -37,10 +37,14 @@ class SpotServiceTest {
     void returnsAtMostThreeMenuItemsForEachSpotAndAnEmptyListWithoutMenus() {
         TouristSpot cafe = spot(1L, "감자밭", SpotCategory.POTATO_CAFE);
         TouristSpot attraction = spot(2L, "남이섬", SpotCategory.POTATO_TOUR);
-        when(spotImageResolver.resolveImageUrl(cafe))
-            .thenReturn("https://example.com/cafe.jpg");
-        when(spotImageResolver.resolveImageUrl(attraction))
-            .thenReturn("https://example.com/attraction.jpg");
+        when(spotImageResolver.resolveImageUrls(cafe, 3))
+            .thenReturn(List.of("https://example.com/cafe.jpg"));
+        when(spotImageResolver.resolveImageUrls(attraction, 3))
+            .thenReturn(List.of("https://example.com/attraction.jpg"));
+        when(externalPlaceDetailsResolver.resolve(cafe))
+            .thenReturn(ExternalPlaceDetails.empty());
+        when(externalPlaceDetailsResolver.resolve(attraction))
+            .thenReturn(ExternalPlaceDetails.empty());
         when(touristSpotRepository.findActiveSpots(null, null, null))
             .thenReturn(List.of(cafe, attraction));
         when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
@@ -57,7 +61,42 @@ class SpotServiceTest {
             .extracting(item -> item.name())
             .containsExactly("감자빵", "감자빵 BOX(10ea)", "아메리카노");
         assertThat(responses.get(0).imageUrl()).isEqualTo("https://example.com/cafe.jpg");
+        assertThat(responses.get(0).imageUrls()).containsExactly("https://example.com/cafe.jpg");
         assertThat(responses.get(1).menuItems()).isEmpty();
+    }
+
+    @Test
+    void appendsGooglePlaceDetailsForRestaurantAndCafeList() {
+        TouristSpot cafe = spot(3L, "감자 카페", SpotCategory.POTATO_CAFE);
+        when(touristSpotRepository.findActiveSpots(null, null, null))
+            .thenReturn(List.of(cafe));
+        when(spotImageResolver.resolveImageUrls(cafe, 3))
+            .thenReturn(List.of());
+        when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
+            .thenReturn(List.of(menu(3L, "감자라떼", 5500, 1)));
+        when(externalPlaceDetailsResolver.resolve(cafe))
+            .thenReturn(new ExternalPlaceDetails(
+                "google-place-id",
+                "033-000-0000",
+                "https://example.com",
+                4.3,
+                new PlaceOpeningHours(true, "화요일: 오전 11:00~오후 8:00", List.of("화요일: 오전 11:00~오후 8:00")),
+                List.of("https://google.example.com/photo.jpg")
+            ));
+
+        List<SpotListResponse> responses = spotService.getSpots(null, null, null);
+
+        assertThat(responses).hasSize(1);
+        SpotListResponse response = responses.get(0);
+        assertThat(response.imageUrl()).isEqualTo("https://google.example.com/photo.jpg");
+        assertThat(response.imageUrls()).containsExactly("https://google.example.com/photo.jpg");
+        assertThat(response.phone()).isEqualTo("033-000-0000");
+        assertThat(response.website()).isEqualTo("https://example.com");
+        assertThat(response.rating()).isEqualTo(4.3);
+        assertThat(response.businessOpeningHours().todayText()).contains("오전 11:00");
+        assertThat(response.menuItems())
+            .extracting(item -> item.name())
+            .containsExactly("감자라떼");
     }
 
     @Test
@@ -65,8 +104,6 @@ class SpotServiceTest {
         TouristSpot attraction = spot(2L, "평창무이예술관", SpotCategory.POTATO_TOUR);
         when(touristSpotRepository.findByIdAndActiveTrue(2L))
             .thenReturn(java.util.Optional.of(attraction));
-        when(spotImageResolver.resolveImageUrl(attraction))
-            .thenReturn("https://example.com/muei.jpg");
         when(spotImageResolver.resolveImageUrls(attraction, 3))
             .thenReturn(List.of(
                 "https://example.com/muei.jpg",

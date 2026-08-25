@@ -68,6 +68,31 @@ void main() {
     expect(courses.first.heroImageUrl, 'https://example.com/potato-bread.jpg');
   });
 
+  test('uses TourAPI or external image candidates before app fallbacks', () {
+    final courses = buildTravelCourses([
+      for (final spot in _spots)
+        MapSpot(
+          id: 'candidate-image-${spot.id}',
+          name: spot.name,
+          category: spot.category,
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          address: spot.address,
+          cityName: spot.cityName,
+          imageUrls: spot.id == '1'
+              ? const ['https://tour.example.com/ongshimi.jpg']
+              : const [],
+          congestionLevel: spot.congestionLevel,
+          stampEnabled: spot.stampEnabled,
+        ),
+    ]);
+
+    expect(
+      courses.first.heroImageUrl,
+      'https://tour.example.com/ongshimi.jpg',
+    );
+  });
+
   test('does not use stamp tour assets as course image fallback', () {
     final courses = buildTravelCourses([
       for (final spot in _spots)

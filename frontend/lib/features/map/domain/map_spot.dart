@@ -10,6 +10,11 @@ class MapSpot {
     required this.congestionLevel,
     required this.stampEnabled,
     this.imageUrl,
+    this.imageUrls = const [],
+    this.phone,
+    this.website,
+    this.rating,
+    this.businessOpeningHours,
     this.menuItems = const [],
     this.isRecommended = false,
   });
@@ -29,6 +34,13 @@ class MapSpot {
       address: json['address'] as String? ?? '',
       cityName: json['cityName'] as String? ?? '',
       imageUrl: _readNullableString(json['imageUrl']),
+      imageUrls: _readImageUrls(json),
+      phone: _readNullableString(json['phone']),
+      website: _readNullableString(json['website']),
+      rating: _readNullableDouble(json['rating']),
+      businessOpeningHours: MapSpotBusinessOpeningHours.fromJson(
+        json['businessOpeningHours'],
+      ),
       congestionLevel: json['congestionLevel'] as String? ?? 'NORMAL',
       stampEnabled: json['stampEnabled'] as bool? ?? true,
       menuItems: menuItems,
@@ -43,6 +55,11 @@ class MapSpot {
   final String address;
   final String cityName;
   final String? imageUrl;
+  final List<String> imageUrls;
+  final String? phone;
+  final String? website;
+  final double? rating;
+  final MapSpotBusinessOpeningHours? businessOpeningHours;
   final String congestionLevel;
   final bool stampEnabled;
   final List<MapSpotMenuItem> menuItems;
@@ -58,6 +75,11 @@ class MapSpot {
       address: address,
       cityName: cityName,
       imageUrl: imageUrl,
+      imageUrls: imageUrls,
+      phone: phone,
+      website: website,
+      rating: rating,
+      businessOpeningHours: businessOpeningHours,
       congestionLevel: congestionLevel,
       stampEnabled: stampEnabled,
       menuItems: menuItems,
@@ -104,6 +126,27 @@ class MapSpot {
     return '#56C787';
   }
 
+  List<String> get effectiveImageUrls {
+    final urls = <String>[
+      ...imageUrls,
+      if (imageUrl != null) imageUrl!,
+    ];
+    return urls
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+  }
+
+  String? get todayOpeningText => businessOpeningHours?.todayText;
+
+  bool get hasBusinessInfo {
+    return (phone != null && phone!.trim().isNotEmpty) ||
+        (website != null && website!.trim().isNotEmpty) ||
+        rating != null ||
+        (businessOpeningHours?.hasInfo ?? false);
+  }
+
   bool get isRare => congestionLevel == 'LOW' || category == 'POTATO_TOUR';
 
   bool matchesCategoryLabel(String label) {
@@ -126,6 +169,68 @@ class MapSpot {
     }
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  static double? _readNullableDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value.trim());
+    }
+    return null;
+  }
+
+  static List<String> _readImageUrls(Map<String, dynamic> json) {
+    final values = (json['imageUrls'] as List<dynamic>? ?? const [])
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    final imageUrl = _readNullableString(json['imageUrl']);
+    if (imageUrl == null || values.contains(imageUrl)) {
+      return values;
+    }
+    return [imageUrl, ...values];
+  }
+}
+
+class MapSpotBusinessOpeningHours {
+  const MapSpotBusinessOpeningHours({
+    required this.weekdayDescriptions,
+    this.openNow,
+    this.todayText,
+  });
+
+  factory MapSpotBusinessOpeningHours.fromJson(dynamic json) {
+    if (json is! Map<String, dynamic>) {
+      return nullOpeningHours;
+    }
+    final weekdayDescriptions =
+        (json['weekdayDescriptions'] as List<dynamic>? ?? const [])
+            .whereType<String>()
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false);
+    return MapSpotBusinessOpeningHours(
+      openNow: json['openNow'] is bool ? json['openNow'] as bool : null,
+      todayText: MapSpot._readNullableString(json['todayText']),
+      weekdayDescriptions: weekdayDescriptions,
+    );
+  }
+
+  static const nullOpeningHours = MapSpotBusinessOpeningHours(
+    weekdayDescriptions: [],
+  );
+
+  final bool? openNow;
+  final String? todayText;
+  final List<String> weekdayDescriptions;
+
+  bool get hasInfo {
+    return openNow != null ||
+        (todayText != null && todayText!.trim().isNotEmpty) ||
+        weekdayDescriptions.isNotEmpty;
   }
 }
 

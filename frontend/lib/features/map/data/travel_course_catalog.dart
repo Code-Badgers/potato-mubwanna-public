@@ -118,7 +118,7 @@ class _TravelCourseDefinition {
       }
     }
     for (final stop in stops) {
-      final imageUrl = _validImageUrl(stop.spot.imageUrl);
+      final imageUrl = _firstValidImageUrl(stop.spot);
       if (imageUrl != null) {
         return imageUrl;
       }
@@ -143,7 +143,7 @@ class _TravelCourseDefinition {
       if (!matchesName) {
         continue;
       }
-      final imageUrl = _validImageUrl(spot.imageUrl);
+      final imageUrl = _firstValidImageUrl(spot);
       if (imageUrl != null) {
         return imageUrl;
       }
@@ -154,6 +154,16 @@ class _TravelCourseDefinition {
   String? _validImageUrl(String? imageUrl) {
     final trimmed = imageUrl?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _firstValidImageUrl(MapSpot spot) {
+    for (final imageUrl in spot.effectiveImageUrls) {
+      final validImageUrl = _validImageUrl(imageUrl);
+      if (validImageUrl != null) {
+        return validImageUrl;
+      }
+    }
+    return null;
   }
 
   MapSpot? _fallbackSpot(
@@ -242,6 +252,7 @@ String _travelCourseCacheKey(List<MapSpot> spots) {
           spot.category,
           spot.cityName,
           spot.imageUrl ?? '',
+          spot.imageUrls.join(','),
           spot.congestionLevel,
         ].join(':'),
       )

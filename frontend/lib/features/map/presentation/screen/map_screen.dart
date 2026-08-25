@@ -558,14 +558,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           ),
                           Positioned(
                             left: 14,
-                            bottom: _isRouteMode ? 280 : 184,
+                            bottom: _isRouteMode ? 298 : 202,
                             child: _FullMapHomeButton(
                               onTap: _returnToDiscoveryHome,
                             ),
                           ),
                           Positioned(
                             right: 18,
-                            bottom: _isRouteMode ? 280 : 184,
+                            bottom: _isRouteMode ? 298 : 202,
                             child: _FullMapLocateButton(
                               onTap: () => unawaited(
                                 _loadCurrentLocation(focusMap: true),
@@ -606,9 +606,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                   wasFavorite:
                                       favoriteSpotIds.contains(selectedSpot.id),
                                 );
-                              },
-                              onDetailPressed: () {
-                                context.push('/spots/${selectedSpot.id}');
                               },
                             ),
                         ],
@@ -2122,7 +2119,9 @@ class _PopularSpotCard extends StatelessWidget {
                   width: 72,
                   height: 72,
                   child: _CourseImage(
-                    imageUrl: spot.imageUrl,
+                    imageUrl: spot.effectiveImageUrls.isEmpty
+                        ? null
+                        : spot.effectiveImageUrls.first,
                     icon: Icons.place_rounded,
                   ),
                 ),
@@ -2156,6 +2155,13 @@ class _PopularSpotCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
+                    if (spot.todayOpeningText != null) ...[
+                      _PopularSpotMetaLine(
+                        icon: Icons.schedule_rounded,
+                        label: spot.todayOpeningText!,
+                      ),
+                      const SizedBox(height: 7),
+                    ],
                     _CongestionBadge(label: '혼잡도 ${spot.congestionLabel}'),
                   ],
                 ),
@@ -2189,6 +2195,39 @@ class _DiscoverySectionHeader extends StatelessWidget {
               color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PopularSpotMetaLine extends StatelessWidget {
+  const _PopularSpotMetaLine({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0,
             ),
           ),
@@ -2261,20 +2300,20 @@ class _RouteRecommendationSheet extends ConsumerWidget {
     required this.isFavorite,
     required this.onNavigationPressed,
     required this.onFavoritePressed,
-    required this.onDetailPressed,
   });
 
   final MapSpot selectedSpot;
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
   final Future<void> Function() onFavoritePressed;
-  final VoidCallback onDetailPressed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasMenu = selectedSpot.menuItems.isNotEmpty;
-    final initialChildSize = hasMenu ? 0.42 : 0.28;
-    final snapSizes = hasMenu ? const [0.42, 0.68] : const [0.28, 0.56];
+    final hasPreviewInfo = selectedSpot.effectiveImageUrls.isNotEmpty ||
+        selectedSpot.menuItems.isNotEmpty ||
+        selectedSpot.hasBusinessInfo;
+    final initialChildSize = hasPreviewInfo ? 0.40 : 0.28;
+    final snapSizes = hasPreviewInfo ? const [0.40, 0.72] : const [0.28, 0.62];
     final spotDetail = ref.watch(spotDetailProvider(selectedSpot.id));
     return DraggableScrollableSheet(
       minChildSize: 0.24,
@@ -2310,7 +2349,6 @@ class _RouteRecommendationSheet extends ConsumerWidget {
                   isFavorite: isFavorite,
                   onNavigationPressed: onNavigationPressed,
                   onFavoritePressed: onFavoritePressed,
-                  onDetailPressed: onDetailPressed,
                 ),
               ],
             ),
@@ -2812,7 +2850,6 @@ class _SelectedSpotSummary extends StatelessWidget {
     required this.isFavorite,
     required this.onNavigationPressed,
     required this.onFavoritePressed,
-    required this.onDetailPressed,
   });
 
   final MapSpot spot;
@@ -2820,7 +2857,6 @@ class _SelectedSpotSummary extends StatelessWidget {
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
   final Future<void> Function() onFavoritePressed;
-  final VoidCallback onDetailPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -2831,6 +2867,7 @@ class _SelectedSpotSummary extends StatelessWidget {
     final menuItems = (detail?.menuItems.isNotEmpty ?? false)
         ? detail!.menuItems
         : spot.menuItems;
+    final shouldShowMenuSection = _shouldShowMenuSection(spot.category);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2868,6 +2905,10 @@ class _SelectedSpotSummary extends StatelessWidget {
                     const SizedBox(height: 8),
                     _SpotAddressLine(address: address),
                   ],
+                  if (spot.todayOpeningText != null) ...[
+                    const SizedBox(height: 7),
+                    _SpotBusinessLine(label: spot.todayOpeningText!),
+                  ],
                   const SizedBox(height: 9),
                   _CongestionBadge(label: spot.congestionLabel),
                 ],
@@ -2888,53 +2929,31 @@ class _SelectedSpotSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            SizedBox(
-              width: 118,
-              child: OutlinedButton(
-                onPressed: onNavigationPressed,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _mapDark,
-                  side: const BorderSide(color: AppColors.line),
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                child: const Text('길찾기'),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onNavigationPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _mapDark,
+              side: const BorderSide(color: AppColors.line),
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                onPressed: onDetailPressed,
-                style: FilledButton.styleFrom(
-                  backgroundColor: _mapPrimary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                child: const Text('상세보기'),
-              ),
-            ),
-          ],
+            icon: const Icon(Icons.navigation_rounded, size: 18),
+            label: const Text('길찾기'),
+          ),
         ),
         _SpotTourInfoSection(
           spot: spot,
           spotDetail: spotDetail,
         ),
-        if (menuItems.isNotEmpty) ...[
+        if (menuItems.isNotEmpty || shouldShowMenuSection) ...[
           const SizedBox(height: 14),
           _SpotMenuPreview(
             key: ValueKey('spot-menu-preview-${spot.id}'),
@@ -2981,6 +3000,41 @@ class _SpotAddressLine extends StatelessWidget {
   }
 }
 
+class _SpotBusinessLine extends StatelessWidget {
+  const _SpotBusinessLine({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.schedule_rounded,
+          size: 16,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SpotTourInfoSection extends StatelessWidget {
   const _SpotTourInfoSection({
     required this.spot,
@@ -2993,89 +3047,112 @@ class _SpotTourInfoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return spotDetail.when(
-      data: (detail) {
-        final imageUrls = _imageUrls(detail, spot);
-        final hasImage = imageUrls.isNotEmpty;
-        if (!detail.hasTourInfo && !detail.hasBusinessInfo && !hasImage) {
-          return const SizedBox.shrink();
-        }
-        final guideRows = _tourGuideRows(detail).take(6).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            _SpotImageGallery(imageUrls: imageUrls),
-            if (detail.description != null) ...[
-              const SizedBox(height: 16),
-              const Text(
-                '이곳은 어떤 곳인가요?',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                detail.description!,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  height: 1.48,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-            if (guideRows.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                '이용 안내',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final row in guideRows) ...[
-                _TourInfoRow(icon: row.icon, label: row.label),
-                const SizedBox(height: 7),
-              ],
-            ],
-          ],
-        );
-      },
-      loading: () => const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: _SpotTourInfoSkeleton(),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
+      data: (detail) => _buildContent(detail),
+      loading: () => _buildContent(null, isLoading: true),
+      error: (_, __) => _buildContent(null),
     );
   }
 
-  List<_TourInfoItem> _tourGuideRows(SpotDetail detail) {
+  Widget _buildContent(SpotDetail? detail, {bool isLoading = false}) {
+    final imageUrls = _imageUrls(detail, spot);
+    final guideRows = _tourGuideRows(detail, spot).take(6).toList();
+    final description = detail?.description;
+    final shouldShowGuidePlaceholder =
+        _shouldShowBusinessSection(spot.category) && guideRows.isEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        _SpotImageGallery(
+          key: ValueKey('spot-image-gallery-${spot.id}'),
+          imageUrls: imageUrls,
+        ),
+        if (isLoading && imageUrls.isEmpty) ...[
+          const SizedBox(height: 10),
+          const _SpotTourInfoSkeleton(),
+        ],
+        if (description != null) ...[
+          const SizedBox(height: 16),
+          const Text(
+            '이곳은 어떤 곳인가요?',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              height: 1.48,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+        if (guideRows.isNotEmpty || shouldShowGuidePlaceholder) ...[
+          const SizedBox(height: 16),
+          const Text(
+            '이용 안내',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (guideRows.isEmpty)
+            const _SpotInfoPlaceholder(
+              icon: Icons.schedule_rounded,
+              label: '영업시간과 연락처 정보를 준비 중이에요.',
+            )
+          else
+            for (final row in guideRows) ...[
+              _TourInfoRow(icon: row.icon, label: row.label),
+              const SizedBox(height: 7),
+            ],
+        ],
+      ],
+    );
+  }
+
+  List<_TourInfoItem> _tourGuideRows(SpotDetail? detail, MapSpot spot) {
     return [
       _TourInfoItem(
         Icons.storefront_rounded,
-        _businessOpenLabel(detail.businessOpeningHours?.openNow),
+        _businessOpenLabel(
+          detail?.businessOpeningHours?.openNow ??
+              spot.businessOpeningHours?.openNow,
+        ),
       ),
       _TourInfoItem(
-          Icons.today_rounded, detail.businessOpeningHours?.todayText),
-      _TourInfoItem(Icons.star_rounded, _ratingLabel(detail.rating)),
-      _TourInfoItem(Icons.public_rounded, _websiteLabel(detail.website)),
-      _TourInfoItem(Icons.call_rounded, detail.phone),
-      _TourInfoItem(Icons.schedule_rounded, detail.openingHours),
-      _TourInfoItem(Icons.confirmation_number_rounded, detail.admissionFee),
-      _TourInfoItem(Icons.event_busy_rounded, detail.closedDays),
-      _TourInfoItem(Icons.local_parking_rounded, detail.parking),
+        Icons.today_rounded,
+        detail?.businessOpeningHours?.todayText ??
+            spot.businessOpeningHours?.todayText,
+      ),
+      _TourInfoItem(
+        Icons.star_rounded,
+        _ratingLabel(detail?.rating ?? spot.rating),
+      ),
+      _TourInfoItem(
+        Icons.public_rounded,
+        _websiteLabel(detail?.website ?? spot.website),
+      ),
+      _TourInfoItem(Icons.call_rounded, detail?.phone ?? spot.phone),
+      _TourInfoItem(Icons.schedule_rounded, detail?.openingHours),
+      _TourInfoItem(Icons.confirmation_number_rounded, detail?.admissionFee),
+      _TourInfoItem(Icons.event_busy_rounded, detail?.closedDays),
+      _TourInfoItem(Icons.local_parking_rounded, detail?.parking),
       _TourInfoItem(
         Icons.call_rounded,
-        detail.phone == null ? detail.contactPhone : null,
+        detail?.phone == null ? detail?.contactPhone : null,
       ),
     ]
         .where((item) => item.label != null && item.label!.trim().isNotEmpty)
@@ -3108,10 +3185,11 @@ class _SpotTourInfoSection extends StatelessWidget {
     return uri.host.replaceFirst(RegExp(r'^www\.'), '');
   }
 
-  List<String> _imageUrls(SpotDetail detail, MapSpot spot) {
+  List<String> _imageUrls(SpotDetail? detail, MapSpot spot) {
     final urls = <String>[
-      ...detail.imageUrls,
-      if (detail.imageUrl != null) detail.imageUrl!,
+      ...?detail?.imageUrls,
+      if (detail?.imageUrl != null) detail!.imageUrl!,
+      ...spot.imageUrls,
       if (spot.imageUrl != null) spot.imageUrl!,
     ];
     return urls
@@ -3123,8 +3201,31 @@ class _SpotTourInfoSection extends StatelessWidget {
   }
 }
 
+bool _shouldShowMenuSection(String category) {
+  return const {
+    'POTATO_RESTAURANT',
+    'POTATO_CAFE',
+    'POTATO_SNACK',
+    'POTATO_MARKET',
+    'POTATO_BREWERY',
+  }.contains(category);
+}
+
+bool _shouldShowBusinessSection(String category) {
+  return const {
+    'POTATO_RESTAURANT',
+    'POTATO_CAFE',
+    'POTATO_SNACK',
+    'POTATO_MARKET',
+    'POTATO_BREWERY',
+    'POTATO_EXPERIENCE',
+    'POTATO_TOUR',
+    'POTATO_SHOP',
+  }.contains(category);
+}
+
 class _SpotImageGallery extends StatelessWidget {
-  const _SpotImageGallery({required this.imageUrls});
+  const _SpotImageGallery({required this.imageUrls, super.key});
 
   final List<String> imageUrls;
 
@@ -3133,14 +3234,7 @@ class _SpotImageGallery extends StatelessWidget {
     if (imageUrls.isEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(18),
-        child: const SizedBox(
-          width: double.infinity,
-          height: 148,
-          child: _CourseImage(
-            imageUrl: null,
-            icon: Icons.landscape_rounded,
-          ),
-        ),
+        child: const _SpotImagePlaceholder(),
       );
     }
     if (imageUrls.length == 1) {
@@ -3174,6 +3268,49 @@ class _SpotImageGallery extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SpotImagePlaceholder extends StatelessWidget {
+  const _SpotImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 148,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryTint.withValues(alpha: 0.74),
+            AppColors.cream.withValues(alpha: 0.82),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_search_rounded,
+            color: _mapDark,
+            size: 34,
+          ),
+          SizedBox(height: 8),
+          Text(
+            '장소 이미지를 준비 중이에요',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3221,6 +3358,45 @@ class _TourInfoRow extends StatelessWidget {
   }
 }
 
+class _SpotInfoPlaceholder extends StatelessWidget {
+  const _SpotInfoPlaceholder({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: _mapDark),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SpotTourInfoSkeleton extends StatelessWidget {
   const _SpotTourInfoSkeleton();
 
@@ -3246,6 +3422,9 @@ class _SpotMenuPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (menuItems.isEmpty) {
+      return const _SpotEmptyMenuPreview();
+    }
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -3325,6 +3504,43 @@ class _SpotMenuPreview extends StatelessWidget {
                 color: AppColors.textSecondary,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpotEmptyMenuPreview extends StatelessWidget {
+  const _SpotEmptyMenuPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cream.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.restaurant_menu_rounded,
+            size: 18,
+            color: _mapDark,
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '대표 메뉴와 가격 정보를 준비 중이에요.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
                 letterSpacing: 0,
               ),
             ),

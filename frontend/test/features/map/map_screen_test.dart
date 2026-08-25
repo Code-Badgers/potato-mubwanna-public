@@ -103,7 +103,8 @@ void main() {
     expect(
         find.byKey(const ValueKey('full-map-locate-button')), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('상세보기'), findsOneWidget);
+    expect(find.text('길찾기'), findsOneWidget);
+    expect(find.text('상세보기'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('full-map-home-button')));
     await tester.pumpAndSettle();
@@ -282,6 +283,58 @@ void main() {
     expect(find.text('5,500원'), findsOneWidget);
   });
 
+  testWidgets('uses spot list media and business info when detail fails', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_failingSpotDetail),
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+            mapViewBuilder: (spots, onSpotSelected) => Stack(
+              children: [
+                for (var index = 0; index < spots.length; index++)
+                  Positioned(
+                    left: 24 + (index * 64),
+                    top: 180,
+                    child: TextButton(
+                      key: ValueKey('fallback-marker-${spots[index].id}'),
+                      onPressed: () => onSpotSelected(spots[index].id),
+                      child: Text('마커 ${spots[index].id}'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('장소 이미지를 준비 중이에요'), findsOneWidget);
+    expect(find.text('이용 안내'), findsOneWidget);
+    expect(find.text('영업시간과 연락처 정보를 준비 중이에요.'), findsOneWidget);
+    expect(find.text('대표 메뉴와 가격 정보를 준비 중이에요.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('fallback-marker-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('spot-image-gallery-2')), findsOneWidget);
+    expect(find.text('화요일: 오전 11:00~오후 8:00'), findsWidgets);
+    expect(find.text('대표 메뉴'), findsOneWidget);
+    expect(find.text('감자빵'), findsOneWidget);
+    expect(find.text('3,300원'), findsOneWidget);
+  });
+
   testWidgets('updates map spots without recreating the map after filtering', (
     tester,
   ) async {
@@ -328,7 +381,7 @@ void main() {
     expect(renderedSpotIds.last, ['2']);
   });
 
-  testWidgets('opens detail for the currently selected map marker', (
+  testWidgets('shows expanded information for the currently selected marker', (
     tester,
   ) async {
     final router = GoRouter(
@@ -382,19 +435,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('marker-2')));
     await tester.pump();
-    await tester.ensureVisible(find.text('상세보기'));
+    await tester.ensureVisible(find.text('대표 메뉴'));
     await tester.pump();
-    await tester.tap(find.text('상세보기'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('상세 2'), findsOneWidget);
-
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-
-    expect(find.text('상세 2'), findsNothing);
     expect(find.text('감자 카페'), findsOneWidget);
-    expect(find.text('상세보기'), findsOneWidget);
+    expect(find.text('대표 메뉴'), findsOneWidget);
+    expect(find.text('상세보기'), findsNothing);
   });
 
   testWidgets('keeps all category spots visible when a spot is bookmarked', (
@@ -1139,7 +1184,8 @@ void main() {
 
     expect(find.text('추천 장소를 찾지 못했어요'), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('상세보기'), findsOneWidget);
+    expect(find.text('길찾기'), findsOneWidget);
+    expect(find.text('상세보기'), findsNothing);
   });
 
   testWidgets('keeps the map usable when recommendations fail', (tester) async {
@@ -1319,6 +1365,10 @@ Future<SpotDetail> _richSpotDetail(Ref ref, String spotId) async {
   );
 }
 
+Future<SpotDetail> _failingSpotDetail(Ref ref, String spotId) async {
+  throw const ApiException(message: '상세 정보를 불러오지 못했어요.');
+}
+
 class _FakeMapSpotRepository extends MapSpotRepository {
   _FakeMapSpotRepository() : super(dio: Dio());
 
@@ -1468,6 +1518,20 @@ const _spots = [
     cityName: '정선',
     congestionLevel: 'LOW',
     stampEnabled: true,
+    imageUrls: [
+      'https://example.com/cafe-list.jpg',
+      'https://example.com/cafe-list-2.jpg',
+    ],
+    phone: '033-000-0000',
+    website: 'https://example.com/cafe',
+    rating: 4.3,
+    businessOpeningHours: MapSpotBusinessOpeningHours(
+      openNow: true,
+      todayText: '화요일: 오전 11:00~오후 8:00',
+      weekdayDescriptions: [
+        '화요일: 오전 11:00~오후 8:00',
+      ],
+    ),
     menuItems: [
       MapSpotMenuItem(
         name: '감자빵',

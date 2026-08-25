@@ -49,8 +49,17 @@ class SpotControllerTest {
                 "강원특별자치도 정선군",
                 "정선군",
                 "https://example.com/jeongseon.jpg",
+                List.of("https://example.com/jeongseon.jpg"),
                 CongestionLevel.NORMAL,
                 true,
+                "033-000-0000",
+                "https://example.com",
+                4.2,
+                new PlaceOpeningHoursResponse(
+                    true,
+                    "월요일: 오전 10:00~오후 8:00",
+                    List.of("월요일: 오전 10:00~오후 8:00")
+                ),
                 List.of(new SpotMenuItemResponse(
                     "감자옹심이",
                     10000,
@@ -70,6 +79,10 @@ class SpotControllerTest {
             .andExpect(jsonPath("$.data[0].category").value("POTATO_RESTAURANT"))
             .andExpect(jsonPath("$.data[0].cityName").value("정선군"))
             .andExpect(jsonPath("$.data[0].imageUrl").value("https://example.com/jeongseon.jpg"))
+            .andExpect(jsonPath("$.data[0].imageUrls[0]").value("https://example.com/jeongseon.jpg"))
+            .andExpect(jsonPath("$.data[0].phone").value("033-000-0000"))
+            .andExpect(jsonPath("$.data[0].rating").value(4.2))
+            .andExpect(jsonPath("$.data[0].businessOpeningHours.openNow").value(true))
             .andExpect(jsonPath("$.data[0].menuItems[0].name").value("감자옹심이"))
             .andExpect(jsonPath("$.data[0].menuItems[0].priceWon").value(10000))
             .andExpect(jsonPath("$.data[0].menuItems[0].priceNote").isEmpty())
