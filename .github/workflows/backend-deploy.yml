@@ -70,6 +70,7 @@ jobs:
           ./backend/gradlew -p backend test build --no-daemon
           docker compose --env-file deploy/.env.example -f deploy/compose.prod.yml config --quiet
           bash deploy/tests/deploy-backend-test.sh
+          bash deploy/tests/sync-tour-api-secret-test.sh
           bash deploy/tests/caddy-config-test.sh
           bash deploy/tests/nginx-legal-page-test.sh
 
