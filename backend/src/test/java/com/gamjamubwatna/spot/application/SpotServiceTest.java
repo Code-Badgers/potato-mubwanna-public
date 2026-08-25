@@ -37,10 +37,14 @@ class SpotServiceTest {
     void returnsAtMostThreeMenuItemsForEachSpotAndAnEmptyListWithoutMenus() {
         TouristSpot cafe = spot(1L, "감자밭", SpotCategory.POTATO_CAFE);
         TouristSpot attraction = spot(2L, "남이섬", SpotCategory.POTATO_TOUR);
-        when(spotImageResolver.resolveImageUrls(cafe, 3))
+        when(spotImageResolver.resolveStoredImageUrls(cafe, 3))
             .thenReturn(List.of("https://example.com/cafe.jpg"));
-        when(spotImageResolver.resolveImageUrls(attraction, 3))
+        when(spotImageResolver.resolveTourApiImageUrls(cafe, 3))
+            .thenReturn(List.of());
+        when(spotImageResolver.resolveStoredImageUrls(attraction, 3))
             .thenReturn(List.of("https://example.com/attraction.jpg"));
+        when(spotImageResolver.resolveTourApiImageUrls(attraction, 3))
+            .thenReturn(List.of());
         when(externalPlaceDetailsResolver.resolve(cafe))
             .thenReturn(ExternalPlaceDetails.empty());
         when(externalPlaceDetailsResolver.resolve(attraction))
@@ -70,7 +74,9 @@ class SpotServiceTest {
         TouristSpot cafe = spot(3L, "감자 카페", SpotCategory.POTATO_CAFE);
         when(touristSpotRepository.findActiveSpots(null, null, null))
             .thenReturn(List.of(cafe));
-        when(spotImageResolver.resolveImageUrls(cafe, 3))
+        when(spotImageResolver.resolveStoredImageUrls(cafe, 3))
+            .thenReturn(List.of());
+        when(spotImageResolver.resolveTourApiImageUrls(cafe, 3))
             .thenReturn(List.of());
         when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
             .thenReturn(List.of(menu(3L, "감자라떼", 5500, 1)));
@@ -104,11 +110,10 @@ class SpotServiceTest {
         TouristSpot attraction = spot(2L, "평창무이예술관", SpotCategory.POTATO_TOUR);
         when(touristSpotRepository.findByIdAndActiveTrue(2L))
             .thenReturn(java.util.Optional.of(attraction));
-        when(spotImageResolver.resolveImageUrls(attraction, 3))
-            .thenReturn(List.of(
-                "https://example.com/muei.jpg",
-                "https://tour.example.com/muei-2.jpg"
-            ));
+        when(spotImageResolver.resolveStoredImageUrls(attraction, 3))
+            .thenReturn(List.of("https://example.com/muei.jpg"));
+        when(spotImageResolver.resolveTourApiImageUrls(attraction, 3))
+            .thenReturn(List.of("https://tour.example.com/muei-2.jpg"));
         when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
             .thenReturn(List.of(
                 menu(2L, "입장권", 5000, 1),
@@ -147,8 +152,10 @@ class SpotServiceTest {
         TouristSpot cafe = spot(3L, "감자 카페", SpotCategory.POTATO_CAFE);
         when(touristSpotRepository.findByIdAndActiveTrue(3L))
             .thenReturn(java.util.Optional.of(cafe));
-        when(spotImageResolver.resolveImageUrls(cafe, 3))
+        when(spotImageResolver.resolveStoredImageUrls(cafe, 3))
             .thenReturn(List.of("https://example.com/internal.jpg"));
+        when(spotImageResolver.resolveTourApiImageUrls(cafe, 3))
+            .thenReturn(List.of("https://tour.example.com/cafe.jpg"));
         when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
             .thenReturn(List.of(menu(3L, "감자라떼", 5500, 1)));
         when(spotTourInfoResolver.resolve(cafe))
@@ -174,7 +181,8 @@ class SpotServiceTest {
         assertThat(response.imageUrls())
             .containsExactly(
                 "https://example.com/internal.jpg",
-                "https://google.example.com/photo.jpg"
+                "https://google.example.com/photo.jpg",
+                "https://tour.example.com/cafe.jpg"
             );
     }
 

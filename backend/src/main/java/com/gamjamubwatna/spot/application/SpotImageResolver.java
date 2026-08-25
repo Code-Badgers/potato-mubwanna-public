@@ -37,34 +37,56 @@ public class SpotImageResolver {
             return List.of();
         }
         List<String> imageUrls = new ArrayList<>();
-        if (hasText(spot.getImageUrl())) {
-            imageUrls.add(spot.getImageUrl());
-            if (limit == 1) {
-                return imageUrls;
-            }
+        imageUrls.addAll(resolveStoredImageUrls(spot, limit));
+        if (imageUrls.size() >= limit) {
+            return List.copyOf(imageUrls);
         }
-        String contentId = spot.getContentId();
-        if (!isTourApiContentId(contentId)) {
-            return imageUrls;
-        }
-        List<String> resolvedImageUrls = tourApiImageCache.computeIfAbsent(
-            contentId,
-            this::fetchTourApiImagesOrEmpty
-        );
-        if (resolvedImageUrls.isEmpty()) {
-            return imageUrls;
-        }
-        // 최초 조회 결과를 DB에 저장해 이후 목록 렌더링이 외부 API에 의존하지 않게 한다.
-        if (!hasText(spot.getImageUrl())) {
-            spotImageCacheWriter.cacheResolvedImage(spot.getId(), resolvedImageUrls.get(0));
-        }
-        for (String resolvedImageUrl : resolvedImageUrls) {
+        for (String resolvedImageUrl : resolveTourApiImageUrls(spot, limit)) {
             if (imageUrls.size() >= limit) {
                 break;
             }
             if (!imageUrls.contains(resolvedImageUrl)) {
                 imageUrls.add(resolvedImageUrl);
             }
+        }
+        return List.copyOf(imageUrls);
+    }
+
+    public List<String> resolveStoredImageUrls(TouristSpot spot, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        if (hasText(spot.getImageUrl())) {
+            return List.of(spot.getImageUrl());
+        }
+        return List.of();
+    }
+
+    public List<String> resolveTourApiImageUrls(TouristSpot spot, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        String contentId = spot.getContentId();
+        if (!isTourApiContentId(contentId)) {
+            return List.of();
+        }
+        List<String> resolvedImageUrls = tourApiImageCache.computeIfAbsent(
+            contentId,
+            this::fetchTourApiImagesOrEmpty
+        );
+        if (resolvedImageUrls.isEmpty()) {
+            return List.of();
+        }
+        // 최초 조회 결과를 DB에 저장해 이후 목록 렌더링이 외부 API에 의존하지 않게 한다.
+        if (!hasText(spot.getImageUrl())) {
+            spotImageCacheWriter.cacheResolvedImage(spot.getId(), resolvedImageUrls.get(0));
+        }
+        List<String> imageUrls = new ArrayList<>();
+        for (String resolvedImageUrl : resolvedImageUrls) {
+            if (imageUrls.size() >= limit) {
+                break;
+            }
+            imageUrls.add(resolvedImageUrl);
         }
         return List.copyOf(imageUrls);
     }

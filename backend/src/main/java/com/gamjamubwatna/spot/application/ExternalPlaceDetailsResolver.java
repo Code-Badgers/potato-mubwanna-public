@@ -1,5 +1,9 @@
 package com.gamjamubwatna.spot.application;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gamjamubwatna.spot.domain.GooglePlaceDetailsCache;
+import com.gamjamubwatna.spot.domain.GooglePlaceDetailsCacheRepository;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.infrastructure.GooglePlacesClient;
@@ -28,14 +32,23 @@ public class ExternalPlaceDetailsResolver {
     private static final double EARTH_RADIUS_KM = 6371.0088;
 
     private final GooglePlacesClient googlePlacesClient;
+    private final GooglePlaceDetailsCacheRepository googlePlaceDetailsCacheRepository;
+    private final GooglePlaceDetailsCacheWriter googlePlaceDetailsCacheWriter;
+    private final ObjectMapper objectMapper;
     private final Duration cacheTtl;
     private final Map<Long, CachedExternalPlaceDetails> cache = new ConcurrentHashMap<>();
 
     public ExternalPlaceDetailsResolver(
         GooglePlacesClient googlePlacesClient,
+        GooglePlaceDetailsCacheRepository googlePlaceDetailsCacheRepository,
+        GooglePlaceDetailsCacheWriter googlePlaceDetailsCacheWriter,
+        ObjectMapper objectMapper,
         @Value("${external.google-places.cache-ttl-seconds}") long cacheTtlSeconds
     ) {
         this.googlePlacesClient = googlePlacesClient;
+        this.googlePlaceDetailsCacheRepository = googlePlaceDetailsCacheRepository;
+        this.googlePlaceDetailsCacheWriter = googlePlaceDetailsCacheWriter;
+        this.objectMapper = objectMapper;
         this.cacheTtl = Duration.ofSeconds(Math.max(60, cacheTtlSeconds));
     }
 
@@ -46,25 +59,56 @@ public class ExternalPlaceDetailsResolver {
 
         CachedExternalPlaceDetails cached = cache.get(spot.getId());
         if (cached != null && cached.isFresh(cacheTtl)) {
+            log.info("spotId={} google enrichment cache=HIT", spot.getId());
             return cached.details();
         }
 
-        ExternalPlaceDetails details = fetchOrEmpty(spot);
+        Optional<GooglePlaceDetailsCache> persistedCache = googlePlaceDetailsCacheRepository.findById(spot.getId());
+        Instant now = Instant.now();
+        if (persistedCache.filter(value -> value.hasFreshDetails(now)).isPresent()) {
+            Optional<ExternalPlaceDetails> persistedDetails = readCachedDetails(persistedCache.get());
+            if (persistedDetails.isPresent()) {
+                log.info("spotId={} google enrichment cache=HIT", spot.getId());
+                cache.put(spot.getId(), new CachedExternalPlaceDetails(persistedDetails.get(), now));
+                return persistedDetails.get();
+            }
+        }
+
+        ExternalPlaceDetails details = fetchOrFallback(spot, persistedCache);
         cache.put(spot.getId(), new CachedExternalPlaceDetails(details, Instant.now()));
         return details;
     }
 
-    private ExternalPlaceDetails fetchOrEmpty(TouristSpot spot) {
+    private ExternalPlaceDetails fetchOrFallback(
+        TouristSpot spot,
+        Optional<GooglePlaceDetailsCache> persistedCache
+    ) {
         try {
-            Optional<GooglePlaceSearchResult> match = findBestMatch(spot);
-            if (match.isEmpty()) {
-                return ExternalPlaceDetails.empty();
+            Optional<String> persistedPlaceId = persistedCache
+                .map(GooglePlaceDetailsCache::getGooglePlaceId)
+                .filter(value -> !value.isBlank());
+            Optional<GooglePlaceSearchResult> match = Optional.empty();
+            String googlePlaceId = persistedPlaceId.orElse(null);
+            if (googlePlaceId == null) {
+                match = findBestMatch(spot);
+                if (match.isEmpty()) {
+                    return fallbackFromCacheOrEmpty(spot, persistedCache);
+                }
+                googlePlaceId = match.get().placeId();
+                googlePlaceDetailsCacheWriter.recordMatch(spot.getId(), googlePlaceId);
+                log.info("spotId={} googlePlaceId={} match=SUCCESS", spot.getId(), googlePlaceId);
             }
-            return googlePlacesClient.findDetails(match.get().placeId())
-                .orElseGet(ExternalPlaceDetails::empty);
+
+            Optional<ExternalPlaceDetails> details = googlePlacesClient.findDetails(googlePlaceId);
+            if (details.isEmpty()) {
+                return fallbackFromCacheOrEmpty(spot, persistedCache);
+            }
+            logSources(spot, details.get());
+            writeDetailsCache(spot.getId(), details.get());
+            return details.get();
         } catch (RuntimeException exception) {
             log.warn("Google Places enrichment skipped. spotId={}, reason={}", spot.getId(), exception.getMessage());
-            return ExternalPlaceDetails.empty();
+            return fallbackFromCacheOrEmpty(spot, persistedCache);
         }
     }
 
@@ -80,6 +124,56 @@ public class ExternalPlaceDetailsResolver {
             }
         }
         return Optional.empty();
+    }
+
+    private ExternalPlaceDetails fallbackFromCacheOrEmpty(
+        TouristSpot spot,
+        Optional<GooglePlaceDetailsCache> persistedCache
+    ) {
+        Optional<ExternalPlaceDetails> cachedDetails = persistedCache.flatMap(this::readCachedDetails);
+        if (cachedDetails.isPresent()) {
+            log.info("spotId={} google enrichment cache=STALE_FALLBACK", spot.getId());
+            return cachedDetails.get();
+        }
+        return ExternalPlaceDetails.empty();
+    }
+
+    private Optional<ExternalPlaceDetails> readCachedDetails(GooglePlaceDetailsCache cache) {
+        if (!cache.hasDetails()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(objectMapper.readValue(cache.getDetailsPayload(), ExternalPlaceDetails.class));
+        } catch (JsonProcessingException exception) {
+            log.warn(
+                "Google Places cached payload skipped. spotId={}, reason={}",
+                cache.getTouristSpotId(),
+                exception.getMessage()
+            );
+            return Optional.empty();
+        }
+    }
+
+    private void writeDetailsCache(Long spotId, ExternalPlaceDetails details) {
+        try {
+            googlePlaceDetailsCacheWriter.cacheDetails(
+                spotId,
+                details,
+                objectMapper.writeValueAsString(details),
+                cacheTtl
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Google Places cache payload skipped. spotId={}, reason={}", spotId, exception.getMessage());
+        }
+    }
+
+    private void logSources(TouristSpot spot, ExternalPlaceDetails details) {
+        if (details.imageUrls() != null && !details.imageUrls().isEmpty()) {
+            log.info("spotId={} photoSource=GOOGLE", spot.getId());
+        }
+        if (details.openingHours() != null && details.openingHours().hasText()) {
+            log.info("spotId={} openingHoursSource=GOOGLE", spot.getId());
+        }
     }
 
     private List<String> searchQueries(TouristSpot spot) {

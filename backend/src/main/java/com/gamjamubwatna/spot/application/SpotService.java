@@ -54,9 +54,8 @@ public class SpotService {
         Map<Long, List<SpotMenuItemResponse>> menuItemsBySpotId = menuItemsBySpotId(spots);
         return spots.stream()
             .map(spot -> {
-                List<String> imageUrls = spotImageResolver.resolveImageUrls(spot, 3);
                 ExternalPlaceDetails externalDetails = externalPlaceDetailsResolver.resolve(spot);
-                imageUrls = mergedImageUrls(imageUrls, externalDetails.imageUrls(), 3);
+                List<String> imageUrls = resolvedImageUrls(spot, externalDetails, 3);
                 return SpotListResponse.from(
                     spot,
                     imageUrls.isEmpty() ? null : imageUrls.get(0),
@@ -72,9 +71,8 @@ public class SpotService {
     public SpotDetailResponse getSpot(Long spotId) {
         TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(spotId)
             .orElseThrow(() -> new IllegalArgumentException("감자 스팟을 찾을 수 없습니다."));
-        List<String> imageUrls = spotImageResolver.resolveImageUrls(spot, 3);
         ExternalPlaceDetails externalDetails = externalPlaceDetailsResolver.resolve(spot);
-        imageUrls = mergedImageUrls(imageUrls, externalDetails.imageUrls(), 3);
+        List<String> imageUrls = resolvedImageUrls(spot, externalDetails, 3);
         List<SpotMenuItemResponse> menuItems = menuItemsBySpotId(List.of(spot))
             .getOrDefault(spot.getId(), List.of());
         return SpotDetailResponse.from(
@@ -85,6 +83,18 @@ public class SpotService {
             externalDetails,
             menuItems
         );
+    }
+
+    private List<String> resolvedImageUrls(
+        TouristSpot spot,
+        ExternalPlaceDetails externalDetails,
+        int limit
+    ) {
+        List<String> imageUrls = new ArrayList<>();
+        appendImages(imageUrls, spotImageResolver.resolveStoredImageUrls(spot, limit), limit);
+        appendImages(imageUrls, externalDetails.imageUrls(), limit);
+        appendImages(imageUrls, spotImageResolver.resolveTourApiImageUrls(spot, limit), limit);
+        return List.copyOf(imageUrls);
     }
 
     private String blankToNull(String value) {
@@ -110,17 +120,6 @@ public class SpotService {
             }
         }
         return menuItemsBySpotId;
-    }
-
-    private List<String> mergedImageUrls(
-        List<String> primaryImageUrls,
-        List<String> fallbackImageUrls,
-        int limit
-    ) {
-        List<String> merged = new ArrayList<>();
-        appendImages(merged, primaryImageUrls, limit);
-        appendImages(merged, fallbackImageUrls, limit);
-        return List.copyOf(merged);
     }
 
     private void appendImages(List<String> target, List<String> source, int limit) {
