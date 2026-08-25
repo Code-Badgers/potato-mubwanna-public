@@ -24,11 +24,13 @@ class SpotServiceTest {
     private final SpotMenuItemRepository spotMenuItemRepository = mock(SpotMenuItemRepository.class);
     private final SpotImageResolver spotImageResolver = mock(SpotImageResolver.class);
     private final SpotTourInfoResolver spotTourInfoResolver = mock(SpotTourInfoResolver.class);
+    private final ExternalPlaceDetailsResolver externalPlaceDetailsResolver = mock(ExternalPlaceDetailsResolver.class);
     private final SpotService spotService = new SpotService(
         touristSpotRepository,
         spotMenuItemRepository,
         spotImageResolver,
-        spotTourInfoResolver
+        spotTourInfoResolver,
+        externalPlaceDetailsResolver
     );
 
     @Test
@@ -84,6 +86,8 @@ class SpotServiceTest {
                 "가능",
                 "033-000-0000"
             ));
+        when(externalPlaceDetailsResolver.resolve(attraction))
+            .thenReturn(ExternalPlaceDetails.empty());
 
         SpotDetailResponse response = spotService.getSpot(2L);
 
@@ -99,6 +103,42 @@ class SpotServiceTest {
         assertThat(response.admissionFee()).isEqualTo("성인 5,000원");
         assertThat(response.parking()).isEqualTo("가능");
         assertThat(response.contactPhone()).isEqualTo("033-000-0000");
+    }
+
+    @Test
+    void appendsGooglePlaceDetailsForRestaurantAndCafeDetail() {
+        TouristSpot cafe = spot(3L, "감자 카페", SpotCategory.POTATO_CAFE);
+        when(touristSpotRepository.findByIdAndActiveTrue(3L))
+            .thenReturn(java.util.Optional.of(cafe));
+        when(spotImageResolver.resolveImageUrls(cafe, 3))
+            .thenReturn(List.of("https://example.com/internal.jpg"));
+        when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
+            .thenReturn(List.of(menu(3L, "감자라떼", 5500, 1)));
+        when(spotTourInfoResolver.resolve(cafe))
+            .thenReturn(SpotTourInfo.empty());
+        when(externalPlaceDetailsResolver.resolve(cafe))
+            .thenReturn(new ExternalPlaceDetails(
+                "google-place-id",
+                "033-000-0000",
+                "https://example.com",
+                4.3,
+                new PlaceOpeningHours(true, "화요일: 오전 11:00~오후 8:00", List.of("화요일: 오전 11:00~오후 8:00")),
+                List.of("https://google.example.com/photo.jpg")
+            ));
+
+        SpotDetailResponse response = spotService.getSpot(3L);
+
+        assertThat(response.googlePlaceId()).isEqualTo("google-place-id");
+        assertThat(response.phone()).isEqualTo("033-000-0000");
+        assertThat(response.website()).isEqualTo("https://example.com");
+        assertThat(response.rating()).isEqualTo(4.3);
+        assertThat(response.businessOpeningHours().openNow()).isTrue();
+        assertThat(response.businessOpeningHours().todayText()).contains("오전 11:00");
+        assertThat(response.imageUrls())
+            .containsExactly(
+                "https://example.com/internal.jpg",
+                "https://google.example.com/photo.jpg"
+            );
     }
 
     private TouristSpot spot(Long id, String name, SpotCategory category) {

@@ -1,5 +1,6 @@
 package com.gamjamubwatna.spot.api;
 
+import com.gamjamubwatna.spot.application.ExternalPlaceDetails;
 import com.gamjamubwatna.spot.application.SpotTourInfo;
 import com.gamjamubwatna.spot.domain.CongestionLevel;
 import com.gamjamubwatna.spot.domain.SpotCategory;
@@ -27,6 +28,11 @@ public record SpotDetailResponse(
     String admissionFee,
     String parking,
     String contactPhone,
+    String googlePlaceId,
+    String phone,
+    String website,
+    Double rating,
+    PlaceOpeningHoursResponse businessOpeningHours,
     List<String> imageUrls,
     List<SpotMenuItemResponse> menuItems
 ) {
@@ -36,6 +42,7 @@ public record SpotDetailResponse(
         String imageUrl,
         List<String> imageUrls,
         SpotTourInfo tourInfo,
+        ExternalPlaceDetails externalDetails,
         List<SpotMenuItemResponse> menuItems
     ) {
         return new SpotDetailResponse(
@@ -58,6 +65,11 @@ public record SpotDetailResponse(
             tourInfo.admissionFee(),
             tourInfo.parking(),
             tourInfo.contactPhone(),
+            externalDetails.googlePlaceId(),
+            externalDetails.phone(),
+            externalDetails.website(),
+            externalDetails.rating(),
+            PlaceOpeningHoursResponse.from(externalDetails.openingHours()),
             imageUrls,
             menuItems
         );

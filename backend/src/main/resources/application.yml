@@ -104,6 +104,13 @@ external:
     keyword-search-url: ${KAKAO_LOCAL_KEYWORD_SEARCH_URL:https://dapi.kakao.com/v2/local/search/keyword.json}
     rest-api-key: ${KAKAO_REST_API_KEY:}
     spot-keywords: ${KAKAO_LOCAL_SPOT_KEYWORDS:강원 감자빵,강릉 감자빵,춘천 감자 카페,평창 감자 체험,강원 감자전,강원 옹심이,강원 알감자,강원 로컬푸드 감자,강원 감자 맥주,강원 감자 직판장}
+  google-places:
+    base-url: ${GOOGLE_PLACES_BASE_URL:https://places.googleapis.com/v1}
+    api-key: ${GOOGLE_PLACES_API_KEY:}
+    language-code: ${GOOGLE_PLACES_LANGUAGE_CODE:ko}
+    region-code: ${GOOGLE_PLACES_REGION_CODE:KR}
+    cache-ttl-seconds: ${GOOGLE_PLACES_CACHE_TTL_SECONDS:21600}
+    max-photo-count: ${GOOGLE_PLACES_MAX_PHOTO_COUNT:3}
 
 management:
   endpoints:
