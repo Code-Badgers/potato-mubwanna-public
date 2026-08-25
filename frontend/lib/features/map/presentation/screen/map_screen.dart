@@ -2996,10 +2996,10 @@ class _SpotTourInfoSection extends StatelessWidget {
       data: (detail) {
         final imageUrls = _imageUrls(detail, spot);
         final hasImage = imageUrls.isNotEmpty;
-        if (!detail.hasTourInfo && !hasImage) {
+        if (!detail.hasTourInfo && !detail.hasBusinessInfo && !hasImage) {
           return const SizedBox.shrink();
         }
-        final guideRows = _tourGuideRows(detail).take(3).toList();
+        final guideRows = _tourGuideRows(detail).take(6).toList();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3060,14 +3060,52 @@ class _SpotTourInfoSection extends StatelessWidget {
 
   List<_TourInfoItem> _tourGuideRows(SpotDetail detail) {
     return [
+      _TourInfoItem(
+        Icons.storefront_rounded,
+        _businessOpenLabel(detail.businessOpeningHours?.openNow),
+      ),
+      _TourInfoItem(
+          Icons.today_rounded, detail.businessOpeningHours?.todayText),
+      _TourInfoItem(Icons.star_rounded, _ratingLabel(detail.rating)),
+      _TourInfoItem(Icons.public_rounded, _websiteLabel(detail.website)),
+      _TourInfoItem(Icons.call_rounded, detail.phone),
       _TourInfoItem(Icons.schedule_rounded, detail.openingHours),
       _TourInfoItem(Icons.confirmation_number_rounded, detail.admissionFee),
       _TourInfoItem(Icons.event_busy_rounded, detail.closedDays),
       _TourInfoItem(Icons.local_parking_rounded, detail.parking),
-      _TourInfoItem(Icons.call_rounded, detail.contactPhone),
+      _TourInfoItem(
+        Icons.call_rounded,
+        detail.phone == null ? detail.contactPhone : null,
+      ),
     ]
         .where((item) => item.label != null && item.label!.trim().isNotEmpty)
         .toList();
+  }
+
+  String? _businessOpenLabel(bool? openNow) {
+    return switch (openNow) {
+      true => '영업 중',
+      false => '영업 종료',
+      null => null,
+    };
+  }
+
+  String? _ratingLabel(double? rating) {
+    if (rating == null || rating <= 0) {
+      return null;
+    }
+    return '평점 ${rating.toStringAsFixed(1)}';
+  }
+
+  String? _websiteLabel(String? website) {
+    if (website == null || website.trim().isEmpty) {
+      return null;
+    }
+    final uri = Uri.tryParse(website.trim());
+    if (uri == null || uri.host.isEmpty) {
+      return website.trim();
+    }
+    return uri.host.replaceFirst(RegExp(r'^www\.'), '');
   }
 
   List<String> _imageUrls(SpotDetail detail, MapSpot spot) {
