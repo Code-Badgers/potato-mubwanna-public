@@ -65,6 +65,16 @@ class SpotServiceTest {
             .thenReturn(java.util.Optional.of(attraction));
         when(spotImageResolver.resolveImageUrl(attraction))
             .thenReturn("https://example.com/muei.jpg");
+        when(spotImageResolver.resolveImageUrls(attraction, 3))
+            .thenReturn(List.of(
+                "https://example.com/muei.jpg",
+                "https://tour.example.com/muei-2.jpg"
+            ));
+        when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
+            .thenReturn(List.of(
+                menu(2L, "입장권", 5000, 1),
+                menu(2L, "체험권", 12000, 2)
+            ));
         when(spotTourInfoResolver.resolve(attraction))
             .thenReturn(new SpotTourInfo(
                 "폐교를 예술 공간으로 꾸민 평창의 문화 관광지입니다.",
@@ -78,6 +88,11 @@ class SpotServiceTest {
         SpotDetailResponse response = spotService.getSpot(2L);
 
         assertThat(response.imageUrl()).isEqualTo("https://example.com/muei.jpg");
+        assertThat(response.imageUrls())
+            .containsExactly("https://example.com/muei.jpg", "https://tour.example.com/muei-2.jpg");
+        assertThat(response.menuItems())
+            .extracting(item -> item.name())
+            .containsExactly("입장권", "체험권");
         assertThat(response.description()).contains("평창의 문화 관광지");
         assertThat(response.openingHours()).isEqualTo("10:00 - 18:00");
         assertThat(response.closedDays()).isEqualTo("월요일");

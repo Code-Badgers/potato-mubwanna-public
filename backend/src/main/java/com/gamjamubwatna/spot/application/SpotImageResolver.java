@@ -2,6 +2,8 @@ package com.gamjamubwatna.spot.application;
 
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -15,7 +17,7 @@ public class SpotImageResolver {
 
     private final TourApiClient tourApiClient;
     private final SpotImageCacheWriter spotImageCacheWriter;
-    private final Map<String, String> tourApiImageCache = new ConcurrentHashMap<>();
+    private final Map<String, List<String>> tourApiImageCache = new ConcurrentHashMap<>();
 
     public SpotImageResolver(
         TourApiClient tourApiClient,
@@ -26,28 +28,53 @@ public class SpotImageResolver {
     }
 
     public String resolveImageUrl(TouristSpot spot) {
+        List<String> imageUrls = resolveImageUrls(spot, 1);
+        return imageUrls.isEmpty() ? null : imageUrls.get(0);
+    }
+
+    public List<String> resolveImageUrls(TouristSpot spot, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        List<String> imageUrls = new ArrayList<>();
         if (hasText(spot.getImageUrl())) {
-            return spot.getImageUrl();
+            imageUrls.add(spot.getImageUrl());
+            if (limit == 1) {
+                return imageUrls;
+            }
         }
         String contentId = spot.getContentId();
         if (!isTourApiContentId(contentId)) {
-            return null;
+            return imageUrls;
         }
-        String resolvedImageUrl = tourApiImageCache.computeIfAbsent(contentId, this::fetchTourApiImageOrEmpty);
-        if (resolvedImageUrl.isBlank()) {
-            return null;
+        List<String> resolvedImageUrls = tourApiImageCache.computeIfAbsent(
+            contentId,
+            this::fetchTourApiImagesOrEmpty
+        );
+        if (resolvedImageUrls.isEmpty()) {
+            return imageUrls;
         }
         // 최초 조회 결과를 DB에 저장해 이후 목록 렌더링이 외부 API에 의존하지 않게 한다.
-        spotImageCacheWriter.cacheResolvedImage(spot.getId(), resolvedImageUrl);
-        return resolvedImageUrl;
+        if (!hasText(spot.getImageUrl())) {
+            spotImageCacheWriter.cacheResolvedImage(spot.getId(), resolvedImageUrls.get(0));
+        }
+        for (String resolvedImageUrl : resolvedImageUrls) {
+            if (imageUrls.size() >= limit) {
+                break;
+            }
+            if (!imageUrls.contains(resolvedImageUrl)) {
+                imageUrls.add(resolvedImageUrl);
+            }
+        }
+        return List.copyOf(imageUrls);
     }
 
-    private String fetchTourApiImageOrEmpty(String contentId) {
+    private List<String> fetchTourApiImagesOrEmpty(String contentId) {
         try {
-            return tourApiClient.findRepresentativeImage(contentId).orElse("");
+            return tourApiClient.findRepresentativeImages(contentId, 3);
         } catch (RuntimeException exception) {
             log.warn("TourAPI image fallback skipped. contentId={}, reason={}", contentId, exception.getMessage());
-            return "";
+            return List.of();
         }
     }
 

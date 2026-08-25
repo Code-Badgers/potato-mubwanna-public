@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient;
-import java.util.Optional;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class SpotImageResolverTest {
@@ -24,15 +24,15 @@ class SpotImageResolverTest {
         String imageUrl = resolver.resolveImageUrl(spot);
 
         assertThat(imageUrl).isEqualTo("https://example.com/internal.jpg");
-        verify(tourApiClient, never()).findRepresentativeImage("12345");
+        verify(tourApiClient, never()).findRepresentativeImages("12345", 3);
         verify(spotImageCacheWriter, never()).cacheResolvedImage(1L, "https://example.com/internal.jpg");
     }
 
     @Test
     void returnsTourApiDetailImageWhenInternalImageIsMissing() {
         TouristSpot spot = spot(null, "12345");
-        when(tourApiClient.findRepresentativeImage("12345"))
-            .thenReturn(Optional.of("https://tour.example.com/detail.jpg"));
+        when(tourApiClient.findRepresentativeImages("12345", 3))
+            .thenReturn(List.of("https://tour.example.com/detail.jpg"));
 
         String imageUrl = resolver.resolveImageUrl(spot);
 
@@ -45,22 +45,43 @@ class SpotImageResolverTest {
         assertThat(resolver.resolveImageUrl(spot(null, null))).isNull();
         assertThat(resolver.resolveImageUrl(spot(null, "curated-1"))).isNull();
 
-        verify(tourApiClient, never()).findRepresentativeImage(null);
-        verify(tourApiClient, never()).findRepresentativeImage("curated-1");
+        verify(tourApiClient, never()).findRepresentativeImages(null, 3);
+        verify(tourApiClient, never()).findRepresentativeImages("curated-1", 3);
         verify(spotImageCacheWriter, never()).cacheResolvedImage(1L, "curated-1");
     }
 
     @Test
     void treatsTourApiFailureAsNonCriticalAndCachesEmptyResult() {
         TouristSpot spot = spot(null, "12345");
-        when(tourApiClient.findRepresentativeImage("12345"))
+        when(tourApiClient.findRepresentativeImages("12345", 3))
             .thenThrow(new IllegalStateException("timeout"));
 
         assertThat(resolver.resolveImageUrl(spot)).isNull();
         assertThat(resolver.resolveImageUrl(spot)).isNull();
 
-        verify(tourApiClient).findRepresentativeImage("12345");
+        verify(tourApiClient).findRepresentativeImages("12345", 3);
         verify(spotImageCacheWriter, never()).cacheResolvedImage(1L, "12345");
+    }
+
+    @Test
+    void appendsTourApiImagesAfterInternalImageForDetailGallery() {
+        TouristSpot spot = spot("https://example.com/internal.jpg", "12345");
+        when(tourApiClient.findRepresentativeImages("12345", 3))
+            .thenReturn(List.of(
+                "https://example.com/internal.jpg",
+                "https://tour.example.com/detail-2.jpg",
+                "https://tour.example.com/detail-3.jpg"
+            ));
+
+        List<String> imageUrls = resolver.resolveImageUrls(spot, 3);
+
+        assertThat(imageUrls)
+            .containsExactly(
+                "https://example.com/internal.jpg",
+                "https://tour.example.com/detail-2.jpg",
+                "https://tour.example.com/detail-3.jpg"
+            );
+        verify(spotImageCacheWriter, never()).cacheResolvedImage(1L, "https://example.com/internal.jpg");
     }
 
     private TouristSpot spot(String imageUrl, String contentId) {
