@@ -283,6 +283,53 @@ void main() {
     expect(find.text('5,500원'), findsOneWidget);
   });
 
+  testWidgets('uses spot list media and business info when detail fails', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_failingSpotDetail),
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+            mapViewBuilder: (spots, onSpotSelected) => Stack(
+              children: [
+                for (var index = 0; index < spots.length; index++)
+                  Positioned(
+                    left: 24 + (index * 64),
+                    top: 180,
+                    child: TextButton(
+                      key: ValueKey('fallback-marker-${spots[index].id}'),
+                      onPressed: () => onSpotSelected(spots[index].id),
+                      child: Text('마커 ${spots[index].id}'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('fallback-marker-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('spot-image-gallery-2')), findsOneWidget);
+    expect(find.text('화요일: 오전 11:00~오후 8:00'), findsWidgets);
+    expect(find.text('대표 메뉴'), findsOneWidget);
+    expect(find.text('감자빵'), findsOneWidget);
+    expect(find.text('3,300원'), findsOneWidget);
+  });
+
   testWidgets('updates map spots without recreating the map after filtering', (
     tester,
   ) async {
@@ -1311,6 +1358,10 @@ Future<SpotDetail> _richSpotDetail(Ref ref, String spotId) async {
       ),
     ],
   );
+}
+
+Future<SpotDetail> _failingSpotDetail(Ref ref, String spotId) async {
+  throw const ApiException(message: '상세 정보를 불러오지 못했어요.');
 }
 
 class _FakeMapSpotRepository extends MapSpotRepository {

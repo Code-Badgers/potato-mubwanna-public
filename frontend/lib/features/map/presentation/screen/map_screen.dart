@@ -3046,89 +3046,107 @@ class _SpotTourInfoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return spotDetail.when(
-      data: (detail) {
-        final imageUrls = _imageUrls(detail, spot);
-        final hasImage = imageUrls.isNotEmpty;
-        if (!detail.hasTourInfo && !detail.hasBusinessInfo && !hasImage) {
-          return const SizedBox.shrink();
-        }
-        final guideRows = _tourGuideRows(detail).take(6).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            _SpotImageGallery(imageUrls: imageUrls),
-            if (detail.description != null) ...[
-              const SizedBox(height: 16),
-              const Text(
-                '이곳은 어떤 곳인가요?',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                detail.description!,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  height: 1.48,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-            if (guideRows.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                '이용 안내',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final row in guideRows) ...[
-                _TourInfoRow(icon: row.icon, label: row.label),
-                const SizedBox(height: 7),
-              ],
-            ],
-          ],
-        );
-      },
-      loading: () => const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: _SpotTourInfoSkeleton(),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
+      data: (detail) => _buildContent(detail),
+      loading: () => _buildContent(null, isLoading: true),
+      error: (_, __) => _buildContent(null),
     );
   }
 
-  List<_TourInfoItem> _tourGuideRows(SpotDetail detail) {
+  Widget _buildContent(SpotDetail? detail, {bool isLoading = false}) {
+    final imageUrls = _imageUrls(detail, spot);
+    final hasImage = imageUrls.isNotEmpty;
+    final guideRows = _tourGuideRows(detail, spot).take(6).toList();
+    final description = detail?.description;
+    if (!hasImage && description == null && guideRows.isEmpty && !isLoading) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        if (hasImage)
+          _SpotImageGallery(
+            key: ValueKey('spot-image-gallery-${spot.id}'),
+            imageUrls: imageUrls,
+          )
+        else if (isLoading)
+          const _SpotTourInfoSkeleton(),
+        if (description != null) ...[
+          const SizedBox(height: 16),
+          const Text(
+            '이곳은 어떤 곳인가요?',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              height: 1.48,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
+        if (guideRows.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Text(
+            '이용 안내',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final row in guideRows) ...[
+            _TourInfoRow(icon: row.icon, label: row.label),
+            const SizedBox(height: 7),
+          ],
+        ],
+      ],
+    );
+  }
+
+  List<_TourInfoItem> _tourGuideRows(SpotDetail? detail, MapSpot spot) {
     return [
       _TourInfoItem(
         Icons.storefront_rounded,
-        _businessOpenLabel(detail.businessOpeningHours?.openNow),
+        _businessOpenLabel(
+          detail?.businessOpeningHours?.openNow ??
+              spot.businessOpeningHours?.openNow,
+        ),
       ),
       _TourInfoItem(
-          Icons.today_rounded, detail.businessOpeningHours?.todayText),
-      _TourInfoItem(Icons.star_rounded, _ratingLabel(detail.rating)),
-      _TourInfoItem(Icons.public_rounded, _websiteLabel(detail.website)),
-      _TourInfoItem(Icons.call_rounded, detail.phone),
-      _TourInfoItem(Icons.schedule_rounded, detail.openingHours),
-      _TourInfoItem(Icons.confirmation_number_rounded, detail.admissionFee),
-      _TourInfoItem(Icons.event_busy_rounded, detail.closedDays),
-      _TourInfoItem(Icons.local_parking_rounded, detail.parking),
+        Icons.today_rounded,
+        detail?.businessOpeningHours?.todayText ??
+            spot.businessOpeningHours?.todayText,
+      ),
+      _TourInfoItem(
+        Icons.star_rounded,
+        _ratingLabel(detail?.rating ?? spot.rating),
+      ),
+      _TourInfoItem(
+        Icons.public_rounded,
+        _websiteLabel(detail?.website ?? spot.website),
+      ),
+      _TourInfoItem(Icons.call_rounded, detail?.phone ?? spot.phone),
+      _TourInfoItem(Icons.schedule_rounded, detail?.openingHours),
+      _TourInfoItem(Icons.confirmation_number_rounded, detail?.admissionFee),
+      _TourInfoItem(Icons.event_busy_rounded, detail?.closedDays),
+      _TourInfoItem(Icons.local_parking_rounded, detail?.parking),
       _TourInfoItem(
         Icons.call_rounded,
-        detail.phone == null ? detail.contactPhone : null,
+        detail?.phone == null ? detail?.contactPhone : null,
       ),
     ]
         .where((item) => item.label != null && item.label!.trim().isNotEmpty)
@@ -3161,10 +3179,10 @@ class _SpotTourInfoSection extends StatelessWidget {
     return uri.host.replaceFirst(RegExp(r'^www\.'), '');
   }
 
-  List<String> _imageUrls(SpotDetail detail, MapSpot spot) {
+  List<String> _imageUrls(SpotDetail? detail, MapSpot spot) {
     final urls = <String>[
-      ...detail.imageUrls,
-      if (detail.imageUrl != null) detail.imageUrl!,
+      ...?detail?.imageUrls,
+      if (detail?.imageUrl != null) detail!.imageUrl!,
       ...spot.imageUrls,
       if (spot.imageUrl != null) spot.imageUrl!,
     ];
@@ -3178,7 +3196,7 @@ class _SpotTourInfoSection extends StatelessWidget {
 }
 
 class _SpotImageGallery extends StatelessWidget {
-  const _SpotImageGallery({required this.imageUrls});
+  const _SpotImageGallery({required this.imageUrls, super.key});
 
   final List<String> imageUrls;
 
