@@ -288,6 +288,40 @@ class TourApiClientTest {
     }
 
     @Test
+    void searchesCuratedPlaceByKeyword() {
+        server.createContext("/searchKeyword2", exchange -> {
+            lastQuery = exchange.getRequestURI().getRawQuery();
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": [
+                          {
+                            "contentid": "12345",
+                            "contenttypeid": "12",
+                            "title": "평창무이예술관",
+                            "addr1": "강원특별자치도 평창군 봉평면"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+
+        assertThat(client("encoded%2Bkey").searchByKeyword("평창무이예술관 평창군", 10))
+            .singleElement()
+            .extracting(TourApiClient.TourApiSpotItem::contentId)
+            .isEqualTo("12345");
+        assertThat(lastQuery)
+            .contains("keyword=%ED%8F%89%EC%B0%BD%EB%AC%B4%EC%9D%B4%EC%98%88%EC%88%A0%EA%B4%80%20%ED%8F%89%EC%B0%BD%EA%B5%B0")
+            .contains("numOfRows=10");
+    }
+
+    @Test
     void returnsIntroInfoWhenDetailCommonHasAnUnexpectedResponse() {
         server.createContext("/detailCommon2", exchange -> {
             byte[] body = "<OpenAPI_ServiceResponse><error>invalid response</error></OpenAPI_ServiceResponse>"

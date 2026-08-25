@@ -2,9 +2,11 @@ package com.gamjamubwatna.spot.application;
 
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient;
+import com.gamjamubwatna.spot.infrastructure.TourApiClient.TourApiSpotItem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,15 +18,18 @@ public class SpotImageResolver {
     private static final Logger log = LoggerFactory.getLogger(SpotImageResolver.class);
 
     private final TourApiClient tourApiClient;
+    private final TourApiSpotReferenceResolver tourApiSpotReferenceResolver;
     private final SpotImageCacheWriter spotImageCacheWriter;
     private final Map<String, List<String>> tourApiImageCache = new ConcurrentHashMap<>();
 
     public SpotImageResolver(
         TourApiClient tourApiClient,
-        SpotImageCacheWriter spotImageCacheWriter
+        SpotImageCacheWriter spotImageCacheWriter,
+        TourApiSpotReferenceResolver tourApiSpotReferenceResolver
     ) {
         this.tourApiClient = tourApiClient;
         this.spotImageCacheWriter = spotImageCacheWriter;
+        this.tourApiSpotReferenceResolver = tourApiSpotReferenceResolver;
     }
 
     public String resolveImageUrl(TouristSpot spot) {
@@ -66,10 +71,11 @@ public class SpotImageResolver {
         if (limit <= 0) {
             return List.of();
         }
-        String contentId = spot.getContentId();
-        if (!isTourApiContentId(contentId)) {
+        Optional<TourApiSpotItem> reference = tourApiSpotReferenceResolver.resolve(spot);
+        if (reference.isEmpty()) {
             return List.of();
         }
+        String contentId = reference.get().contentId();
         List<String> resolvedImageUrls = tourApiImageCache.computeIfAbsent(
             contentId,
             this::fetchTourApiImagesOrEmpty
@@ -95,13 +101,13 @@ public class SpotImageResolver {
         try {
             return tourApiClient.findRepresentativeImages(contentId, 3);
         } catch (RuntimeException exception) {
-            log.warn("TourAPI image fallback skipped. contentId={}, reason={}", contentId, exception.getMessage());
+            log.warn(
+                "TourAPI image fallback skipped. contentId={}, reason={}",
+                contentId,
+                exception.getClass().getSimpleName()
+            );
             return List.of();
         }
-    }
-
-    private boolean isTourApiContentId(String contentId) {
-        return hasText(contentId) && contentId.chars().allMatch(Character::isDigit);
     }
 
     private boolean hasText(String value) {

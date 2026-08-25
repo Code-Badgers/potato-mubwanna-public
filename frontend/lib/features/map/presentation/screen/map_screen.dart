@@ -2153,11 +2153,26 @@ class _PopularSpotCard extends StatelessWidget {
                         letterSpacing: 0,
                       ),
                     ),
+                    if (spot.address.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _PopularSpotMetaLine(
+                        icon: Icons.place_outlined,
+                        label: spot.address,
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     if (spot.todayOpeningText != null) ...[
                       _PopularSpotMetaLine(
                         icon: Icons.schedule_rounded,
                         label: spot.todayOpeningText!,
+                      ),
+                      const SizedBox(height: 7),
+                    ],
+                    if (spot.menuItems.isNotEmpty) ...[
+                      _PopularSpotMetaLine(
+                        icon: Icons.restaurant_menu_rounded,
+                        label:
+                            '${spot.menuItems.first.name} · ${spot.menuItems.first.priceLabel}',
                       ),
                       const SizedBox(height: 7),
                     ],

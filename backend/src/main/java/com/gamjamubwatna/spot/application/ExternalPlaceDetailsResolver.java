@@ -107,7 +107,11 @@ public class ExternalPlaceDetailsResolver {
             writeDetailsCache(spot.getId(), details.get());
             return details.get();
         } catch (RuntimeException exception) {
-            log.warn("Google Places enrichment skipped. spotId={}, reason={}", spot.getId(), exception.getMessage());
+            log.warn(
+                "Google Places enrichment skipped. spotId={}, reason={}",
+                spot.getId(),
+                exception.getClass().getSimpleName()
+            );
             return fallbackFromCacheOrEmpty(spot, persistedCache);
         }
     }
@@ -218,7 +222,14 @@ public class ExternalPlaceDetailsResolver {
 
     private boolean shouldUseGooglePlaces(TouristSpot spot) {
         return switch (spot.getCategory()) {
-            case POTATO_RESTAURANT, POTATO_CAFE, POTATO_SNACK, POTATO_BREWERY -> true;
+            case POTATO_RESTAURANT,
+                POTATO_CAFE,
+                POTATO_SNACK,
+                POTATO_BREWERY,
+                POTATO_TOUR,
+                POTATO_EXPERIENCE,
+                POTATO_MARKET,
+                POTATO_SHOP -> true;
             default -> false;
         };
     }

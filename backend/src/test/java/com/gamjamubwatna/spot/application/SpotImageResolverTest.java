@@ -8,14 +8,21 @@ import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient;
+import com.gamjamubwatna.spot.infrastructure.TourApiClient.TourApiSpotItem;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class SpotImageResolverTest {
 
     private final TourApiClient tourApiClient = mock(TourApiClient.class);
+    private final TourApiSpotReferenceResolver tourApiSpotReferenceResolver = mock(TourApiSpotReferenceResolver.class);
     private final SpotImageCacheWriter spotImageCacheWriter = mock(SpotImageCacheWriter.class);
-    private final SpotImageResolver resolver = new SpotImageResolver(tourApiClient, spotImageCacheWriter);
+    private final SpotImageResolver resolver = new SpotImageResolver(
+        tourApiClient,
+        spotImageCacheWriter,
+        tourApiSpotReferenceResolver
+    );
 
     @Test
     void returnsInternalImageBeforeCallingTourApi() {
@@ -89,6 +96,21 @@ class SpotImageResolverTest {
         when(spot.getId()).thenReturn(1L);
         when(spot.getImageUrl()).thenReturn(imageUrl);
         when(spot.getContentId()).thenReturn(contentId);
+        if (contentId != null && contentId.chars().allMatch(Character::isDigit)) {
+            when(tourApiSpotReferenceResolver.resolve(spot)).thenReturn(Optional.of(
+                new TourApiSpotItem(
+                    contentId,
+                    12,
+                    "테스트 장소",
+                    "강원도 테스트 주소",
+                    null,
+                    null,
+                    imageUrl
+                )
+            ));
+        } else {
+            when(tourApiSpotReferenceResolver.resolve(spot)).thenReturn(Optional.empty());
+        }
         return spot;
     }
 }

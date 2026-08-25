@@ -87,6 +87,9 @@ void main() {
     expect(find.text('외향인 전용 사람 좋아 핫플'), findsOneWidget);
     expect(find.text('혼잡도 여유'), findsAtLeastNWidgets(1));
     expect(find.text('방문자 많음'), findsAtLeastNWidgets(1));
+    expect(find.text('강원 정선군'), findsAtLeastNWidgets(1));
+    expect(find.text('화요일: 오전 11:00~오후 8:00'), findsAtLeastNWidgets(1));
+    expect(find.text('감자빵 · 3,300원'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('open-full-map-button')),
