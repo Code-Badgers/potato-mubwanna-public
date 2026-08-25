@@ -53,11 +53,18 @@ public class SpotService {
 
         Map<Long, List<SpotMenuItemResponse>> menuItemsBySpotId = menuItemsBySpotId(spots);
         return spots.stream()
-            .map(spot -> SpotListResponse.from(
-                spot,
-                spotImageResolver.resolveImageUrl(spot),
-                menuItemsBySpotId.getOrDefault(spot.getId(), List.of())
-            ))
+            .map(spot -> {
+                List<String> imageUrls = spotImageResolver.resolveImageUrls(spot, 3);
+                ExternalPlaceDetails externalDetails = externalPlaceDetailsResolver.resolve(spot);
+                imageUrls = mergedImageUrls(imageUrls, externalDetails.imageUrls(), 3);
+                return SpotListResponse.from(
+                    spot,
+                    imageUrls.isEmpty() ? null : imageUrls.get(0),
+                    imageUrls,
+                    externalDetails,
+                    menuItemsBySpotId.getOrDefault(spot.getId(), List.of())
+                );
+            })
             .toList();
     }
 
