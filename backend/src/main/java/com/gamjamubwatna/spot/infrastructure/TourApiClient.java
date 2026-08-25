@@ -76,41 +76,56 @@ public class TourApiClient {
     }
 
     public Optional<String> findRepresentativeImage(String contentId) {
+        return findRepresentativeImages(contentId, 1).stream().findFirst();
+    }
+
+    public List<String> findRepresentativeImages(String contentId, int limit) {
         if (serviceKey == null || serviceKey.isBlank()) {
             throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
         }
-        if (contentId == null || contentId.isBlank()) {
-            return Optional.empty();
+        if (contentId == null || contentId.isBlank() || limit <= 0) {
+            return List.of();
         }
 
-        Optional<String> representativeImage = findRepresentativeImageFromCommon(contentId);
-        if (representativeImage.isPresent()) {
-            return representativeImage;
+        List<String> candidates = new ArrayList<>();
+        candidates.addAll(findRepresentativeImagesFromCommon(contentId));
+        if (validImageCandidates(candidates).size() >= limit) {
+            return validImageCandidates(candidates).stream()
+                .limit(limit)
+                .toList();
         }
 
         JsonNode response = restClient.get()
             .uri(detailImageUri(contentId))
             .retrieve()
             .body(JsonNode.class);
+        candidates.addAll(imageCandidates(response));
 
-        return imageCandidates(response).stream()
+        return candidates.stream()
             .map(String::trim)
             .filter(value -> !value.isBlank())
-            .findFirst();
+            .distinct()
+            .limit(limit)
+            .toList();
     }
 
-    private Optional<String> findRepresentativeImageFromCommon(String contentId) {
+    private List<String> validImageCandidates(List<String> candidates) {
+        return candidates.stream()
+            .map(String::trim)
+            .filter(value -> !value.isBlank())
+            .distinct()
+            .toList();
+    }
+
+    private List<String> findRepresentativeImagesFromCommon(String contentId) {
         try {
             JsonNode commonResponse = restClient.get()
                 .uri(detailCommonUri(contentId))
                 .retrieve()
                 .body(JsonNode.class);
-            return imageCandidatesFromCommon(firstItem(commonResponse)).stream()
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .findFirst();
+            return imageCandidatesFromCommon(firstItem(commonResponse));
         } catch (RuntimeException ignored) {
-            return Optional.empty();
+            return List.of();
         }
     }
 
@@ -135,7 +150,14 @@ public class TourApiClient {
 
         SpotTourInfo tourInfo = new SpotTourInfo(
             readFirstText(commonItem, "overview"),
-            readFirstText(introItem, "usetime", "usetimeculture", "usetimeleports", "usetimefestival"),
+            readFirstText(
+                introItem,
+                "opentimefood",
+                "usetime",
+                "usetimeculture",
+                "usetimeleports",
+                "usetimefestival"
+            ),
             readFirstText(introItem, "restdate", "restdateculture", "restdateleports", "restdatefood"),
             readFirstText(introItem, "usefee", "usefeeleports", "expagerangeleports"),
             readFirstText(introItem, "parking", "parkingculture", "parkingleports", "parkingfood"),

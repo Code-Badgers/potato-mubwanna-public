@@ -2824,6 +2824,13 @@ class _SelectedSpotSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final detail = spotDetail.valueOrNull;
+    final address = (detail?.address.trim().isNotEmpty ?? false)
+        ? detail!.address
+        : spot.address;
+    final menuItems = (detail?.menuItems.isNotEmpty ?? false)
+        ? detail!.menuItems
+        : spot.menuItems;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2857,6 +2864,10 @@ class _SelectedSpotSummary extends StatelessWidget {
                       letterSpacing: 0,
                     ),
                   ),
+                  if (address.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _SpotAddressLine(address: address),
+                  ],
                   const SizedBox(height: 9),
                   _CongestionBadge(label: spot.congestionLabel),
                 ],
@@ -2919,26 +2930,54 @@ class _SelectedSpotSummary extends StatelessWidget {
             ),
           ],
         ),
-        if (_showsTourApiInfo(spot))
-          _SpotTourInfoSection(
-            spot: spot,
-            spotDetail: spotDetail,
-          ),
-        if (spot.menuItems.isNotEmpty) ...[
+        _SpotTourInfoSection(
+          spot: spot,
+          spotDetail: spotDetail,
+        ),
+        if (menuItems.isNotEmpty) ...[
           const SizedBox(height: 14),
           _SpotMenuPreview(
             key: ValueKey('spot-menu-preview-${spot.id}'),
-            menuItems: spot.menuItems,
+            menuItems: menuItems,
           ),
         ],
       ],
     );
   }
+}
 
-  bool _showsTourApiInfo(MapSpot spot) {
-    return spot.category == 'POTATO_TOUR' ||
-        spot.category == 'POTATO_SHOP' ||
-        spot.category == 'POTATO_EXPERIENCE';
+class _SpotAddressLine extends StatelessWidget {
+  const _SpotAddressLine({required this.address});
+
+  final String address;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.place_outlined,
+          size: 16,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            address,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -2955,8 +2994,8 @@ class _SpotTourInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return spotDetail.when(
       data: (detail) {
-        final imageUrl = detail.imageUrl ?? spot.imageUrl;
-        final hasImage = imageUrl != null && imageUrl.trim().isNotEmpty;
+        final imageUrls = _imageUrls(detail, spot);
+        final hasImage = imageUrls.isNotEmpty;
         if (!detail.hasTourInfo && !hasImage) {
           return const SizedBox.shrink();
         }
@@ -2965,17 +3004,7 @@ class _SpotTourInfoSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: SizedBox(
-                width: double.infinity,
-                height: 164,
-                child: _CourseImage(
-                  imageUrl: imageUrl,
-                  icon: Icons.landscape_rounded,
-                ),
-              ),
-            ),
+            _SpotImageGallery(imageUrls: imageUrls),
             if (detail.description != null) ...[
               const SizedBox(height: 16),
               const Text(
@@ -3039,6 +3068,76 @@ class _SpotTourInfoSection extends StatelessWidget {
     ]
         .where((item) => item.label != null && item.label!.trim().isNotEmpty)
         .toList();
+  }
+
+  List<String> _imageUrls(SpotDetail detail, MapSpot spot) {
+    final urls = <String>[
+      ...detail.imageUrls,
+      if (detail.imageUrl != null) detail.imageUrl!,
+      if (spot.imageUrl != null) spot.imageUrl!,
+    ];
+    return urls
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .take(3)
+        .toList(growable: false);
+  }
+}
+
+class _SpotImageGallery extends StatelessWidget {
+  const _SpotImageGallery({required this.imageUrls});
+
+  final List<String> imageUrls;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrls.isEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: const SizedBox(
+          width: double.infinity,
+          height: 148,
+          child: _CourseImage(
+            imageUrl: null,
+            icon: Icons.landscape_rounded,
+          ),
+        ),
+      );
+    }
+    if (imageUrls.length == 1) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: SizedBox(
+          width: double.infinity,
+          height: 154,
+          child: _CourseImage(
+            imageUrl: imageUrls.first,
+            icon: Icons.landscape_rounded,
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 142,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: imageUrls.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: SizedBox(
+              width: index == 0 ? 214 : 154,
+              child: _CourseImage(
+                imageUrl: imageUrls[index],
+                icon: Icons.landscape_rounded,
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

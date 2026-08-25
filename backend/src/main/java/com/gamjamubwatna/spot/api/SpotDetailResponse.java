@@ -5,6 +5,7 @@ import com.gamjamubwatna.spot.domain.CongestionLevel;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import java.math.BigDecimal;
+import java.util.List;
 
 public record SpotDetailResponse(
     Long id,
@@ -25,10 +26,18 @@ public record SpotDetailResponse(
     String closedDays,
     String admissionFee,
     String parking,
-    String contactPhone
+    String contactPhone,
+    List<String> imageUrls,
+    List<SpotMenuItemResponse> menuItems
 ) {
 
-    public static SpotDetailResponse from(TouristSpot spot, String imageUrl, SpotTourInfo tourInfo) {
+    public static SpotDetailResponse from(
+        TouristSpot spot,
+        String imageUrl,
+        List<String> imageUrls,
+        SpotTourInfo tourInfo,
+        List<SpotMenuItemResponse> menuItems
+    ) {
         return new SpotDetailResponse(
             spot.getId(),
             spot.getContentId(),
@@ -48,7 +57,9 @@ public record SpotDetailResponse(
             tourInfo.closedDays(),
             tourInfo.admissionFee(),
             tourInfo.parking(),
-            tourInfo.contactPhone()
+            tourInfo.contactPhone(),
+            imageUrls,
+            menuItems
         );
     }
 }

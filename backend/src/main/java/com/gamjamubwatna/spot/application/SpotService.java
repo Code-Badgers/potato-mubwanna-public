@@ -62,10 +62,15 @@ public class SpotService {
     public SpotDetailResponse getSpot(Long spotId) {
         TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(spotId)
             .orElseThrow(() -> new IllegalArgumentException("감자 스팟을 찾을 수 없습니다."));
+        List<String> imageUrls = spotImageResolver.resolveImageUrls(spot, 3);
+        List<SpotMenuItemResponse> menuItems = menuItemsBySpotId(List.of(spot))
+            .getOrDefault(spot.getId(), List.of());
         return SpotDetailResponse.from(
             spot,
-            spotImageResolver.resolveImageUrl(spot),
-            spotTourInfoResolver.resolve(spot)
+            imageUrls.isEmpty() ? null : imageUrls.get(0),
+            imageUrls,
+            spotTourInfoResolver.resolve(spot),
+            menuItems
         );
     }
 

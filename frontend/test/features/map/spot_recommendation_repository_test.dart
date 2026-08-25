@@ -56,7 +56,13 @@ void main() {
     final detail = await MapSpotRepository(dio: dio).fetchSpotDetail('7');
 
     expect(requestedPaths, ['/spots/7']);
+    expect(detail.address, '강원특별자치도 평창군 봉평면');
     expect(detail.imageUrl, 'https://tour.example.com/muei.jpg');
+    expect(detail.imageUrls, [
+      'https://tour.example.com/muei.jpg',
+      'https://tour.example.com/muei-2.jpg',
+    ]);
+    expect(detail.menuItems.first.name, '감자전');
     expect(detail.description, contains('평창의 예술 공간'));
     expect(detail.openingHours, '10:00 - 18:00');
     expect(detail.admissionFee, '성인 5,000원');
@@ -111,8 +117,21 @@ const _spotDetailResponse = <String, Object?>{
     'id': 7,
     'name': '평창무이예술관',
     'category': 'POTATO_TOUR',
+    'address': '강원특별자치도 평창군 봉평면',
     'cityName': '평창군',
     'imageUrl': 'https://tour.example.com/muei.jpg',
+    'imageUrls': [
+      'https://tour.example.com/muei.jpg',
+      'https://tour.example.com/muei-2.jpg',
+    ],
+    'menuItems': [
+      {
+        'name': '감자전',
+        'priceWon': 9000,
+        'priceNote': null,
+        'verifiedOn': '2026-08-03',
+      },
+    ],
     'description': '평창의 예술 공간입니다.',
     'openingHours': '10:00 - 18:00',
     'closedDays': '월요일',

@@ -63,6 +63,56 @@ class TourApiClientTest {
     }
 
     @Test
+    void findsRepresentativeImagesFromCommonAndDetailImage2() {
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "firstimage": "https://tour.example.com/first.jpg",
+                          "firstimage2": "https://tour.example.com/first-thumb.jpg"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+        server.createContext("/detailImage2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": [
+                          {
+                            "originimgurl": "https://tour.example.com/detail-1.jpg",
+                            "smallimageurl": "https://tour.example.com/detail-thumb.jpg"
+                          },
+                          {
+                            "originimgurl": "https://tour.example.com/detail-2.jpg"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+
+        assertThat(client("encoded%2Bkey").findRepresentativeImages("12345", 3))
+            .containsExactly(
+                "https://tour.example.com/first.jpg",
+                "https://tour.example.com/first-thumb.jpg",
+                "https://tour.example.com/detail-1.jpg"
+            );
+    }
+
+    @Test
     void prefersRepresentativeImageFromDetailCommon2() {
         server.createContext("/detailCommon2", exchange -> {
             lastQuery = exchange.getRequestURI().getRawQuery();
@@ -188,6 +238,53 @@ class TourApiClientTest {
         assertThat(lastQuery)
             .contains("contentId=12345")
             .contains("contentTypeId=14");
+    }
+
+    @Test
+    void readsRestaurantOpeningHoursFromFoodIntro() {
+        server.createContext("/detailCommon2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "overview": "감자 음식을 맛볼 수 있는 식당입니다."
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+        server.createContext("/detailIntro2", exchange -> {
+            byte[] body = """
+                {
+                  "response": {
+                    "body": {
+                      "items": {
+                        "item": {
+                          "opentimefood": "11:00 - 20:00",
+                          "restdatefood": "화요일",
+                          "parkingfood": "가능",
+                          "infocenterfood": "033-111-2222"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+            writeJson(exchange, body);
+        });
+
+        assertThat(client("encoded%2Bkey").findSpotTourInfo("12345", 39))
+            .hasValueSatisfying(info -> {
+                assertThat(info.openingHours()).isEqualTo("11:00 - 20:00");
+                assertThat(info.closedDays()).isEqualTo("화요일");
+                assertThat(info.parking()).isEqualTo("가능");
+                assertThat(info.contactPhone()).isEqualTo("033-111-2222");
+            });
     }
 
     private TourApiClient client(String serviceKey) {
