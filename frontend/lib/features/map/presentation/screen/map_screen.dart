@@ -558,14 +558,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           ),
                           Positioned(
                             left: 14,
-                            bottom: _isRouteMode ? 280 : 184,
+                            bottom: _isRouteMode ? 298 : 202,
                             child: _FullMapHomeButton(
                               onTap: _returnToDiscoveryHome,
                             ),
                           ),
                           Positioned(
                             right: 18,
-                            bottom: _isRouteMode ? 280 : 184,
+                            bottom: _isRouteMode ? 298 : 202,
                             child: _FullMapLocateButton(
                               onTap: () => unawaited(
                                 _loadCurrentLocation(focusMap: true),
