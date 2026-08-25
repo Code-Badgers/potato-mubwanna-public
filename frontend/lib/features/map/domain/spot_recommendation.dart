@@ -10,6 +10,7 @@ class SpotRecommendation {
     required this.address,
     required this.cityName,
     required this.imageUrl,
+    this.imageUrls = const [],
     required this.externalRank,
   });
 
@@ -24,6 +25,7 @@ class SpotRecommendation {
       address: json['address'] as String? ?? '',
       cityName: json['cityName'] as String? ?? '',
       imageUrl: imageUrl == null || imageUrl.trim().isEmpty ? null : imageUrl,
+      imageUrls: _readImageUrls(json),
       externalRank: _readInt(json['externalRank']),
     );
   }
@@ -36,6 +38,7 @@ class SpotRecommendation {
   final String address;
   final String cityName;
   final String? imageUrl;
+  final List<String> imageUrls;
   final int externalRank;
 
   bool get hasValidCoordinates => latitude != 0 && longitude != 0;
@@ -50,6 +53,7 @@ class SpotRecommendation {
       address: address,
       cityName: cityName,
       imageUrl: imageUrl,
+      imageUrls: imageUrls,
       congestionLevel: 'NORMAL',
       stampEnabled: false,
       isRecommended: true,
@@ -77,5 +81,21 @@ class SpotRecommendation {
       return int.tryParse(value) ?? 0;
     }
     return 0;
+  }
+
+  static List<String> _readImageUrls(Map<String, dynamic> json) {
+    final values = (json['imageUrls'] as List<dynamic>? ?? const [])
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
+    final imageUrl = json['imageUrl'] as String?;
+    final trimmedImageUrl = imageUrl?.trim();
+    if (trimmedImageUrl == null ||
+        trimmedImageUrl.isEmpty ||
+        values.contains(trimmedImageUrl)) {
+      return values;
+    }
+    return [trimmedImageUrl, ...values];
   }
 }
