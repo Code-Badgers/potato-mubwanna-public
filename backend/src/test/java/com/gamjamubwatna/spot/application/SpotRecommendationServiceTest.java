@@ -37,6 +37,12 @@ class SpotRecommendationServiceTest {
     @Mock
     private RelatedTourismApiClient relatedTourismApiClient;
 
+    @Mock
+    private SpotImageResolver spotImageResolver;
+
+    @Mock
+    private ExternalPlaceDetailsResolver externalPlaceDetailsResolver;
+
     private SpotRecommendationService service;
 
     @BeforeEach
@@ -44,7 +50,9 @@ class SpotRecommendationServiceTest {
         service = new SpotRecommendationService(
             touristSpotRepository,
             relatedTourismApiClient,
-            new GangwonSignguCodeResolver()
+            new GangwonSignguCodeResolver(),
+            spotImageResolver,
+            externalPlaceDetailsResolver
         );
     }
 
@@ -70,6 +78,9 @@ class SpotRecommendationServiceTest {
             "원주소금산출렁다리",
             "원주전통시장"
         ))).thenReturn(List.of(fourth, third, second, first));
+        mockImages(first, "https://example.com/2.jpg");
+        mockImages(second, "https://example.com/3.jpg");
+        mockImages(third, "https://example.com/4.jpg");
 
         var result = service.getRecommendations(1L);
 
@@ -77,6 +88,43 @@ class SpotRecommendationServiceTest {
             .containsExactly(2L, 3L, 4L);
         assertThat(result).extracting(response -> response.externalRank())
             .containsExactly(1, 2, 3);
+        assertThat(result).extracting(response -> response.imageUrl())
+            .containsExactly(
+                "https://example.com/2.jpg",
+                "https://example.com/3.jpg",
+                "https://example.com/4.jpg"
+            );
+    }
+
+    @Test
+    void enrichesRecommendationImagesWithGoogleAndTourApiFallbacks() {
+        TouristSpot current = spot(1L, "뮤지엄산", "원주시");
+        TouristSpot related = spot(2L, "원주소금산출렁다리", "원주시");
+        when(touristSpotRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(current));
+        when(relatedTourismApiClient.searchRelatedSpots("뮤지엄산", "51130")).thenReturn(List.of(
+            item("뮤지엄산", "51130", "원주소금산출렁다리", "1")
+        ));
+        when(touristSpotRepository.findActiveSpotsByNames(Set.of("원주소금산출렁다리")))
+            .thenReturn(List.of(related));
+        when(spotImageResolver.resolveStoredImageUrls(related, 3)).thenReturn(List.of());
+        when(externalPlaceDetailsResolver.resolve(related))
+            .thenReturn(new ExternalPlaceDetails(
+                "google-place-id",
+                null,
+                null,
+                null,
+                PlaceOpeningHours.empty(),
+                List.of("https://google.example.com/photo.jpg")
+            ));
+        when(spotImageResolver.resolveTourApiImageUrls(related, 3))
+            .thenReturn(List.of("https://tour.example.com/photo.jpg"));
+
+        var result = service.getRecommendations(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).imageUrl()).isEqualTo("https://google.example.com/photo.jpg");
+        assertThat(result.get(0).imageUrls())
+            .containsExactly("https://google.example.com/photo.jpg", "https://tour.example.com/photo.jpg");
     }
 
     @Test
@@ -138,6 +186,12 @@ class SpotRecommendationServiceTest {
         );
         ReflectionTestUtils.setField(spot, "id", id);
         return spot;
+    }
+
+    private void mockImages(TouristSpot spot, String imageUrl) {
+        when(spotImageResolver.resolveStoredImageUrls(spot, 3)).thenReturn(List.of(imageUrl));
+        when(externalPlaceDetailsResolver.resolve(spot)).thenReturn(ExternalPlaceDetails.empty());
+        when(spotImageResolver.resolveTourApiImageUrls(spot, 3)).thenReturn(List.of());
     }
 
     private RelatedTourismSpot item(

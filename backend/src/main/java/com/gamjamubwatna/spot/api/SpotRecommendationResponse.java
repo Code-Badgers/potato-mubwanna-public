@@ -3,6 +3,7 @@ package com.gamjamubwatna.spot.api;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import java.math.BigDecimal;
+import java.util.List;
 
 public record SpotRecommendationResponse(
     Long spotId,
@@ -13,10 +14,16 @@ public record SpotRecommendationResponse(
     String address,
     String cityName,
     String imageUrl,
+    List<String> imageUrls,
     int externalRank
 ) {
 
-    public static SpotRecommendationResponse from(TouristSpot spot, int externalRank) {
+    public static SpotRecommendationResponse from(
+        TouristSpot spot,
+        String imageUrl,
+        List<String> imageUrls,
+        int externalRank
+    ) {
         return new SpotRecommendationResponse(
             spot.getId(),
             spot.getName(),
@@ -25,7 +32,8 @@ public record SpotRecommendationResponse(
             spot.getLongitude(),
             spot.getAddress(),
             spot.getCityName(),
-            spot.getImageUrl(),
+            imageUrl,
+            List.copyOf(imageUrls),
             externalRank
         );
     }

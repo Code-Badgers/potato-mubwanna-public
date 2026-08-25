@@ -44,6 +44,7 @@ class SpotRecommendationControllerTest {
                 "강원특별자치도 원주시",
                 "원주시",
                 "https://example.com/spot.jpg",
+                List.of("https://example.com/spot.jpg"),
                 2
             )
         ));
@@ -53,6 +54,8 @@ class SpotRecommendationControllerTest {
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data[0].spotId").value(2))
             .andExpect(jsonPath("$.data[0].name").value("원주소금산출렁다리"))
+            .andExpect(jsonPath("$.data[0].imageUrl").value("https://example.com/spot.jpg"))
+            .andExpect(jsonPath("$.data[0].imageUrls[0]").value("https://example.com/spot.jpg"))
             .andExpect(jsonPath("$.data[0].externalRank").value(2));
     }
 
