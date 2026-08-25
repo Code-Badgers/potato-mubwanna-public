@@ -22,11 +22,13 @@ done
 
 runner_directory="$(mktemp -d)"
 exchange_id="$(openssl rand -hex 16)"
+production_repository_directory="${PRODUCTION_REPOSITORY_DIRECTORY:-/opt/potato-mubwanna}"
 remote_private_key="/tmp/potato-tour-api-${exchange_id}.pem"
 remote_public_key="/tmp/potato-tour-api-${exchange_id}.pub"
 remote_ciphertext="/tmp/potato-tour-api-${exchange_id}.bin"
 remote_secret="/tmp/potato-tour-api-${exchange_id}.secret"
-remote_next_env="/opt/potato-mubwanna/deploy/.env.next-${exchange_id}"
+remote_env_file="${production_repository_directory}/deploy/.env"
+remote_next_env="${remote_env_file}.next-${exchange_id}"
 
 cleanup_runner() {
   rm -rf "${runner_directory}"
@@ -118,6 +120,7 @@ jq -n \
   --arg public_key "${remote_public_key}" \
   --arg ciphertext_path "${remote_ciphertext}" \
   --arg secret_path "${remote_secret}" \
+  --arg env_file "${remote_env_file}" \
   --arg next_env "${remote_next_env}" \
   --arg ciphertext "${ciphertext_base64}" \
   '{commands: [
@@ -127,8 +130,8 @@ jq -n \
     ("public_key=" + ($public_key | @sh)),
     ("ciphertext_path=" + ($ciphertext_path | @sh)),
     ("secret_path=" + ($secret_path | @sh)),
+    ("env_file=" + ($env_file | @sh)),
     ("next_env=" + ($next_env | @sh)),
-    "env_file=/opt/potato-mubwanna/deploy/.env",
     "cleanup() { rm -f \"${private_key}\" \"${public_key}\" \"${ciphertext_path}\" \"${secret_path}\" \"${next_env}\"; }",
     "trap cleanup EXIT",
     ("printf %s " + ($ciphertext | @sh) + " | openssl base64 -d -A -out \"${ciphertext_path}\""),
@@ -137,7 +140,7 @@ jq -n \
     "test -f \"${env_file}\"",
     "secret_value=\"$(cat \"${secret_path}\")\"",
     "grep -v '^TOUR_API_SERVICE_KEY=' \"${env_file}\" > \"${next_env}\" || true",
-    "printf 'TOUR_API_SERVICE_KEY=%s\\n' \"${secret_value}\" >> \"${next_env}\"",
+    "echo \"TOUR_API_SERVICE_KEY=${secret_value}\" >> \"${next_env}\"",
     "chown --reference=\"${env_file}\" \"${next_env}\"",
     "chmod --reference=\"${env_file}\" \"${next_env}\"",
     "mv \"${next_env}\" \"${env_file}\"",
