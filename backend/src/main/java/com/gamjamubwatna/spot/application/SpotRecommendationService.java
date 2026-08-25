@@ -6,6 +6,7 @@ import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.spot.infrastructure.RelatedTourismApiClient;
 import com.gamjamubwatna.spot.infrastructure.RelatedTourismApiClient.RelatedTourismSpot;
 import com.gamjamubwatna.spot.infrastructure.RelatedTourismApiException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,15 +24,21 @@ public class SpotRecommendationService {
     private final TouristSpotRepository touristSpotRepository;
     private final RelatedTourismApiClient relatedTourismApiClient;
     private final GangwonSignguCodeResolver signguCodeResolver;
+    private final SpotImageResolver spotImageResolver;
+    private final ExternalPlaceDetailsResolver externalPlaceDetailsResolver;
 
     public SpotRecommendationService(
         TouristSpotRepository touristSpotRepository,
         RelatedTourismApiClient relatedTourismApiClient,
-        GangwonSignguCodeResolver signguCodeResolver
+        GangwonSignguCodeResolver signguCodeResolver,
+        SpotImageResolver spotImageResolver,
+        ExternalPlaceDetailsResolver externalPlaceDetailsResolver
     ) {
         this.touristSpotRepository = touristSpotRepository;
         this.relatedTourismApiClient = relatedTourismApiClient;
         this.signguCodeResolver = signguCodeResolver;
+        this.spotImageResolver = spotImageResolver;
+        this.externalPlaceDetailsResolver = externalPlaceDetailsResolver;
     }
 
     public List<SpotRecommendationResponse> getRecommendations(Long spotId) {
@@ -64,10 +71,7 @@ public class SpotRecommendationService {
 
             return rankedSpots.stream()
                 .filter(rankedSpot -> localSpotsByName.containsKey(rankedSpot.name()))
-                .map(rankedSpot -> SpotRecommendationResponse.from(
-                    localSpotsByName.get(rankedSpot.name()),
-                    rankedSpot.rank()
-                ))
+                .map(rankedSpot -> recommendationResponse(localSpotsByName.get(rankedSpot.name()), rankedSpot.rank()))
                 .limit(MAX_RECOMMENDATIONS)
                 .toList();
         } catch (RelatedTourismApiException exception) {
@@ -100,6 +104,39 @@ public class SpotRecommendationService {
             .map(entry -> new RankedRelatedSpot(entry.getKey(), entry.getValue()))
             .sorted(Comparator.comparingInt(RankedRelatedSpot::rank))
             .toList();
+    }
+
+    private SpotRecommendationResponse recommendationResponse(TouristSpot spot, int externalRank) {
+        List<String> imageUrls = resolvedImageUrls(spot, 3);
+        return SpotRecommendationResponse.from(
+            spot,
+            imageUrls.isEmpty() ? null : imageUrls.get(0),
+            imageUrls,
+            externalRank
+        );
+    }
+
+    private List<String> resolvedImageUrls(TouristSpot spot, int limit) {
+        List<String> imageUrls = new ArrayList<>();
+        appendImages(imageUrls, spotImageResolver.resolveStoredImageUrls(spot, limit), limit);
+        appendImages(imageUrls, externalPlaceDetailsResolver.resolve(spot).imageUrls(), limit);
+        appendImages(imageUrls, spotImageResolver.resolveTourApiImageUrls(spot, limit), limit);
+        return List.copyOf(imageUrls);
+    }
+
+    private void appendImages(List<String> target, List<String> source, int limit) {
+        if (source == null || source.isEmpty()) {
+            return;
+        }
+        for (String imageUrl : source) {
+            if (target.size() >= limit) {
+                return;
+            }
+            if (imageUrl == null || imageUrl.isBlank() || target.contains(imageUrl)) {
+                continue;
+            }
+            target.add(imageUrl);
+        }
     }
 
     private String normalized(String value) {
