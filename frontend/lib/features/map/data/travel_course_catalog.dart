@@ -252,6 +252,7 @@ String _travelCourseCacheKey(List<MapSpot> spots) {
           spot.category,
           spot.cityName,
           spot.imageUrl ?? '',
+          spot.imageUrls.join(','),
           spot.congestionLevel,
         ].join(':'),
       )

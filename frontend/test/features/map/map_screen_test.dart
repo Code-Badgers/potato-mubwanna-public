@@ -103,7 +103,8 @@ void main() {
     expect(
         find.byKey(const ValueKey('full-map-locate-button')), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('상세보기'), findsOneWidget);
+    expect(find.text('길찾기'), findsOneWidget);
+    expect(find.text('상세보기'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('full-map-home-button')));
     await tester.pumpAndSettle();
@@ -328,7 +329,7 @@ void main() {
     expect(renderedSpotIds.last, ['2']);
   });
 
-  testWidgets('opens detail for the currently selected map marker', (
+  testWidgets('shows expanded information for the currently selected marker', (
     tester,
   ) async {
     final router = GoRouter(
@@ -382,19 +383,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('marker-2')));
     await tester.pump();
-    await tester.ensureVisible(find.text('상세보기'));
+    await tester.ensureVisible(find.text('대표 메뉴'));
     await tester.pump();
-    await tester.tap(find.text('상세보기'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('상세 2'), findsOneWidget);
-
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-
-    expect(find.text('상세 2'), findsNothing);
     expect(find.text('감자 카페'), findsOneWidget);
-    expect(find.text('상세보기'), findsOneWidget);
+    expect(find.text('대표 메뉴'), findsOneWidget);
+    expect(find.text('상세보기'), findsNothing);
   });
 
   testWidgets('keeps all category spots visible when a spot is bookmarked', (
@@ -1139,7 +1132,8 @@ void main() {
 
     expect(find.text('추천 장소를 찾지 못했어요'), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('상세보기'), findsOneWidget);
+    expect(find.text('길찾기'), findsOneWidget);
+    expect(find.text('상세보기'), findsNothing);
   });
 
   testWidgets('keeps the map usable when recommendations fail', (tester) async {
