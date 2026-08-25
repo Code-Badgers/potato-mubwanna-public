@@ -748,10 +748,8 @@ class _MapDiscoveryHome extends StatelessWidget {
           ],
         );
       },
-      loading: () => const _DiscoverySectionStatus(
-        icon: Icons.travel_explore_rounded,
-        title: '강원 여행 지도를 준비하고 있어요',
-        description: '가볍게 둘러볼 장소를 불러오는 중입니다.',
+      loading: () => const PotatoLoadingView.fullScreen(
+        subtitle: '가볍게 둘러볼 장소를 불러오는 중입니다',
       ),
       error: (_, __) => const Padding(
         padding: EdgeInsets.all(20),
