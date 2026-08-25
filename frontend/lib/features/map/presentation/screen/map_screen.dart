@@ -971,7 +971,7 @@ class _TravelCourseSection extends StatelessWidget {
         const _DiscoverySectionHeader(title: '오늘 어떤 여행이 끌리나요? 🌿'),
         const SizedBox(height: 12),
         SizedBox(
-          height: 340,
+          height: 304,
           child: courses.isEmpty
               ? const Padding(
                   padding: EdgeInsets.only(right: 20),
@@ -1052,6 +1052,7 @@ class _TravelCourseCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Container(
           width: 266,
+          height: 292,
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(24),
@@ -1066,7 +1067,7 @@ class _TravelCourseCard extends StatelessWidget {
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(24)),
                     child: SizedBox(
-                      height: 166,
+                      height: 142,
                       width: double.infinity,
                       child: _CourseImage(
                         imageUrl: course.heroImageUrl,
@@ -1120,7 +1121,7 @@ class _TravelCourseCard extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+                  padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1136,7 +1137,7 @@ class _TravelCourseCard extends StatelessWidget {
                           letterSpacing: 0,
                         ),
                       ),
-                      const SizedBox(height: 11),
+                      const SizedBox(height: 8),
                       Wrap(
                         spacing: 6,
                         runSpacing: 6,
@@ -1425,7 +1426,6 @@ class _TravelCourseDetailPage extends StatelessWidget {
                     _CourseStopCard(
                       index: index + 1,
                       stop: course.stops[index],
-                      isAlternateLayout: index.isOdd,
                       onDetailPressed: () =>
                           onSpotDetailPressed(course.stops[index].spot),
                     ),
@@ -1644,13 +1644,11 @@ class _CourseStopCard extends StatelessWidget {
   const _CourseStopCard({
     required this.index,
     required this.stop,
-    required this.isAlternateLayout,
     required this.onDetailPressed,
   });
 
   final int index;
   final TravelCourseStop stop;
-  final bool isAlternateLayout;
   final VoidCallback onDetailPressed;
 
   @override
@@ -1658,7 +1656,7 @@ class _CourseStopCard extends StatelessWidget {
     final image = ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: AspectRatio(
-        aspectRatio: isAlternateLayout ? 0.86 : 1.72,
+        aspectRatio: 1.72,
         child: _CourseImage(
           imageUrl: stop.spot.imageUrl,
           asset: stop.imageAsset,
@@ -1769,23 +1767,14 @@ class _CourseStopCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 22),
-      child: isAlternateLayout
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(width: 132, child: image),
-                const SizedBox(width: 14),
-                Expanded(child: text),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                image,
-                const SizedBox(height: 14),
-                text,
-              ],
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          image,
+          const SizedBox(height: 14),
+          text,
+        ],
+      ),
     );
   }
 }

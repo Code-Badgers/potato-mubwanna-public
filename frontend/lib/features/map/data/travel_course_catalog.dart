@@ -9,6 +9,7 @@ class TravelCourse {
     required this.editorialIntro,
     required this.tags,
     required this.heroImageAsset,
+    required this.heroImageUrl,
     required this.estimatedDuration,
     required this.focusLabel,
     required this.stops,
@@ -21,21 +22,12 @@ class TravelCourse {
   final String editorialIntro;
   final List<String> tags;
   final String heroImageAsset;
+  final String? heroImageUrl;
   final String estimatedDuration;
   final String focusLabel;
   final List<TravelCourseStop> stops;
 
   List<MapSpot> get spots => stops.map((stop) => stop.spot).toList();
-
-  String? get heroImageUrl {
-    for (final stop in stops) {
-      final imageUrl = stop.spot.imageUrl;
-      if (imageUrl != null && imageUrl.trim().isNotEmpty) {
-        return imageUrl;
-      }
-    }
-    return null;
-  }
 }
 
 class TravelCourseStop {
@@ -112,10 +104,64 @@ class _TravelCourseDefinition {
       editorialIntro: editorialIntro,
       tags: tags,
       heroImageAsset: heroImageAsset,
+      heroImageUrl: _resolveHeroImageUrl(spots, stops),
       estimatedDuration: estimatedDuration,
       focusLabel: focusLabel,
       stops: stops,
     );
+  }
+
+  String? _resolveHeroImageUrl(
+    List<MapSpot> spots,
+    List<TravelCourseStop> stops,
+  ) {
+    for (final spec in placeSpecs) {
+      final imageUrl = _matchingImageUrl(
+        spots,
+        spec.categories,
+        spec.nameKeywords,
+      );
+      if (imageUrl != null) {
+        return imageUrl;
+      }
+    }
+    for (final stop in stops) {
+      final imageUrl = _validImageUrl(stop.spot.imageUrl);
+      if (imageUrl != null) {
+        return imageUrl;
+      }
+    }
+    final courseCategories =
+        placeSpecs.expand((spec) => spec.categories).toSet();
+    return _matchingImageUrl(spots, courseCategories, const []);
+  }
+
+  String? _matchingImageUrl(
+    List<MapSpot> spots,
+    Set<String> categories,
+    List<String> nameKeywords,
+  ) {
+    for (final spot in spots) {
+      if (!categories.contains(spot.category)) {
+        continue;
+      }
+      final text = '${spot.name} ${spot.address} ${spot.cityName}';
+      final matchesName =
+          nameKeywords.isEmpty || nameKeywords.any(text.contains);
+      if (!matchesName) {
+        continue;
+      }
+      final imageUrl = _validImageUrl(spot.imageUrl);
+      if (imageUrl != null) {
+        return imageUrl;
+      }
+    }
+    return null;
+  }
+
+  String? _validImageUrl(String? imageUrl) {
+    final trimmed = imageUrl?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
   MapSpot? _fallbackSpot(
