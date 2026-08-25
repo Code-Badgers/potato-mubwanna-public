@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../data/travel_course_catalog.dart';
@@ -747,10 +748,8 @@ class _MapDiscoveryHome extends StatelessWidget {
           ],
         );
       },
-      loading: () => const _DiscoverySectionStatus(
-        icon: Icons.travel_explore_rounded,
-        title: '강원 여행 지도를 준비하고 있어요',
-        description: '가볍게 둘러볼 장소를 불러오는 중입니다.',
+      loading: () => const PotatoLoadingView.fullScreen(
+        subtitle: '가볍게 둘러볼 장소를 불러오는 중입니다',
       ),
       error: (_, __) => const Padding(
         padding: EdgeInsets.all(20),
@@ -3870,11 +3869,8 @@ class _MapLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(color: AppColors.primaryTint),
-      child: Center(
-        child: CircularProgressIndicator(color: _mapPrimary),
-      ),
+    return const PotatoLoadingView.fullScreen(
+      subtitle: '강원도의 특별한 장소를 불러오고 있어요',
     );
   }
 }

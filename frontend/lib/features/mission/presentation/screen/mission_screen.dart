@@ -8,6 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/mission_controller.dart';
 import '../../data/mission_native_input_service.dart';
@@ -505,8 +506,8 @@ class _MissionLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(color: _missionPrimary),
+    return const PotatoLoadingView.fullScreen(
+      subtitle: '점순이가 오늘 미션을 고르고 있어요',
     );
   }
 }

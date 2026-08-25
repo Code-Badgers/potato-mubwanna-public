@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
 import '../model/gangwon_context_region.dart';
@@ -63,7 +64,9 @@ class StampBookScreen extends ConsumerWidget {
                   },
                 ),
           loading: () => const _StampBookStatusBody(
-            child: Center(child: CircularProgressIndicator()),
+            child: PotatoLoadingView.compact(
+              subtitle: '강원도 스탬프 지도를 준비하고 있어요',
+            ),
           ),
           error: (_, __) => _StampBookStatusBody(
             child: _StampBookError(
@@ -94,7 +97,9 @@ class PassportStampGridScreen extends ConsumerWidget {
                   progress: value.progress,
                   rallybookSpots: rallybookSpots,
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const PotatoLoadingView.fullScreen(
+            subtitle: '여행 패스포트를 펼치고 있어요',
+          ),
           error: (_, __) => _StampBookStatusBody(
             child: _StampBookError(
               onRetry: () => ref.invalidate(stampBookProvider),

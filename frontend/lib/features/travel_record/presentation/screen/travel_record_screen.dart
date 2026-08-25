@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/travel_record_controller.dart';
 import '../../domain/travel_record.dart';
@@ -795,8 +796,8 @@ class _TravelRecordLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(color: _travelPrimary),
+    return const PotatoLoadingView.fullScreen(
+      subtitle: '여행 사진첩을 꺼내고 있어요',
     );
   }
 }

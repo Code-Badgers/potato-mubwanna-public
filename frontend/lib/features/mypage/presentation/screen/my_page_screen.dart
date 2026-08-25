@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../admin_notice/application/admin_notice_controller.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../potato/application/potato_collection_controller.dart';
@@ -472,11 +473,8 @@ class _MyPageLoading extends StatelessWidget {
     return const Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Stack(
-          children: [
-            ModalBarrier(dismissible: false, color: Colors.black12),
-            Center(child: CircularProgressIndicator()),
-          ],
+        child: PotatoLoadingView.fullScreen(
+          subtitle: '여행자 정보를 확인하고 있어요',
         ),
       ),
     );

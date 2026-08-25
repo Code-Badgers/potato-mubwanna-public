@@ -228,7 +228,8 @@ void main() {
     );
 
     expect(find.text('랠리북'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('감자가 길을 찾는 중이에요'), findsOneWidget);
+    expect(find.text('강원도 스탬프 지도를 준비하고 있어요'), findsOneWidget);
   });
 
   testWidgets('shows an error and retry action when stamp tour loading fails', (

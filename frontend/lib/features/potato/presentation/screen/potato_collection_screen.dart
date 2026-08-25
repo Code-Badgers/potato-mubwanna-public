@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../application/potato_collection_controller.dart';
 import '../../domain/potato_collection.dart';
 import '../default_potato.dart';
@@ -290,8 +291,8 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
                   ),
                 ),
           loading: () => const _PotatoStatusBody(
-            child: Center(
-              child: CircularProgressIndicator(color: _potatoPrimary),
+            child: PotatoLoadingView.compact(
+              subtitle: '감자밭 상태를 확인하고 있어요',
             ),
           ),
           error: (error, _) => _PotatoStatusBody(
