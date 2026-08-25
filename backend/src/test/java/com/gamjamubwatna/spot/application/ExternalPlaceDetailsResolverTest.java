@@ -1,15 +1,23 @@
 package com.gamjamubwatna.spot.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gamjamubwatna.spot.domain.GooglePlaceDetailsCache;
+import com.gamjamubwatna.spot.domain.GooglePlaceDetailsCacheRepository;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.infrastructure.GooglePlacesClient;
 import com.gamjamubwatna.spot.infrastructure.GooglePlacesClient.GooglePlaceSearchResult;
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -17,14 +25,23 @@ import org.junit.jupiter.api.Test;
 class ExternalPlaceDetailsResolverTest {
 
     private final GooglePlacesClient googlePlacesClient = mock(GooglePlacesClient.class);
+    private final GooglePlaceDetailsCacheRepository googlePlaceDetailsCacheRepository =
+        mock(GooglePlaceDetailsCacheRepository.class);
+    private final GooglePlaceDetailsCacheWriter googlePlaceDetailsCacheWriter =
+        mock(GooglePlaceDetailsCacheWriter.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExternalPlaceDetailsResolver resolver = new ExternalPlaceDetailsResolver(
         googlePlacesClient,
+        googlePlaceDetailsCacheRepository,
+        googlePlaceDetailsCacheWriter,
+        objectMapper,
         3600
     );
 
     @Test
     void resolvesGoogleDetailsForTrustedRestaurantMatchAndCachesResult() {
         TouristSpot spot = spot(1L, "토지옹심이 원주", SpotCategory.POTATO_RESTAURANT);
+        when(googlePlaceDetailsCacheRepository.findById(1L)).thenReturn(Optional.empty());
         when(googlePlacesClient.searchText("토지옹심이 원주 원주시"))
             .thenReturn(List.of(new GooglePlaceSearchResult(
                 "google-place-id",
@@ -56,6 +73,7 @@ class ExternalPlaceDetailsResolverTest {
     @Test
     void skipsGoogleWhenMatchScoreIsLow() {
         TouristSpot spot = spot(2L, "카페수미", SpotCategory.POTATO_CAFE);
+        when(googlePlaceDetailsCacheRepository.findById(2L)).thenReturn(Optional.empty());
         when(googlePlacesClient.searchText("카페수미 평창군"))
             .thenReturn(List.of(new GooglePlaceSearchResult(
                 "wrong-place-id",
@@ -68,6 +86,63 @@ class ExternalPlaceDetailsResolverTest {
         ExternalPlaceDetails details = resolver.resolve(spot);
 
         assertThat(details).isEqualTo(ExternalPlaceDetails.empty());
+    }
+
+    @Test
+    void usesFreshPersistedCacheBeforeCallingGoogle() throws JsonProcessingException {
+        TouristSpot spot = spot(4L, "감자 카페", SpotCategory.POTATO_CAFE);
+        ExternalPlaceDetails cachedDetails = googleDetails("google-place-id", "https://google.example.com/cached.jpg");
+        GooglePlaceDetailsCache persistedCache = persistedCache(
+            4L,
+            cachedDetails,
+            Instant.now(),
+            Duration.ofHours(1)
+        );
+        when(googlePlaceDetailsCacheRepository.findById(4L)).thenReturn(Optional.of(persistedCache));
+
+        ExternalPlaceDetails details = resolver.resolve(spot);
+
+        assertThat(details.googlePlaceId()).isEqualTo("google-place-id");
+        assertThat(details.imageUrls()).containsExactly("https://google.example.com/cached.jpg");
+        verify(googlePlacesClient, never()).searchText(anyString());
+        verify(googlePlacesClient, never()).findDetails(anyString());
+    }
+
+    @Test
+    void reusesPersistedGooglePlaceIdWithoutTextSearch() {
+        TouristSpot spot = spot(5L, "감자 카페", SpotCategory.POTATO_CAFE);
+        GooglePlaceDetailsCache persistedCache = new GooglePlaceDetailsCache(5L, Instant.now());
+        persistedCache.recordMatch("google-place-id", Instant.now());
+        when(googlePlaceDetailsCacheRepository.findById(5L)).thenReturn(Optional.of(persistedCache));
+        when(googlePlacesClient.findDetails("google-place-id"))
+            .thenReturn(Optional.of(googleDetails("google-place-id", "https://google.example.com/fresh.jpg")));
+
+        ExternalPlaceDetails details = resolver.resolve(spot);
+
+        assertThat(details.imageUrls()).containsExactly("https://google.example.com/fresh.jpg");
+        verify(googlePlacesClient, never()).searchText(anyString());
+        verify(googlePlacesClient).findDetails("google-place-id");
+    }
+
+    @Test
+    void fallsBackToLastSuccessfulCacheWhenGoogleFails() throws JsonProcessingException {
+        TouristSpot spot = spot(6L, "감자 카페", SpotCategory.POTATO_CAFE);
+        ExternalPlaceDetails staleDetails = googleDetails("google-place-id", "https://google.example.com/stale.jpg");
+        GooglePlaceDetailsCache persistedCache = persistedCache(
+            6L,
+            staleDetails,
+            Instant.now().minus(Duration.ofHours(2)),
+            Duration.ofSeconds(1)
+        );
+        when(googlePlaceDetailsCacheRepository.findById(6L)).thenReturn(Optional.of(persistedCache));
+        when(googlePlacesClient.findDetails("google-place-id"))
+            .thenThrow(new RuntimeException("timeout"));
+
+        ExternalPlaceDetails details = resolver.resolve(spot);
+
+        assertThat(details.googlePlaceId()).isEqualTo("google-place-id");
+        assertThat(details.imageUrls()).containsExactly("https://google.example.com/stale.jpg");
+        verify(googlePlacesClient, never()).searchText(anyString());
     }
 
     @Test
@@ -89,5 +164,27 @@ class ExternalPlaceDetailsResolverTest {
         when(spot.getAddress()).thenReturn("강원특별자치도 원주시 감자길 1");
         when(spot.getCityName()).thenReturn(category == SpotCategory.POTATO_CAFE ? "평창군" : "원주시");
         return spot;
+    }
+
+    private ExternalPlaceDetails googleDetails(String googlePlaceId, String imageUrl) {
+        return new ExternalPlaceDetails(
+            googlePlaceId,
+            "033-000-0000",
+            "https://example.com",
+            4.4,
+            new PlaceOpeningHours(true, "화요일: 오전 10:00~오후 8:00", List.of()),
+            List.of(imageUrl)
+        );
+    }
+
+    private GooglePlaceDetailsCache persistedCache(
+        Long spotId,
+        ExternalPlaceDetails details,
+        Instant fetchedAt,
+        Duration ttl
+    ) throws JsonProcessingException {
+        GooglePlaceDetailsCache cache = new GooglePlaceDetailsCache(spotId, fetchedAt);
+        cache.cacheDetails(details.googlePlaceId(), objectMapper.writeValueAsString(details), fetchedAt, ttl);
+        return cache;
     }
 }
