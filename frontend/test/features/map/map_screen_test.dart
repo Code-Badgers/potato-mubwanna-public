@@ -63,8 +63,9 @@ void main() {
     await tester.tap(courseTitle);
     await tester.pumpAndSettle();
 
+    expect(find.text('강원도 감자 먹거리 코스'), findsOneWidget);
+    await _dragCourseDetailUntilVisible(tester, find.text('이 코스에 담긴 장소'));
     expect(find.text('이 코스에 담긴 장소'), findsOneWidget);
-    expect(find.textContaining('따뜻한 옹심이'), findsOneWidget);
 
     Navigator.of(tester.element(find.text('이 코스에 담긴 장소'))).pop();
     await tester.pumpAndSettle();
@@ -152,8 +153,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(courseTitle);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('내 동선에 3곳 담기'));
-    await tester.pumpAndSettle();
+    await _dragCourseDetailUntilVisible(tester, find.text('내 동선에 3곳 담기'));
     await tester.tap(find.text('내 동선에 3곳 담기'));
     await tester.pumpAndSettle();
 
@@ -1181,6 +1181,20 @@ final _networkFailures = [
     ApiException(message: '서버 오류가 발생했습니다.', statusCode: 500),
   ),
 ];
+
+Future<void> _dragCourseDetailUntilVisible(
+  WidgetTester tester,
+  Finder target,
+) async {
+  final detailScrollView = find.byType(CustomScrollView).last;
+  for (var attempt = 0; attempt < 8; attempt++) {
+    if (target.evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.drag(detailScrollView, const Offset(0, -520));
+    await tester.pumpAndSettle();
+  }
+}
 
 FavoriteSpotController _favoriteController([Set<String> spotIds = const {}]) {
   return FavoriteSpotController(

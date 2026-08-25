@@ -21,8 +21,6 @@ void main() {
     for (final course in courses) {
       expect(course.categoryTitle, isNotEmpty);
       expect(course.editorialIntro, isNotEmpty);
-      expect(
-          course.heroImageAsset, startsWith('assets/stamps/passport/spots/'));
       expect(course.tags.length, greaterThanOrEqualTo(3));
       expect(course.stops, hasLength(3));
       expect(course.spots.map((spot) => spot.id).toSet(), hasLength(3));
@@ -35,6 +33,58 @@ void main() {
     final second = buildTravelCourses(_spots);
 
     expect(identical(first, second), isTrue);
+  });
+
+  test('uses a matching course category image when selected stops have none',
+      () {
+    final courses = buildTravelCourses([
+      for (final spot in _spots)
+        MapSpot(
+          id: 'no-image-${spot.id}',
+          name: spot.name,
+          category: spot.category,
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          address: spot.address,
+          cityName: spot.cityName,
+          congestionLevel: spot.congestionLevel,
+          stampEnabled: spot.stampEnabled,
+        ),
+      const MapSpot(
+        id: 'food-image',
+        name: '강원 감자빵 하우스',
+        category: 'POTATO_CAFE',
+        latitude: 37.88,
+        longitude: 128.82,
+        address: '강원 강릉시',
+        cityName: '강릉',
+        imageUrl: 'https://example.com/potato-bread.jpg',
+        congestionLevel: 'LOW',
+        stampEnabled: true,
+      ),
+    ]);
+
+    expect(courses.first.title, '오늘 감자로 배 채워볼까? 🥔');
+    expect(courses.first.heroImageUrl, 'https://example.com/potato-bread.jpg');
+  });
+
+  test('does not use stamp tour assets as course image fallback', () {
+    final courses = buildTravelCourses([
+      for (final spot in _spots)
+        MapSpot(
+          id: 'empty-image-${spot.id}',
+          name: spot.name,
+          category: spot.category,
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          address: spot.address,
+          cityName: spot.cityName,
+          congestionLevel: spot.congestionLevel,
+          stampEnabled: spot.stampEnabled,
+        ),
+    ]);
+
+    expect(courses.first.heroImageUrl, isNull);
   });
 }
 
