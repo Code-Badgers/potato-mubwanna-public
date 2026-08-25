@@ -146,12 +146,23 @@ class ExternalPlaceDetailsResolverTest {
     }
 
     @Test
-    void skipsGoogleForTourismSpot() {
+    void resolvesGoogleDetailsForTourismSpotWhenMatched() {
         TouristSpot spot = spot(3L, "남이섬", SpotCategory.POTATO_TOUR);
+        when(googlePlaceDetailsCacheRepository.findById(3L)).thenReturn(Optional.empty());
+        when(googlePlacesClient.searchText("남이섬 원주시"))
+            .thenReturn(List.of(new GooglePlaceSearchResult(
+                "google-tour-id",
+                "남이섬",
+                "강원특별자치도 원주시 감자길 1",
+                new BigDecimal("37.9000100"),
+                new BigDecimal("127.7000100")
+            )));
+        when(googlePlacesClient.findDetails("google-tour-id"))
+            .thenReturn(Optional.of(googleDetails("google-tour-id", "https://google.example.com/nami.jpg")));
 
         ExternalPlaceDetails details = resolver.resolve(spot);
 
-        assertThat(details).isEqualTo(ExternalPlaceDetails.empty());
+        assertThat(details.imageUrls()).containsExactly("https://google.example.com/nami.jpg");
     }
 
     private TouristSpot spot(Long id, String name, SpotCategory category) {

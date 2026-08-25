@@ -12,14 +12,19 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriUtils;
 
 @Component
 public class GooglePlacesClient {
+
+    private static final Logger log = LoggerFactory.getLogger(GooglePlacesClient.class);
 
     private static final String TEXT_SEARCH_FIELD_MASK = String.join(",",
         "places.id",
@@ -47,6 +52,7 @@ public class GooglePlacesClient {
     private final String languageCode;
     private final String regionCode;
     private final int maxPhotoCount;
+    private final AtomicBoolean missingApiKeyLogged = new AtomicBoolean();
 
     public GooglePlacesClient(
         RestClient.Builder restClientBuilder,
@@ -65,7 +71,7 @@ public class GooglePlacesClient {
     }
 
     public List<GooglePlaceSearchResult> searchText(String query) {
-        if (isBlank(apiKey) || isBlank(query)) {
+        if (!hasApiKey() || isBlank(query)) {
             return List.of();
         }
 
@@ -98,7 +104,7 @@ public class GooglePlacesClient {
     }
 
     public Optional<ExternalPlaceDetails> findDetails(String placeId) {
-        if (isBlank(apiKey) || isBlank(placeId)) {
+        if (!hasApiKey() || isBlank(placeId)) {
             return Optional.empty();
         }
 
@@ -166,6 +172,16 @@ public class GooglePlacesClient {
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
+    }
+
+    private boolean hasApiKey() {
+        if (!isBlank(apiKey)) {
+            return true;
+        }
+        if (missingApiKeyLogged.compareAndSet(false, true)) {
+            log.warn("Google Places enrichment unavailable: GOOGLE_PLACES_API_KEY is not configured");
+        }
+        return false;
     }
 
     private URI photoUri(String photoName) {

@@ -12,13 +12,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriUtils;
 import org.springframework.web.client.RestClient;
 
 @Component
 public class TourApiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(TourApiClient.class);
 
     private final RestClient restClient;
     private final String baseUrl;
@@ -31,6 +36,7 @@ public class TourApiClient {
     private final String mobileApp;
     private final String legalRegionCode;
     private final List<String> spotKeywords;
+    private final AtomicBoolean missingServiceKeyLogged = new AtomicBoolean();
 
     public TourApiClient(
         RestClient.Builder restClientBuilder,
@@ -60,6 +66,7 @@ public class TourApiClient {
 
     public List<TourApiSpotItem> searchPotatoSpots(int pageNo, int numOfRows) {
         if (serviceKey == null || serviceKey.isBlank()) {
+            logMissingServiceKey();
             throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
         }
 
@@ -77,6 +84,7 @@ public class TourApiClient {
 
     public List<TourApiSpotItem> searchByKeyword(String keyword, int numOfRows) {
         if (serviceKey == null || serviceKey.isBlank()) {
+            logMissingServiceKey();
             throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
         }
         if (keyword == null || keyword.isBlank() || numOfRows <= 0) {
@@ -91,6 +99,7 @@ public class TourApiClient {
 
     public List<String> findRepresentativeImages(String contentId, int limit) {
         if (serviceKey == null || serviceKey.isBlank()) {
+            logMissingServiceKey();
             throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
         }
         if (contentId == null || contentId.isBlank() || limit <= 0) {
@@ -141,6 +150,7 @@ public class TourApiClient {
 
     public Optional<SpotTourInfo> findSpotTourInfo(String contentId, Integer contentTypeId) {
         if (serviceKey == null || serviceKey.isBlank()) {
+            logMissingServiceKey();
             throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
         }
         if (contentId == null || contentId.isBlank()) {
@@ -177,6 +187,12 @@ public class TourApiClient {
             return Optional.empty();
         }
         return Optional.of(tourInfo);
+    }
+
+    private void logMissingServiceKey() {
+        if (missingServiceKeyLogged.compareAndSet(false, true)) {
+            log.warn("TourAPI enrichment unavailable: TOUR_API_SERVICE_KEY is not configured");
+        }
     }
 
     private List<TourApiSpotItem> searchPotatoSpots(String keyword, int pageNo, int numOfRows) {
