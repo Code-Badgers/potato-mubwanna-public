@@ -2122,7 +2122,9 @@ class _PopularSpotCard extends StatelessWidget {
                   width: 72,
                   height: 72,
                   child: _CourseImage(
-                    imageUrl: spot.imageUrl,
+                    imageUrl: spot.effectiveImageUrls.isEmpty
+                        ? null
+                        : spot.effectiveImageUrls.first,
                     icon: Icons.place_rounded,
                   ),
                 ),
@@ -2156,6 +2158,13 @@ class _PopularSpotCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
+                    if (spot.todayOpeningText != null) ...[
+                      _PopularSpotMetaLine(
+                        icon: Icons.schedule_rounded,
+                        label: spot.todayOpeningText!,
+                      ),
+                      const SizedBox(height: 7),
+                    ],
                     _CongestionBadge(label: '혼잡도 ${spot.congestionLabel}'),
                   ],
                 ),
@@ -2189,6 +2198,39 @@ class _DiscoverySectionHeader extends StatelessWidget {
               color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PopularSpotMetaLine extends StatelessWidget {
+  const _PopularSpotMetaLine({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0,
             ),
           ),
@@ -2868,6 +2910,10 @@ class _SelectedSpotSummary extends StatelessWidget {
                     const SizedBox(height: 8),
                     _SpotAddressLine(address: address),
                   ],
+                  if (spot.todayOpeningText != null) ...[
+                    const SizedBox(height: 7),
+                    _SpotBusinessLine(label: spot.todayOpeningText!),
+                  ],
                   const SizedBox(height: 9),
                   _CongestionBadge(label: spot.congestionLabel),
                 ],
@@ -2966,6 +3012,41 @@ class _SpotAddressLine extends StatelessWidget {
           child: Text(
             address,
             maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SpotBusinessLine extends StatelessWidget {
+  const _SpotBusinessLine({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.schedule_rounded,
+          size: 16,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.textSecondary,
@@ -3112,6 +3193,7 @@ class _SpotTourInfoSection extends StatelessWidget {
     final urls = <String>[
       ...detail.imageUrls,
       if (detail.imageUrl != null) detail.imageUrl!,
+      ...spot.imageUrls,
       if (spot.imageUrl != null) spot.imageUrl!,
     ];
     return urls

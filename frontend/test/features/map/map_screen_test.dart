@@ -1468,6 +1468,20 @@ const _spots = [
     cityName: '정선',
     congestionLevel: 'LOW',
     stampEnabled: true,
+    imageUrls: [
+      'https://example.com/cafe-list.jpg',
+      'https://example.com/cafe-list-2.jpg',
+    ],
+    phone: '033-000-0000',
+    website: 'https://example.com/cafe',
+    rating: 4.3,
+    businessOpeningHours: MapSpotBusinessOpeningHours(
+      openNow: true,
+      todayText: '화요일: 오전 11:00~오후 8:00',
+      weekdayDescriptions: [
+        '화요일: 오전 11:00~오후 8:00',
+      ],
+    ),
     menuItems: [
       MapSpotMenuItem(
         name: '감자빵',
