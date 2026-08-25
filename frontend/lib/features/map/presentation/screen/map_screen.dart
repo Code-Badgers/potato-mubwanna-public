@@ -2867,6 +2867,7 @@ class _SelectedSpotSummary extends StatelessWidget {
     final menuItems = (detail?.menuItems.isNotEmpty ?? false)
         ? detail!.menuItems
         : spot.menuItems;
+    final shouldShowMenuSection = _shouldShowMenuSection(spot.category);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2952,7 +2953,7 @@ class _SelectedSpotSummary extends StatelessWidget {
           spot: spot,
           spotDetail: spotDetail,
         ),
-        if (menuItems.isNotEmpty) ...[
+        if (menuItems.isNotEmpty || shouldShowMenuSection) ...[
           const SizedBox(height: 14),
           _SpotMenuPreview(
             key: ValueKey('spot-menu-preview-${spot.id}'),
@@ -3054,23 +3055,22 @@ class _SpotTourInfoSection extends StatelessWidget {
 
   Widget _buildContent(SpotDetail? detail, {bool isLoading = false}) {
     final imageUrls = _imageUrls(detail, spot);
-    final hasImage = imageUrls.isNotEmpty;
     final guideRows = _tourGuideRows(detail, spot).take(6).toList();
     final description = detail?.description;
-    if (!hasImage && description == null && guideRows.isEmpty && !isLoading) {
-      return const SizedBox.shrink();
-    }
+    final shouldShowGuidePlaceholder =
+        _shouldShowBusinessSection(spot.category) && guideRows.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        if (hasImage)
-          _SpotImageGallery(
-            key: ValueKey('spot-image-gallery-${spot.id}'),
-            imageUrls: imageUrls,
-          )
-        else if (isLoading)
+        _SpotImageGallery(
+          key: ValueKey('spot-image-gallery-${spot.id}'),
+          imageUrls: imageUrls,
+        ),
+        if (isLoading && imageUrls.isEmpty) ...[
+          const SizedBox(height: 10),
           const _SpotTourInfoSkeleton(),
+        ],
         if (description != null) ...[
           const SizedBox(height: 16),
           const Text(
@@ -3096,7 +3096,7 @@ class _SpotTourInfoSection extends StatelessWidget {
             ),
           ),
         ],
-        if (guideRows.isNotEmpty) ...[
+        if (guideRows.isNotEmpty || shouldShowGuidePlaceholder) ...[
           const SizedBox(height: 16),
           const Text(
             '이용 안내',
@@ -3108,10 +3108,16 @@ class _SpotTourInfoSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          for (final row in guideRows) ...[
-            _TourInfoRow(icon: row.icon, label: row.label),
-            const SizedBox(height: 7),
-          ],
+          if (guideRows.isEmpty)
+            const _SpotInfoPlaceholder(
+              icon: Icons.schedule_rounded,
+              label: '영업시간과 연락처 정보를 준비 중이에요.',
+            )
+          else
+            for (final row in guideRows) ...[
+              _TourInfoRow(icon: row.icon, label: row.label),
+              const SizedBox(height: 7),
+            ],
         ],
       ],
     );
@@ -3195,6 +3201,29 @@ class _SpotTourInfoSection extends StatelessWidget {
   }
 }
 
+bool _shouldShowMenuSection(String category) {
+  return const {
+    'POTATO_RESTAURANT',
+    'POTATO_CAFE',
+    'POTATO_SNACK',
+    'POTATO_MARKET',
+    'POTATO_BREWERY',
+  }.contains(category);
+}
+
+bool _shouldShowBusinessSection(String category) {
+  return const {
+    'POTATO_RESTAURANT',
+    'POTATO_CAFE',
+    'POTATO_SNACK',
+    'POTATO_MARKET',
+    'POTATO_BREWERY',
+    'POTATO_EXPERIENCE',
+    'POTATO_TOUR',
+    'POTATO_SHOP',
+  }.contains(category);
+}
+
 class _SpotImageGallery extends StatelessWidget {
   const _SpotImageGallery({required this.imageUrls, super.key});
 
@@ -3205,14 +3234,7 @@ class _SpotImageGallery extends StatelessWidget {
     if (imageUrls.isEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(18),
-        child: const SizedBox(
-          width: double.infinity,
-          height: 148,
-          child: _CourseImage(
-            imageUrl: null,
-            icon: Icons.landscape_rounded,
-          ),
-        ),
+        child: const _SpotImagePlaceholder(),
       );
     }
     if (imageUrls.length == 1) {
@@ -3246,6 +3268,49 @@ class _SpotImageGallery extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SpotImagePlaceholder extends StatelessWidget {
+  const _SpotImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 148,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryTint.withValues(alpha: 0.74),
+            AppColors.cream.withValues(alpha: 0.82),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_search_rounded,
+            color: _mapDark,
+            size: 34,
+          ),
+          SizedBox(height: 8),
+          Text(
+            '장소 이미지를 준비 중이에요',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3293,6 +3358,45 @@ class _TourInfoRow extends StatelessWidget {
   }
 }
 
+class _SpotInfoPlaceholder extends StatelessWidget {
+  const _SpotInfoPlaceholder({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: _mapDark),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SpotTourInfoSkeleton extends StatelessWidget {
   const _SpotTourInfoSkeleton();
 
@@ -3318,6 +3422,9 @@ class _SpotMenuPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (menuItems.isEmpty) {
+      return const _SpotEmptyMenuPreview();
+    }
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -3397,6 +3504,43 @@ class _SpotMenuPreview extends StatelessWidget {
                 color: AppColors.textSecondary,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpotEmptyMenuPreview extends StatelessWidget {
+  const _SpotEmptyMenuPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cream.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.restaurant_menu_rounded,
+            size: 18,
+            color: _mapDark,
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '대표 메뉴와 가격 정보를 준비 중이에요.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
                 letterSpacing: 0,
               ),
             ),

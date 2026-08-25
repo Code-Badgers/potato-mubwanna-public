@@ -320,6 +320,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('장소 이미지를 준비 중이에요'), findsOneWidget);
+    expect(find.text('이용 안내'), findsOneWidget);
+    expect(find.text('영업시간과 연락처 정보를 준비 중이에요.'), findsOneWidget);
+    expect(find.text('대표 메뉴와 가격 정보를 준비 중이에요.'), findsOneWidget);
+
     await tester.tap(find.byKey(const ValueKey('fallback-marker-2')));
     await tester.pumpAndSettle();
 
