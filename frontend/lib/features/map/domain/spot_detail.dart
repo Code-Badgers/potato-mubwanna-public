@@ -16,6 +16,11 @@ class SpotDetail {
     this.admissionFee,
     this.parking,
     this.contactPhone,
+    this.googlePlaceId,
+    this.phone,
+    this.website,
+    this.rating,
+    this.businessOpeningHours,
   });
 
   factory SpotDetail.fromJson(Map<String, dynamic> json) {
@@ -34,6 +39,13 @@ class SpotDetail {
       admissionFee: _readNullableString(json['admissionFee']),
       parking: _readNullableString(json['parking']),
       contactPhone: _readNullableString(json['contactPhone']),
+      googlePlaceId: _readNullableString(json['googlePlaceId']),
+      phone: _readNullableString(json['phone']),
+      website: _readNullableString(json['website']),
+      rating: _readNullableDouble(json['rating']),
+      businessOpeningHours: SpotBusinessOpeningHours.fromJson(
+        json['businessOpeningHours'],
+      ),
     );
   }
 
@@ -51,6 +63,11 @@ class SpotDetail {
   final String? admissionFee;
   final String? parking;
   final String? contactPhone;
+  final String? googlePlaceId;
+  final String? phone;
+  final String? website;
+  final double? rating;
+  final SpotBusinessOpeningHours? businessOpeningHours;
 
   bool get hasTourInfo {
     return _hasText(description) ||
@@ -59,6 +76,13 @@ class SpotDetail {
         _hasText(admissionFee) ||
         _hasText(parking) ||
         _hasText(contactPhone);
+  }
+
+  bool get hasBusinessInfo {
+    return _hasText(phone) ||
+        _hasText(website) ||
+        rating != null ||
+        (businessOpeningHours?.hasInfo ?? false);
   }
 
   static String? _readNullableString(dynamic value) {
@@ -71,6 +95,16 @@ class SpotDetail {
 
   static bool _hasText(String? value) =>
       value != null && value.trim().isNotEmpty;
+
+  static double? _readNullableDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value.trim());
+    }
+    return null;
+  }
 
   static List<String> _readImageUrls(Map<String, dynamic> json) {
     final values = (json['imageUrls'] as List<dynamic>? ?? const [])
@@ -91,5 +125,44 @@ class SpotDetail {
         .map(MapSpotMenuItem.fromJson)
         .where((item) => item.name.isNotEmpty && item.hasPrice)
         .toList(growable: false);
+  }
+}
+
+class SpotBusinessOpeningHours {
+  const SpotBusinessOpeningHours({
+    required this.weekdayDescriptions,
+    this.openNow,
+    this.todayText,
+  });
+
+  factory SpotBusinessOpeningHours.fromJson(dynamic json) {
+    if (json is! Map<String, dynamic>) {
+      return nullOpeningHours;
+    }
+    final weekdayDescriptions =
+        (json['weekdayDescriptions'] as List<dynamic>? ?? const [])
+            .whereType<String>()
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false);
+    return SpotBusinessOpeningHours(
+      openNow: json['openNow'] is bool ? json['openNow'] as bool : null,
+      todayText: SpotDetail._readNullableString(json['todayText']),
+      weekdayDescriptions: weekdayDescriptions,
+    );
+  }
+
+  static const nullOpeningHours = SpotBusinessOpeningHours(
+    weekdayDescriptions: [],
+  );
+
+  final bool? openNow;
+  final String? todayText;
+  final List<String> weekdayDescriptions;
+
+  bool get hasInfo {
+    return openNow != null ||
+        (todayText != null && todayText!.trim().isNotEmpty) ||
+        weekdayDescriptions.isNotEmpty;
   }
 }

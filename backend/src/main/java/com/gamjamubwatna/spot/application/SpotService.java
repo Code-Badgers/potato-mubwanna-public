@@ -23,17 +23,20 @@ public class SpotService {
     private final SpotMenuItemRepository spotMenuItemRepository;
     private final SpotImageResolver spotImageResolver;
     private final SpotTourInfoResolver spotTourInfoResolver;
+    private final ExternalPlaceDetailsResolver externalPlaceDetailsResolver;
 
     public SpotService(
         TouristSpotRepository touristSpotRepository,
         SpotMenuItemRepository spotMenuItemRepository,
         SpotImageResolver spotImageResolver,
-        SpotTourInfoResolver spotTourInfoResolver
+        SpotTourInfoResolver spotTourInfoResolver,
+        ExternalPlaceDetailsResolver externalPlaceDetailsResolver
     ) {
         this.touristSpotRepository = touristSpotRepository;
         this.spotMenuItemRepository = spotMenuItemRepository;
         this.spotImageResolver = spotImageResolver;
         this.spotTourInfoResolver = spotTourInfoResolver;
+        this.externalPlaceDetailsResolver = externalPlaceDetailsResolver;
     }
 
     @Transactional(readOnly = true)
@@ -63,6 +66,8 @@ public class SpotService {
         TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(spotId)
             .orElseThrow(() -> new IllegalArgumentException("감자 스팟을 찾을 수 없습니다."));
         List<String> imageUrls = spotImageResolver.resolveImageUrls(spot, 3);
+        ExternalPlaceDetails externalDetails = externalPlaceDetailsResolver.resolve(spot);
+        imageUrls = mergedImageUrls(imageUrls, externalDetails.imageUrls(), 3);
         List<SpotMenuItemResponse> menuItems = menuItemsBySpotId(List.of(spot))
             .getOrDefault(spot.getId(), List.of());
         return SpotDetailResponse.from(
@@ -70,6 +75,7 @@ public class SpotService {
             imageUrls.isEmpty() ? null : imageUrls.get(0),
             imageUrls,
             spotTourInfoResolver.resolve(spot),
+            externalDetails,
             menuItems
         );
     }
@@ -97,5 +103,31 @@ public class SpotService {
             }
         }
         return menuItemsBySpotId;
+    }
+
+    private List<String> mergedImageUrls(
+        List<String> primaryImageUrls,
+        List<String> fallbackImageUrls,
+        int limit
+    ) {
+        List<String> merged = new ArrayList<>();
+        appendImages(merged, primaryImageUrls, limit);
+        appendImages(merged, fallbackImageUrls, limit);
+        return List.copyOf(merged);
+    }
+
+    private void appendImages(List<String> target, List<String> source, int limit) {
+        if (source == null || source.isEmpty()) {
+            return;
+        }
+        for (String imageUrl : source) {
+            if (target.size() >= limit) {
+                return;
+            }
+            if (imageUrl == null || imageUrl.isBlank() || target.contains(imageUrl)) {
+                continue;
+            }
+            target.add(imageUrl);
+        }
     }
 }

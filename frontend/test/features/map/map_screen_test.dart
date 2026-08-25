@@ -271,6 +271,11 @@ void main() {
     expect(find.text('이곳은 어떤 곳인가요?'), findsOneWidget);
     expect(find.textContaining('감자 디저트'), findsOneWidget);
     expect(find.text('이용 안내'), findsOneWidget);
+    expect(find.text('영업 중'), findsOneWidget);
+    expect(find.text('월요일: 오전 11:00~오후 8:00'), findsOneWidget);
+    expect(find.text('평점 4.4'), findsOneWidget);
+    expect(find.text('example.com'), findsOneWidget);
+    expect(find.text('033-111-2222'), findsOneWidget);
     expect(find.text('11:00 - 20:00'), findsOneWidget);
     expect(find.text('대표 메뉴'), findsOneWidget);
     expect(find.text('감자라떼'), findsOneWidget);
@@ -1292,6 +1297,17 @@ Future<SpotDetail> _richSpotDetail(Ref ref, String spotId) async {
     description: '감자 디저트를 천천히 맛볼 수 있는 작은 카페입니다.',
     openingHours: '11:00 - 20:00',
     closedDays: '화요일',
+    phone: '033-111-2222',
+    website: 'https://example.com/cafe',
+    rating: 4.4,
+    businessOpeningHours: const SpotBusinessOpeningHours(
+      openNow: true,
+      todayText: '월요일: 오전 11:00~오후 8:00',
+      weekdayDescriptions: [
+        '월요일: 오전 11:00~오후 8:00',
+        '화요일: 휴무',
+      ],
+    ),
     menuItems: const [
       MapSpotMenuItem(
         name: '감자라떼',

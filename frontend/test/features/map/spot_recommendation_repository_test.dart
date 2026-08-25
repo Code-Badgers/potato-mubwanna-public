@@ -66,7 +66,13 @@ void main() {
     expect(detail.description, contains('평창의 예술 공간'));
     expect(detail.openingHours, '10:00 - 18:00');
     expect(detail.admissionFee, '성인 5,000원');
+    expect(detail.phone, '033-111-2222');
+    expect(detail.website, 'https://example.com/muei');
+    expect(detail.rating, 4.3);
+    expect(detail.businessOpeningHours?.openNow, isTrue);
+    expect(detail.businessOpeningHours?.todayText, '월요일: 오전 10:00~오후 8:00');
     expect(detail.hasTourInfo, isTrue);
+    expect(detail.hasBusinessInfo, isTrue);
   });
 }
 
@@ -138,5 +144,17 @@ const _spotDetailResponse = <String, Object?>{
     'admissionFee': '성인 5,000원',
     'parking': '가능',
     'contactPhone': '033-000-0000',
+    'googlePlaceId': 'places/muei',
+    'phone': '033-111-2222',
+    'website': 'https://example.com/muei',
+    'rating': 4.3,
+    'businessOpeningHours': {
+      'openNow': true,
+      'todayText': '월요일: 오전 10:00~오후 8:00',
+      'weekdayDescriptions': [
+        '월요일: 오전 10:00~오후 8:00',
+        '화요일: 오전 10:00~오후 8:00',
+      ],
+    },
   },
 };
