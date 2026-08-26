@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
 
 @Component
@@ -76,14 +77,19 @@ public class GooglePlacesClient {
         }
 
         GoogleTextSearchRequest request = new GoogleTextSearchRequest(query, languageCode, regionCode);
-        JsonNode response = restClient.post()
-            .uri("%s/places:searchText".formatted(baseUrl))
-            .header("X-Goog-Api-Key", apiKey)
-            .header("X-Goog-FieldMask", TEXT_SEARCH_FIELD_MASK)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(request)
-            .retrieve()
-            .body(JsonNode.class);
+        JsonNode response;
+        try {
+            response = restClient.post()
+                .uri("%s/places:searchText".formatted(baseUrl))
+                .header("X-Goog-Api-Key", apiKey)
+                .header("X-Goog-FieldMask", TEXT_SEARCH_FIELD_MASK)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(JsonNode.class);
+        } catch (RestClientResponseException exception) {
+            throw apiException("text search", exception);
+        }
 
         JsonNode places = response == null ? null : response.path("places");
         if (places == null || !places.isArray()) {
@@ -108,12 +114,17 @@ public class GooglePlacesClient {
             return Optional.empty();
         }
 
-        JsonNode place = restClient.get()
-            .uri(detailsUri(placeId))
-            .header("X-Goog-Api-Key", apiKey)
-            .header("X-Goog-FieldMask", DETAILS_FIELD_MASK)
-            .retrieve()
-            .body(JsonNode.class);
+        JsonNode place;
+        try {
+            place = restClient.get()
+                .uri(detailsUri(placeId))
+                .header("X-Goog-Api-Key", apiKey)
+                .header("X-Goog-FieldMask", DETAILS_FIELD_MASK)
+                .retrieve()
+                .body(JsonNode.class);
+        } catch (RestClientResponseException exception) {
+            throw apiException("place details", exception);
+        }
         if (place == null || place.isMissingNode()) {
             return Optional.empty();
         }
@@ -169,9 +180,51 @@ public class GooglePlacesClient {
                 .body(JsonNode.class);
             return Optional.ofNullable(readText(response, "photoUri"))
                 .filter(value -> !value.isBlank());
+        } catch (RestClientResponseException exception) {
+            GooglePlacesApiException apiException = apiException("photo", exception);
+            log.warn(
+                "Google Places photo unavailable. status={}, reason={}",
+                apiException.getStatusCode(),
+                apiException.getReason()
+            );
+            return Optional.empty();
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
+    }
+
+    private GooglePlacesApiException apiException(
+        String operation,
+        RestClientResponseException exception
+    ) {
+        return new GooglePlacesApiException(
+            operation,
+            exception.getStatusCode().value(),
+            googleErrorReason(exception),
+            exception
+        );
+    }
+
+    private String googleErrorReason(RestClientResponseException exception) {
+        try {
+            JsonNode error = exception.getResponseBodyAs(JsonNode.class).path("error");
+            JsonNode details = error.path("details");
+            if (details.isArray()) {
+                for (JsonNode detail : details) {
+                    String reason = readText(detail, "reason");
+                    if (!isBlank(reason)) {
+                        return reason;
+                    }
+                }
+            }
+            String status = readText(error, "status");
+            if (!isBlank(status)) {
+                return status;
+            }
+        } catch (RuntimeException ignored) {
+            // Only expose Google's structured reason; never log the raw response body.
+        }
+        return "HTTP_%d".formatted(exception.getStatusCode().value());
     }
 
     private boolean hasApiKey() {
