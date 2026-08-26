@@ -86,6 +86,8 @@ set_backend_image "${image_uri}"
 "${compose[@]}" up -d --no-build
 "${compose[@]}" restart nginx gateway
 curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors "${health_url}"
+"${compose[@]}" exec -T backend sh -c 'test -n "${GOOGLE_PLACES_API_KEY:-}"'
+echo "Backend Google Places environment verified."
 "${compose[@]}" ps
 
 while IFS= read -r candidate_image; do

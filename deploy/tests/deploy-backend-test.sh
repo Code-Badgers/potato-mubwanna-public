@@ -44,6 +44,7 @@ grep -q '^BACKEND_IMAGE=potato-mubwanna-backend:next$' "${test_root}/.env"
 grep -q '^build .*--tag potato-mubwanna-backend:next ' "${TEST_DOCKER_LOG}"
 grep -q 'restart nginx gateway' "${TEST_DOCKER_LOG}"
 grep -q 'https://potato-mubwanna.duckdns.org/health' "${TEST_DOCKER_LOG}"
+grep -Fq 'exec -T backend sh -c test -n "${GOOGLE_PLACES_API_KEY:-}"' "${TEST_DOCKER_LOG}"
 
 sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=potato-mubwanna-backend:previous|' "${test_root}/.env"
 if bash "${test_root}/deploy-backend.sh" \
