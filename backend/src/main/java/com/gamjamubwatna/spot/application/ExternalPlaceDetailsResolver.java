@@ -6,6 +6,7 @@ import com.gamjamubwatna.spot.domain.GooglePlaceDetailsCache;
 import com.gamjamubwatna.spot.domain.GooglePlaceDetailsCacheRepository;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
+import com.gamjamubwatna.spot.infrastructure.GooglePlacesApiException;
 import com.gamjamubwatna.spot.infrastructure.GooglePlacesClient;
 import com.gamjamubwatna.spot.infrastructure.GooglePlacesClient.GooglePlaceSearchResult;
 import java.math.BigDecimal;
@@ -106,6 +107,14 @@ public class ExternalPlaceDetailsResolver {
             logSources(spot, details.get());
             writeDetailsCache(spot.getId(), details.get());
             return details.get();
+        } catch (GooglePlacesApiException exception) {
+            log.warn(
+                "Google Places enrichment skipped. spotId={}, status={}, reason={}",
+                spot.getId(),
+                exception.getStatusCode(),
+                exception.getReason()
+            );
+            return fallbackFromCacheOrEmpty(spot, persistedCache);
         } catch (RuntimeException exception) {
             log.warn(
                 "Google Places enrichment skipped. spotId={}, reason={}",

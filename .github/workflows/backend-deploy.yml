@@ -81,11 +81,14 @@ jobs:
           role-session-name: github-actions-backend-deploy
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Sync TourAPI production secret
+      - name: Sync external API production secrets
         shell: bash
         env:
           TOUR_API_SERVICE_KEY: ${{ secrets.TOUR_API_SERVICE_KEY }}
-        run: bash deploy/sync-tour-api-secret.sh
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: |
+          bash deploy/sync-tour-api-secret.sh
+          bash deploy/sync-google-places-secret.sh
 
       - name: Resolve local image tag
         id: image

@@ -3,6 +3,8 @@ package com.gamjamubwatna.spot.application;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient;
 import com.gamjamubwatna.spot.infrastructure.TourApiClient.TourApiSpotItem;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class SpotImageResolver {
 
     private static final Logger log = LoggerFactory.getLogger(SpotImageResolver.class);
+    private static final String KAKAO_PLACE_PAGE_HOST = "place.map.kakao.com";
 
     private final TourApiClient tourApiClient;
     private final TourApiSpotReferenceResolver tourApiSpotReferenceResolver;
@@ -61,7 +64,7 @@ public class SpotImageResolver {
         if (limit <= 0) {
             return List.of();
         }
-        if (hasText(spot.getImageUrl())) {
+        if (isRenderableImageUrl(spot.getImageUrl())) {
             return List.of(spot.getImageUrl());
         }
         return List.of();
@@ -84,7 +87,7 @@ public class SpotImageResolver {
             return List.of();
         }
         // 최초 조회 결과를 DB에 저장해 이후 목록 렌더링이 외부 API에 의존하지 않게 한다.
-        if (!hasText(spot.getImageUrl())) {
+        if (!isRenderableImageUrl(spot.getImageUrl())) {
             spotImageCacheWriter.cacheResolvedImage(spot.getId(), resolvedImageUrls.get(0));
         }
         List<String> imageUrls = new ArrayList<>();
@@ -112,5 +115,23 @@ public class SpotImageResolver {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private boolean isRenderableImageUrl(String value) {
+        if (!hasText(value)) {
+            return false;
+        }
+        try {
+            URI uri = new URI(value);
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (!("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) || host == null) {
+                return false;
+            }
+            // Kakao 장소 상세 URL은 HTML 페이지이므로 Flutter Image.network에서 렌더링할 수 없다.
+            return !KAKAO_PLACE_PAGE_HOST.equalsIgnoreCase(host);
+        } catch (URISyntaxException exception) {
+            return false;
+        }
     }
 }

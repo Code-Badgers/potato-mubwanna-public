@@ -48,6 +48,25 @@ class SpotImageResolverTest {
     }
 
     @Test
+    void replacesKakaoPlacePageUrlWithRenderableTourApiImage() {
+        TouristSpot spot = spot("http://place.map.kakao.com/11554270", "12345");
+        when(tourApiClient.findRepresentativeImages("12345", 3))
+            .thenReturn(List.of("https://tour.example.com/detail.jpg"));
+
+        String imageUrl = resolver.resolveImageUrl(spot);
+
+        assertThat(imageUrl).isEqualTo("https://tour.example.com/detail.jpg");
+        verify(spotImageCacheWriter).cacheResolvedImage(1L, "https://tour.example.com/detail.jpg");
+    }
+
+    @Test
+    void ignoresMalformedStoredImageUrl() {
+        TouristSpot spot = spot("not-an-image-url", null);
+
+        assertThat(resolver.resolveImageUrl(spot)).isNull();
+    }
+
+    @Test
     void skipsTourApiWhenContentIdIsMissingOrNotTourApiContentId() {
         assertThat(resolver.resolveImageUrl(spot(null, null))).isNull();
         assertThat(resolver.resolveImageUrl(spot(null, "curated-1"))).isNull();

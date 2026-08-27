@@ -124,6 +124,36 @@ class GooglePlacesClientTest {
             .doesNotContain("*");
     }
 
+    @Test
+    void exposesOnlyStructuredReasonWhenGoogleRejectsTheApiKey() {
+        server.createContext("/places:searchText", exchange -> writeJson(exchange, 403, """
+            {
+              "error": {
+                "code": 403,
+                "message": "Requests from this IP are blocked for key REDACTED",
+                "status": "PERMISSION_DENIED",
+                "details": [
+                  {
+                    "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                    "reason": "API_KEY_IP_ADDRESS_BLOCKED"
+                  }
+                ]
+              }
+            }
+            """));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> client().searchText("토지옹심이 원주")
+        )
+            .isInstanceOf(GooglePlacesApiException.class)
+            .satisfies(exception -> {
+                GooglePlacesApiException apiException = (GooglePlacesApiException) exception;
+                assertThat(apiException.getStatusCode()).isEqualTo(403);
+                assertThat(apiException.getReason()).isEqualTo("API_KEY_IP_ADDRESS_BLOCKED");
+                assertThat(apiException.getMessage()).doesNotContain("REDACTED");
+            });
+    }
+
     private GooglePlacesClient client() {
         return new GooglePlacesClient(
             RestClient.builder(),
@@ -136,13 +166,21 @@ class GooglePlacesClientTest {
     }
 
     private void writeJson(HttpExchange exchange, String body) throws IOException {
+        writeJson(exchange, 200, body);
+    }
+
+    private void writeJson(HttpExchange exchange, int statusCode, String body) throws IOException {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        writeJson(exchange, bytes);
+        writeJson(exchange, statusCode, bytes);
     }
 
     private void writeJson(HttpExchange exchange, byte[] body) throws IOException {
+        writeJson(exchange, 200, body);
+    }
+
+    private void writeJson(HttpExchange exchange, int statusCode, byte[] body) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.sendResponseHeaders(200, body.length);
+        exchange.sendResponseHeaders(statusCode, body.length);
         exchange.getResponseBody().write(body);
         exchange.close();
     }

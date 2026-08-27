@@ -9,6 +9,7 @@ mock_bin="${test_directory}/bin"
 mock_state="${test_directory}/aws-state"
 production_directory="${test_directory}/production"
 service_key='dummy%2Fencoded%2Bkey%3D'
+google_places_key='dummy-google-places-key'
 
 cleanup() {
   rm -rf "${test_directory}"
@@ -20,6 +21,7 @@ cat > "${production_directory}/deploy/.env" <<'EOF'
 PUBLIC_DOMAIN=example.test
 UNCHANGED_VALUE=keep-me
 TOUR_API_SERVICE_KEY=old-value
+GOOGLE_PLACES_API_KEY=old-google-value
 EOF
 chmod 600 "${production_directory}/deploy/.env"
 
@@ -114,10 +116,20 @@ EC2_INSTANCE_ID='i-test' \
 TOUR_API_SERVICE_KEY="${service_key}" \
 bash "${deploy_dir}/sync-tour-api-secret.sh"
 
+PATH="${mock_bin}:${PATH}" \
+MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
+PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
+AWS_REGION='ap-northeast-2' \
+EC2_INSTANCE_ID='i-test' \
+GOOGLE_PLACES_API_KEY="${google_places_key}" \
+bash "${deploy_dir}/sync-google-places-secret.sh"
+
 grep -q '^PUBLIC_DOMAIN=example.test$' "${production_directory}/deploy/.env"
 grep -q '^UNCHANGED_VALUE=keep-me$' "${production_directory}/deploy/.env"
 grep -q "^TOUR_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^TOUR_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
+grep -q "^GOOGLE_PLACES_API_KEY=${google_places_key}$" "${production_directory}/deploy/.env"
+test "$(grep -c '^GOOGLE_PLACES_API_KEY=' "${production_directory}/deploy/.env")" -eq 1
 if [[ "$(uname -s)" == "Linux" ]]; then
   test "$(stat -c '%a' "${production_directory}/deploy/.env")" = '600'
 fi
@@ -127,4 +139,9 @@ if grep -R -F "${service_key}" "${mock_state}" > /dev/null; then
   exit 1
 fi
 
-echo 'TourAPI encrypted SSM secret sync scenario passed.'
+if grep -R -F "${google_places_key}" "${mock_state}" > /dev/null; then
+  echo 'Plaintext Google Places key leaked into SSM command records.' >&2
+  exit 1
+fi
+
+echo 'TourAPI and Google Places encrypted SSM secret sync scenarios passed.'
