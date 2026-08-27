@@ -1196,11 +1196,26 @@ class _CourseImage extends StatelessWidget {
         imageUrl: effectiveImageUrl,
         fit: BoxFit.cover,
         placeholder: (_, __) => _CourseImageFallback(icon: icon),
-        errorWidget: (_, __, ___) => _CourseImageFallback(icon: icon),
+        errorWidget: (_, error, ___) {
+          _logImageLoadFailure(effectiveImageUrl, error);
+          return _CourseImageFallback(icon: icon);
+        },
       );
     }
     return _CourseImageFallback(icon: icon);
   }
+}
+
+void _logImageLoadFailure(String imageUrl, Object error) {
+  if (!kDebugMode) {
+    return;
+  }
+  final uri = Uri.tryParse(imageUrl);
+  final host = uri?.host;
+  debugPrint(
+    '[map] image load failed: host=${host == null || host.isEmpty ? 'invalid' : host}, '
+    'error=${error.runtimeType}',
+  );
 }
 
 class _CourseImageFallback extends StatelessWidget {
