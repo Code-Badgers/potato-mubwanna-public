@@ -48,7 +48,7 @@ void main() {
     expect(find.text('지도에서 깃발 선택'), findsNothing);
     expect(find.text('방문 인증하기'), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-101')));
+    await _tapMapMarker(tester, 101);
     await tester.pumpAndSettle();
 
     expect(find.text('여행할 명소를 골라보세요'), findsNothing);
@@ -73,12 +73,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-102')));
+    await _tapMapMarker(tester, 102);
     await tester.pumpAndSettle();
     expect(find.text('남이섬'), findsWidgets);
     expect(find.text('춘천 · 도장 획득'), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-103')));
+    await _tapMapMarker(tester, 103);
     await tester.pumpAndSettle();
     expect(find.text('소양강 스카이워크'), findsWidgets);
     expect(find.text('춘천 · 방문 인증 대기'), findsNothing);
@@ -114,13 +114,45 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('rallybook-spot-marker-101')));
+    await _tapMapMarker(tester, 101);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('방문 인증하기'));
     await tester.pumpAndSettle();
 
     expect(find.text('상세 101'), findsOneWidget);
+  });
+
+  testWidgets('selects nearby markers by their nearest map coordinate', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) async => _nearbyRallybookSpots,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstMarker = find.byKey(
+      const ValueKey('rallybook-spot-marker-201'),
+    );
+    final secondMarker = find.byKey(
+      const ValueKey('rallybook-spot-marker-202'),
+    );
+    final firstCenter = tester.getCenter(firstMarker);
+    final secondCenter = tester.getCenter(secondMarker);
+
+    expect((firstCenter - secondCenter).distance, lessThan(40));
+
+    await tester.tapAt(firstCenter);
+    await tester.pumpAndSettle();
+    expect(find.text('가까운 장소 A'), findsWidgets);
+
+    await tester.tapAt(secondCenter);
+    await tester.pumpAndSettle();
+    expect(find.text('가까운 장소 B'), findsWidgets);
   });
 
   testWidgets('opens passport stamp cards from the map progress badge', (
@@ -421,6 +453,37 @@ const _rallybookSpots = <RallybookSpot>[
     imageUrl: null,
   ),
 ];
+
+const _nearbyRallybookSpots = <RallybookSpot>[
+  RallybookSpot(
+    spotId: 201,
+    spotName: '가까운 장소 A',
+    cityName: '춘천시',
+    category: 'POTATO_TOUR',
+    latitude: 37.8932774,
+    longitude: 127.7236633,
+    address: '강원특별자치도 춘천시 가까운 길 1',
+    imageUrl: null,
+  ),
+  RallybookSpot(
+    spotId: 202,
+    spotName: '가까운 장소 B',
+    cityName: '춘천시',
+    category: 'POTATO_TOUR',
+    latitude: 37.9932774,
+    longitude: 127.8236633,
+    address: '강원특별자치도 춘천시 가까운 길 2',
+    imageUrl: null,
+  ),
+];
+
+Future<void> _tapMapMarker(WidgetTester tester, int spotId) async {
+  await tester.tapAt(
+    tester.getCenter(
+      find.byKey(ValueKey('rallybook-spot-marker-$spotId')),
+    ),
+  );
+}
 
 StampBook _stampBook({
   int acquiredCount = 2,

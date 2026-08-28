@@ -13,7 +13,9 @@
 - `frontend/lib/features/feature_tour/presentation/feature_tour_definitions.dart`: 감자밭 정보 보기와 대표 감자 변경을 실제 navigation result 단계로 변경
 - `frontend/lib/features/feature_tour/presentation/feature_tour_overlay.dart`: 상호작용 대상과 시각적 Spotlight 대상을 분리하고 Coach Mark 카드를 압축
 - `frontend/lib/features/potato/presentation/screen/potato_collection_screen.dart`: 감자밭의 모달/대표 감자 선택 완료를 Coach Mark navigation result와 연결하고 성장 패널 대상은 제거
+- `frontend/lib/features/stamp/presentation/screen/stamp_book_screen.dart`: 겹치는 스탬프 마커를 지도 좌표 기준으로 판정하도록 정리
 - `frontend/test/features/feature_tour/feature_tour_test.dart`: 지도 카드 Spotlight, 감자밭 단계, 패스포트 안내 문구, navigation result 흐름 검증 추가
+- `frontend/test/features/stamp/stamp_book_screen_test.dart`: 지도 좌표 탭과 가까운 마커 선택 회귀 테스트 추가
 
 ## 공유 파일 / 계약 변경
 
@@ -30,7 +32,7 @@
 - 실행: `flutter test test/features/feature_tour/feature_tour_test.dart`
 - 결과: 통과, Coach Mark 관련 테스트 8개
 - 실행: `flutter test`
-- 결과: 통과, 전체 테스트 336개
+- 결과: 통과, 전체 테스트 337개
 - 실행하지 못한 명령: 없음
 
 ## 산출물

@@ -1369,103 +1369,101 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                   left: anchor.dx - width / 2,
                   top: anchor.dy - (selected ? 19 : 16),
                   width: width,
-                  child: GestureDetector(
+                  child: KeyedSubtree(
                     key: ValueKey('rallybook-spot-marker-${spot.spotId}'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _selectSpot(spot),
-                    child: _RallybookSpotMapNode(
-                      spot: spot,
-                      stamp: stampsBySpotId[spot.spotId],
-                      selected: selected,
+                    child: IgnorePointer(
+                      child: _RallybookSpotMapNode(
+                        spot: spot,
+                        stamp: stampsBySpotId[spot.spotId],
+                        selected: selected,
+                      ),
                     ),
                   ),
                 );
               }
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: (details) {
-                      final city =
-                          _hitTestRegion(details.localPosition, mapRect);
-                      if (city == null) {
-                        return;
-                      }
-                      _selectCity(city, spotsByCity);
-                    },
-                    child: CustomPaint(
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (details) => _handleMapTap(
+                  details.localPosition,
+                  mapRect: mapRect,
+                  spots: rallybookSpots,
+                  spotsByCity: spotsByCity,
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CustomPaint(
                       painter: _GangwonMapPainter(
                         completedByCity: completedByCity,
                         selectedCity: selectedRegion?.city,
                       ),
                       child: const SizedBox.expand(),
                     ),
-                  ),
-                  if (selectedRegion != null && selectedSpot != null)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: AnimatedBuilder(
-                          animation: _travelController,
-                          builder: (context, _) {
-                            final start = _stampTravelStart(
-                              mapRect,
-                              fromCity: _travelFromCity,
-                            );
-                            return CustomPaint(
-                              painter: _StampTravelRoutePainter(
-                                start: start,
-                                end: _rallybookSpotAnchor(
-                                  selectedSpot,
-                                  mapRect,
+                    if (selectedRegion != null && selectedSpot != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: AnimatedBuilder(
+                            animation: _travelController,
+                            builder: (context, _) {
+                              final start = _stampTravelStart(
+                                mapRect,
+                                fromCity: _travelFromCity,
+                              );
+                              return CustomPaint(
+                                painter: _StampTravelRoutePainter(
+                                  start: start,
+                                  end: _rallybookSpotAnchor(
+                                    selectedSpot,
+                                    mapRect,
+                                  ),
+                                  progress: _travelController.value,
                                 ),
-                                progress: _travelController.value,
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  for (final spot in rallybookSpots)
-                    if (spot.spotId != selectedSpot?.spotId)
-                      buildSpotNode(spot, selected: false),
-                  if (selectedSpot != null)
-                    buildSpotNode(selectedSpot, selected: true),
-                  if (selectedRegion != null && selectedSpot != null)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: AnimatedBuilder(
-                          animation: _travelController,
-                          builder: (context, _) {
-                            final start = _stampTravelStart(
-                              mapRect,
-                              fromCity: _travelFromCity,
-                            );
-                            final end = _rallybookSpotAnchor(
-                              selectedSpot,
-                              mapRect,
-                            );
-                            final value = Curves.easeInOutCubic
-                                .transform(_travelController.value);
-                            final position = Offset.lerp(start, end, value)!;
+                    for (final spot in rallybookSpots)
+                      if (spot.spotId != selectedSpot?.spotId)
+                        buildSpotNode(spot, selected: false),
+                    if (selectedSpot != null)
+                      buildSpotNode(selectedSpot, selected: true),
+                    if (selectedRegion != null && selectedSpot != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: AnimatedBuilder(
+                            animation: _travelController,
+                            builder: (context, _) {
+                              final start = _stampTravelStart(
+                                mapRect,
+                                fromCity: _travelFromCity,
+                              );
+                              final end = _rallybookSpotAnchor(
+                                selectedSpot,
+                                mapRect,
+                              );
+                              final value = Curves.easeInOutCubic
+                                  .transform(_travelController.value);
+                              final position = Offset.lerp(start, end, value)!;
 
-                            return Stack(
-                              children: [
-                                Positioned(
-                                  left: position.dx - 18,
-                                  top: position.dy - 18,
-                                  width: 36,
-                                  height: 36,
-                                  child: const _StampTravelCarMarker(),
-                                ),
-                              ],
-                            );
-                          },
+                              return Stack(
+                                children: [
+                                  Positioned(
+                                    left: position.dx - 18,
+                                    top: position.dy - 18,
+                                    width: 36,
+                                    height: 36,
+                                    child: const _StampTravelCarMarker(),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               );
             },
           ),
@@ -1483,6 +1481,48 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
         ),
       ],
     );
+  }
+
+  void _handleMapTap(
+    Offset position, {
+    required Rect mapRect,
+    required List<RallybookSpot> spots,
+    required Map<String, List<RallybookSpot>> spotsByCity,
+  }) {
+    final spot = _findSpotAtPosition(position, mapRect, spots);
+    if (spot != null) {
+      _selectSpot(spot);
+      return;
+    }
+
+    final city = _hitTestRegion(position, mapRect);
+    if (city != null) {
+      _selectCity(city, spotsByCity);
+    }
+  }
+
+  RallybookSpot? _findSpotAtPosition(
+    Offset position,
+    Rect mapRect,
+    List<RallybookSpot> spots,
+  ) {
+    RallybookSpot? nearest;
+    var nearestDistanceSquared = double.infinity;
+    for (final spot in spots) {
+      final anchor = _rallybookSpotAnchor(spot, mapRect);
+      final distanceSquared = (anchor - position).distanceSquared;
+      if (distanceSquared < nearestDistanceSquared) {
+        nearest = spot;
+        nearestDistanceSquared = distanceSquared;
+      }
+    }
+
+    const markerHitRadius = 28.0;
+    if (nearest == null ||
+        nearestDistanceSquared > markerHitRadius * markerHitRadius) {
+      return null;
+    }
+    return nearest;
   }
 
   _StampMapDerivedData _derivedDataFor(
