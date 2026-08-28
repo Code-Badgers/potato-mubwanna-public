@@ -2049,19 +2049,15 @@ class _GoodNowSpotSection extends StatelessWidget {
           Column(
             children: [
               _GoodNowSpotGroup(
-                icon: Icons.spa_rounded,
                 title: '내향인 전용 여유로운 장소',
                 description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
-                badgeLabel: '혼잡도 여유',
                 spots: calmSpots,
                 onSpotPressed: onSpotPressed,
               ),
               const SizedBox(height: 14),
               _GoodNowSpotGroup(
-                icon: Icons.local_fire_department_rounded,
                 title: '외향인 전용 사람 좋아 핫플',
                 description: '활기 있는 분위기를 즐기고 싶을 때 좋아요.',
-                badgeLabel: '방문자 많음',
                 spots: hotSpots,
                 onSpotPressed: onSpotPressed,
               ),
@@ -2092,18 +2088,14 @@ class _GoodNowSpotSection extends StatelessWidget {
 
 class _GoodNowSpotGroup extends StatelessWidget {
   const _GoodNowSpotGroup({
-    required this.icon,
     required this.title,
     required this.description,
-    required this.badgeLabel,
     required this.spots,
     required this.onSpotPressed,
   });
 
-  final IconData icon;
   final String title;
   final String description;
-  final String badgeLabel;
   final List<MapSpot> spots;
   final ValueChanged<MapSpot> onSpotPressed;
 
@@ -2122,20 +2114,6 @@ class _GoodNowSpotGroup extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  icon,
-                  color: AppColors.primaryDark,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2167,8 +2145,6 @@ class _GoodNowSpotGroup extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              _GoodNowTag(label: badgeLabel),
             ],
           ),
           const SizedBox(height: 12),
@@ -2180,34 +2156,6 @@ class _GoodNowSpotGroup extends StatelessWidget {
             if (index < spots.length - 1) const SizedBox(height: 10),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _GoodNowTag extends StatelessWidget {
-  const _GoodNowTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: _mapDark,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
       ),
     );
   }
