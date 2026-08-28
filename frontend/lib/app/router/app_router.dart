@@ -121,6 +121,8 @@ final appRouter = GoRouter(
           path: '/main/map',
           builder: (context, state) => MapScreen(
             recommendationSourceSpotId: state.queryParameters['recommendFrom'],
+            showFullMapInitially:
+                state.queryParameters['featureTour'] == 'route',
           ),
         ),
         GoRoute(

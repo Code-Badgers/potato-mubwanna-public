@@ -13,6 +13,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../data/travel_course_catalog.dart';
@@ -738,9 +739,12 @@ class _MapDiscoveryHome extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverToBoxAdapter(
-                child: _DiscoveryMapPreviewCard(
-                  spots: previewSpots,
-                  onOpenFullMap: onOpenFullMap,
+                child: KeyedSubtree(
+                  key: FeatureTourTargets.mapDiscovery,
+                  child: _DiscoveryMapPreviewCard(
+                    spots: previewSpots,
+                    onOpenFullMap: onOpenFullMap,
+                  ),
                 ),
               ),
             ),
@@ -3807,6 +3811,7 @@ class _RouteModeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
+      key: FeatureTourTargets.routeMode,
       color: selected
           ? AppColors.primaryTint
           : Colors.white.withValues(alpha: 0.96),
