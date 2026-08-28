@@ -10,6 +10,8 @@ import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../application/mission_controller.dart';
 import '../../data/mission_native_input_service.dart';
 import '../../data/mission_repository.dart';
@@ -757,9 +759,17 @@ class _MissionGentleStart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (featuredMission != null) ...[
-            _MissionFeaturedCard(
-              mission: featuredMission!,
-              onTap: () => onMissionTap(featuredMission!.id),
+            KeyedSubtree(
+              key: FeatureTourTargets.missionFeatured,
+              child: _MissionFeaturedCard(
+                mission: featuredMission!,
+                onTap: () {
+                  FeatureTourScope.maybeOf(context)?.completeTarget(
+                    FeatureTourTargets.missionFeatured,
+                  );
+                  onMissionTap(featuredMission!.id);
+                },
+              ),
             ),
             const SizedBox(height: 24),
           ],

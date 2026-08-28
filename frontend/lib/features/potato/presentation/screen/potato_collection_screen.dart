@@ -8,6 +8,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../application/potato_collection_controller.dart';
 import '../../domain/potato_collection.dart';
 import '../default_potato.dart';
@@ -536,6 +538,9 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
           PotatoInteractionAction.snack => '영양제를 줬어요. 제법 잘 자라요',
         };
       });
+      FeatureTourScope.maybeOf(context)?.completeTarget(
+        FeatureTourTargets.potatoCareActions,
+      );
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -647,15 +652,18 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PotatoCareStage(
-            potato: potato,
-            level: level,
-            growthStage: displayGrowthStage,
-            revealIdentity: harvested,
-            speech: careMessage ??
-                (potato == null || !potato.acquired
-                    ? _defaultPotatoSpeech
-                    : _potatoSpeechFor(potato)),
+          KeyedSubtree(
+            key: FeatureTourTargets.potatoGrowth,
+            child: _PotatoCareStage(
+              potato: potato,
+              level: level,
+              growthStage: displayGrowthStage,
+              revealIdentity: harvested,
+              speech: careMessage ??
+                  (potato == null || !potato.acquired
+                      ? _defaultPotatoSpeech
+                      : _potatoSpeechFor(potato)),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
@@ -684,15 +692,21 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   value: harvestProgress,
                 ),
                 const SizedBox(height: 12),
-                _PotatoCareBar(
-                  onCare: _reactToCare,
-                  enabled: potato != null &&
-                      potato.acquired &&
-                      widget.onCare != null &&
-                      !_isCaring,
+                KeyedSubtree(
+                  key: FeatureTourTargets.potatoCareActions,
+                  child: _PotatoCareBar(
+                    onCare: _reactToCare,
+                    enabled: potato != null &&
+                        potato.acquired &&
+                        widget.onCare != null &&
+                        !_isCaring,
+                  ),
                 ),
                 const SizedBox(height: 10),
-                const _PotatoStepGrowthPanel(),
+                KeyedSubtree(
+                  key: FeatureTourTargets.potatoSteps,
+                  child: const _PotatoStepGrowthPanel(),
+                ),
                 const SizedBox(height: 10),
                 _PotatoHarvestAction(
                   item: potato,
@@ -708,10 +722,18 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   onShowHarvested: widget.onShowDetail,
                 ),
                 const SizedBox(height: 10),
-                _PotatoMainActions(
-                  updating: widget.updating,
-                  onShowDetail: widget.onShowDetail,
-                  onChangeRepresentative: widget.onChangeRepresentative,
+                KeyedSubtree(
+                  key: FeatureTourTargets.representativePotato,
+                  child: _PotatoMainActions(
+                    updating: widget.updating,
+                    onShowDetail: widget.onShowDetail,
+                    onChangeRepresentative: () {
+                      FeatureTourScope.maybeOf(context)?.completeTarget(
+                        FeatureTourTargets.representativePotato,
+                      );
+                      widget.onChangeRepresentative();
+                    },
+                  ),
                 ),
               ],
             ),

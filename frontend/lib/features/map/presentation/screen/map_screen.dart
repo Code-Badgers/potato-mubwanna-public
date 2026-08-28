@@ -14,6 +14,7 @@ import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../feature_tour/presentation/feature_tour_targets.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../data/travel_course_catalog.dart';
@@ -277,6 +278,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     setState(() {
       _selectedSpotId = normalizedSpotId;
     });
+    FeatureTourScope.maybeOf(context)?.completeTarget(
+      FeatureTourTargets.mapMarker,
+    );
   }
 
   void _enterRouteMode(List<MapSpot> routeSpots) {
@@ -285,6 +289,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _selectedSpotId = null;
       _routeSpotOrder = routeSpots.map((spot) => spot.id).toList();
     });
+    FeatureTourScope.maybeOf(context)?.completeTarget(
+      FeatureTourTargets.routeMode,
+    );
   }
 
   void _exitRouteMode() {
@@ -297,6 +304,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     setState(() {
       _showFullMap = true;
     });
+    FeatureTourScope.maybeOf(context)?.completeTarget(
+      FeatureTourTargets.mapFullView,
+    );
   }
 
   void _returnToDiscoveryHome() {
@@ -528,20 +538,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       return Stack(
                         children: [
                           Positioned.fill(
-                            child: _PotatoMapPreview(
-                              spots: activeMapSpots,
-                              routePolyline: activeRoutePolyline,
-                              routeSpotIds: _isRouteMode
-                                  ? orderedFavoriteSpots
-                                      .map((spot) => spot.id)
-                                      .toList(growable: false)
-                                  : const [],
-                              favoriteSpotIds: favoriteSpotIds,
-                              currentLocation: _currentLocation,
-                              currentLocationFocusTick:
-                                  _currentLocationFocusTick,
-                              onSpotSelected: _selectSpotById,
-                              mapViewBuilder: widget.mapViewBuilder,
+                            child: KeyedSubtree(
+                              key: FeatureTourTargets.mapMarker,
+                              child: _PotatoMapPreview(
+                                spots: activeMapSpots,
+                                routePolyline: activeRoutePolyline,
+                                routeSpotIds: _isRouteMode
+                                    ? orderedFavoriteSpots
+                                        .map((spot) => spot.id)
+                                        .toList(growable: false)
+                                    : const [],
+                                favoriteSpotIds: favoriteSpotIds,
+                                currentLocation: _currentLocation,
+                                currentLocationFocusTick:
+                                    _currentLocationFocusTick,
+                                onSpotSelected: _selectSpotById,
+                                mapViewBuilder: widget.mapViewBuilder,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -886,22 +899,27 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
           Positioned(
             left: 18,
             bottom: 18,
-            child: FilledButton.icon(
-              key: const ValueKey('open-full-map-button'),
-              onPressed: onOpenFullMap,
-              icon: const Icon(Icons.open_in_full_rounded, size: 18),
-              label: const Text('지도 크게 보기'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: _mapPrimary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
+            child: KeyedSubtree(
+              key: FeatureTourTargets.mapFullView,
+              child: FilledButton.icon(
+                key: const ValueKey('open-full-map-button'),
+                onPressed: onOpenFullMap,
+                icon: const Icon(Icons.open_in_full_rounded, size: 18),
+                label: const Text('지도 크게 보기'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: _mapPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
@@ -2407,52 +2425,66 @@ class _RouteRecommendationSheet extends ConsumerWidget {
     final initialChildSize = hasPreviewInfo ? 0.40 : 0.28;
     final snapSizes = hasPreviewInfo ? const [0.40, 0.72] : const [0.28, 0.62];
     final spotDetail = ref.watch(spotDetailProvider(selectedSpot.id));
-    return DraggableScrollableSheet(
-      key: const ValueKey('selected-spot-sheet'),
-      controller: sheetController,
-      minChildSize: 0.24,
-      initialChildSize: initialChildSize,
-      maxChildSize: 0.78,
-      snap: true,
-      snapSizes: snapSizes,
-      builder: (context, scrollController) {
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: AppColors.line),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, -8),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Center(
-                  child: _SheetDragHandle(
-                    key: ValueKey('selected-spot-sheet-handle'),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _SelectedSpotSummary(
-                  spot: selectedSpot,
-                  spotDetail: spotDetail,
-                  isFavorite: isFavorite,
-                  onNavigationPressed: onNavigationPressed,
-                  onFavoritePressed: onFavoritePressed,
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (notification) {
+        if (notification.extent > notification.minExtent + 0.10) {
+          FeatureTourScope.maybeOf(context)?.completeSwipe(
+            FeatureTourTargets.spotSheetHandle,
+          );
+        }
+        return false;
+      },
+      child: DraggableScrollableSheet(
+        key: const ValueKey('selected-spot-sheet'),
+        controller: sheetController,
+        minChildSize: 0.24,
+        initialChildSize: initialChildSize,
+        maxChildSize: 0.78,
+        snap: true,
+        snapSizes: snapSizes,
+        builder: (context, scrollController) {
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(color: AppColors.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 24,
+                  offset: const Offset(0, -8),
                 ),
               ],
             ),
-          ),
-        );
-      },
+            child: SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: KeyedSubtree(
+                      key: FeatureTourTargets.spotSheetHandle,
+                      child: const _SheetDragHandle(
+                        key: ValueKey('selected-spot-sheet-handle'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SelectedSpotSummary(
+                    spot: selectedSpot,
+                    spotDetail: spotDetail,
+                    isFavorite: isFavorite,
+                    onNavigationPressed: onNavigationPressed,
+                    onFavoritePressed: onFavoritePressed,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
