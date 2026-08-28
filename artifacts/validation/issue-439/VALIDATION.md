@@ -28,6 +28,8 @@ Android Studio에서 별도 `--dart-define` 없이 실행해도 배포 API의 �
   기록하지 않는다.
 - 지도 이미지 요청이 실패할 때 URL 전체 대신 host와 오류 타입만 출력한다.
 - 진단 로그는 `debugPrint` 대신 공통 `AppLogger`의 `dart:developer` 경로를 사용한다.
+- 지도 크게보기의 뒤로가기/현재 위치 버튼을 드래그 가능한 장소 카드의 실제 상단에
+  고정해, 카드를 올리거나 내릴 때 같은 간격으로 함께 이동하도록 했다.
 
 ## 검증
 
@@ -38,6 +40,7 @@ Android Studio에서 별도 `--dart-define` 없이 실행해도 배포 API의 �
 - 자동 검증: `flutter analyze` 통과 (`No issues found!`)
 - 자동 검증: 전체 `flutter test` 통과 (328개 테스트)
 - 변경 후 관련 테스트: 환경 설정 및 지도 테스트 3개 통과
+- 지도 UI 회귀 테스트: 카드 드래그 후 상단 컨트롤 위치 동기화 및 장소 전환 검증 통과
 - 변경 후 Semgrep 대상 파일 점검: `print/debugPrint` 없음
 - Android 검증: `flutter build apk --debug` 통과 (`build/app/outputs/flutter-apk/app-debug.apk`)
 
