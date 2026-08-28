@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
+import '../logging/app_logger.dart';
 import '../storage/token_storage.dart';
 import 'auth_interceptor.dart';
 
@@ -9,9 +9,10 @@ class DioClient {
     required TokenStorage tokenStorage,
     String baseUrl = '/api',
   }) : dio = Dio(BaseOptions(baseUrl: baseUrl)) {
-    if (kDebugMode) {
-      debugPrint('[network] API base: ${_safeBaseUrl(baseUrl)}');
-    }
+    AppLogger.debug(
+      'API base: ${_safeBaseUrl(baseUrl)}',
+      name: 'network',
+    );
     dio.interceptors.add(
       AuthInterceptor(
         tokenStorage,

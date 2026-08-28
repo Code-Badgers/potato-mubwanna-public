@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/config/app_environment.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
@@ -1207,14 +1208,12 @@ class _CourseImage extends StatelessWidget {
 }
 
 void _logImageLoadFailure(String imageUrl, Object error) {
-  if (!kDebugMode) {
-    return;
-  }
   final uri = Uri.tryParse(imageUrl);
   final host = uri?.host;
-  debugPrint(
-    '[map] image load failed: host=${host == null || host.isEmpty ? 'invalid' : host}, '
+  AppLogger.debug(
+    'image load failed: host=${host == null || host.isEmpty ? 'invalid' : host}, '
     'error=${error.runtimeType}',
+    name: 'map',
   );
 }
 
