@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:potato_mubwanna/features/feature_tour/data/feature_tour_status_store.dart';
-import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_host.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -11,166 +11,234 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('stores and reads the completed version', () async {
+    test('stores completion independently for each page tour', () async {
       const store = SharedPreferencesFeatureTourStatusStore();
 
-      expect(
-        await store.hasCompleted(
-          SharedPreferencesFeatureTourStatusStore.currentVersion,
-        ),
-        isFalse,
-      );
+      await store.markCompleted('map-v2');
 
-      await store.markCompleted(
-        SharedPreferencesFeatureTourStatusStore.currentVersion,
-      );
+      expect(await store.hasCompleted('map-v2'), isTrue);
+      expect(await store.hasCompleted('stamp-v2'), isFalse);
 
-      expect(
-        await store.hasCompleted(
-          SharedPreferencesFeatureTourStatusStore.currentVersion,
-        ),
-        isTrue,
-      );
+      await store.markCompleted('stamp-v2');
+
+      expect(await store.hasCompleted('map-v2'), isTrue);
+      expect(await store.hasCompleted('stamp-v2'), isTrue);
     });
 
-    test('shows a newer tour version as incomplete', () async {
+    test('keeps compatibility with the legacy completion key', () async {
+      SharedPreferences.setMockInitialValues({
+        'completedFeatureTourVersion': '1',
+      });
       const store = SharedPreferencesFeatureTourStatusStore();
 
-      await store.markCompleted('1');
-
-      expect(await store.hasCompleted('2'), isFalse);
+      expect(await store.hasCompleted('1'), isTrue);
+      expect(await store.hasCompleted('map-v2'), isFalse);
     });
   });
 
-  group('MainShell feature tour', () {
+  group('FeatureTourHost', () {
     late _FakeFeatureTourStatusStore store;
 
     setUp(() {
       store = _FakeFeatureTourStatusStore();
     });
 
-    testWidgets('shows the first step and can be skipped', (tester) async {
-      await _pumpShell(tester, store);
+    testWidgets('advances a target step only after the target is tapped',
+        (tester) async {
+      final introKey = GlobalKey();
+      final actionKey = GlobalKey();
 
-      expect(find.text('강원도에서 오늘 갈 곳을 찾아보세요'), findsOneWidget);
-      expect(find.text('1 / 5'), findsOneWidget);
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'map-v2',
+          steps: [
+            FeatureTourStep(
+              targetKey: introKey,
+              title: '지도 둘러보기',
+              description: '지도의 주요 기능을 소개합니다.',
+            ),
+            FeatureTourStep(
+              targetKey: actionKey,
+              title: '직접 눌러보기',
+              description: '강조된 버튼을 눌러 다음 단계로 넘어갑니다.',
+              advanceType: CoachMarkAdvanceType.targetTap,
+              interactionHint: '버튼을 눌러보세요',
+            ),
+          ],
+          child: _TourPage(
+            introKey: introKey,
+            actionKey: actionKey,
+          ),
+        ),
+      );
+      await _settleTour(tester);
 
-      await tester.tap(find.text('건너뛰기'));
-      await tester.pumpAndSettle();
+      expect(find.text('지도 둘러보기'), findsOneWidget);
+      expect(find.text('1 / 2'), findsOneWidget);
 
-      expect(find.text('강원도에서 오늘 갈 곳을 찾아보세요'), findsNothing);
-      expect(store.completed, isTrue);
-      expect(store.completedVersion, '1');
+      await tester.tap(find.text('다음'));
+      await _settleTour(tester);
+
+      expect(find.text('직접 눌러보기'), findsOneWidget);
+      expect(find.text('2 / 2'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('tour-target-action')));
+      await _settleTour(tester);
+
+      expect(find.text('직접 눌러보기'), findsNothing);
+      expect(store.completedIds, contains('map-v2'));
     });
 
-    testWidgets('moves through all five steps and persists completion',
+    testWidgets('automatically scrolls an offscreen target before showing it',
         (tester) async {
-      await _pumpShell(tester, store);
+      final scrollController = ScrollController();
+      final targetKey = GlobalKey();
 
-      expect(find.text('1 / 5'), findsOneWidget);
-      await tester.tap(find.text('다음'));
-      await tester.pumpAndSettle();
-      expect(find.text('가고 싶은 곳은 내 동선에 담아보세요'), findsOneWidget);
-      expect(find.text('2 / 5'), findsOneWidget);
+      addTearDown(scrollController.dispose);
 
-      await tester.tap(find.text('다음'));
-      await tester.pumpAndSettle();
-      expect(find.text('직접 방문하고 스탬프를 모아요'), findsOneWidget);
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'potato-v2',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '감자밭 돌보기',
+              description: '화면 아래 기능도 이어서 확인할 수 있어요.',
+            ),
+          ],
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              children: [
+                const SizedBox(height: 900),
+                Container(
+                  key: targetKey,
+                  height: 80,
+                  color: Colors.green,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 
-      await tester.tap(find.text('다음'));
-      await tester.pumpAndSettle();
-      expect(find.text('여행하며 나만의 감자를 키워보세요'), findsOneWidget);
+      await _settleTour(tester);
 
-      await tester.tap(find.text('다음'));
-      await tester.pumpAndSettle();
-      expect(find.text('점순이와 여행 미션도 즐겨보세요'), findsOneWidget);
-      expect(find.text('시작하기'), findsOneWidget);
-
-      await tester.tap(find.text('시작하기'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('점순이와 여행 미션도 즐겨보세요'), findsNothing);
-      expect(store.completed, isTrue);
+      expect(scrollController.offset, greaterThan(0));
+      expect(find.text('감자밭 돌보기'), findsOneWidget);
     });
 
-    testWidgets('does not show after the current version is completed',
+    testWidgets('completing one page tour does not hide another page tour',
         (tester) async {
-      store.completed = true;
+      final mapKey = GlobalKey();
+      final stampKey = GlobalKey();
 
-      await _pumpShell(tester, store);
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'map-v2',
+          steps: [
+            FeatureTourStep(
+              targetKey: mapKey,
+              title: '지도 투어',
+              description: '지도를 살펴보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: mapKey),
+        ),
+      );
+      await _settleTour(tester);
+      await tester.tap(find.text('확인'));
+      await _settleTour(tester);
 
-      expect(find.text('강원도에서 오늘 갈 곳을 찾아보세요'), findsNothing);
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'stamp-v2',
+          steps: [
+            FeatureTourStep(
+              targetKey: stampKey,
+              title: '스탬프 투어',
+              description: '스탬프를 모아보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: stampKey),
+        ),
+      );
+      await _settleTour(tester);
+
+      expect(find.text('스탬프 투어'), findsOneWidget);
+      expect(store.completedIds, contains('map-v2'));
+      expect(store.completedIds, isNot(contains('stamp-v2')));
     });
   });
 }
 
-Future<void> _pumpShell(
-  WidgetTester tester,
-  _FakeFeatureTourStatusStore store,
-) async {
-  tester.view.physicalSize = const Size(430, 932);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.resetPhysicalSize);
-  addTearDown(tester.view.resetDevicePixelRatio);
-
-  final router = GoRouter(
-    initialLocation: '/main/map',
-    routes: [
-      ShellRoute(
-        builder: (context, state, child) => MainShell(
-          featureTourStatusStore: store,
-          child: child,
-        ),
-        routes: [
-          GoRoute(
-            path: '/main/map',
-            builder: (context, state) => const SizedBox(
-              key: ValueKey('tour-map-screen'),
-            ),
-          ),
-          GoRoute(
-            path: '/main/stamps',
-            builder: (context, state) => const SizedBox(
-              key: ValueKey('tour-stamp-screen'),
-            ),
-          ),
-          GoRoute(
-            path: '/main/potatoes',
-            builder: (context, state) => const SizedBox(
-              key: ValueKey('tour-potato-screen'),
-            ),
-          ),
-          GoRoute(
-            path: '/main/missions',
-            builder: (context, state) => const SizedBox(
-              key: ValueKey('tour-mission-screen'),
-            ),
-          ),
-          GoRoute(
-            path: '/main/mypage',
-            builder: (context, state) => const SizedBox(
-              key: ValueKey('tour-mypage-screen'),
-            ),
-          ),
-        ],
-      ),
-    ],
+Widget _tourApp({
+  required _FakeFeatureTourStatusStore store,
+  required String tourId,
+  required List<FeatureTourStep> steps,
+  required Widget child,
+}) {
+  return MaterialApp(
+    home: FeatureTourHost(
+      tourId: tourId,
+      steps: steps,
+      statusStore: store,
+      child: child,
+    ),
   );
+}
 
-  await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+Future<void> _settleTour(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump();
+  await tester.pump();
+  // Target preparation includes a short post-scroll layout stabilization.
+  await tester.pump(const Duration(milliseconds: 1000));
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.pumpAndSettle();
 }
 
-class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
-  bool completed = false;
-  String? completedVersion;
+class _TourPage extends StatelessWidget {
+  const _TourPage({required this.introKey, this.actionKey});
+
+  final GlobalKey introKey;
+  final GlobalKey? actionKey;
 
   @override
-  Future<bool> hasCompleted(String version) async => completed;
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(key: introKey, height: 100, width: 200),
+        if (actionKey != null)
+          KeyedSubtree(
+            key: actionKey,
+            child: ElevatedButton(
+              key: const ValueKey('tour-target-action'),
+              onPressed: () {
+                FeatureTourScope.maybeOf(context)?.completeTarget(actionKey!);
+              },
+              child: const Text('대상 버튼'),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
+  final completedIds = <String>{};
+
+  @override
+  Future<bool> hasCompleted(String version) async {
+    return completedIds.contains(version);
+  }
 
   @override
   Future<void> markCompleted(String version) async {
-    completed = true;
-    completedVersion = version;
+    completedIds.add(version);
   }
 }
