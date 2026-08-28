@@ -60,6 +60,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   List<String> _routeSpotOrder = const [];
   FavoriteSpotRoutePoint? _currentLocation;
   int _currentLocationFocusTick = 0;
+  final _spotSheetController = DraggableScrollableController();
+  final _routeSheetController = DraggableScrollableController();
 
   static const _categories = [
     _MapCategoryFilter(label: '전체', icon: Icons.grid_view_rounded),
@@ -226,6 +228,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_loadCurrentLocation());
     });
+  }
+
+  @override
+  void dispose() {
+    _spotSheetController.dispose();
+    _routeSheetController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCurrentLocation({bool focusMap = false}) async {
@@ -503,6 +512,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               )
                               .toList()
                           : const <FavoriteSpotRoutePoint>[];
+                      final activeSheetController = _isRouteMode
+                          ? _routeSheetController
+                          : _spotSheetController;
+                      final initialSheetSize = _isRouteMode
+                          ? (orderedFavoriteSpots.isEmpty ? 0.34 : 0.46)
+                          : selectedSpot == null
+                              ? 0.24
+                              : (selectedSpot.effectiveImageUrls.isNotEmpty ||
+                                      selectedSpot.menuItems.isNotEmpty ||
+                                      selectedSpot.hasBusinessInfo)
+                                  ? 0.40
+                                  : 0.28;
                       return Stack(
                         children: [
                           Positioned.fill(
@@ -558,24 +579,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                               ],
                             ),
                           ),
-                          Positioned(
-                            left: 14,
-                            bottom: _isRouteMode ? 298 : 202,
-                            child: _FullMapHomeButton(
-                              onTap: _returnToDiscoveryHome,
-                            ),
-                          ),
-                          Positioned(
-                            right: 18,
-                            bottom: _isRouteMode ? 298 : 202,
-                            child: _FullMapLocateButton(
-                              onTap: () => unawaited(
-                                _loadCurrentLocation(focusMap: true),
-                              ),
-                            ),
-                          ),
                           if (_isRouteMode)
                             _FavoriteRouteSheet(
+                              sheetController: _routeSheetController,
                               routeSpots: orderedFavoriteSpots,
                               currentLocation: _currentLocation,
                               onBrowsePressed: _exitRouteMode,
@@ -596,7 +602,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             )
                           else
                             _RouteRecommendationSheet(
-                              key: ValueKey('route-sheet-${selectedSpot.id}'),
+                              key: const ValueKey('route-sheet'),
+                              sheetController: _spotSheetController,
                               selectedSpot: selectedSpot,
                               isFavorite:
                                   favoriteSpotIds.contains(selectedSpot.id),
@@ -610,6 +617,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                 );
                               },
                             ),
+                          Positioned.fill(
+                            child: _SheetAnchoredMapControls(
+                              controller: activeSheetController,
+                              initialSheetSize: initialSheetSize,
+                              onHomePressed: _returnToDiscoveryHome,
+                              onLocatePressed: () => unawaited(
+                                _loadCurrentLocation(focusMap: true),
+                              ),
+                            ),
+                          ),
                         ],
                       );
                     },
@@ -887,6 +904,99 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SheetAnchoredMapControls extends StatefulWidget {
+  const _SheetAnchoredMapControls({
+    required this.controller,
+    required this.initialSheetSize,
+    required this.onHomePressed,
+    required this.onLocatePressed,
+  });
+
+  final DraggableScrollableController controller;
+  final double initialSheetSize;
+  final VoidCallback onHomePressed;
+  final VoidCallback onLocatePressed;
+
+  @override
+  State<_SheetAnchoredMapControls> createState() =>
+      _SheetAnchoredMapControlsState();
+}
+
+class _SheetAnchoredMapControlsState extends State<_SheetAnchoredMapControls> {
+  late double _sheetSize = widget.initialSheetSize;
+  bool _refreshScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SheetAnchoredMapControls oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleControllerChanged);
+      widget.controller.addListener(_handleControllerChanged);
+    }
+    _scheduleRefresh();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
+    super.dispose();
+  }
+
+  void _handleControllerChanged() {
+    _scheduleRefresh();
+  }
+
+  void _scheduleRefresh() {
+    if (_refreshScheduled) {
+      return;
+    }
+    _refreshScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      final nextSize = widget.controller.isAttached
+          ? widget.controller.size
+          : widget.initialSheetSize;
+      if (nextSize != _sheetSize) {
+        setState(() {
+          _sheetSize = nextSize;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final buttonBottom = constraints.maxHeight * _sheetSize + 12;
+        return Stack(
+          children: [
+            Positioned(
+              left: 14,
+              bottom: buttonBottom,
+              child: _FullMapHomeButton(onTap: widget.onHomePressed),
+            ),
+            Positioned(
+              right: 18,
+              bottom: buttonBottom,
+              child: _FullMapLocateButton(onTap: widget.onLocatePressed),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -2324,12 +2434,14 @@ class _DiscoverySectionStatus extends StatelessWidget {
 class _RouteRecommendationSheet extends ConsumerWidget {
   const _RouteRecommendationSheet({
     super.key,
+    required this.sheetController,
     required this.selectedSpot,
     required this.isFavorite,
     required this.onNavigationPressed,
     required this.onFavoritePressed,
   });
 
+  final DraggableScrollableController sheetController;
   final MapSpot selectedSpot;
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
@@ -2344,6 +2456,8 @@ class _RouteRecommendationSheet extends ConsumerWidget {
     final snapSizes = hasPreviewInfo ? const [0.40, 0.72] : const [0.28, 0.62];
     final spotDetail = ref.watch(spotDetailProvider(selectedSpot.id));
     return DraggableScrollableSheet(
+      key: const ValueKey('selected-spot-sheet'),
+      controller: sheetController,
       minChildSize: 0.24,
       initialChildSize: initialChildSize,
       maxChildSize: 0.78,
@@ -2369,7 +2483,11 @@ class _RouteRecommendationSheet extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Center(child: _SheetDragHandle()),
+                const Center(
+                  child: _SheetDragHandle(
+                    key: ValueKey('selected-spot-sheet-handle'),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 _SelectedSpotSummary(
                   spot: selectedSpot,
@@ -2389,6 +2507,7 @@ class _RouteRecommendationSheet extends ConsumerWidget {
 
 class _FavoriteRouteSheet extends StatelessWidget {
   const _FavoriteRouteSheet({
+    required this.sheetController,
     required this.routeSpots,
     required this.currentLocation,
     required this.onBrowsePressed,
@@ -2396,6 +2515,7 @@ class _FavoriteRouteSheet extends StatelessWidget {
     required this.onFavoritePressed,
   });
 
+  final DraggableScrollableController sheetController;
   final List<MapSpot> routeSpots;
   final FavoriteSpotRoutePoint? currentLocation;
   final VoidCallback onBrowsePressed;
@@ -2407,6 +2527,7 @@ class _FavoriteRouteSheet extends StatelessWidget {
     final initialChildSize = routeSpots.isEmpty ? 0.34 : 0.46;
     return DraggableScrollableSheet(
       key: const ValueKey('favorite-route-sheet'),
+      controller: sheetController,
       minChildSize: 0.28,
       initialChildSize: initialChildSize,
       maxChildSize: 0.78,
@@ -2856,7 +2977,7 @@ class _RouteSpotThumbnail extends StatelessWidget {
 }
 
 class _SheetDragHandle extends StatelessWidget {
-  const _SheetDragHandle();
+  const _SheetDragHandle({super.key});
 
   @override
   Widget build(BuildContext context) {
