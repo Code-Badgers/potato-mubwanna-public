@@ -257,13 +257,6 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     );
     final interactionTarget =
         interactionRect == null ? target : _toOverlayRect(interactionRect);
-    if (interactionTarget == null) {
-      return [
-        const Positioned.fill(
-          child: AbsorbPointer(),
-        ),
-      ];
-    }
     final hole = interactionTarget.inflate(10);
     return [
       Positioned(
@@ -302,7 +295,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     final cardWidth = math.min(360.0, size.width - (horizontalInset * 2));
     final targetRect = target ??
         Rect.fromLTWH(size.width / 2 - 26, size.height / 2 - 26, 52, 52);
-    final maxHeight = math.min(210.0, size.height - 28);
+    final maxHeight = math.min(188.0, size.height - 28);
     final spaceBelow = size.height - targetRect.bottom;
     final showAbove = spaceBelow < maxHeight + 24;
     final top = showAbove
@@ -371,7 +364,7 @@ class _FeatureTourCard extends StatelessWidget {
           filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             constraints: BoxConstraints(maxHeight: maxHeight),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 11),
+            padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(22),
@@ -397,7 +390,7 @@ class _FeatureTourCard extends StatelessWidget {
                         '${stepIndex + 1} / $totalSteps',
                         style: const TextStyle(
                           color: AppColors.primaryDark,
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
@@ -407,11 +400,11 @@ class _FeatureTourCard extends StatelessWidget {
                         onPressed: onSkip,
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.textSecondary,
-                          minimumSize: const Size(0, 32),
+                          minimumSize: const Size(0, 28),
                           padding: const EdgeInsets.symmetric(horizontal: 6),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           textStyle: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0,
                           ),
@@ -420,42 +413,42 @@ class _FeatureTourCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     step.title,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w900,
                       height: 1.25,
                       letterSpacing: 0,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     step.description,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       height: 1.45,
                       letterSpacing: 0,
                     ),
                   ),
                   if (isInteractionStep && step.interactionHint != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       step.interactionHint!,
                       style: const TextStyle(
                         color: AppColors.primaryDark,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
                     ),
                   ],
                   if (!isInteractionStep) ...[
-                    const SizedBox(height: 9),
+                    const SizedBox(height: 7),
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton.icon(
@@ -470,13 +463,13 @@ class _FeatureTourCard extends StatelessWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 42),
+                          minimumSize: const Size(0, 36),
                           padding: const EdgeInsets.symmetric(horizontal: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                           textStyle: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0,
                           ),

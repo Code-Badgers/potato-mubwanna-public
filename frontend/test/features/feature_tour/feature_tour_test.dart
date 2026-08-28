@@ -67,6 +67,17 @@ void main() {
             .advanceType,
         CoachMarkAdvanceType.swipeUp,
       );
+      final mapMarkerStep = FeatureTourDefinitions.map.firstWhere(
+        (step) => step.targetKey == FeatureTourTargets.mapMarker,
+      );
+      expect(
+        mapMarkerStep.spotlightTargetKey,
+        same(FeatureTourTargets.mapSelectedSpotCard),
+      );
+      expect(
+        mapMarkerStep.interactionTargetKey,
+        same(FeatureTourTargets.mapMarker),
+      );
       expect(
         FeatureTourDefinitions.stamp.map((step) => step.targetKey),
         contains(FeatureTourTargets.passportButton),
@@ -77,6 +88,23 @@ void main() {
           FeatureTourTargets.potatoInfo,
           FeatureTourTargets.representativePotato,
         ]),
+      );
+      expect(
+        FeatureTourDefinitions.potato
+            .where(
+              (step) =>
+                  step.targetKey == FeatureTourTargets.potatoInfo ||
+                  step.targetKey == FeatureTourTargets.representativePotato,
+            )
+            .every(
+              (step) =>
+                  step.advanceType == CoachMarkAdvanceType.navigationResult,
+            ),
+        isTrue,
+      );
+      expect(
+        FeatureTourDefinitions.potato.map((step) => step.targetKey),
+        isNot(contains(FeatureTourTargets.potatoSteps)),
       );
       expect(
         FeatureTourDefinitions.spot.map((step) => step.targetKey),
@@ -95,6 +123,48 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        FeatureTourDefinitions.passport.single.description,
+        contains('스탬프'),
+      );
+    });
+  });
+
+  group('FeatureTourController', () {
+    test('waits for a navigation result before advancing a route step',
+        () async {
+      var completed = false;
+      final controller = FeatureTourController(
+        tourId: 'potato-v4',
+        steps: [
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '정보 보기',
+            description: '상세 정보를 확인해보세요.',
+            advanceType: CoachMarkAdvanceType.navigationResult,
+          ),
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '대표 감자',
+            description: '대표 감자를 바꿔보세요.',
+          ),
+        ],
+        onCompleted: () async {
+          completed = true;
+        },
+      );
+      addTearDown(controller.dispose);
+
+      controller.activate();
+      controller.completeTarget(controller.currentStep.targetKey);
+      expect(controller.stepIndex, 0);
+      expect(controller.isActive, isTrue);
+
+      controller.completeNavigation();
+
+      expect(controller.stepIndex, 1);
+      expect(controller.isActive, isTrue);
+      expect(completed, isFalse);
     });
   });
 
