@@ -131,6 +131,22 @@ GitHub 저장소의 **Settings → Environments → production**에 다음 envir
 - `AWS_REGION`: `ap-northeast-2`
 - `EC2_INSTANCE_ID`: 운영 EC2 인스턴스 ID
 
+Firebase Admin 운영 발송을 켤 때는 같은 `production` environment에 다음 값을 추가한다.
+
+- Variable `FIREBASE_ADMIN_ENABLED`: `true`
+- Variable `FIREBASE_PROJECT_ID`: `potato-mubwanna-prod`
+- Secret `FIREBASE_SERVICE_ACCOUNT_BASE64`: 저장소 밖에서 만든 Firebase Admin service account JSON의 Base64 값
+- Secret `TOUR_API_SERVICE_KEY`: 기존 TourAPI 서비스 키
+- Secret `GOOGLE_PLACES_API_KEY`: 기존 Google Places API 키
+
+Firebase service account Secret은 workflow에서 평문을 출력하지 않고 RSA 일회성 암호화 후
+SSM으로 EC2에 전달한다. 활성화 변수와 프로젝트 ID는 허용된 값인지 먼저 검증한 뒤
+`deploy/.env`의 해당 행만 교체한다. 기존 `.env` 값과 권한은 보존된다.
+
+`FIREBASE_ADMIN_ENABLED=true`인데 프로젝트 ID 또는 service account Secret이 비어 있으면
+배포가 실패해야 하며, backend도 동일 조건을 다시 검사한다. service account JSON과 private
+key는 Git, Actions 로그, SSM 결과, Docker 로그에 저장하거나 출력하지 않는다.
+
 production environment의 deployment branches and tags는 `main`과 `backend-v*`만 허용한다. 가능하면 required reviewer도 지정한다. 저장소나 계정 요금제에서 지원하지 않더라도 워크플로 자체가 다른 ref의 배포를 거부한다.
 
 ## 배포와 롤백

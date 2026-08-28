@@ -48,6 +48,29 @@ FIREBASE_SERVICE_ACCOUNT_BASE64=<base64-encoded-service-account-json>
 PUSH_TOKEN_STALE_DAYS=60
 ```
 
+### Production Environment 등록값
+
+GitHub 저장소의 `Settings → Environments → production`에 다음 이름으로 등록한다.
+
+| 종류 | 이름 | 값/정책 |
+| --- | --- | --- |
+| Variable | `FIREBASE_ADMIN_ENABLED` | `true` |
+| Variable | `FIREBASE_PROJECT_ID` | `potato-mubwanna-prod` |
+| Secret | `FIREBASE_SERVICE_ACCOUNT_BASE64` | Firebase Admin service account JSON의 Base64 값 |
+
+`FIREBASE_SERVICE_ACCOUNT_BASE64`는 service account JSON 원문을 저장소 밖에서 Base64로
+변환한 값만 GitHub Production Secret에 등록한다. JSON 파일, private key, Base64 원문은
+저장소·Issue·PR·Actions 로그에 남기지 않는다.
+
+Production workflow는 두 종류의 값을 서로 다른 경로로 전달한다.
+
+- Firebase service account Secret: 기존 RSA 일회성 암호화 → AWS SSM → EC2 `deploy/.env`
+- Firebase 활성화/프로젝트 Variable: 검증 후 AWS SSM 명령으로 EC2 `deploy/.env`의 해당 두 행만 교체
+
+두 동기화가 끝난 뒤 Compose가 `FIREBASE_ADMIN_ENABLED`, `FIREBASE_PROJECT_ID`,
+`FIREBASE_SERVICE_ACCOUNT_BASE64`를 backend 컨테이너에 전달한다. 배포 스크립트는 실제 값을
+출력하지 않고 값의 존재와 활성화 조건만 검사한다.
+
 로컬 파일 기반 실행도 가능하다. 이 경우 `FIREBASE_SERVICE_ACCOUNT_BASE64`를 비우고
 `GOOGLE_APPLICATION_CREDENTIALS`에 저장소 밖의 절대 경로를 지정한다.
 
@@ -61,6 +84,8 @@ $env:PUSH_TOKEN_STALE_DAYS = "60"
 
 - 운영 Docker Compose에는 `FIREBASE_SERVICE_ACCOUNT_BASE64`가 전달된다.
 - GitHub Actions는 SSM으로 EC2의 배포 스크립트를 실행한다. 실제 값은 운영 서버의 `deploy/.env` 또는 동일한 서버 secret 관리 방식에만 보관한다.
+- `deploy/sync-firebase-service-account-secret.sh`는 service account Secret을 기존 외부 API Secret과 같은 RSA/OAEP 방식으로 동기화한다.
+- `deploy/sync-firebase-production-config.sh`는 `FIREBASE_ADMIN_ENABLED`와 `FIREBASE_PROJECT_ID`만 교체하며 다른 `.env` 행은 보존한다.
 - service account key 경로와 파일 내용은 로그, 이슈, PR, 저장소에 남기지 않는다.
 - Firebase Admin이 필요 없는 환경은 `FIREBASE_ADMIN_ENABLED=false`를 유지한다.
 - 활성화했는데 project ID 또는 자격 증명이 없으면 서버는 즉시 시작 실패해 잘못된 운영 설정을 드러낸다.

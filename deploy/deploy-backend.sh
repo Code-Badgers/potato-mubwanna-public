@@ -42,7 +42,8 @@ deployment_started=false
 
 set_backend_image() {
   local next_image="$1"
-  sed -i '/^BACKEND_IMAGE=/d' "${env_file}"
+  sed -i.bak '/^BACKEND_IMAGE=/d' "${env_file}"
+  rm -f "${env_file}.bak"
   printf 'BACKEND_IMAGE=%s\n' "${next_image}" >> "${env_file}"
   chmod 600 "${env_file}"
 }
@@ -88,6 +89,14 @@ set_backend_image "${image_uri}"
 curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors "${health_url}"
 "${compose[@]}" exec -T backend sh -c 'test -n "${GOOGLE_PLACES_API_KEY:-}"'
 echo "Backend Google Places environment verified."
+"${compose[@]}" exec -T backend sh -c '
+  test -n "${FIREBASE_ADMIN_ENABLED:-}" \
+    && if [ "${FIREBASE_ADMIN_ENABLED}" = "true" ]; then
+      test -n "${FIREBASE_PROJECT_ID:-}" \
+        && test -n "${FIREBASE_SERVICE_ACCOUNT_BASE64:-}";
+    fi
+'
+echo "Backend Firebase environment verified."
 "${compose[@]}" ps
 
 while IFS= read -r candidate_image; do

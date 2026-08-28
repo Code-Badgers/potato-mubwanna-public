@@ -10,6 +10,7 @@ mock_state="${test_directory}/aws-state"
 production_directory="${test_directory}/production"
 service_key='dummy%2Fencoded%2Bkey%3D'
 google_places_key='dummy-google-places-key'
+firebase_service_account_base64='eyJ0ZXN0IjoiZmlyZWJhc2UifQ=='
 
 cleanup() {
   rm -rf "${test_directory}"
@@ -22,6 +23,8 @@ PUBLIC_DOMAIN=example.test
 UNCHANGED_VALUE=keep-me
 TOUR_API_SERVICE_KEY=old-value
 GOOGLE_PLACES_API_KEY=old-google-value
+FIREBASE_ADMIN_ENABLED=false
+FIREBASE_PROJECT_ID=
 EOF
 chmod 600 "${production_directory}/deploy/.env"
 
@@ -124,12 +127,33 @@ EC2_INSTANCE_ID='i-test' \
 GOOGLE_PLACES_API_KEY="${google_places_key}" \
 bash "${deploy_dir}/sync-google-places-secret.sh"
 
+PATH="${mock_bin}:${PATH}" \
+MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
+PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
+AWS_REGION='ap-northeast-2' \
+EC2_INSTANCE_ID='i-test' \
+FIREBASE_ADMIN_ENABLED='true' \
+FIREBASE_PROJECT_ID='potato-mubwanna-prod' \
+bash "${deploy_dir}/sync-firebase-production-config.sh"
+
+PATH="${mock_bin}:${PATH}" \
+MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
+PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
+AWS_REGION='ap-northeast-2' \
+EC2_INSTANCE_ID='i-test' \
+FIREBASE_SERVICE_ACCOUNT_BASE64="${firebase_service_account_base64}" \
+bash "${deploy_dir}/sync-firebase-service-account-secret.sh"
+
 grep -q '^PUBLIC_DOMAIN=example.test$' "${production_directory}/deploy/.env"
 grep -q '^UNCHANGED_VALUE=keep-me$' "${production_directory}/deploy/.env"
 grep -q "^TOUR_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^TOUR_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^GOOGLE_PLACES_API_KEY=${google_places_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^GOOGLE_PLACES_API_KEY=' "${production_directory}/deploy/.env")" -eq 1
+grep -q "^FIREBASE_SERVICE_ACCOUNT_BASE64=${firebase_service_account_base64}$" "${production_directory}/deploy/.env"
+test "$(grep -c '^FIREBASE_SERVICE_ACCOUNT_BASE64=' "${production_directory}/deploy/.env")" -eq 1
+grep -q '^FIREBASE_ADMIN_ENABLED=true$' "${production_directory}/deploy/.env"
+grep -q '^FIREBASE_PROJECT_ID=potato-mubwanna-prod$' "${production_directory}/deploy/.env"
 if [[ "$(uname -s)" == "Linux" ]]; then
   test "$(stat -c '%a' "${production_directory}/deploy/.env")" = '600'
 fi
@@ -144,4 +168,9 @@ if grep -R -F "${google_places_key}" "${mock_state}" > /dev/null; then
   exit 1
 fi
 
-echo 'TourAPI and Google Places encrypted SSM secret sync scenarios passed.'
+if grep -R -F "${firebase_service_account_base64}" "${mock_state}" > /dev/null; then
+  echo 'Plaintext Firebase service account leaked into SSM command records.' >&2
+  exit 1
+fi
+
+echo 'TourAPI, Google Places, Firebase secret, and Firebase config sync scenarios passed.'
