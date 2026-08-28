@@ -144,14 +144,14 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
       return;
     }
     if (result.showDetail) {
-      _showPotatoDetail(result.item);
+      await _showPotatoDetail(result.item);
     } else {
       await _updateRepresentativePotato(result.item);
     }
   }
 
-  void _showPotatoDetail(PotatoCollectionItem item) {
-    showModalBottomSheet<void>(
+  Future<void> _showPotatoDetail(PotatoCollectionItem item) {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -159,8 +159,8 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
     );
   }
 
-  void _showDefaultPotatoDetail() {
-    showModalBottomSheet<void>(
+  Future<void> _showDefaultPotatoDetail() {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -285,9 +285,8 @@ class _PotatoCollectionScreenState extends ConsumerState<PotatoCollectionScreen>
                     updatingRepresentative: _isUpdatingRepresentative,
                     onShowDetail: _showPotatoDetail,
                     onShowDefaultDetail: _showDefaultPotatoDetail,
-                    onChangeRepresentative: () {
-                      _showRepresentativePicker(collection);
-                    },
+                    onChangeRepresentative: () =>
+                        _showRepresentativePicker(collection),
                     onCare: _interactWithRepresentativePotato,
                     onHarvest: _harvestRepresentativePotato,
                   ),
@@ -417,9 +416,9 @@ class _PotatoCollectionBody extends StatelessWidget {
 
   final PotatoCollection collection;
   final bool updatingRepresentative;
-  final ValueChanged<PotatoCollectionItem> onShowDetail;
-  final VoidCallback onShowDefaultDetail;
-  final VoidCallback onChangeRepresentative;
+  final Future<void> Function(PotatoCollectionItem) onShowDetail;
+  final Future<void> Function() onShowDefaultDetail;
+  final Future<void> Function() onChangeRepresentative;
   final Future<PotatoInteractionResult> Function(PotatoInteractionAction action)
       onCare;
   final Future<PotatoHarvestResult> Function() onHarvest;
@@ -444,6 +443,9 @@ class _PotatoCollectionBody extends StatelessWidget {
                     growthProgress: representative?.growthRatio ?? 0.0,
                     updating: updatingRepresentative,
                     onShowDetail: representative == null
+                        ? () => unawaited(onShowDefaultDetail())
+                        : () => unawaited(onShowDetail(representative)),
+                    onOpenDetail: representative == null
                         ? onShowDefaultDetail
                         : () => onShowDetail(representative),
                     onChangeRepresentative: onChangeRepresentative,
@@ -475,6 +477,7 @@ class _RepresentativePotatoCard extends StatefulWidget {
     required this.growthProgress,
     required this.updating,
     required this.onShowDetail,
+    required this.onOpenDetail,
     required this.onChangeRepresentative,
     required this.onCare,
     required this.onHarvest,
@@ -484,7 +487,8 @@ class _RepresentativePotatoCard extends StatefulWidget {
   final double growthProgress;
   final bool updating;
   final VoidCallback? onShowDetail;
-  final VoidCallback onChangeRepresentative;
+  final Future<void> Function()? onOpenDetail;
+  final Future<void> Function() onChangeRepresentative;
   final Future<PotatoInteractionResult> Function(
     PotatoInteractionAction action,
   )? onCare;
@@ -703,10 +707,7 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                KeyedSubtree(
-                  key: FeatureTourTargets.potatoSteps,
-                  child: const _PotatoStepGrowthPanel(),
-                ),
+                const _PotatoStepGrowthPanel(),
                 const SizedBox(height: 10),
                 _PotatoHarvestAction(
                   item: potato,
@@ -724,7 +725,7 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                 const SizedBox(height: 10),
                 _PotatoMainActions(
                   updating: widget.updating,
-                  onShowDetail: widget.onShowDetail,
+                  onOpenDetail: widget.onOpenDetail,
                   onChangeRepresentative: widget.onChangeRepresentative,
                 ),
               ],
@@ -1093,13 +1094,13 @@ class _PotatoHarvestDialog extends StatelessWidget {
 class _PotatoMainActions extends StatelessWidget {
   const _PotatoMainActions({
     required this.updating,
-    required this.onShowDetail,
+    required this.onOpenDetail,
     required this.onChangeRepresentative,
   });
 
   final bool updating;
-  final VoidCallback? onShowDetail;
-  final VoidCallback onChangeRepresentative;
+  final Future<void> Function()? onOpenDetail;
+  final Future<void> Function() onChangeRepresentative;
 
   @override
   Widget build(BuildContext context) {
@@ -1109,13 +1110,14 @@ class _PotatoMainActions extends StatelessWidget {
           child: KeyedSubtree(
             key: FeatureTourTargets.potatoInfo,
             child: OutlinedButton.icon(
-              onPressed: onShowDetail == null
+              onPressed: onOpenDetail == null
                   ? null
-                  : () {
-                      FeatureTourScope.maybeOf(context)?.completeTarget(
-                        FeatureTourTargets.potatoInfo,
-                      );
-                      onShowDetail!();
+                  : () async {
+                      await onOpenDetail!();
+                      if (!context.mounted) {
+                        return;
+                      }
+                      FeatureTourScope.maybeOf(context)?.completeNavigation();
                     },
               style: OutlinedButton.styleFrom(
                 foregroundColor: _potatoDark,
@@ -1144,11 +1146,12 @@ class _PotatoMainActions extends StatelessWidget {
             child: FilledButton(
               onPressed: updating
                   ? null
-                  : () {
-                      FeatureTourScope.maybeOf(context)?.completeTarget(
-                        FeatureTourTargets.representativePotato,
-                      );
-                      onChangeRepresentative();
+                  : () async {
+                      await onChangeRepresentative();
+                      if (!context.mounted) {
+                        return;
+                      }
+                      FeatureTourScope.maybeOf(context)?.completeNavigation();
                     },
               style: FilledButton.styleFrom(
                 backgroundColor: _potatoPrimary,
