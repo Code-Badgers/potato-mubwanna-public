@@ -39,6 +39,16 @@ void main() {
     expect(find.text('시장·상권'), findsOneWidget);
     expect(find.text('여유'), findsOneWidget);
     expect(find.text('#감자전'), findsOneWidget);
+    expect(find.text('관광지 정보'), findsOneWidget);
+    expect(find.text('정선의 대표 전통시장입니다.'), findsOneWidget);
+    expect(find.text('금요일 09:00~18:00'), findsOneWidget);
+    expect(find.text('평점 4.6'), findsOneWidget);
+    expect(find.text('example.com'), findsOneWidget);
+    expect(find.text('033-111-1111'), findsOneWidget);
+    expect(find.text('매일 09:00~18:00'), findsOneWidget);
+    expect(find.text('무료'), findsOneWidget);
+    expect(find.text('연중무휴'), findsOneWidget);
+    expect(find.text('공영주차장 이용'), findsOneWidget);
     expect(find.text('관광 해설 오디오'), findsOneWidget);
     expect(find.text('한국관광공사 오디(Odii) 제공'), findsOneWidget);
     expect(find.text('점순이 오디오'), findsNothing);
@@ -47,14 +57,19 @@ void main() {
     expect(find.byKey(const ValueKey('visit-verify-button')), findsOneWidget);
 
     final playButton = find.byKey(const ValueKey('audio-play-toggle'));
-    await tester.ensureVisible(playButton);
+    await tester.scrollUntilVisible(
+      playButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(playButton);
     await tester.pump();
 
     expect(engine.playCount, 1);
   });
 
-  testWidgets('keeps spot detail visible when audio guide is unavailable',
+  testWidgets('hides audio section when audio guide is unavailable',
       (tester) async {
     await _setMobileViewport(tester);
 
@@ -73,11 +88,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('정선 5일장'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('audio-guide-unavailable')),
-      findsOneWidget,
-    );
-    expect(find.text('관광지 정보는 계속 확인할 수 있습니다.'), findsOneWidget);
+    expect(find.text('관광지 정보'), findsOneWidget);
+    expect(find.text('관광 해설 오디오'), findsNothing);
+    expect(find.byKey(const ValueKey('audio-guide-unavailable')), findsNothing);
   });
 
   testWidgets('shows a retry action when audio service fails', (tester) async {
@@ -526,6 +539,17 @@ const _spot = SpotDetail(
   congestionLevel: 'LOW',
   verificationRadiusMeter: 100,
   stampEnabled: true,
+  description: '정선의 대표 전통시장입니다.',
+  openingHours: '매일 09:00~18:00',
+  closedDays: '연중무휴',
+  admissionFee: '무료',
+  parking: '공영주차장 이용',
+  contactPhone: '033-000-0000',
+  phone: '033-111-1111',
+  website: 'https://example.com',
+  rating: 4.6,
+  businessOpenNow: true,
+  businessTodayText: '금요일 09:00~18:00',
 );
 
 const _guide = AudioGuide(

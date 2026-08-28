@@ -22,6 +22,17 @@ void main() {
     expect(detail.potatoTags, ['감자', '감자전']);
     expect(detail.verificationRadiusMeter, 100);
     expect(detail.stampEnabled, isTrue);
+    expect(detail.description, '정선의 대표 전통시장입니다.');
+    expect(detail.openingHours, '매일 09:00~18:00');
+    expect(detail.closedDays, '연중무휴');
+    expect(detail.admissionFee, '무료');
+    expect(detail.parking, '공영주차장 이용');
+    expect(detail.contactPhone, '033-000-0000');
+    expect(detail.phone, '033-111-1111');
+    expect(detail.website, 'https://example.com');
+    expect(detail.rating, 4.6);
+    expect(detail.businessOpenNow, isTrue);
+    expect(detail.businessTodayText, '금요일 09:00~18:00');
   });
 
   test('throws ApiException when spot detail response fails', () async {
@@ -88,5 +99,19 @@ const _spotDetailResponse = <String, Object?>{
     'congestionLevel': 'LOW',
     'verificationRadiusMeter': 100,
     'stampEnabled': true,
+    'description': '정선의 대표 전통시장입니다.',
+    'openingHours': '매일 09:00~18:00',
+    'closedDays': '연중무휴',
+    'admissionFee': '무료',
+    'parking': '공영주차장 이용',
+    'contactPhone': '033-000-0000',
+    'phone': '033-111-1111',
+    'website': 'https://example.com',
+    'rating': 4.6,
+    'businessOpeningHours': {
+      'openNow': true,
+      'todayText': '금요일 09:00~18:00',
+      'weekdayDescriptions': ['금요일 09:00~18:00'],
+    },
   },
 };

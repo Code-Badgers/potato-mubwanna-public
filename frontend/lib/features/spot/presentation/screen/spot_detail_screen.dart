@@ -128,36 +128,13 @@ class _SpotDetailBody extends ConsumerWidget {
                   ],
                 ),
               ],
-              const SizedBox(height: 30),
-              const _SectionTitle(
-                icon: Icons.headphones_rounded,
-                title: '관광 해설 오디오',
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                '한국관광공사 오디(Odii) 제공',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              audioGuide.when(
-                loading: () => const _AudioGuideLoading(),
-                error: (error, _) {
-                  if (error is AudioGuideException &&
-                      error.type == AudioGuideFailureType.unavailable) {
-                    return const _AudioGuideUnavailable();
-                  }
-                  return _AudioGuideError(
-                    message: error is AudioGuideException
-                        ? error.message
-                        : '오디오 가이드를 불러오지 못했습니다.',
-                    onRetry: () => ref.invalidate(audioGuideProvider(spot.id)),
-                  );
-                },
-                data: (guide) => _AudioGuideContent(guide: guide),
+              if (spot.hasPlaceInformation) ...[
+                const SizedBox(height: 30),
+                _SpotInformationSection(spot: spot),
+              ],
+              _AudioGuideSection(
+                audioGuide: audioGuide,
+                onRetry: () => ref.invalidate(audioGuideProvider(spot.id)),
               ),
             ],
           ),
@@ -923,6 +900,192 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _SpotInformationSection extends StatelessWidget {
+  const _SpotInformationSection({required this.spot});
+
+  final SpotDetail spot;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <_SpotInformationItem>[
+      _SpotInformationItem(
+        Icons.storefront_rounded,
+        switch (spot.businessOpenNow) {
+          true => '영업 중',
+          false => '영업 종료',
+          null => null,
+        },
+      ),
+      _SpotInformationItem(Icons.today_rounded, spot.businessTodayText),
+      _SpotInformationItem(
+        Icons.star_rounded,
+        spot.rating == null || spot.rating! <= 0
+            ? null
+            : '평점 ${spot.rating!.toStringAsFixed(1)}',
+      ),
+      _SpotInformationItem(
+        Icons.public_rounded,
+        _websiteLabel(spot.website),
+      ),
+      _SpotInformationItem(
+        Icons.call_rounded,
+        spot.phone ?? spot.contactPhone,
+      ),
+      _SpotInformationItem(Icons.schedule_rounded, spot.openingHours),
+      _SpotInformationItem(
+          Icons.confirmation_number_rounded, spot.admissionFee),
+      _SpotInformationItem(Icons.event_busy_rounded, spot.closedDays),
+      _SpotInformationItem(Icons.local_parking_rounded, spot.parking),
+    ].where((item) => item.text != null && item.text!.isNotEmpty).toList();
+
+    return Column(
+      key: const ValueKey('spot-information-section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionTitle(
+          icon: Icons.info_outline_rounded,
+          title: '관광지 정보',
+        ),
+        if (spot.description != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            spot.description!,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 1.65,
+            ),
+          ),
+        ],
+        if (rows.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _audioLine),
+            ),
+            child: Column(
+              children: [
+                for (var index = 0; index < rows.length; index++) ...[
+                  _SpotInformationRow(item: rows[index]),
+                  if (index < rows.length - 1) const SizedBox(height: 12),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String? _websiteLabel(String? website) {
+    if (website == null || website.isEmpty) {
+      return null;
+    }
+    final uri = Uri.tryParse(website);
+    if (uri == null || uri.host.isEmpty) {
+      return website;
+    }
+    return uri.host.replaceFirst(RegExp(r'^www\.'), '');
+  }
+}
+
+class _SpotInformationRow extends StatelessWidget {
+  const _SpotInformationRow({required this.item});
+
+  final _SpotInformationItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(item.icon, color: _audioGreen, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            item.text!,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SpotInformationItem {
+  const _SpotInformationItem(this.icon, this.text);
+
+  final IconData icon;
+  final String? text;
+}
+
+class _AudioGuideSection extends StatelessWidget {
+  const _AudioGuideSection({
+    required this.audioGuide,
+    required this.onRetry,
+  });
+
+  final AsyncValue<AudioGuide> audioGuide;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return audioGuide.when(
+      loading: () => _buildSection(const _AudioGuideLoading()),
+      error: (error, _) {
+        if (error is AudioGuideException &&
+            error.type == AudioGuideFailureType.unavailable) {
+          return const SizedBox.shrink();
+        }
+        return _buildSection(
+          _AudioGuideError(
+            message: error is AudioGuideException
+                ? error.message
+                : '오디오 가이드를 불러오지 못했습니다.',
+            onRetry: onRetry,
+          ),
+        );
+      },
+      data: (guide) => _buildSection(_AudioGuideContent(guide: guide)),
+    );
+  }
+
+  Widget _buildSection(Widget content) {
+    return Column(
+      key: const ValueKey('audio-guide-section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 30),
+        const _SectionTitle(
+          icon: Icons.headphones_rounded,
+          title: '관광 해설 오디오',
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          '한국관광공사 오디(Odii) 제공',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        content,
+      ],
+    );
+  }
+}
+
 class _AudioGuideContent extends StatelessWidget {
   const _AudioGuideContent({required this.guide});
 
@@ -1159,20 +1322,6 @@ class _AudioGuideLoading extends StatelessWidget {
       key: ValueKey('audio-guide-loading'),
       height: 148,
       child: Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
-class _AudioGuideUnavailable extends StatelessWidget {
-  const _AudioGuideUnavailable();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _AudioMessagePanel(
-      key: ValueKey('audio-guide-unavailable'),
-      icon: Icons.headset_off_rounded,
-      title: '오디오 가이드가 준비되지 않았어요',
-      message: '관광지 정보는 계속 확인할 수 있습니다.',
     );
   }
 }
