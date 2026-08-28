@@ -7,6 +7,7 @@ import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../admin_notice/application/admin_notice_controller.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../../potato/application/potato_collection_controller.dart';
 import '../../../potato/domain/potato_collection.dart';
 import '../../../potato/presentation/default_potato.dart';
@@ -952,6 +953,7 @@ class _QuickActionGrid extends StatelessWidget {
         icon: Icons.menu_book_rounded,
         label: '여행 기록',
         key: const ValueKey('mypage-quick-action-travel-records'),
+        targetKey: FeatureTourTargets.myPageTravelRecord,
         onTap: () => context.push('/travel-records'),
       ),
       _QuickAction(
@@ -980,7 +982,14 @@ class _QuickActionGrid extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var index = 0; index < actions.length; index++) ...[
-            Expanded(child: _QuickActionCard(action: actions[index])),
+            Expanded(
+              child: actions[index].targetKey == null
+                  ? _QuickActionCard(action: actions[index])
+                  : KeyedSubtree(
+                      key: actions[index].targetKey,
+                      child: _QuickActionCard(action: actions[index]),
+                    ),
+            ),
             if (index < actions.length - 1) const SizedBox(width: 8),
           ],
         ],
@@ -1188,12 +1197,14 @@ class _QuickAction {
     required this.icon,
     required this.label,
     required this.key,
+    this.targetKey,
     this.onTap,
   });
 
   final IconData icon;
   final String label;
   final Key key;
+  final GlobalKey? targetKey;
   final VoidCallback? onTap;
 }
 

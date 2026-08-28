@@ -281,7 +281,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     final cardWidth = math.min(360.0, size.width - (horizontalInset * 2));
     final targetRect = target ??
         Rect.fromLTWH(size.width / 2 - 26, size.height / 2 - 26, 52, 52);
-    final maxHeight = math.min(250.0, size.height - 32);
+    final maxHeight = math.min(210.0, size.height - 28);
     final spaceBelow = size.height - targetRect.bottom;
     final showAbove = spaceBelow < maxHeight + 24;
     final top = showAbove
@@ -350,7 +350,7 @@ class _FeatureTourCard extends StatelessWidget {
           filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             constraints: BoxConstraints(maxHeight: maxHeight),
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 11),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(22),
@@ -399,42 +399,42 @@ class _FeatureTourCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     step.title,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                       height: 1.25,
                       letterSpacing: 0,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     step.description,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 13,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w600,
                       height: 1.45,
                       letterSpacing: 0,
                     ),
                   ),
                   if (isInteractionStep && step.interactionHint != null) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       step.interactionHint!,
                       style: const TextStyle(
                         color: AppColors.primaryDark,
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
                     ),
                   ],
                   if (!isInteractionStep) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 9),
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton.icon(

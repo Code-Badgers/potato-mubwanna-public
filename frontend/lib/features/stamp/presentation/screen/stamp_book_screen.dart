@@ -1149,10 +1149,18 @@ class _StampTourHero extends StatelessWidget {
                       ),
                     ),
                   ),
-                  _StampTourProgressPill(
-                    acquiredCount: acquiredCount,
-                    totalCount: totalCount,
-                    onTap: () => context.push('/main/stamps/cities'),
+                  KeyedSubtree(
+                    key: FeatureTourTargets.passportButton,
+                    child: _StampTourProgressPill(
+                      acquiredCount: acquiredCount,
+                      totalCount: totalCount,
+                      onTap: () {
+                        FeatureTourScope.maybeOf(context)?.completeTarget(
+                          FeatureTourTargets.passportButton,
+                        );
+                        context.push('/main/stamps/cities');
+                      },
+                    ),
                   ),
                 ],
               ),

@@ -722,18 +722,10 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   onShowHarvested: widget.onShowDetail,
                 ),
                 const SizedBox(height: 10),
-                KeyedSubtree(
-                  key: FeatureTourTargets.representativePotato,
-                  child: _PotatoMainActions(
-                    updating: widget.updating,
-                    onShowDetail: widget.onShowDetail,
-                    onChangeRepresentative: () {
-                      FeatureTourScope.maybeOf(context)?.completeTarget(
-                        FeatureTourTargets.representativePotato,
-                      );
-                      widget.onChangeRepresentative();
-                    },
-                  ),
+                _PotatoMainActions(
+                  updating: widget.updating,
+                  onShowDetail: widget.onShowDetail,
+                  onChangeRepresentative: widget.onChangeRepresentative,
                 ),
               ],
             ),
@@ -1114,57 +1106,77 @@ class _PotatoMainActions extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onShowDetail,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _potatoDark,
-              side: BorderSide(color: _potatoPrimary.withValues(alpha: 0.55)),
-              minimumSize: const Size.fromHeight(44),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
+          child: KeyedSubtree(
+            key: FeatureTourTargets.potatoInfo,
+            child: OutlinedButton.icon(
+              onPressed: onShowDetail == null
+                  ? null
+                  : () {
+                      FeatureTourScope.maybeOf(context)?.completeTarget(
+                        FeatureTourTargets.potatoInfo,
+                      );
+                      onShowDetail!();
+                    },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _potatoDark,
+                side: BorderSide(color: _potatoPrimary.withValues(alpha: 0.55)),
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-            ),
-            icon: const Icon(Icons.info_outline_rounded, size: 17),
-            label: const Text(
-              '정보 보기',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
+              icon: const Icon(Icons.info_outline_rounded, size: 17),
+              label: const Text(
+                '정보 보기',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: FilledButton(
-            onPressed: updating ? null : onChangeRepresentative,
-            style: FilledButton.styleFrom(
-              backgroundColor: _potatoPrimary,
-              disabledBackgroundColor: const Color(0xFFBFE5CC),
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(44),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
+          child: KeyedSubtree(
+            key: FeatureTourTargets.representativePotato,
+            child: FilledButton(
+              onPressed: updating
+                  ? null
+                  : () {
+                      FeatureTourScope.maybeOf(context)?.completeTarget(
+                        FeatureTourTargets.representativePotato,
+                      );
+                      onChangeRepresentative();
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: _potatoPrimary,
+                disabledBackgroundColor: const Color(0xFFBFE5CC),
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
+              child: updating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      '대표 감자 변경',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
             ),
-            child: updating
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text(
-                    '대표 감자 변경',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
           ),
         ),
       ],

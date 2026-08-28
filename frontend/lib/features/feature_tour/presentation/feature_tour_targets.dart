@@ -5,6 +5,10 @@ class FeatureTourTargets {
   const FeatureTourTargets._();
 
   static final mapDiscovery = GlobalKey(debugLabel: 'feature-tour-map');
+  static final mapCourseCard =
+      GlobalKey(debugLabel: 'feature-tour-map-course-card');
+  static final mapGoodNowCard =
+      GlobalKey(debugLabel: 'feature-tour-map-good-now-card');
   static final mapFullView =
       GlobalKey(debugLabel: 'feature-tour-map-full-view');
   static final mapMarker = GlobalKey(debugLabel: 'feature-tour-map-marker');
@@ -27,6 +31,7 @@ class FeatureTourTargets {
   static final potatoSteps = GlobalKey(debugLabel: 'feature-tour-potato-steps');
   static final representativePotato =
       GlobalKey(debugLabel: 'feature-tour-representative-potato');
+  static final potatoInfo = GlobalKey(debugLabel: 'feature-tour-potato-info');
   static final potatoNavigation =
       GlobalKey(debugLabel: 'feature-tour-potato-nav');
   static final missionFeatured =
@@ -35,4 +40,8 @@ class FeatureTourTargets {
       GlobalKey(debugLabel: 'feature-tour-mission-daily');
   static final missionNavigation =
       GlobalKey(debugLabel: 'feature-tour-mission-nav');
+  static final audioPlay = GlobalKey(debugLabel: 'feature-tour-audio-play');
+  static final visitVerify = GlobalKey(debugLabel: 'feature-tour-visit-verify');
+  static final myPageTravelRecord =
+      GlobalKey(debugLabel: 'feature-tour-my-page-travel-record');
 }

@@ -173,7 +173,11 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/main/mypage',
-          builder: (context, state) => const MyPageScreen(),
+          builder: (context, state) => FeatureTourHost(
+            tourId: FeatureTourIds.myPage,
+            steps: FeatureTourDefinitions.myPage,
+            child: const MyPageScreen(),
+          ),
         ),
       ],
     ),
@@ -185,7 +189,11 @@ final appRouter = GoRouter(
       path: '/spots/:spotId',
       builder: (context, state) {
         final spotId = state.pathParameters['spotId']!;
-        return SpotDetailScreen(spotId: spotId);
+        return FeatureTourHost(
+          tourId: FeatureTourIds.spot,
+          steps: FeatureTourDefinitions.spot,
+          child: SpotDetailScreen(spotId: spotId),
+        );
       },
     ),
     GoRoute(

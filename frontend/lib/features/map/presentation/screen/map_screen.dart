@@ -448,6 +448,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             spotsState: spotsState,
             onOpenFullMap: _openFullMap,
             onSpotPressed: (spot) {
+              FeatureTourScope.maybeOf(context)?.completeTarget(
+                FeatureTourTargets.mapGoodNowCard,
+              );
               setState(() {
                 _showFullMap = true;
                 _selectedSpotId = spot.id;
@@ -1116,15 +1119,26 @@ class _TravelCourseSection extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 20),
                   itemBuilder: (context, index) {
                     final course = courses[index];
-                    return _TravelCourseCard(
+                    final card = _TravelCourseCard(
                       course: course,
-                      onPressed: () => _showTravelCourseDetail(
-                        context,
-                        course,
-                        onAddCourseToRoute,
-                        onSpotDetailPressed,
-                      ),
+                      onPressed: () {
+                        FeatureTourScope.maybeOf(context)?.completeTarget(
+                          FeatureTourTargets.mapCourseCard,
+                        );
+                        _showTravelCourseDetail(
+                          context,
+                          course,
+                          onAddCourseToRoute,
+                          onSpotDetailPressed,
+                        );
+                      },
                     );
+                    return index == 0
+                        ? KeyedSubtree(
+                            key: FeatureTourTargets.mapCourseCard,
+                            child: card,
+                          )
+                        : card;
                   },
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemCount: courses.length,
@@ -2040,6 +2054,7 @@ class _GoodNowSpotSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final calmSpots = _spotsByCongestion('LOW');
     final hotSpots = _spotsByCongestion('HIGH');
+    final firstTargetGroup = calmSpots.isNotEmpty ? 'calm' : 'hot';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2071,6 +2086,9 @@ class _GoodNowSpotSection extends StatelessWidget {
                 description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
                 spots: calmSpots,
                 onSpotPressed: onSpotPressed,
+                targetKey: firstTargetGroup == 'calm'
+                    ? FeatureTourTargets.mapGoodNowCard
+                    : null,
               ),
               const SizedBox(height: 14),
               _GoodNowSpotGroup(
@@ -2078,6 +2096,9 @@ class _GoodNowSpotSection extends StatelessWidget {
                 description: '활기 있는 분위기를 즐기고 싶을 때 좋아요.',
                 spots: hotSpots,
                 onSpotPressed: onSpotPressed,
+                targetKey: firstTargetGroup == 'hot'
+                    ? FeatureTourTargets.mapGoodNowCard
+                    : null,
               ),
             ],
           ),
@@ -2110,12 +2131,14 @@ class _GoodNowSpotGroup extends StatelessWidget {
     required this.description,
     required this.spots,
     required this.onSpotPressed,
+    this.targetKey,
   });
 
   final String title;
   final String description;
   final List<MapSpot> spots;
   final ValueChanged<MapSpot> onSpotPressed;
+  final GlobalKey? targetKey;
 
   @override
   Widget build(BuildContext context) {
@@ -2167,10 +2190,19 @@ class _GoodNowSpotGroup extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           for (var index = 0; index < spots.length; index++) ...[
-            _PopularSpotCard(
-              spot: spots[index],
-              onPressed: () => onSpotPressed(spots[index]),
-            ),
+            if (index == 0 && targetKey != null)
+              KeyedSubtree(
+                key: targetKey,
+                child: _PopularSpotCard(
+                  spot: spots[index],
+                  onPressed: () => onSpotPressed(spots[index]),
+                ),
+              )
+            else
+              _PopularSpotCard(
+                spot: spots[index],
+                onPressed: () => onSpotPressed(spots[index]),
+              ),
             if (index < spots.length - 1) const SizedBox(height: 10),
           ],
         ],
