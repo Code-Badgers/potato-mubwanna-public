@@ -5,12 +5,34 @@ class FeatureTourTargets {
   const FeatureTourTargets._();
 
   static final mapDiscovery = GlobalKey(debugLabel: 'feature-tour-map');
+  static final mapFullView =
+      GlobalKey(debugLabel: 'feature-tour-map-full-view');
+  static final mapMarker = GlobalKey(debugLabel: 'feature-tour-map-marker');
+  static final spotSheetHandle =
+      GlobalKey(debugLabel: 'feature-tour-spot-sheet-handle');
   static final routeMode = GlobalKey(debugLabel: 'feature-tour-route');
   static final mapNavigation = GlobalKey(debugLabel: 'feature-tour-map-nav');
+  static final stampMap = GlobalKey(debugLabel: 'feature-tour-stamp-map');
+  static final stampMarker = GlobalKey(debugLabel: 'feature-tour-stamp-marker');
+  static final passportButton =
+      GlobalKey(debugLabel: 'feature-tour-passport-button');
+  static final passportBook =
+      GlobalKey(debugLabel: 'feature-tour-passport-book');
   static final stampNavigation =
       GlobalKey(debugLabel: 'feature-tour-stamp-nav');
+  static final potatoGrowth =
+      GlobalKey(debugLabel: 'feature-tour-potato-growth');
+  static final potatoCareActions =
+      GlobalKey(debugLabel: 'feature-tour-potato-care-actions');
+  static final potatoSteps = GlobalKey(debugLabel: 'feature-tour-potato-steps');
+  static final representativePotato =
+      GlobalKey(debugLabel: 'feature-tour-representative-potato');
   static final potatoNavigation =
       GlobalKey(debugLabel: 'feature-tour-potato-nav');
+  static final missionFeatured =
+      GlobalKey(debugLabel: 'feature-tour-mission-featured');
+  static final missionDaily =
+      GlobalKey(debugLabel: 'feature-tour-mission-daily');
   static final missionNavigation =
       GlobalKey(debugLabel: 'feature-tour-mission-nav');
 }

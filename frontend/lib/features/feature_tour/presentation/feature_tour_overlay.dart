@@ -1,10 +1,17 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
-import 'feature_tour_targets.dart';
+
+enum CoachMarkAdvanceType {
+  nextButton,
+  targetTap,
+  swipeUp,
+  navigationResult,
+}
 
 class FeatureTourStep {
   const FeatureTourStep({
@@ -12,12 +19,16 @@ class FeatureTourStep {
     required this.title,
     required this.description,
     this.fallbackTargetKey,
+    this.advanceType = CoachMarkAdvanceType.nextButton,
+    this.interactionHint,
   });
 
   final GlobalKey targetKey;
   final GlobalKey? fallbackTargetKey;
   final String title;
   final String description;
+  final CoachMarkAdvanceType advanceType;
+  final String? interactionHint;
 }
 
 class FeatureTourOverlay extends StatefulWidget {
@@ -27,6 +38,7 @@ class FeatureTourOverlay extends StatefulWidget {
     required this.totalSteps,
     required this.onNext,
     required this.onSkip,
+    required this.onTargetUnavailable,
     super.key,
   });
 
@@ -35,49 +47,25 @@ class FeatureTourOverlay extends StatefulWidget {
   final int totalSteps;
   final VoidCallback onNext;
   final VoidCallback onSkip;
-
-  static List<FeatureTourStep> get steps => [
-        FeatureTourStep(
-          targetKey: FeatureTourTargets.mapDiscovery,
-          fallbackTargetKey: FeatureTourTargets.mapNavigation,
-          title: '강원도에서 오늘 갈 곳을 찾아보세요',
-          description: '추천 장소와 여행 코스를 한눈에 볼 수 있어요.',
-        ),
-        FeatureTourStep(
-          targetKey: FeatureTourTargets.routeMode,
-          fallbackTargetKey: FeatureTourTargets.mapNavigation,
-          title: '가고 싶은 곳은 내 동선에 담아보세요',
-          description: '담은 장소만 모아보고 여행 순서도 확인할 수 있어요.',
-        ),
-        FeatureTourStep(
-          targetKey: FeatureTourTargets.stampNavigation,
-          title: '직접 방문하고 스탬프를 모아요',
-          description: '강원도 여행 패스포트를 하나씩 채워보세요.',
-        ),
-        FeatureTourStep(
-          targetKey: FeatureTourTargets.potatoNavigation,
-          title: '여행하며 나만의 감자를 키워보세요',
-          description: '걷고 돌보며 성장시키면 감자 카드를 획득할 수 있어요.',
-        ),
-        FeatureTourStep(
-          targetKey: FeatureTourTargets.missionNavigation,
-          title: '점순이와 여행 미션도 즐겨보세요',
-          description: '사진·QR·걷기 등 다양한 방식으로 여행을 기록할 수 있어요.',
-        ),
-      ];
+  final VoidCallback onTargetUnavailable;
 
   @override
   State<FeatureTourOverlay> createState() => _FeatureTourOverlayState();
 }
 
 class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
+  static const _maxTargetRetries = 10;
+
   Rect? _targetRect;
   Timer? _targetRefreshTimer;
+  int _targetRetryCount = 0;
+  bool _isPreparingTarget = false;
+  bool _unavailableReported = false;
 
   @override
   void initState() {
     super.initState();
-    _refreshTargetRect();
+    _scheduleTargetRefresh();
     _targetRefreshTimer = Timer.periodic(
       const Duration(milliseconds: 120),
       (_) => _refreshTargetRect(),
@@ -90,8 +78,11 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     if (oldWidget.step.targetKey != widget.step.targetKey ||
         oldWidget.step.fallbackTargetKey != widget.step.fallbackTargetKey) {
       _targetRect = null;
+      _targetRetryCount = 0;
+      _isPreparingTarget = false;
+      _unavailableReported = false;
+      _scheduleTargetRefresh();
     }
-    _refreshTargetRect();
   }
 
   @override
@@ -100,31 +91,121 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     super.dispose();
   }
 
-  void _refreshTargetRect() {
-    if (!mounted) {
-      return;
-    }
-    final targetRect = _readRect(widget.step.targetKey) ??
-        (widget.step.fallbackTargetKey == null
-            ? null
-            : _readRect(widget.step.fallbackTargetKey!));
-    if (targetRect == _targetRect) {
-      return;
-    }
-    setState(() {
-      _targetRect = targetRect;
+  void _scheduleTargetRefresh() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshTargetRect();
+      }
     });
   }
 
-  Rect? _readRect(GlobalKey key) {
+  void _refreshTargetRect() {
+    if (!mounted || _isPreparingTarget) {
+      return;
+    }
+
+    final resolved = _resolveTarget();
+    if (resolved == null) {
+      _targetRect = null;
+      _targetRetryCount += 1;
+      if (_targetRetryCount >= _maxTargetRetries && !_unavailableReported) {
+        _unavailableReported = true;
+        widget.onTargetUnavailable();
+      }
+      setState(() {});
+      return;
+    }
+
+    _targetRetryCount = 0;
+    final rect = _toOverlayRect(resolved.rect);
+    if (_shouldScrollToTarget(rect)) {
+      unawaited(_prepareTarget(resolved.key));
+      return;
+    }
+    if (rect == _targetRect) {
+      return;
+    }
+    setState(() {
+      _targetRect = rect;
+    });
+  }
+
+  _ResolvedTarget? _resolveTarget() {
+    final keys = <GlobalKey>[
+      widget.step.targetKey,
+      if (widget.step.fallbackTargetKey != null) widget.step.fallbackTargetKey!,
+    ];
+    for (final key in keys) {
+      final rect = _readGlobalRect(key);
+      if (rect != null) {
+        return _ResolvedTarget(key: key, rect: rect);
+      }
+    }
+    return null;
+  }
+
+  Rect? _readGlobalRect(GlobalKey key) {
     final renderObject = key.currentContext?.findRenderObject();
     if (renderObject is! RenderBox ||
         !renderObject.hasSize ||
         renderObject.size.isEmpty) {
       return null;
     }
-    final origin = renderObject.localToGlobal(Offset.zero);
-    return origin & renderObject.size;
+    return renderObject.localToGlobal(Offset.zero) & renderObject.size;
+  }
+
+  Rect _toOverlayRect(Rect globalRect) {
+    final overlayRenderObject = context.findRenderObject();
+    if (overlayRenderObject is RenderBox) {
+      final origin = overlayRenderObject.localToGlobal(Offset.zero);
+      return globalRect.shift(-origin);
+    }
+    return globalRect;
+  }
+
+  bool _shouldScrollToTarget(Rect rect) {
+    final size = MediaQuery.sizeOf(context);
+    const edgeTolerance = 2.0;
+    final safeViewport = Rect.fromLTWH(
+      0,
+      0,
+      size.width,
+      size.height,
+    );
+    return rect.left < safeViewport.left - edgeTolerance ||
+        rect.top < safeViewport.top - edgeTolerance ||
+        rect.right > safeViewport.right + edgeTolerance ||
+        rect.bottom > safeViewport.bottom + edgeTolerance;
+  }
+
+  Future<void> _prepareTarget(GlobalKey key) async {
+    if (_isPreparingTarget || !mounted) {
+      return;
+    }
+    final targetContext = key.currentContext;
+    if (targetContext == null) {
+      return;
+    }
+    setState(() {
+      _isPreparingTarget = true;
+      _targetRect = null;
+    });
+    try {
+      await Scrollable.ensureVisible(
+        targetContext,
+        alignment: 0.34,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 160));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreparingTarget = false;
+        });
+        _scheduleTargetRefresh();
+      }
+    }
   }
 
   @override
@@ -133,18 +214,18 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
+          final target = _isPreparingTarget ? null : _targetRect;
           return Stack(
             children: [
               Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {},
+                child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _FeatureTourScrimPainter(targetRect: _targetRect),
+                    painter: _FeatureTourScrimPainter(targetRect: target),
                   ),
                 ),
               ),
-              _buildDescriptionCard(size),
+              ..._buildInteractionGuards(size, target),
+              if (!_isPreparingTarget) _buildDescriptionCard(size, target),
             ],
           );
         },
@@ -152,26 +233,64 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     );
   }
 
-  Widget _buildDescriptionCard(Size size) {
+  List<Widget> _buildInteractionGuards(Size size, Rect? target) {
+    if (widget.step.advanceType == CoachMarkAdvanceType.nextButton ||
+        target == null) {
+      return [
+        const Positioned.fill(
+          child: AbsorbPointer(),
+        ),
+      ];
+    }
+
+    final hole = target.inflate(10);
+    return [
+      Positioned(
+        left: 0,
+        right: 0,
+        top: 0,
+        height: math.max(0, hole.top),
+        child: const AbsorbPointer(),
+      ),
+      Positioned(
+        left: 0,
+        right: 0,
+        top: hole.bottom,
+        bottom: 0,
+        child: const AbsorbPointer(),
+      ),
+      Positioned(
+        left: 0,
+        width: math.max(0, hole.left),
+        top: hole.top,
+        height: math.max(0, math.min(size.height, hole.bottom) - hole.top),
+        child: const AbsorbPointer(),
+      ),
+      Positioned(
+        left: hole.right,
+        right: 0,
+        top: hole.top,
+        height: math.max(0, math.min(size.height, hole.bottom) - hole.top),
+        child: const AbsorbPointer(),
+      ),
+    ];
+  }
+
+  Widget _buildDescriptionCard(Size size, Rect? target) {
     const horizontalInset = 16.0;
     final cardWidth = math.min(360.0, size.width - (horizontalInset * 2));
-    final target = _targetRect ??
-        Rect.fromLTWH(
-          size.width / 2 - 26,
-          size.height / 2 - 26,
-          52,
-          52,
-        );
-    final cardHeightEstimate = math.min(230.0, size.height - 32);
-    final spaceBelow = size.height - target.bottom;
-    final showAbove = spaceBelow < cardHeightEstimate + 24;
+    final targetRect = target ??
+        Rect.fromLTWH(size.width / 2 - 26, size.height / 2 - 26, 52, 52);
+    final maxHeight = math.min(250.0, size.height - 32);
+    final spaceBelow = size.height - targetRect.bottom;
+    final showAbove = spaceBelow < maxHeight + 24;
     final top = showAbove
-        ? math.max(16.0, target.top - cardHeightEstimate - 22)
-        : math.min(target.bottom + 22, size.height - cardHeightEstimate - 16);
+        ? math.max(16.0, targetRect.top - maxHeight - 22)
+        : math.min(targetRect.bottom + 22, size.height - maxHeight - 16);
     final left = math.max(
       horizontalInset,
       math.min(
-        target.center.dx - (cardWidth / 2),
+        targetRect.center.dx - (cardWidth / 2),
         size.width - cardWidth - horizontalInset,
       ),
     );
@@ -186,12 +305,19 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         step: widget.step,
         stepIndex: widget.stepIndex,
         totalSteps: widget.totalSteps,
-        maxHeight: math.min(250.0, size.height - 32),
+        maxHeight: maxHeight,
         onNext: widget.onNext,
         onSkip: widget.onSkip,
       ),
     );
   }
+}
+
+class _ResolvedTarget {
+  const _ResolvedTarget({required this.key, required this.rect});
+
+  final GlobalKey key;
+  final Rect rect;
 }
 
 class _FeatureTourCard extends StatelessWidget {
@@ -213,109 +339,133 @@ class _FeatureTourCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isInteractionStep =
+        step.advanceType != CoachMarkAdvanceType.nextButton;
     final isLastStep = stepIndex == totalSteps - 1;
     return Material(
       color: Colors.transparent,
-      child: Container(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-        decoration: BoxDecoration(
-          color: AppColors.textPrimary.withValues(alpha: 0.96),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.66)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.24),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.34),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  Row(
+                    children: [
+                      Text(
+                        '${stepIndex + 1} / $totalSteps',
+                        style: const TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: onSkip,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary,
+                          minimumSize: const Size(0, 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                        child: const Text('건너뛰기'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   Text(
-                    '${stepIndex + 1} / $totalSteps',
-                    style: TextStyle(
-                      color: AppColors.primary.withValues(alpha: 0.98),
-                      fontSize: 12,
+                    step.title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
                       fontWeight: FontWeight.w900,
+                      height: 1.25,
                       letterSpacing: 0,
                     ),
                   ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: onSkip,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white.withValues(alpha: 0.74),
-                      minimumSize: const Size(0, 32),
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      textStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                  const SizedBox(height: 8),
+                  Text(
+                    step.description,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.45,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  if (isInteractionStep && step.interactionHint != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      step.interactionHint!,
+                      style: const TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
                     ),
-                    child: const Text('건너뛰기'),
-                  ),
+                  ],
+                  if (!isInteractionStep) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        onPressed: onNext,
+                        icon: Icon(
+                          isLastStep
+                              ? Icons.check_rounded
+                              : Icons.arrow_forward_rounded,
+                          size: 17,
+                        ),
+                        label: Text(isLastStep ? '확인' : '다음'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 42),
+                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                step.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  height: 1.25,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                step.description,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.82),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  height: 1.45,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  onPressed: onNext,
-                  icon: Icon(
-                    isLastStep
-                        ? Icons.check_rounded
-                        : Icons.arrow_forward_rounded,
-                    size: 17,
-                  ),
-                  label: Text(isLastStep ? '시작하기' : '다음'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 42),
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -334,14 +484,14 @@ class _FeatureTourScrimPainter extends CustomPainter {
     final hole = targetRect == null
         ? null
         : RRect.fromRectAndRadius(
-            targetRect!.inflate(8),
+            targetRect!.inflate(10),
             const Radius.circular(18),
           );
 
     canvas.saveLayer(bounds, Paint());
     canvas.drawRect(
       bounds,
-      Paint()..color = Colors.black.withValues(alpha: 0.68),
+      Paint()..color = Colors.black.withValues(alpha: 0.62),
     );
     if (hole != null) {
       canvas.drawRRect(
@@ -355,7 +505,7 @@ class _FeatureTourScrimPainter extends CustomPainter {
       canvas.drawRRect(
         hole,
         Paint()
-          ..color = AppColors.primary.withValues(alpha: 0.9)
+          ..color = AppColors.primary.withValues(alpha: 0.92)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2,
       );

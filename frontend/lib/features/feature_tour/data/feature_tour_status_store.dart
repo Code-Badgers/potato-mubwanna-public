@@ -12,16 +12,25 @@ class SharedPreferencesFeatureTourStatusStore
 
   static const currentVersion = '1';
   static const _versionKey = 'completedFeatureTourVersion';
+  static const _versionsKey = 'completedFeatureTourVersions';
 
   @override
   Future<bool> hasCompleted(String version) async {
     final preferences = await SharedPreferences.getInstance();
-    return preferences.getString(_versionKey) == version;
+    final completedVersions =
+        preferences.getStringList(_versionsKey) ?? const <String>[];
+    return completedVersions.contains(version) ||
+        preferences.getString(_versionKey) == version;
   }
 
   @override
   Future<void> markCompleted(String version) async {
     final preferences = await SharedPreferences.getInstance();
+    final completedVersions = <String>{
+      ...(preferences.getStringList(_versionsKey) ?? const <String>[]),
+      version,
+    }.toList();
+    await preferences.setStringList(_versionsKey, completedVersions);
     await preferences.setString(_versionKey, version);
   }
 }
