@@ -2,10 +2,10 @@ import 'feature_tour_overlay.dart';
 import 'feature_tour_targets.dart';
 
 abstract final class FeatureTourIds {
-  static const map = 'map-v3';
+  static const map = 'map-v4';
   static const stamp = 'stamp-v3';
-  static const passport = 'passport-v2';
-  static const potato = 'potato-v3';
+  static const passport = 'passport-v3';
+  static const potato = 'potato-v4';
   static const mission = 'mission-v2';
   static const spot = 'spot-v1';
   static const myPage = 'my-page-v1';
@@ -27,6 +27,7 @@ abstract final class FeatureTourDefinitions {
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapGoodNowCard,
+      fallbackTargetKey: FeatureTourTargets.mapFullView,
       title: '지금 가기 좋은 곳도 살펴보세요',
       description: '마음에 드는 장소를 누르면 지도에서 바로 확인할 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
@@ -34,6 +35,8 @@ abstract final class FeatureTourDefinitions {
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapMarker,
+      spotlightTargetKey: FeatureTourTargets.mapSelectedSpotCard,
+      interactionTargetKey: FeatureTourTargets.mapMarker,
       title: '궁금한 장소를 눌러보세요',
       description: '장소를 고르면 방문 인증과 상세 정보를 확인할 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
@@ -80,8 +83,8 @@ abstract final class FeatureTourDefinitions {
   static final passport = <FeatureTourStep>[
     FeatureTourStep(
       targetKey: FeatureTourTargets.passportBook,
-      title: '여행 도장을 모아보세요',
-      description: '인증한 명소가 패스포트에 하나씩 채워져요.',
+      title: '방문 인증한 도장이 여기에 채워져요',
+      description: '스탬프를 찍으면 이 패스포트에 여행 도장이 하나씩 표시돼요.',
     ),
   ];
 
@@ -97,11 +100,6 @@ abstract final class FeatureTourDefinitions {
       description: '돌봄 버튼을 누르면 감자의 상태가 달라져요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '돌봄 버튼을 눌러보세요',
-    ),
-    FeatureTourStep(
-      targetKey: FeatureTourTargets.potatoSteps,
-      title: '걸음도 성장으로 이어져요',
-      description: '오늘 걸음이 감자의 성장 진행에 반영돼요.',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.potatoInfo,

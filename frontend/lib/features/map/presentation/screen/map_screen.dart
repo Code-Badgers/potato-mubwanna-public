@@ -2504,12 +2504,15 @@ class _RouteRecommendationSheet extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _SelectedSpotSummary(
-                    spot: selectedSpot,
-                    spotDetail: spotDetail,
-                    isFavorite: isFavorite,
-                    onNavigationPressed: onNavigationPressed,
-                    onFavoritePressed: onFavoritePressed,
+                  KeyedSubtree(
+                    key: FeatureTourTargets.mapSelectedSpotCard,
+                    child: _SelectedSpotSummary(
+                      spot: selectedSpot,
+                      spotDetail: spotDetail,
+                      isFavorite: isFavorite,
+                      onNavigationPressed: onNavigationPressed,
+                      onFavoritePressed: onFavoritePressed,
+                    ),
                   ),
                 ],
               ),

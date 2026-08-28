@@ -19,12 +19,16 @@ class FeatureTourStep {
     required this.title,
     required this.description,
     this.fallbackTargetKey,
+    this.spotlightTargetKey,
+    this.interactionTargetKey,
     this.advanceType = CoachMarkAdvanceType.nextButton,
     this.interactionHint,
   });
 
   final GlobalKey targetKey;
   final GlobalKey? fallbackTargetKey;
+  final GlobalKey? spotlightTargetKey;
+  final GlobalKey? interactionTargetKey;
   final String title;
   final String description;
   final CoachMarkAdvanceType advanceType;
@@ -76,7 +80,10 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   void didUpdateWidget(covariant FeatureTourOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.step.targetKey != widget.step.targetKey ||
-        oldWidget.step.fallbackTargetKey != widget.step.fallbackTargetKey) {
+        oldWidget.step.fallbackTargetKey != widget.step.fallbackTargetKey ||
+        oldWidget.step.spotlightTargetKey != widget.step.spotlightTargetKey ||
+        oldWidget.step.interactionTargetKey !=
+            widget.step.interactionTargetKey) {
       _targetRect = null;
       _targetRetryCount = 0;
       _isPreparingTarget = false;
@@ -132,6 +139,8 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
 
   _ResolvedTarget? _resolveTarget() {
     final keys = <GlobalKey>[
+      if (widget.step.spotlightTargetKey != null)
+        widget.step.spotlightTargetKey!,
       widget.step.targetKey,
       if (widget.step.fallbackTargetKey != null) widget.step.fallbackTargetKey!,
     ];
@@ -243,7 +252,19 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       ];
     }
 
-    final hole = target.inflate(10);
+    final interactionRect = _readGlobalRect(
+      widget.step.interactionTargetKey ?? widget.step.targetKey,
+    );
+    final interactionTarget =
+        interactionRect == null ? target : _toOverlayRect(interactionRect);
+    if (interactionTarget == null) {
+      return [
+        const Positioned.fill(
+          child: AbsorbPointer(),
+        ),
+      ];
+    }
+    final hole = interactionTarget.inflate(10);
     return [
       Positioned(
         left: 0,

@@ -12,6 +12,8 @@ class FeatureTourTargets {
   static final mapFullView =
       GlobalKey(debugLabel: 'feature-tour-map-full-view');
   static final mapMarker = GlobalKey(debugLabel: 'feature-tour-map-marker');
+  static final mapSelectedSpotCard =
+      GlobalKey(debugLabel: 'feature-tour-map-selected-spot-card');
   static final spotSheetHandle =
       GlobalKey(debugLabel: 'feature-tour-spot-sheet-handle');
   static final routeMode = GlobalKey(debugLabel: 'feature-tour-route');
