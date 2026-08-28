@@ -118,8 +118,8 @@ Future<void> _pumpShell(
     routes: [
       ShellRoute(
         builder: (context, state, child) => MainShell(
-          child: child,
           featureTourStatusStore: store,
+          child: child,
         ),
         routes: [
           GoRoute(
