@@ -11,11 +11,13 @@
 
 ### 페이지별 투어
 
-- `map-v2`: 지도 발견 홈, 지도 크게 보기, 마커 선택, 장소 카드 펼치기, 내 동선
-- `stamp-v2`: 스탬프 지도와 명소 선택
+- `map-v3`: 지도 발견 홈, 취향별 코스 카드, 지금 가기 좋은 곳, 마커 선택, 장소 카드 펼치기, 내 동선
+- `stamp-v3`: 스탬프 지도, 패스포트 버튼, 명소 선택
 - `passport-v2`: 여행 패스포트
-- `potato-v2`: 감자 성장 상태, 돌봄 버튼, 걸음 성장, 대표 감자 변경
+- `potato-v3`: 감자 성장 상태, 돌봄 버튼, 걸음 성장, 정보 보기, 대표 감자 변경
 - `mission-v2`: 오늘의 미션 카드
+- `spot-v1`: 관광 해설 오디오 재생, 방문 인증
+- `my-page-v1`: 여행 기록
 - 각 투어는 해당 route에 진입했을 때만 시작하며, Coach Mark가 다른 Bottom Navigation 탭으로 사용자를 강제 이동시키지 않는다.
 
 ### 상태 저장
@@ -30,6 +32,8 @@
 - `FeatureTourTargets`의 `GlobalKey`로 화면에 실제 렌더링된 target을 등록한다.
 - overlay는 target의 `RenderBox`를 측정하고, 화면 밖이면 `Scrollable.ensureVisible`로 부드럽게 이동한 뒤 약 160ms 동안 레이아웃 안정화를 기다린다.
 - target을 찾지 못하면 최대 10회 재시도한 뒤 해당 단계만 건너뛰며 앱을 막지 않는다.
+- 지도 홈의 코스/지금 가기 좋은 곳, 감자밭의 정보 보기/대표 감자 변경, 마이페이지의 여행 기록처럼 화면 아래에 있는 target도 같은 자동 스크롤 흐름을 사용한다.
+- DraggableScrollableSheet의 장소 카드 펼치기 단계는 사용자가 실제로 위로 스와이프해야 다음 단계로 진행한다.
 - 지도 마커와 Kakao/custom map처럼 Flutter 하위 RenderBox를 직접 얻기 어려운 대상은 지도 영역을 spotlight하고, 실제 marker callback이 해당 단계를 완료한다.
 - `targetTap`, `swipeUp`, `navigationResult`, `nextButton` 유형을 분리했다.
 - 상호작용 단계에서는 target 바깥만 `AbsorbPointer`로 막아 실제 버튼·지도·스와이프 입력이 target까지 전달되도록 했다.
@@ -39,6 +43,7 @@
 - 화면 바깥은 반투명 검정 scrim으로 처리한다.
 - 정확한 target만 초록색 outline과 spotlight로 강조한다.
 - 설명 카드는 흰색 92% 투명도, `BackdropFilter` blur 20, 낮은 투명도의 `#56C787` border를 사용한다.
+- 설명 카드의 최대 높이는 210px이며, 내부 여백과 글자 크기를 줄여 화면을 과하게 가리지 않도록 했다.
 - 단순 안내 단계는 `다음`, 실제 조작 단계는 `직접 눌러보세요`/`카드를 위로 올려보세요` 힌트를 표시한다.
 
 ## 변경 파일
@@ -47,13 +52,15 @@
 - `frontend/lib/features/feature_tour/presentation/feature_tour_targets.dart`: 페이지별 실제 target registry
 - `frontend/lib/features/feature_tour/presentation/feature_tour_overlay.dart`: RenderBox spotlight, 자동 스크롤, 상호작용 통과, glass Coach Mark
 - `frontend/lib/features/feature_tour/presentation/feature_tour_host.dart`: route 단위 투어 lifecycle, controller, scope, 완료 저장
-- `frontend/lib/features/feature_tour/presentation/feature_tour_definitions.dart`: map/stamp/passport/potato/mission 투어 단계 정의
-- `frontend/lib/app/router/app_router.dart`: 페이지별 `FeatureTourHost` route 연결
+- `frontend/lib/features/feature_tour/presentation/feature_tour_definitions.dart`: map/stamp/passport/potato/mission/spot/my-page 투어 단계 정의
+- `frontend/lib/app/router/app_router.dart`: 지도 셸 외 spot·my-page route의 `FeatureTourHost` 연결
 - `frontend/lib/shared/widgets/navigation/main_shell.dart`: 전역 강제 투어와 탭 이동 제거, 기존 shell 유지
 - `frontend/lib/features/map/presentation/screen/map_screen.dart`: 지도 크게 보기, 마커, 장소 카드 펼치기, 내 동선 target 및 실제 완료 callback
-- `frontend/lib/features/stamp/presentation/screen/stamp_book_screen.dart`: 스탬프 지도·마커·패스포트 target 연결
-- `frontend/lib/features/potato/presentation/screen/potato_collection_screen.dart`: 성장·돌봄·걸음·대표 감자 target 연결
-- `frontend/test/features/feature_tour/feature_tour_test.dart`: 페이지별 저장, target tap, 자동 스크롤, 독립 상태 검증
+- `frontend/lib/features/stamp/presentation/screen/stamp_book_screen.dart`: 스탬프 지도·마커·패스포트 target과 실제 이동 callback 연결
+- `frontend/lib/features/potato/presentation/screen/potato_collection_screen.dart`: 성장·돌봄·걸음·정보 보기·대표 감자 target 연결
+- `frontend/lib/features/spot/presentation/screen/spot_detail_screen.dart`: 오디오 재생·방문 인증 target과 실제 완료 callback 연결
+- `frontend/lib/features/mypage/presentation/screen/my_page_screen.dart`: 여행 기록 target 연결
+- `frontend/test/features/feature_tour/feature_tour_test.dart`: 페이지별 target 정의, target tap, 자동 스크롤, 독립 상태 검증
 
 ## API/DB/환경 설정
 
@@ -68,20 +75,21 @@
 
 ### 통과
 
-- `flutter test test/features/feature_tour/feature_tour_test.dart --reporter expanded`
-  - 페이지별 완료 버전, legacy key 호환, target tap, 자동 스크롤, 독립 투어 상태 등 5개 테스트 통과
+- `flutter test test/features/feature_tour/feature_tour_test.dart test/features/spot/spot_detail_screen_test.dart`
+  - 페이지별 target 정의, target tap, 자동 스크롤, 오디오/방문 인증 회귀 등 19개 테스트 통과
+- `flutter test test/features/potato/potato_collection_screen_test.dart`
+  - 대표 감자 변경·감자밭 상호작용을 포함한 감자밭 회귀 테스트 21개 통과
 - `flutter analyze`
   - `No issues found!`
-- `flutter test test/shared/widgets/main_shell_test.dart test/features/map/map_screen_test.dart test/features/stamp/stamp_book_screen_test.dart test/features/mission/mission_screen_test.dart test/features/potato/potato_collection_screen_test.dart`
-  - 기존 메인 셸·지도·스탬프·미션·감자밭 회귀 테스트 79개 통과
 - `flutter test`
-  - 전체 Flutter 테스트 334개 통과
+  - 전체 Flutter 테스트 335개 통과
 - `git diff --check`
   - 공백 오류 없음
 
 ## 시각/실기기 검증 상태
 
 - 자동 위젯 테스트로 overlay 표시, target tap 전후 단계 유지, 자동 스크롤, 페이지별 상태 독립을 확인했다.
+- 오디오 재생과 방문 인증 버튼은 기존 spot detail 위젯 테스트에서 실제 key와 callback 렌더링을 확인했다.
 - 실제 iPhone/Android 화면 캡처는 이번 검증에서 생성하지 못했다. iPhone 16e와 작은 Android에서 Safe Area, target과 카드의 겹침, 지도 native marker 터치 전달을 실기기에서 확인해야 한다.
 - 실제 위치 권한 팝업과 방문 인증 성공 여부는 이번 변경 대상이 아니므로 기존 지도/방문 인증 QA를 별도로 수행해야 한다.
 

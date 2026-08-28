@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/feature_tour/data/feature_tour_status_store.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_definitions.dart';
 import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_host.dart';
 import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_overlay.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -33,6 +35,66 @@ void main() {
 
       expect(await store.hasCompleted('1'), isTrue);
       expect(await store.hasCompleted('map-v2'), isFalse);
+    });
+  });
+
+  group('FeatureTourDefinitions', () {
+    test('covers page-specific interaction targets', () {
+      expect(
+        FeatureTourDefinitions.map,
+        contains(
+          isA<FeatureTourStep>().having(
+            (step) => step.targetKey,
+            'targetKey',
+            same(FeatureTourTargets.mapCourseCard),
+          ),
+        ),
+      );
+      expect(
+        FeatureTourDefinitions.map,
+        contains(
+          isA<FeatureTourStep>().having(
+            (step) => step.targetKey,
+            'targetKey',
+            same(FeatureTourTargets.mapGoodNowCard),
+          ),
+        ),
+      );
+      expect(
+        FeatureTourDefinitions.map
+            .firstWhere(
+                (step) => step.targetKey == FeatureTourTargets.spotSheetHandle)
+            .advanceType,
+        CoachMarkAdvanceType.swipeUp,
+      );
+      expect(
+        FeatureTourDefinitions.stamp.map((step) => step.targetKey),
+        contains(FeatureTourTargets.passportButton),
+      );
+      expect(
+        FeatureTourDefinitions.potato.map((step) => step.targetKey),
+        containsAll([
+          FeatureTourTargets.potatoInfo,
+          FeatureTourTargets.representativePotato,
+        ]),
+      );
+      expect(
+        FeatureTourDefinitions.spot.map((step) => step.targetKey),
+        containsAll([
+          FeatureTourTargets.audioPlay,
+          FeatureTourTargets.visitVerify,
+        ]),
+      );
+      expect(
+        FeatureTourDefinitions.myPage.single.targetKey,
+        same(FeatureTourTargets.myPageTravelRecord),
+      );
+      expect(
+        FeatureTourDefinitions.spot.every(
+          (step) => step.advanceType == CoachMarkAdvanceType.targetTap,
+        ),
+        isTrue,
+      );
     });
   });
 
