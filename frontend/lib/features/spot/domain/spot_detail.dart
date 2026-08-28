@@ -13,12 +13,24 @@ class SpotDetail {
     required this.congestionLevel,
     required this.verificationRadiusMeter,
     required this.stampEnabled,
+    this.description,
+    this.openingHours,
+    this.closedDays,
+    this.admissionFee,
+    this.parking,
+    this.contactPhone,
+    this.phone,
+    this.website,
+    this.rating,
+    this.businessOpenNow,
+    this.businessTodayText,
   });
 
   factory SpotDetail.fromJson(Object? json) {
     final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
     final imageUrl = data['imageUrl'] as String?;
     final tagValue = data['potatoTags'] as String? ?? '';
+    final businessOpeningHours = data['businessOpeningHours'];
 
     return SpotDetail(
       id: '${data['id'] ?? ''}',
@@ -38,6 +50,22 @@ class SpotDetail {
       congestionLevel: data['congestionLevel'] as String? ?? 'NORMAL',
       verificationRadiusMeter: data['verificationRadiusMeter'] as int? ?? 0,
       stampEnabled: data['stampEnabled'] as bool? ?? false,
+      description: _readNullableString(data['description']),
+      openingHours: _readNullableString(data['openingHours']),
+      closedDays: _readNullableString(data['closedDays']),
+      admissionFee: _readNullableString(data['admissionFee']),
+      parking: _readNullableString(data['parking']),
+      contactPhone: _readNullableString(data['contactPhone']),
+      phone: _readNullableString(data['phone']),
+      website: _readNullableString(data['website']),
+      rating: _readNullableDouble(data['rating']),
+      businessOpenNow: businessOpeningHours is Map<String, dynamic> &&
+              businessOpeningHours['openNow'] is bool
+          ? businessOpeningHours['openNow'] as bool
+          : null,
+      businessTodayText: businessOpeningHours is Map<String, dynamic>
+          ? _readNullableString(businessOpeningHours['todayText'])
+          : null,
     );
   }
 
@@ -54,6 +82,31 @@ class SpotDetail {
   final String congestionLevel;
   final int verificationRadiusMeter;
   final bool stampEnabled;
+  final String? description;
+  final String? openingHours;
+  final String? closedDays;
+  final String? admissionFee;
+  final String? parking;
+  final String? contactPhone;
+  final String? phone;
+  final String? website;
+  final double? rating;
+  final bool? businessOpenNow;
+  final String? businessTodayText;
+
+  bool get hasPlaceInformation {
+    return _hasText(description) ||
+        _hasText(openingHours) ||
+        _hasText(closedDays) ||
+        _hasText(admissionFee) ||
+        _hasText(parking) ||
+        _hasText(contactPhone) ||
+        _hasText(phone) ||
+        _hasText(website) ||
+        rating != null ||
+        businessOpenNow != null ||
+        _hasText(businessTodayText);
+  }
 
   String get categoryLabel {
     return switch (category) {
@@ -86,4 +139,25 @@ class SpotDetail {
     }
     return 0;
   }
+
+  static String? _readNullableString(Object? value) {
+    if (value is! String) {
+      return null;
+    }
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  static double? _readNullableDouble(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value.trim());
+    }
+    return null;
+  }
+
+  static bool _hasText(String? value) =>
+      value != null && value.trim().isNotEmpty;
 }
