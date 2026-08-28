@@ -31,6 +31,23 @@ flutter analyze
 flutter test
 ```
 
+### API endpoint for Android Studio runs
+
+Flutter does not automatically load the ignored `frontend/.env` file. A plain
+Android Studio run therefore uses the deployed API by default so the map can
+load the same spot images and business details as the release environment.
+
+To use a backend running on this computer, explicitly override the build-time
+value:
+
+```bash
+flutter run -d <device> \
+  --dart-define=API_BASE_URL=http://localhost:8080/api
+```
+
+After changing a `--dart-define` value, stop and run the app again. Hot reload
+does not replace compile-time environment constants.
+
 ### Legal notice configuration
 
 Copy `.env.example` to the ignored `frontend/.env` and fill every `LEGAL_*`
@@ -67,4 +84,3 @@ Windows SDK locations. Explicit paths can also be supplied:
 
 Run the script again after source changes. A subsequent normal `flutter run`
 can replace the app with an x86_64 build and reproduce the blank map.
-

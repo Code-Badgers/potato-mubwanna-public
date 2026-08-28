@@ -5,7 +5,10 @@ class AppEnvironment {
 
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8080/api',
+    // Android Studio's plain Flutter run does not read frontend/.env. Use the
+    // deployed API by default; local development can still override it with
+    // --dart-define=API_BASE_URL=http://localhost:8080/api.
+    defaultValue: 'https://potato-mubwanna.duckdns.org/api',
   );
 
   static const kakaoNativeAppKey = String.fromEnvironment(

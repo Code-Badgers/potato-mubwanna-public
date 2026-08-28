@@ -115,6 +115,43 @@ void main() {
     expect(find.byKey(const ValueKey('map-discovery-home')), findsOneWidget);
   });
 
+  testWidgets('keeps full map controls above the draggable spot sheet', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+          home: MapScreen(
+            hasMapConfiguration: true,
+            showFullMapInitially: true,
+            mapViewBuilder: (spots, onSpotSelected) => const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final homeButton = find.byKey(const ValueKey('full-map-home-button'));
+    final spotSheetHandle =
+        find.byKey(const ValueKey('selected-spot-sheet-handle'));
+    expect(homeButton, findsOneWidget);
+    expect(spotSheetHandle, findsOneWidget);
+
+    final initialTop = tester.getTopLeft(homeButton).dy;
+    await tester.drag(spotSheetHandle, const Offset(0, -220));
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(homeButton).dy, lessThan(initialTop));
+  });
+
   testWidgets('adds a travel course to the route and opens route mode', (
     tester,
   ) async {
