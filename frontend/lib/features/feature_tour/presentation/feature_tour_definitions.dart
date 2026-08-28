@@ -105,14 +105,14 @@ abstract final class FeatureTourDefinitions {
       targetKey: FeatureTourTargets.potatoInfo,
       title: '감자 정보를 확인해보세요',
       description: '현재 감자의 이야기와 성장 정보를 자세히 볼 수 있어요.',
-      advanceType: CoachMarkAdvanceType.targetTap,
+      advanceType: CoachMarkAdvanceType.navigationResult,
       interactionHint: '정보 보기를 눌러보세요',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.representativePotato,
       title: '대표 감자를 바꿔보세요',
       description: '도감에서 원하는 감자를 대표로 설정할 수 있어요.',
-      advanceType: CoachMarkAdvanceType.targetTap,
+      advanceType: CoachMarkAdvanceType.navigationResult,
       interactionHint: '대표 감자 변경을 눌러보세요',
     ),
   ];
