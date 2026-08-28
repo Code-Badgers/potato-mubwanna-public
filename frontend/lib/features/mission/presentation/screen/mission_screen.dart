@@ -804,7 +804,7 @@ class _MissionFeaturedCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 224),
+          constraints: const BoxConstraints(minHeight: 216),
           padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -844,13 +844,13 @@ class _MissionFeaturedCard extends StatelessWidget {
                 ],
               ),
               Positioned(
-                right: -2,
-                bottom: -34,
+                right: 0,
+                bottom: 0,
                 child: IgnorePointer(
                   child: Image.asset(
                     _featuredJumsooniAsset(mission),
-                    width: 142,
-                    height: 184,
+                    width: 132,
+                    height: 176,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                   ),
@@ -960,23 +960,31 @@ class _MissionSectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Text(
-          '오늘의 일일 미션',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
+        const Expanded(
+          child: Text(
+            '오늘의 일일 미션',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
           ),
         ),
-        const SizedBox(width: 8),
-        Text(
-          '$completedCount / $totalCount',
-          style: const TextStyle(
-            color: _missionPrimary,
-            fontSize: 21,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.primaryTint,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '$completedCount / $totalCount',
+            style: const TextStyle(
+              color: _missionPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
           ),
         ),
       ],
@@ -1006,7 +1014,7 @@ class _MissionCompactTile extends StatelessWidget {
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
           decoration: BoxDecoration(
             color: mission.status == MissionStatus.completed
                 ? AppColors.primaryTint
@@ -1017,7 +1025,7 @@ class _MissionCompactTile extends StatelessWidget {
           child: Row(
             children: [
               _MissionTypeCircle(type: mission.type, enabled: enabled),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1030,7 +1038,7 @@ class _MissionCompactTile extends StatelessWidget {
                         color: enabled
                             ? AppColors.textPrimary
                             : AppColors.textSecondary,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
                       ),
@@ -1074,7 +1082,7 @@ class _MissionCompactTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Container(
                 width: 40,
                 height: 40,
@@ -1108,8 +1116,8 @@ class _MissionTypeCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 52,
-      height: 52,
+      width: 48,
+      height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: enabled ? AppColors.primaryTint : const Color(0xFFF0EEE8),
@@ -1118,7 +1126,7 @@ class _MissionTypeCircle extends StatelessWidget {
       child: Icon(
         type.icon,
         color: enabled ? _missionPrimary : AppColors.textSecondary,
-        size: 28,
+        size: 25,
       ),
     );
   }
