@@ -8,6 +8,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../application/potato_collection_controller.dart';
 import '../../domain/potato_collection.dart';
 import '../default_potato.dart';
@@ -536,6 +538,9 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
           PotatoInteractionAction.snack => '영양제를 줬어요. 제법 잘 자라요',
         };
       });
+      FeatureTourScope.maybeOf(context)?.completeTarget(
+        FeatureTourTargets.potatoCareActions,
+      );
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -647,15 +652,18 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PotatoCareStage(
-            potato: potato,
-            level: level,
-            growthStage: displayGrowthStage,
-            revealIdentity: harvested,
-            speech: careMessage ??
-                (potato == null || !potato.acquired
-                    ? _defaultPotatoSpeech
-                    : _potatoSpeechFor(potato)),
+          KeyedSubtree(
+            key: FeatureTourTargets.potatoGrowth,
+            child: _PotatoCareStage(
+              potato: potato,
+              level: level,
+              growthStage: displayGrowthStage,
+              revealIdentity: harvested,
+              speech: careMessage ??
+                  (potato == null || !potato.acquired
+                      ? _defaultPotatoSpeech
+                      : _potatoSpeechFor(potato)),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
@@ -684,15 +692,21 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   value: harvestProgress,
                 ),
                 const SizedBox(height: 12),
-                _PotatoCareBar(
-                  onCare: _reactToCare,
-                  enabled: potato != null &&
-                      potato.acquired &&
-                      widget.onCare != null &&
-                      !_isCaring,
+                KeyedSubtree(
+                  key: FeatureTourTargets.potatoCareActions,
+                  child: _PotatoCareBar(
+                    onCare: _reactToCare,
+                    enabled: potato != null &&
+                        potato.acquired &&
+                        widget.onCare != null &&
+                        !_isCaring,
+                  ),
                 ),
                 const SizedBox(height: 10),
-                const _PotatoStepGrowthPanel(),
+                KeyedSubtree(
+                  key: FeatureTourTargets.potatoSteps,
+                  child: const _PotatoStepGrowthPanel(),
+                ),
                 const SizedBox(height: 10),
                 _PotatoHarvestAction(
                   item: potato,
@@ -1092,57 +1106,77 @@ class _PotatoMainActions extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onShowDetail,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _potatoDark,
-              side: BorderSide(color: _potatoPrimary.withValues(alpha: 0.55)),
-              minimumSize: const Size.fromHeight(44),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
+          child: KeyedSubtree(
+            key: FeatureTourTargets.potatoInfo,
+            child: OutlinedButton.icon(
+              onPressed: onShowDetail == null
+                  ? null
+                  : () {
+                      FeatureTourScope.maybeOf(context)?.completeTarget(
+                        FeatureTourTargets.potatoInfo,
+                      );
+                      onShowDetail!();
+                    },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _potatoDark,
+                side: BorderSide(color: _potatoPrimary.withValues(alpha: 0.55)),
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-            ),
-            icon: const Icon(Icons.info_outline_rounded, size: 17),
-            label: const Text(
-              '정보 보기',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
+              icon: const Icon(Icons.info_outline_rounded, size: 17),
+              label: const Text(
+                '정보 보기',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: FilledButton(
-            onPressed: updating ? null : onChangeRepresentative,
-            style: FilledButton.styleFrom(
-              backgroundColor: _potatoPrimary,
-              disabledBackgroundColor: const Color(0xFFBFE5CC),
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(44),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
+          child: KeyedSubtree(
+            key: FeatureTourTargets.representativePotato,
+            child: FilledButton(
+              onPressed: updating
+                  ? null
+                  : () {
+                      FeatureTourScope.maybeOf(context)?.completeTarget(
+                        FeatureTourTargets.representativePotato,
+                      );
+                      onChangeRepresentative();
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: _potatoPrimary,
+                disabledBackgroundColor: const Color(0xFFBFE5CC),
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
+              child: updating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      '대표 감자 변경',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0,
+                      ),
+                    ),
             ),
-            child: updating
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text(
-                    '대표 감자 변경',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
-                  ),
           ),
         ),
       ],

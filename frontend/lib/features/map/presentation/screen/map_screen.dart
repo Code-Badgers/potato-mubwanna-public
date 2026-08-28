@@ -13,6 +13,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
 import '../../application/kakao_map_navigation.dart';
 import '../../application/map_spot_controller.dart';
 import '../../data/travel_course_catalog.dart';
@@ -276,6 +278,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     setState(() {
       _selectedSpotId = normalizedSpotId;
     });
+    FeatureTourScope.maybeOf(context)?.completeTarget(
+      FeatureTourTargets.mapMarker,
+    );
   }
 
   void _enterRouteMode(List<MapSpot> routeSpots) {
@@ -284,6 +289,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _selectedSpotId = null;
       _routeSpotOrder = routeSpots.map((spot) => spot.id).toList();
     });
+    FeatureTourScope.maybeOf(context)?.completeTarget(
+      FeatureTourTargets.routeMode,
+    );
   }
 
   void _exitRouteMode() {
@@ -296,6 +304,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     setState(() {
       _showFullMap = true;
     });
+    FeatureTourScope.maybeOf(context)?.completeTarget(
+      FeatureTourTargets.mapFullView,
+    );
   }
 
   void _returnToDiscoveryHome() {
@@ -437,6 +448,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             spotsState: spotsState,
             onOpenFullMap: _openFullMap,
             onSpotPressed: (spot) {
+              FeatureTourScope.maybeOf(context)?.completeTarget(
+                FeatureTourTargets.mapGoodNowCard,
+              );
               setState(() {
                 _showFullMap = true;
                 _selectedSpotId = spot.id;
@@ -527,20 +541,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       return Stack(
                         children: [
                           Positioned.fill(
-                            child: _PotatoMapPreview(
-                              spots: activeMapSpots,
-                              routePolyline: activeRoutePolyline,
-                              routeSpotIds: _isRouteMode
-                                  ? orderedFavoriteSpots
-                                      .map((spot) => spot.id)
-                                      .toList(growable: false)
-                                  : const [],
-                              favoriteSpotIds: favoriteSpotIds,
-                              currentLocation: _currentLocation,
-                              currentLocationFocusTick:
-                                  _currentLocationFocusTick,
-                              onSpotSelected: _selectSpotById,
-                              mapViewBuilder: widget.mapViewBuilder,
+                            child: KeyedSubtree(
+                              key: FeatureTourTargets.mapMarker,
+                              child: _PotatoMapPreview(
+                                spots: activeMapSpots,
+                                routePolyline: activeRoutePolyline,
+                                routeSpotIds: _isRouteMode
+                                    ? orderedFavoriteSpots
+                                        .map((spot) => spot.id)
+                                        .toList(growable: false)
+                                    : const [],
+                                favoriteSpotIds: favoriteSpotIds,
+                                currentLocation: _currentLocation,
+                                currentLocationFocusTick:
+                                    _currentLocationFocusTick,
+                                onSpotSelected: _selectSpotById,
+                                mapViewBuilder: widget.mapViewBuilder,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -738,9 +755,12 @@ class _MapDiscoveryHome extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverToBoxAdapter(
-                child: _DiscoveryMapPreviewCard(
-                  spots: previewSpots,
-                  onOpenFullMap: onOpenFullMap,
+                child: KeyedSubtree(
+                  key: FeatureTourTargets.mapDiscovery,
+                  child: _DiscoveryMapPreviewCard(
+                    spots: previewSpots,
+                    onOpenFullMap: onOpenFullMap,
+                  ),
                 ),
               ),
             ),
@@ -882,22 +902,27 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
           Positioned(
             left: 18,
             bottom: 18,
-            child: FilledButton.icon(
-              key: const ValueKey('open-full-map-button'),
-              onPressed: onOpenFullMap,
-              icon: const Icon(Icons.open_in_full_rounded, size: 18),
-              label: const Text('지도 크게 보기'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: _mapPrimary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
+            child: KeyedSubtree(
+              key: FeatureTourTargets.mapFullView,
+              child: FilledButton.icon(
+                key: const ValueKey('open-full-map-button'),
+                onPressed: onOpenFullMap,
+                icon: const Icon(Icons.open_in_full_rounded, size: 18),
+                label: const Text('지도 크게 보기'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: _mapPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
@@ -1094,15 +1119,26 @@ class _TravelCourseSection extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 20),
                   itemBuilder: (context, index) {
                     final course = courses[index];
-                    return _TravelCourseCard(
+                    final card = _TravelCourseCard(
                       course: course,
-                      onPressed: () => _showTravelCourseDetail(
-                        context,
-                        course,
-                        onAddCourseToRoute,
-                        onSpotDetailPressed,
-                      ),
+                      onPressed: () {
+                        FeatureTourScope.maybeOf(context)?.completeTarget(
+                          FeatureTourTargets.mapCourseCard,
+                        );
+                        _showTravelCourseDetail(
+                          context,
+                          course,
+                          onAddCourseToRoute,
+                          onSpotDetailPressed,
+                        );
+                      },
                     );
+                    return index == 0
+                        ? KeyedSubtree(
+                            key: FeatureTourTargets.mapCourseCard,
+                            child: card,
+                          )
+                        : card;
                   },
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemCount: courses.length,
@@ -2018,6 +2054,7 @@ class _GoodNowSpotSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final calmSpots = _spotsByCongestion('LOW');
     final hotSpots = _spotsByCongestion('HIGH');
+    final firstTargetGroup = calmSpots.isNotEmpty ? 'calm' : 'hot';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2045,21 +2082,23 @@ class _GoodNowSpotSection extends StatelessWidget {
           Column(
             children: [
               _GoodNowSpotGroup(
-                icon: Icons.spa_rounded,
                 title: '내향인 전용 여유로운 장소',
                 description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
-                badgeLabel: '혼잡도 여유',
                 spots: calmSpots,
                 onSpotPressed: onSpotPressed,
+                targetKey: firstTargetGroup == 'calm'
+                    ? FeatureTourTargets.mapGoodNowCard
+                    : null,
               ),
               const SizedBox(height: 14),
               _GoodNowSpotGroup(
-                icon: Icons.local_fire_department_rounded,
                 title: '외향인 전용 사람 좋아 핫플',
                 description: '활기 있는 분위기를 즐기고 싶을 때 좋아요.',
-                badgeLabel: '방문자 많음',
                 spots: hotSpots,
                 onSpotPressed: onSpotPressed,
+                targetKey: firstTargetGroup == 'hot'
+                    ? FeatureTourTargets.mapGoodNowCard
+                    : null,
               ),
             ],
           ),
@@ -2088,20 +2127,18 @@ class _GoodNowSpotSection extends StatelessWidget {
 
 class _GoodNowSpotGroup extends StatelessWidget {
   const _GoodNowSpotGroup({
-    required this.icon,
     required this.title,
     required this.description,
-    required this.badgeLabel,
     required this.spots,
     required this.onSpotPressed,
+    this.targetKey,
   });
 
-  final IconData icon;
   final String title;
   final String description;
-  final String badgeLabel;
   final List<MapSpot> spots;
   final ValueChanged<MapSpot> onSpotPressed;
+  final GlobalKey? targetKey;
 
   @override
   Widget build(BuildContext context) {
@@ -2118,20 +2155,6 @@ class _GoodNowSpotGroup extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  icon,
-                  color: AppColors.primaryDark,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2163,47 +2186,26 @@ class _GoodNowSpotGroup extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              _GoodNowTag(label: badgeLabel),
             ],
           ),
           const SizedBox(height: 12),
           for (var index = 0; index < spots.length; index++) ...[
-            _PopularSpotCard(
-              spot: spots[index],
-              onPressed: () => onSpotPressed(spots[index]),
-            ),
+            if (index == 0 && targetKey != null)
+              KeyedSubtree(
+                key: targetKey,
+                child: _PopularSpotCard(
+                  spot: spots[index],
+                  onPressed: () => onSpotPressed(spots[index]),
+                ),
+              )
+            else
+              _PopularSpotCard(
+                spot: spots[index],
+                onPressed: () => onSpotPressed(spots[index]),
+              ),
             if (index < spots.length - 1) const SizedBox(height: 10),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _GoodNowTag extends StatelessWidget {
-  const _GoodNowTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: _mapDark,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0,
-        ),
       ),
     );
   }
@@ -2455,52 +2457,66 @@ class _RouteRecommendationSheet extends ConsumerWidget {
     final initialChildSize = hasPreviewInfo ? 0.40 : 0.28;
     final snapSizes = hasPreviewInfo ? const [0.40, 0.72] : const [0.28, 0.62];
     final spotDetail = ref.watch(spotDetailProvider(selectedSpot.id));
-    return DraggableScrollableSheet(
-      key: const ValueKey('selected-spot-sheet'),
-      controller: sheetController,
-      minChildSize: 0.24,
-      initialChildSize: initialChildSize,
-      maxChildSize: 0.78,
-      snap: true,
-      snapSizes: snapSizes,
-      builder: (context, scrollController) {
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: AppColors.line),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, -8),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Center(
-                  child: _SheetDragHandle(
-                    key: ValueKey('selected-spot-sheet-handle'),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _SelectedSpotSummary(
-                  spot: selectedSpot,
-                  spotDetail: spotDetail,
-                  isFavorite: isFavorite,
-                  onNavigationPressed: onNavigationPressed,
-                  onFavoritePressed: onFavoritePressed,
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (notification) {
+        if (notification.extent > notification.minExtent + 0.10) {
+          FeatureTourScope.maybeOf(context)?.completeSwipe(
+            FeatureTourTargets.spotSheetHandle,
+          );
+        }
+        return false;
+      },
+      child: DraggableScrollableSheet(
+        key: const ValueKey('selected-spot-sheet'),
+        controller: sheetController,
+        minChildSize: 0.24,
+        initialChildSize: initialChildSize,
+        maxChildSize: 0.78,
+        snap: true,
+        snapSizes: snapSizes,
+        builder: (context, scrollController) {
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(color: AppColors.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 24,
+                  offset: const Offset(0, -8),
                 ),
               ],
             ),
-          ),
-        );
-      },
+            child: SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: KeyedSubtree(
+                      key: FeatureTourTargets.spotSheetHandle,
+                      child: const _SheetDragHandle(
+                        key: ValueKey('selected-spot-sheet-handle'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SelectedSpotSummary(
+                    spot: selectedSpot,
+                    spotDetail: spotDetail,
+                    isFavorite: isFavorite,
+                    onNavigationPressed: onNavigationPressed,
+                    onFavoritePressed: onFavoritePressed,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -3807,6 +3823,7 @@ class _RouteModeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
+      key: FeatureTourTargets.routeMode,
       color: selected
           ? AppColors.primaryTint
           : Colors.white.withValues(alpha: 0.96),

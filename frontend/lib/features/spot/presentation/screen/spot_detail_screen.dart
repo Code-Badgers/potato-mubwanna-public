@@ -11,6 +11,8 @@ import '../../../audio/application/audio_guide_controller.dart';
 import '../../../audio/application/audio_playback_controller.dart';
 import '../../../audio/data/audio_guide_repository.dart';
 import '../../../audio/domain/audio_guide.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../../stamp/presentation/widget/attraction_stamp_image.dart';
 import '../../application/spot_detail_controller.dart';
 import '../../domain/spot_detail.dart';
@@ -183,41 +185,49 @@ class _VisitVerificationBar extends ConsumerWidget {
           color: AppColors.surface,
           border: Border(top: BorderSide(color: _audioLine)),
         ),
-        child: FilledButton.icon(
-          key: const ValueKey('visit-verify-button'),
-          onPressed: canVerify
-              ? () => _handleVisitVerification(context, ref, spot)
-              : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF56C787),
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: const Color(0xFFD7DED6),
-            disabledForegroundColor: AppColors.textSecondary,
-            minimumSize: const Size.fromHeight(54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+        child: KeyedSubtree(
+          key: FeatureTourTargets.visitVerify,
+          child: FilledButton.icon(
+            key: const ValueKey('visit-verify-button'),
+            onPressed: canVerify
+                ? () {
+                    FeatureTourScope.maybeOf(context)?.completeTarget(
+                      FeatureTourTargets.visitVerify,
+                    );
+                    _handleVisitVerification(context, ref, spot);
+                  }
+                : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF56C787),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: const Color(0xFFD7DED6),
+              disabledForegroundColor: AppColors.textSecondary,
+              minimumSize: const Size.fromHeight(54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-          ),
-          icon: state.isLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.verified_rounded),
-          label: Text(
-            state.isLoading
-                ? '방문 인증 중'
-                : spot.stampEnabled
-                    ? '방문 인증하기'
-                    : '방문 인증 준비 중',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
+            icon: state.isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.verified_rounded),
+            label: Text(
+              state.isLoading
+                  ? '방문 인증 중'
+                  : spot.stampEnabled
+                      ? '방문 인증하기'
+                      : '방문 인증 준비 중',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
             ),
           ),
         ),
@@ -1033,32 +1043,41 @@ class _AudioPlayerCard extends ConsumerWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              IconButton.filled(
-                key: const ValueKey('audio-play-toggle'),
-                tooltip: playback.isPlaying ? '일시정지' : '재생',
-                onPressed:
-                    playback.canPlay ? () => controller.togglePlayback() : null,
-                style: IconButton.styleFrom(
-                  backgroundColor: _audioGreen,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFFB7C8BC),
-                  fixedSize: const Size(48, 48),
-                ),
-                icon: playback.status == AudioPlaybackStatus.loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+              KeyedSubtree(
+                key: FeatureTourTargets.audioPlay,
+                child: IconButton.filled(
+                  key: const ValueKey('audio-play-toggle'),
+                  tooltip: playback.isPlaying ? '일시정지' : '재생',
+                  onPressed: playback.canPlay
+                      ? () {
+                          FeatureTourScope.maybeOf(context)?.completeTarget(
+                            FeatureTourTargets.audioPlay,
+                          );
+                          controller.togglePlayback();
+                        }
+                      : null,
+                  style: IconButton.styleFrom(
+                    backgroundColor: _audioGreen,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFFB7C8BC),
+                    fixedSize: const Size(48, 48),
+                  ),
+                  icon: playback.status == AudioPlaybackStatus.loading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          playback.isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 28,
                         ),
-                      )
-                    : Icon(
-                        playback.isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        size: 28,
-                      ),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(

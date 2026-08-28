@@ -8,6 +8,8 @@ import '../../features/auth/application/session_startup_coordinator.dart';
 import '../../features/auth/presentation/screen/login_screen.dart';
 import '../../features/auth/presentation/screen/session_startup_screen.dart';
 import '../../features/coupon/presentation/screen/coupon_screen.dart';
+import '../../features/feature_tour/presentation/feature_tour_definitions.dart';
+import '../../features/feature_tour/presentation/feature_tour_host.dart';
 import '../../features/legal/data/legal_consent_store.dart';
 import '../../features/map/presentation/screen/map_screen.dart';
 import '../../features/mission/presentation/screen/mission_screen.dart';
@@ -119,36 +121,63 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: '/main/map',
-          builder: (context, state) => MapScreen(
-            recommendationSourceSpotId: state.queryParameters['recommendFrom'],
+          builder: (context, state) => FeatureTourHost(
+            tourId: FeatureTourIds.map,
+            steps: FeatureTourDefinitions.map,
+            child: MapScreen(
+              recommendationSourceSpotId:
+                  state.queryParameters['recommendFrom'],
+              showFullMapInitially:
+                  state.queryParameters['featureTour'] == 'route',
+            ),
           ),
         ),
         GoRoute(
           path: '/main/stamps',
-          builder: (context, state) => const StampBookScreen(),
+          builder: (context, state) => FeatureTourHost(
+            tourId: FeatureTourIds.stamp,
+            steps: FeatureTourDefinitions.stamp,
+            child: const StampBookScreen(),
+          ),
         ),
         GoRoute(
           path: '/main/stamps/cities',
-          builder: (context, state) => const PassportStampGridScreen(),
+          builder: (context, state) => FeatureTourHost(
+            tourId: FeatureTourIds.passport,
+            steps: FeatureTourDefinitions.passport,
+            child: const PassportStampGridScreen(),
+          ),
         ),
         GoRoute(
           path: '/main/potatoes',
-          builder: (context, state) => const PotatoCollectionScreen(),
+          builder: (context, state) => FeatureTourHost(
+            tourId: FeatureTourIds.potato,
+            steps: FeatureTourDefinitions.potato,
+            child: const PotatoCollectionScreen(),
+          ),
         ),
         GoRoute(
           path: '/main/missions',
-          builder: (context, state) => MissionScreen(
-            visitEntrySpotName: state.queryParameters['entry'] == 'visit'
-                ? state.queryParameters['spotName']
-                : null,
-            visitEntryMissionId: state.queryParameters['entry'] == 'visit'
-                ? state.queryParameters['missionId']
-                : null,
+          builder: (context, state) => FeatureTourHost(
+            tourId: FeatureTourIds.mission,
+            steps: FeatureTourDefinitions.mission,
+            child: MissionScreen(
+              visitEntrySpotName: state.queryParameters['entry'] == 'visit'
+                  ? state.queryParameters['spotName']
+                  : null,
+              visitEntryMissionId: state.queryParameters['entry'] == 'visit'
+                  ? state.queryParameters['missionId']
+                  : null,
+            ),
           ),
         ),
         GoRoute(
           path: '/main/mypage',
-          builder: (context, state) => const MyPageScreen(),
+          builder: (context, state) => FeatureTourHost(
+            tourId: FeatureTourIds.myPage,
+            steps: FeatureTourDefinitions.myPage,
+            child: const MyPageScreen(),
+          ),
         ),
       ],
     ),
@@ -160,7 +189,11 @@ final appRouter = GoRouter(
       path: '/spots/:spotId',
       builder: (context, state) {
         final spotId = state.pathParameters['spotId']!;
-        return SpotDetailScreen(spotId: spotId);
+        return FeatureTourHost(
+          tourId: FeatureTourIds.spot,
+          steps: FeatureTourDefinitions.spot,
+          child: SpotDetailScreen(spotId: spotId),
+        );
       },
     ),
     GoRoute(

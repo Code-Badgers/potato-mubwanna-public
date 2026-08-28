@@ -6,6 +6,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
 import '../model/gangwon_context_region.dart';
@@ -144,10 +146,13 @@ class _PassportStampGridBody extends StatelessWidget {
           ),
         ),
         SliverToBoxAdapter(
-          child: _PassportPageBook(
-            pages: pages,
-            acquiredCount: acquiredCount,
-            totalCount: totalCount,
+          child: KeyedSubtree(
+            key: FeatureTourTargets.passportBook,
+            child: _PassportPageBook(
+              pages: pages,
+              acquiredCount: acquiredCount,
+              totalCount: totalCount,
+            ),
           ),
         ),
       ],
@@ -988,11 +993,17 @@ class _StampBookBody extends StatelessWidget {
                 ),
               ),
             SliverToBoxAdapter(
-              child: _GangwonStampMap(
-                progress: progress,
-                rallybookSpots: rallybookSpots,
-                mapHeight: mapHeight,
-                onSpotTap: (spot) => context.push('/spots/${spot.spotId}'),
+              child: KeyedSubtree(
+                key: FeatureTourTargets.stampMap,
+                child: KeyedSubtree(
+                  key: FeatureTourTargets.stampMarker,
+                  child: _GangwonStampMap(
+                    progress: progress,
+                    rallybookSpots: rallybookSpots,
+                    mapHeight: mapHeight,
+                    onSpotTap: (spot) => context.push('/spots/${spot.spotId}'),
+                  ),
+                ),
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 10)),
@@ -1138,10 +1149,18 @@ class _StampTourHero extends StatelessWidget {
                       ),
                     ),
                   ),
-                  _StampTourProgressPill(
-                    acquiredCount: acquiredCount,
-                    totalCount: totalCount,
-                    onTap: () => context.push('/main/stamps/cities'),
+                  KeyedSubtree(
+                    key: FeatureTourTargets.passportButton,
+                    child: _StampTourProgressPill(
+                      acquiredCount: acquiredCount,
+                      totalCount: totalCount,
+                      onTap: () {
+                        FeatureTourScope.maybeOf(context)?.completeTarget(
+                          FeatureTourTargets.passportButton,
+                        );
+                        context.push('/main/stamps/cities');
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -1272,6 +1291,9 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
       _selectedCity = city;
       _selectedSpotId = spot.spotId;
     });
+    FeatureTourScope.maybeOf(context)?.completeTarget(
+      FeatureTourTargets.stampMarker,
+    );
     _travelController.forward(from: 0);
   }
 
@@ -1549,7 +1571,7 @@ class _GangwonMapPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final landmassPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.16)
+      ..color = AppColors.primary.withValues(alpha: 0.22)
       ..style = PaintingStyle.fill;
     final landmassPath = pathCache.landmassPath;
     if (!landmassPath.getBounds().isEmpty) {
@@ -1792,7 +1814,7 @@ class _StampTravelCarPainter extends CustomPainter {
 Rect _gangwonMapRect(Size size) {
   const mapAspectRatio = 1000 / 1180;
   final available = Rect.fromLTWH(10, 34, size.width - 20, size.height - 68);
-  const westContextShift = Offset(18, 0);
+  const westContextShift = Offset.zero;
   if (available.width / available.height > mapAspectRatio) {
     final width = available.height * mapAspectRatio;
     return Rect.fromLTWH(

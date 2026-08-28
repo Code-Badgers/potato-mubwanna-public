@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_design_tokens.dart';
+import '../../../features/feature_tour/presentation/feature_tour_targets.dart';
 
 class MainBottomNavigation extends StatelessWidget {
   const MainBottomNavigation({super.key});
@@ -36,11 +37,14 @@ class MainBottomNavigation extends StatelessWidget {
                       final destination = _destinations[index];
 
                       return Expanded(
-                        child: _FooterItem(
-                          icon: destination.icon,
-                          label: destination.label,
-                          isSelected: selectedIndex == index,
-                          onTap: () => context.go(_paths[index]),
+                        child: KeyedSubtree(
+                          key: _targetKeyFor(index),
+                          child: _FooterItem(
+                            icon: destination.icon,
+                            label: destination.label,
+                            isSelected: selectedIndex == index,
+                            onTap: () => context.go(_paths[index]),
+                          ),
                         ),
                       );
                     }),
@@ -75,6 +79,21 @@ class MainBottomNavigation extends StatelessWidget {
     _FooterDestination(icon: Icons.flag_rounded, label: '미션'),
     _FooterDestination(icon: Icons.person_rounded, label: '마이'),
   ];
+
+  static GlobalKey? _targetKeyFor(int index) {
+    switch (index) {
+      case 0:
+        return FeatureTourTargets.mapNavigation;
+      case 1:
+        return FeatureTourTargets.stampNavigation;
+      case 2:
+        return FeatureTourTargets.potatoNavigation;
+      case 3:
+        return FeatureTourTargets.missionNavigation;
+      default:
+        return null;
+    }
+  }
 }
 
 class _FooterItem extends StatelessWidget {
