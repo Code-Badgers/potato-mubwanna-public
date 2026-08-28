@@ -53,4 +53,22 @@ class FirebaseAdminConfigurationTest {
                     );
             });
     }
+
+    @Test
+    void failsFastWhenFirebaseAdminHasNoCredential() {
+        contextRunner
+            .withPropertyValues(
+                "push.firebase.enabled=true",
+                "push.firebase.project-id=potato-mubwanna-prod",
+                "push.firebase.service-account-base64="
+            )
+            .run(context -> {
+                assertThat(context).hasFailed();
+                assertThat(context.getStartupFailure())
+                    .hasMessageContaining(
+                        "FIREBASE_SERVICE_ACCOUNT_BASE64 or GOOGLE_APPLICATION_CREDENTIALS " +
+                            "is required when Firebase Admin is enabled"
+                    );
+            });
+    }
 }
