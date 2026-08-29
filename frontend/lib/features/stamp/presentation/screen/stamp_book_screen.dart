@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
@@ -8,6 +9,8 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../feature_tour/presentation/feature_tour_host.dart';
 import '../../../feature_tour/presentation/feature_tour_targets.dart';
+import '../../../map/application/map_spot_controller.dart';
+import '../../../map/domain/spot_detail.dart';
 import '../../application/stamp_book_controller.dart';
 import '../../domain/stamp_book.dart';
 import '../model/gangwon_context_region.dart';
@@ -2039,7 +2042,7 @@ RallybookSpot? _findSpotById(List<RallybookSpot> spots, int spotId) {
   return null;
 }
 
-class _StampSpotActionCard extends StatelessWidget {
+class _StampSpotActionCard extends ConsumerWidget {
   const _StampSpotActionCard({
     required this.region,
     required this.stamp,
@@ -2053,8 +2056,11 @@ class _StampSpotActionCard extends StatelessWidget {
   final VoidCallback? onSpotTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasSelection = region != null && spot != null;
+    final spotDetail = hasSelection
+        ? ref.watch(spotDetailProvider(spot!.spotId.toString()))
+        : null;
 
     return Container(
       width: double.infinity,
@@ -2087,6 +2093,7 @@ class _StampSpotActionCard extends StatelessWidget {
                     region: region!,
                     stamp: stamp,
                     spot: spot!,
+                    spotDetail: spotDetail,
                     onSpotTap: onSpotTap,
                   )
                 : const _EmptyStampSpotContent(
@@ -2105,20 +2112,36 @@ class _SelectedStampSpotContent extends StatelessWidget {
     required this.region,
     required this.stamp,
     required this.spot,
+    required this.spotDetail,
     required this.onSpotTap,
   });
 
   final GangwonMapRegion region;
   final RallybookStamp? stamp;
   final RallybookSpot spot;
+  final AsyncValue<SpotDetail>? spotDetail;
   final VoidCallback? onSpotTap;
 
   @override
   Widget build(BuildContext context) {
     final acquired = stamp?.acquired ?? false;
+    final detail = spotDetail?.valueOrNull;
+    final imageUrl = _firstNonEmpty(
+      detail == null
+          ? <String?>[spot.imageUrl]
+          : <String?>[detail.imageUrl, ...detail.imageUrls, spot.imageUrl],
+    );
+    final description = _cleanSpotText(detail?.description);
+    final address = _cleanSpotText(
+      detail?.address.isNotEmpty == true ? detail!.address : spot.address,
+    );
+    final openingHours = _firstNonEmpty([
+      detail?.openingHours,
+      detail?.businessOpeningHours?.todayText,
+    ]);
 
     return SizedBox(
-      height: 160,
+      height: 244,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2152,6 +2175,66 @@ class _SelectedStampSpotContent extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 64,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _StampSpotThumbnail(
+                  key: ValueKey('stamp-spot-image-${spot.spotId}'),
+                  imageUrl: imageUrl,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${spot.cityName} · ${spot.categoryLabel}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      if (description.isNotEmpty) ...[
+                        const SizedBox(height: 5),
+                        Text(
+                          description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                            height: 1.35,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (address.isNotEmpty || openingHours != null) ...[
+            const SizedBox(height: 7),
+            if (address.isNotEmpty)
+              _StampSpotInfoLine(
+                icon: Icons.location_on_outlined,
+                label: address,
+              ),
+            if (openingHours != null)
+              _StampSpotInfoLine(
+                icon: Icons.schedule_rounded,
+                label: openingHours,
+              ),
+          ],
           const Spacer(),
           SizedBox(
             width: double.infinity,
@@ -2180,6 +2263,113 @@ class _SelectedStampSpotContent extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String? _firstNonEmpty(Iterable<String?> values) {
+  for (final value in values) {
+    final trimmed = value?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
+String _cleanSpotText(String? value) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) {
+    return '';
+  }
+  return text
+      .replaceAll(RegExp(r'<[^>]*>'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+class _StampSpotThumbnail extends StatelessWidget {
+  const _StampSpotThumbnail({required this.imageUrl, super.key});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        width: 92,
+        height: 64,
+        child: imageUrl == null
+            ? const _StampSpotImagePlaceholder()
+            : CachedNetworkImage(
+                imageUrl: imageUrl!,
+                fit: BoxFit.cover,
+                fadeInDuration: Duration.zero,
+                fadeOutDuration: Duration.zero,
+                errorWidget: (_, __, ___) => const _StampSpotImagePlaceholder(),
+              ),
+      ),
+    );
+  }
+}
+
+class _StampSpotImagePlaceholder extends StatelessWidget {
+  const _StampSpotImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryTint.withValues(alpha: 0.9),
+            AppColors.cream.withValues(alpha: 0.96),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.landscape_rounded,
+          color: AppColors.primaryDark,
+          size: 24,
+        ),
+      ),
+    );
+  }
+}
+
+class _StampSpotInfoLine extends StatelessWidget {
+  const _StampSpotInfoLine({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primaryDark, size: 14),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
               ),
             ),
           ),

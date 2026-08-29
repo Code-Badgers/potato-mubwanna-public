@@ -10,6 +10,8 @@ import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller
 import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
 import 'package:potato_mubwanna/features/stamp/presentation/screen/stamp_book_screen.dart';
+import 'package:potato_mubwanna/features/map/application/map_spot_controller.dart';
+import 'package:potato_mubwanna/features/map/domain/spot_detail.dart';
 
 void main() {
   testWidgets('renders a map-first stamp tour and selected city card', (
@@ -84,6 +86,43 @@ void main() {
     expect(find.text('춘천 · 방문 인증 대기'), findsNothing);
   });
 
+  testWidgets('shows available selected spot details in the action card', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) async => _rallybookSpots,
+      ),
+      spotDetailOverride: spotDetailProvider.overrideWith(
+        (ref, spotId) async => SpotDetail(
+          id: spotId,
+          name: '정선 5일장',
+          category: 'POTATO_MARKET',
+          cityName: '정선군',
+          address: '강원특별자치도 정선군 정선길 12',
+          imageUrl: 'https://example.com/jeongseon-market.jpg',
+          description: '<p>정선의 맛과 이야기를 만나는 전통시장입니다.</p>',
+          openingHours: '09:00 - 18:00',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapMapMarker(tester, 101);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stamp-spot-image-101')),
+      findsOneWidget,
+    );
+    expect(find.text('정선군 · 시장·상권'), findsOneWidget);
+    expect(find.text('정선의 맛과 이야기를 만나는 전통시장입니다.'), findsOneWidget);
+    expect(find.text('강원특별자치도 정선군 정선길 12'), findsOneWidget);
+    expect(find.text('09:00 - 18:00'), findsOneWidget);
+  });
+
   testWidgets('opens the selected stamp spot detail', (tester) async {
     final router = GoRouter(
       initialLocation: '/',
@@ -108,6 +147,7 @@ void main() {
           stampRallybookSpotsProvider.overrideWith(
             (ref) async => _rallybookSpots,
           ),
+          spotDetailProvider.overrideWith(_emptySpotDetail),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -399,6 +439,7 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required Override override,
   Override? rallybookSpotsOverride,
+  Override? spotDetailOverride,
   List<Override> additionalOverrides = const [],
 }) async {
   tester.view.physicalSize = const Size(430, 932);
@@ -414,10 +455,21 @@ Future<void> _pumpScreen(
             stampRallybookSpotsProvider.overrideWith(
               (ref) async => const <RallybookSpot>[],
             ),
+        spotDetailOverride ?? spotDetailProvider.overrideWith(_emptySpotDetail),
         ...additionalOverrides,
       ],
       child: const MaterialApp(home: StampBookScreen()),
     ),
+  );
+}
+
+Future<SpotDetail> _emptySpotDetail(Ref ref, String spotId) async {
+  return SpotDetail(
+    id: spotId,
+    name: '',
+    category: '',
+    cityName: '',
+    address: '',
   );
 }
 
