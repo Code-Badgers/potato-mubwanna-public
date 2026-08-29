@@ -59,10 +59,21 @@ def requiredLegalDartDefines = [
     'LEGAL_CONTACT_PHONE',
     'LEGAL_EFFECTIVE_DATE',
 ]
+def requiredFirebaseDartDefines = [
+    // Release APK가 알림을 조용히 비활성화한 채 배포되지 않도록 운영 앱 설정도 필수로 검사한다.
+    'FIREBASE_API_KEY',
+    'FIREBASE_ANDROID_APP_ID',
+    'FIREBASE_MESSAGING_SENDER_ID',
+    'FIREBASE_PROJECT_ID',
+]
 def missingLegalDartDefines = requiredLegalDartDefines.findAll { name ->
     (dartDefines[name] ?: '').trim().isEmpty()
 }
 missingReleaseConfiguration.addAll(missingLegalDartDefines)
+def missingFirebaseDartDefines = requiredFirebaseDartDefines.findAll { name ->
+    (dartDefines[name] ?: '').trim().isEmpty()
+}
+missingReleaseConfiguration.addAll(missingFirebaseDartDefines)
 
 if (isReleaseTaskRequested && !missingReleaseConfiguration.isEmpty()) {
     throw new GradleException(

@@ -142,6 +142,20 @@ void main() {
     expect(find.text('강원도 이야기 풀어볼까요?'), findsNothing);
   });
 
+  testWidgets('returns to mission list on system back from detail',
+      (tester) async {
+    await _pumpMissionScreen(tester);
+
+    await _openMission(tester, '강원도 이야기 풀어볼까요?');
+    expect(find.text('미션 상세'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 상세'), findsNothing);
+    expect(find.text('점순이의 미션'), findsOneWidget);
+  });
+
   testWidgets('does not complete quiz mission when selected answer is wrong',
       (tester) async {
     final repository = _FakeMissionRepository();

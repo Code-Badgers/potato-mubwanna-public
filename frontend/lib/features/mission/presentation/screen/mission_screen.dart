@@ -230,44 +230,54 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         : ref.watch(missionByIdProvider(selectedMissionId));
 
     if (selectedMissionId != null && selectedMission != null) {
-      return _MissionDetailView(
-        mission: selectedMission,
-        onBack: _closeMissionDetail,
-        isCompleting: _isCompleting,
-        onComplete: _isCompleting ? null : () => _startMission(selectedMission),
-        onSubmitQuiz: _isCompleting
-            ? null
-            : (answer) => _completeMission(
-                  selectedMission,
-                  MissionVerificationPayload(
-                    type: selectedMission.type,
-                    answer: answer,
+      return _wrapMissionDetailBack(
+        _MissionDetailView(
+          mission: selectedMission,
+          onBack: _closeMissionDetail,
+          isCompleting: _isCompleting,
+          onComplete:
+              _isCompleting ? null : () => _startMission(selectedMission),
+          onSubmitQuiz: _isCompleting
+              ? null
+              : (answer) => _completeMission(
+                    selectedMission,
+                    MissionVerificationPayload(
+                      type: selectedMission.type,
+                      answer: answer,
+                    ),
                   ),
-                ),
+        ),
       );
     }
 
     if (selectedMissionId != null && missionsState.isLoading) {
-      return const _MissionScaffold(
-        child: _MissionLoadingState(),
+      return _wrapMissionDetailBack(
+        const _MissionScaffold(
+          child: _MissionLoadingState(),
+        ),
       );
     }
 
     if (selectedMissionId != null && missionsState.hasError) {
       final error = missionsState.error;
-      return _MissionScaffold(
-        child: _MissionErrorState(
-          message: error is ApiException ? error.message : '미션 정보를 불러오지 못했습니다.',
-          onRetry: () => ref.read(missionsProvider.notifier).load(),
+      return _wrapMissionDetailBack(
+        _MissionScaffold(
+          child: _MissionErrorState(
+            message:
+                error is ApiException ? error.message : '미션 정보를 불러오지 못했습니다.',
+            onRetry: () => ref.read(missionsProvider.notifier).load(),
+          ),
         ),
       );
     }
 
     if (selectedMissionId != null && selectedMission == null) {
-      return _MissionScaffold(
-        child: _MissionErrorState(
-          message: '미션 정보를 찾지 못했습니다.',
-          onRetry: _closeMissionDetail,
+      return _wrapMissionDetailBack(
+        _MissionScaffold(
+          child: _MissionErrorState(
+            message: '미션 정보를 찾지 못했습니다.',
+            onRetry: _closeMissionDetail,
+          ),
         ),
       );
     }
@@ -283,6 +293,18 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         ),
       ),
       data: _buildMissionList,
+    );
+  }
+
+  Widget _wrapMissionDetailBack(Widget child) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _closeMissionDetail();
+        }
+      },
+      child: child,
     );
   }
 

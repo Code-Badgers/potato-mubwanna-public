@@ -174,7 +174,8 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   }
 
   void _onPlatformViewCreated(int id) {
-    _channel = MethodChannel('potato_mubwanna/kakao_map_$id')
+    final channel = MethodChannel('potato_mubwanna/kakao_map_$id');
+    _channel = channel
       ..setMethodCallHandler((call) async {
         if (call.method != 'spotSelected') {
           return;
@@ -184,6 +185,32 @@ class _KakaoMapViewState extends State<KakaoMapView> {
           widget.onSpotSelected?.call(spotId);
         }
       });
+
+    // 위치를 읽는 작업과 PlatformView 생성 순서가 엇갈려도 최신 상태를
+    // 네이티브 지도에 한 번 동기화해 현재 위치 표식이 누락되지 않게 한다.
+    unawaited(_synchronizeNativeMap(channel));
+  }
+
+  Future<void> _synchronizeNativeMap(MethodChannel channel) async {
+    try {
+      await channel.invokeMethod<void>('updateSpots', _spotPayload);
+      await channel.invokeMethod<void>(
+        'updateRoutePolyline',
+        _routePolylinePayload,
+      );
+      await channel.invokeMethod<void>(
+        'updateCurrentLocation',
+        _currentLocationPayload,
+      );
+      if (widget.currentLocationFocusTick > 0) {
+        await channel.invokeMethod<void>(
+          'focusCurrentLocation',
+          _currentLocationPayload,
+        );
+      }
+    } catch (_) {
+      // 네이티브 지도가 아직 준비되지 않은 경우 onMapReady에서 초기 상태를 사용한다.
+    }
   }
 
   @override
