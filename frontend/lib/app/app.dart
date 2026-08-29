@@ -51,6 +51,26 @@ class _PotatoMubwannaAppState extends ConsumerState<PotatoMubwannaApp>
   }
 
   @override
+  Future<bool> didPopRoute() async {
+    // GoRouter's nested ShellRoute navigator can report an unhandled pop at
+    // its root, which Android interprets as a request to finish the activity.
+    // Consume that root-level back action so repeated presses never leave the
+    // app unexpectedly. Nested routes still flow through GoRouter normally.
+    if (appRouter.location != '/main/map') {
+      return false;
+    }
+    _scaffoldMessengerKey.currentState
+      ?..clearSnackBars()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('현재 첫 화면입니다.'),
+          duration: Duration(milliseconds: 1200),
+        ),
+      );
+    return true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       scaffoldMessengerKey: _scaffoldMessengerKey,

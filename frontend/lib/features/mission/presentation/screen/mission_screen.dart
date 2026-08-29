@@ -297,14 +297,27 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Widget _wrapMissionDetailBack(Widget child) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          _closeMissionDetail();
+    return Builder(
+      builder: (context) {
+        if (Router.maybeOf(context) == null) {
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) {
+                _closeMissionDetail();
+              }
+            },
+            child: child,
+          );
         }
+        return BackButtonListener(
+          onBackButtonPressed: () async {
+            _closeMissionDetail();
+            return true;
+          },
+          child: child,
+        );
       },
-      child: child,
     );
   }
 
