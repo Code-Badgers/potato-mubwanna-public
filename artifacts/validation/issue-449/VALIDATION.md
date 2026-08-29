@@ -4,11 +4,11 @@
 
 - 이슈: #449 출시 전 QA 실패 항목 보완
 - 브랜치: `fix/449-release-qa-blockers`
-- 기준 커밋: `e256357` (`origin/main`)
+- 기준 커밋: `769c1a5` (최신 `origin/main` `e256357`에 QA 보완을 적용한 커밋)
 - 대상 빌드: `versionName 0.1.0`, `versionCode 1`
 - 대상 기기: Samsung Android 16 / API 36 / 1080x2340, serial `R3CW2056XCY`
 
-이번 검증에 사용한 APK는 과거 `artifacts/validation/issue-93`에서 사용한 APK가 아니라 최신 `origin/main`을 새로 빌드한 파일이다.
+이번 검증에 사용한 APK는 과거 `artifacts/validation/issue-93`에서 사용한 APK가 아니라 최신 `origin/main`에 QA 보완을 적용한 뒤 다시 빌드·설치한 파일이다.
 
 ## 변경 사항
 
@@ -24,7 +24,7 @@
 - `flutter test`: 338개 통과
 - `flutter analyze`: 이슈 없음
 - `backend/gradlew.bat test`: 496개 테스트, 실패 0, 오류 0, 건너뜀 0
-- 최신 빌드: `flutter build apk --debug` 성공
+- 최신 수정본 빌드: `flutter build apk --debug` 성공 후 실기기 재설치 확인
 - 릴리스 설정 누락 검증: 필요한 서명키·법적 문구·Firebase define이 없을 때 예상대로 빌드 차단
 
 ### 실기기 확인
