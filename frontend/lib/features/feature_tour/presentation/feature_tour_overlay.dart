@@ -58,11 +58,17 @@ class FeatureTourOverlay extends StatefulWidget {
 }
 
 class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
-  static const _maxTargetRetries = 10;
+  static const _maxTargetRetries = 18;
+  static const _targetRetryDelay = Duration(milliseconds: 120);
+  static const _targetStabilizationFrames = 2;
 
   Rect? _targetRect;
+  Rect? _pendingTargetRect;
   Timer? _targetRefreshTimer;
   int _targetRetryCount = 0;
+  int _stableFrameCount = 0;
+  int _measurementGeneration = 0;
+  bool _refreshScheduled = false;
   bool _isPreparingTarget = false;
   bool _unavailableReported = false;
 
@@ -70,22 +76,25 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   void initState() {
     super.initState();
     _scheduleTargetRefresh();
-    _targetRefreshTimer = Timer.periodic(
-      const Duration(milliseconds: 120),
-      (_) => _refreshTargetRect(),
-    );
   }
 
   @override
   void didUpdateWidget(covariant FeatureTourOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.step.targetKey != widget.step.targetKey ||
+    if (oldWidget.stepIndex != widget.stepIndex ||
+        oldWidget.totalSteps != widget.totalSteps ||
+        oldWidget.step.targetKey != widget.step.targetKey ||
         oldWidget.step.fallbackTargetKey != widget.step.fallbackTargetKey ||
         oldWidget.step.spotlightTargetKey != widget.step.spotlightTargetKey ||
         oldWidget.step.interactionTargetKey !=
             widget.step.interactionTargetKey) {
+      _measurementGeneration += 1;
+      _targetRefreshTimer?.cancel();
+      _refreshScheduled = false;
       _targetRect = null;
+      _pendingTargetRect = null;
       _targetRetryCount = 0;
+      _stableFrameCount = 0;
       _isPreparingTarget = false;
       _unavailableReported = false;
       _scheduleTargetRefresh();
@@ -99,7 +108,26 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   }
 
   void _scheduleTargetRefresh() {
+    if (_refreshScheduled || _isPreparingTarget) {
+      return;
+    }
+    _refreshScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshScheduled = false;
+      if (mounted) {
+        _refreshTargetRect();
+      }
+    });
+  }
+
+  void _scheduleRetry() {
+    if (_refreshScheduled || _isPreparingTarget || !mounted) {
+      return;
+    }
+    _refreshScheduled = true;
+    _targetRefreshTimer?.cancel();
+    _targetRefreshTimer = Timer(_targetRetryDelay, () {
+      _refreshScheduled = false;
       if (mounted) {
         _refreshTargetRect();
       }
@@ -113,25 +141,36 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
 
     final resolved = _resolveTarget();
     if (resolved == null) {
-      _targetRect = null;
       _targetRetryCount += 1;
       if (_targetRetryCount >= _maxTargetRetries && !_unavailableReported) {
         _unavailableReported = true;
         widget.onTargetUnavailable();
+        return;
       }
-      setState(() {});
+      _scheduleRetry();
       return;
     }
 
     _targetRetryCount = 0;
     final rect = _toOverlayRect(resolved.rect);
     if (_shouldScrollToTarget(rect)) {
-      unawaited(_prepareTarget(resolved.key));
+      unawaited(_prepareTarget(resolved.key, _measurementGeneration));
       return;
     }
-    if (rect == _targetRect) {
+
+    if (rect != _pendingTargetRect) {
+      _pendingTargetRect = rect;
+      _stableFrameCount = 1;
+      _scheduleTargetRefresh();
       return;
     }
+
+    _stableFrameCount += 1;
+    if (_stableFrameCount < _targetStabilizationFrames || rect == _targetRect) {
+      _scheduleTargetRefresh();
+      return;
+    }
+
     setState(() {
       _targetRect = rect;
     });
@@ -174,12 +213,16 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
 
   bool _shouldScrollToTarget(Rect rect) {
     final size = MediaQuery.sizeOf(context);
-    const edgeTolerance = 2.0;
+    final padding = MediaQuery.paddingOf(context);
+    const edgeTolerance = 8.0;
     final safeViewport = Rect.fromLTWH(
       0,
-      0,
+      padding.top + edgeTolerance,
       size.width,
-      size.height,
+      math.max(
+        0,
+        size.height - padding.top - padding.bottom - (edgeTolerance * 2),
+      ),
     );
     return rect.left < safeViewport.left - edgeTolerance ||
         rect.top < safeViewport.top - edgeTolerance ||
@@ -187,7 +230,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         rect.bottom > safeViewport.bottom + edgeTolerance;
   }
 
-  Future<void> _prepareTarget(GlobalKey key) async {
+  Future<void> _prepareTarget(GlobalKey key, int generation) async {
     if (_isPreparingTarget || !mounted) {
       return;
     }
@@ -198,6 +241,8 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     setState(() {
       _isPreparingTarget = true;
       _targetRect = null;
+      _pendingTargetRect = null;
+      _stableFrameCount = 0;
     });
     try {
       await Scrollable.ensureVisible(
@@ -206,9 +251,9 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOutCubic,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 160));
+      await Future<void>.delayed(const Duration(milliseconds: 120));
     } finally {
-      if (mounted) {
+      if (mounted && generation == _measurementGeneration) {
         setState(() {
           _isPreparingTarget = false;
         });
