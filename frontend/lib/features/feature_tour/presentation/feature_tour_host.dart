@@ -139,6 +139,7 @@ class FeatureTourHost extends StatefulWidget {
 
 class _FeatureTourHostState extends State<FeatureTourHost> {
   late FeatureTourController _controller = _createController();
+  int _loadGeneration = 0;
 
   FeatureTourController _createController() {
     return FeatureTourController(
@@ -151,11 +152,12 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
   @override
   void initState() {
     super.initState();
-    unawaited(_loadCompletionState());
+    unawaited(_loadCompletionState(_loadGeneration));
   }
 
   @override
   void dispose() {
+    _loadGeneration += 1;
     _controller.dispose();
     super.dispose();
   }
@@ -168,20 +170,21 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
         oldWidget.statusStore == widget.statusStore) {
       return;
     }
+    final loadGeneration = ++_loadGeneration;
     _controller.dispose();
     _controller = _createController();
     setState(() {});
-    unawaited(_loadCompletionState());
+    unawaited(_loadCompletionState(loadGeneration));
   }
 
-  Future<void> _loadCompletionState() async {
+  Future<void> _loadCompletionState(int loadGeneration) async {
     bool completed;
     try {
       completed = await widget.statusStore.hasCompleted(widget.tourId);
     } catch (_) {
       return;
     }
-    if (!mounted || completed) {
+    if (!mounted || loadGeneration != _loadGeneration || completed) {
       return;
     }
     // The host child is already mounted when the status read completes. The

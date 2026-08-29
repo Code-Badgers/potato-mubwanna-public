@@ -11,6 +11,7 @@ void main() {
   group('SharedPreferencesFeatureTourStatusStore', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
+      SharedPreferencesFeatureTourStatusStore.resetInProcessForTesting();
     });
 
     test('stores completion independently for each page tour', () async {
