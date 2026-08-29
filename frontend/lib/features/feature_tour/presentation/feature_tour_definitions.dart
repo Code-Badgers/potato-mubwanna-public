@@ -9,6 +9,7 @@ abstract final class FeatureTourIds {
   static const mission = 'mission-v2';
   static const spot = 'spot-v1';
   static const myPage = 'my-page-v1';
+  static const travelRecord = 'travel-record-v1';
 }
 
 abstract final class FeatureTourDefinitions {
@@ -78,6 +79,13 @@ abstract final class FeatureTourDefinitions {
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '지도에서 깃발을 눌러보세요',
     ),
+    FeatureTourStep(
+      targetKey: FeatureTourTargets.stampVisit,
+      title: '방문 인증을 남겨보세요',
+      description: '현장에서 인증하면 여행 도장이 패스포트에 기록돼요.',
+      advanceType: CoachMarkAdvanceType.targetTap,
+      interactionHint: '방문 인증하기를 눌러보세요',
+    ),
   ];
 
   static final passport = <FeatureTourStep>[
@@ -125,6 +133,11 @@ abstract final class FeatureTourDefinitions {
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '미션 카드를 눌러보세요',
     ),
+    FeatureTourStep(
+      targetKey: FeatureTourTargets.missionDetailAction,
+      title: '하단 버튼으로 미션을 시작해요',
+      description: '미션 유형에 맞는 인증을 마치면 오늘의 기록에 남아요.',
+    ),
   ];
 
   static final spot = <FeatureTourStep>[
@@ -151,6 +164,14 @@ abstract final class FeatureTourDefinitions {
       description: '스탬프와 미션으로 남긴 사진을 여행 기록에서 다시 볼 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '여행 기록을 눌러보세요',
+    ),
+  ];
+
+  static final travelRecord = <FeatureTourStep>[
+    FeatureTourStep(
+      targetKey: FeatureTourTargets.travelRecordGallery,
+      title: '여행 사진을 한곳에 모아보세요',
+      description: '스탬프와 미션으로 남긴 사진이 여행 기록에 차곡차곡 쌓여요.',
     ),
   ];
 }

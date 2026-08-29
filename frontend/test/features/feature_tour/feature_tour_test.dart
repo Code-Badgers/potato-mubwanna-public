@@ -84,6 +84,14 @@ void main() {
         contains(FeatureTourTargets.passportButton),
       );
       expect(
+        FeatureTourDefinitions.stamp.map((step) => step.targetKey),
+        contains(FeatureTourTargets.stampVisit),
+      );
+      expect(
+        FeatureTourDefinitions.mission.map((step) => step.targetKey),
+        contains(FeatureTourTargets.missionDetailAction),
+      );
+      expect(
         FeatureTourDefinitions.potato.map((step) => step.targetKey),
         containsAll([
           FeatureTourTargets.potatoInfo,
@@ -117,6 +125,10 @@ void main() {
       expect(
         FeatureTourDefinitions.myPage.single.targetKey,
         same(FeatureTourTargets.myPageTravelRecord),
+      );
+      expect(
+        FeatureTourDefinitions.travelRecord.single.targetKey,
+        same(FeatureTourTargets.travelRecordGallery),
       );
       expect(
         FeatureTourDefinitions.spot.every(

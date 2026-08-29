@@ -954,7 +954,12 @@ class _QuickActionGrid extends StatelessWidget {
         label: '여행 기록',
         key: const ValueKey('mypage-quick-action-travel-records'),
         targetKey: FeatureTourTargets.myPageTravelRecord,
-        onTap: () => context.push('/travel-records'),
+        onTap: () {
+          FeatureTourScope.maybeOf(context)?.completeTarget(
+            FeatureTourTargets.myPageTravelRecord,
+          );
+          context.push('/travel-records');
+        },
       ),
       _QuickAction(
         icon: Icons.grid_view_rounded,

@@ -995,14 +995,11 @@ class _StampBookBody extends StatelessWidget {
             SliverToBoxAdapter(
               child: KeyedSubtree(
                 key: FeatureTourTargets.stampMap,
-                child: KeyedSubtree(
-                  key: FeatureTourTargets.stampMarker,
-                  child: _GangwonStampMap(
-                    progress: progress,
-                    rallybookSpots: rallybookSpots,
-                    mapHeight: mapHeight,
-                    onSpotTap: (spot) => context.push('/spots/${spot.spotId}'),
-                  ),
+                child: _GangwonStampMap(
+                  progress: progress,
+                  rallybookSpots: rallybookSpots,
+                  mapHeight: mapHeight,
+                  onSpotTap: (spot) => context.push('/spots/${spot.spotId}'),
                 ),
               ),
             ),
@@ -1362,6 +1359,7 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
               Widget buildSpotNode(
                 RallybookSpot spot, {
                 required bool selected,
+                required bool coachTarget,
               }) {
                 final anchor = _rallybookSpotAnchor(spot, mapRect);
                 final width = selected ? 124.0 : 40.0;
@@ -1370,7 +1368,9 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                   top: anchor.dy - (selected ? 19 : 16),
                   width: width,
                   child: KeyedSubtree(
-                    key: ValueKey('rallybook-spot-marker-${spot.spotId}'),
+                    key: coachTarget
+                        ? FeatureTourTargets.stampMarker
+                        : ValueKey('rallybook-spot-marker-${spot.spotId}'),
                     child: IgnorePointer(
                       child: _RallybookSpotMapNode(
                         spot: spot,
@@ -1424,11 +1424,20 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
                           ),
                         ),
                       ),
-                    for (final spot in rallybookSpots)
-                      if (spot.spotId != selectedSpot?.spotId)
-                        buildSpotNode(spot, selected: false),
+                    for (final entry in rallybookSpots.indexed)
+                      if (entry.$2.spotId != selectedSpot?.spotId)
+                        buildSpotNode(
+                          entry.$2,
+                          selected: false,
+                          coachTarget: entry.$1 == 0,
+                        ),
                     if (selectedSpot != null)
-                      buildSpotNode(selectedSpot, selected: true),
+                      buildSpotNode(
+                        selectedSpot,
+                        selected: true,
+                        coachTarget: rallybookSpots.isNotEmpty &&
+                            rallybookSpots.first.spotId == selectedSpot.spotId,
+                      ),
                     if (selectedRegion != null && selectedSpot != null)
                       Positioned.fill(
                         child: IgnorePointer(
@@ -2139,22 +2148,32 @@ class _SelectedStampSpotContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 40,
-            child: FilledButton.icon(
-              onPressed: onSpotTap,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+            child: KeyedSubtree(
+              key: FeatureTourTargets.stampVisit,
+              child: FilledButton.icon(
+                onPressed: onSpotTap == null
+                    ? null
+                    : () {
+                        FeatureTourScope.maybeOf(context)?.completeTarget(
+                          FeatureTourTargets.stampVisit,
+                        );
+                        onSpotTap!();
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                 ),
-              ),
-              icon: const Icon(Icons.photo_camera_rounded, size: 20),
-              label: const Text(
-                '방문 인증하기',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
+                icon: const Icon(Icons.photo_camera_rounded, size: 20),
+                label: const Text(
+                  '방문 인증하기',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
                 ),
               ),
             ),

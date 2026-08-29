@@ -20,6 +20,7 @@ class FeatureTourTargets {
   static final mapNavigation = GlobalKey(debugLabel: 'feature-tour-map-nav');
   static final stampMap = GlobalKey(debugLabel: 'feature-tour-stamp-map');
   static final stampMarker = GlobalKey(debugLabel: 'feature-tour-stamp-marker');
+  static final stampVisit = GlobalKey(debugLabel: 'feature-tour-stamp-visit');
   static final passportButton =
       GlobalKey(debugLabel: 'feature-tour-passport-button');
   static final passportBook =
@@ -38,6 +39,8 @@ class FeatureTourTargets {
       GlobalKey(debugLabel: 'feature-tour-potato-nav');
   static final missionFeatured =
       GlobalKey(debugLabel: 'feature-tour-mission-featured');
+  static final missionDetailAction =
+      GlobalKey(debugLabel: 'feature-tour-mission-detail-action');
   static final missionDaily =
       GlobalKey(debugLabel: 'feature-tour-mission-daily');
   static final missionNavigation =
@@ -46,4 +49,6 @@ class FeatureTourTargets {
   static final visitVerify = GlobalKey(debugLabel: 'feature-tour-visit-verify');
   static final myPageTravelRecord =
       GlobalKey(debugLabel: 'feature-tour-my-page-travel-record');
+  static final travelRecordGallery =
+      GlobalKey(debugLabel: 'feature-tour-travel-record-gallery');
 }

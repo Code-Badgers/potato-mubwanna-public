@@ -1296,36 +1296,39 @@ class _MissionDetailViewState extends State<_MissionDetailView> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
-              child: FilledButton(
-                onPressed: isQuiz
-                    ? (_selectedAnswer == null || !canComplete
-                        ? null
-                        : _submitQuiz)
-                    : (canComplete ? widget.onComplete : null),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(56),
-                  backgroundColor: _missionPrimary,
-                  foregroundColor: AppColors.surface,
-                  disabledBackgroundColor: _missionLine,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(_missionCardRadius),
+            KeyedSubtree(
+              key: FeatureTourTargets.missionDetailAction,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+                child: FilledButton(
+                  onPressed: isQuiz
+                      ? (_selectedAnswer == null || !canComplete
+                          ? null
+                          : _submitQuiz)
+                      : (canComplete ? widget.onComplete : null),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(56),
+                    backgroundColor: _missionPrimary,
+                    foregroundColor: AppColors.surface,
+                    disabledBackgroundColor: _missionLine,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_missionCardRadius),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
                   ),
-                  textStyle: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
+                  child: Text(
+                    widget.isCompleting
+                        ? '처리 중...'
+                        : isCompleted
+                            ? '완료된 미션'
+                            : isQuiz
+                                ? '정답 제출하기'
+                                : _detailActionLabel(mission),
                   ),
-                ),
-                child: Text(
-                  widget.isCompleting
-                      ? '처리 중...'
-                      : isCompleted
-                          ? '완료된 미션'
-                          : isQuiz
-                              ? '정답 제출하기'
-                              : _detailActionLabel(mission),
                 ),
               ),
             ),
