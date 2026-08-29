@@ -31,6 +31,7 @@
 
 - 지도 관광지 상세 UI 변경은 이번 적용 범위에서 제외했다.
 - `flutter test test/features/stamp/stamp_book_screen_test.dart test/features/spot/spot_detail_screen_test.dart test/features/audio/audio_playback_controller_test.dart test/features/map/map_screen_test.dart`: 58개 통과
+- `flutter test`: 전체 339개 통과
 - 스탬프 마커 선택 → `방문 인증하기` → 관광지 상세 → 오디오 재생 흐름을 위젯 테스트로 확인했다.
 - `flutter analyze` 대상 스탬프·관광지 상세·오디오·지도 파일: 이슈 없음
 - `flutter build apk --debug --dart-define-from-file=.env`: 성공
