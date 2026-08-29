@@ -3104,47 +3104,49 @@ class _SelectedSpotSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: onNavigationPressed,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _mapDark,
-              side: const BorderSide(color: AppColors.line),
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            icon: const Icon(Icons.navigation_rounded, size: 18),
-            label: const Text('길찾기'),
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            key: const ValueKey('selected-spot-detail-button'),
-            onPressed: onSpotDetailPressed,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _mapDark,
-              side: const BorderSide(color: AppColors.line),
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onNavigationPressed,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _mapDark,
+                  side: const BorderSide(color: AppColors.line),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                icon: const Icon(Icons.navigation_rounded, size: 18),
+                label: const Text('길찾기'),
               ),
             ),
-            icon: const Icon(Icons.open_in_new_rounded, size: 18),
-            label: const Text('관광지 상세 보기'),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                key: const ValueKey('selected-spot-detail-button'),
+                onPressed: onSpotDetailPressed,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _mapDark,
+                  side: const BorderSide(color: AppColors.line),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: const Text('상세 보기'),
+              ),
+            ),
+          ],
         ),
         _SpotTourInfoSection(
           spot: spot,
