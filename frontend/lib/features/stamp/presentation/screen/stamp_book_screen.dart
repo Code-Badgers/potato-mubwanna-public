@@ -1363,21 +1363,26 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
               }) {
                 final anchor = _rallybookSpotAnchor(spot, mapRect);
                 final width = selected ? 124.0 : 40.0;
+                Widget marker = IgnorePointer(
+                  child: _RallybookSpotMapNode(
+                    spot: spot,
+                    stamp: stampsBySpotId[spot.spotId],
+                    selected: selected,
+                  ),
+                );
+                if (coachTarget) {
+                  marker = KeyedSubtree(
+                    key: FeatureTourTargets.stampMarker,
+                    child: marker,
+                  );
+                }
                 return Positioned(
                   left: anchor.dx - width / 2,
                   top: anchor.dy - (selected ? 19 : 16),
                   width: width,
                   child: KeyedSubtree(
-                    key: coachTarget
-                        ? FeatureTourTargets.stampMarker
-                        : ValueKey('rallybook-spot-marker-${spot.spotId}'),
-                    child: IgnorePointer(
-                      child: _RallybookSpotMapNode(
-                        spot: spot,
-                        stamp: stampsBySpotId[spot.spotId],
-                        selected: selected,
-                      ),
-                    ),
+                    key: ValueKey('rallybook-spot-marker-${spot.spotId}'),
+                    child: marker,
                   ),
                 );
               }
@@ -2066,25 +2071,28 @@ class _StampSpotActionCard extends StatelessWidget {
           ),
         ],
       ),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 160),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeOutCubic,
-          child: hasSelection
-              ? _SelectedStampSpotContent(
-                  key: ValueKey(spot!.spotId),
-                  region: region!,
-                  stamp: stamp,
-                  spot: spot!,
-                  onSpotTap: onSpotTap,
-                )
-              : const _EmptyStampSpotContent(
-                  key: ValueKey('empty-stamp-spot-card'),
-                ),
+      child: KeyedSubtree(
+        key: FeatureTourTargets.stampVisit,
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 160),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeOutCubic,
+            child: hasSelection
+                ? _SelectedStampSpotContent(
+                    key: ValueKey(spot!.spotId),
+                    region: region!,
+                    stamp: stamp,
+                    spot: spot!,
+                    onSpotTap: onSpotTap,
+                  )
+                : const _EmptyStampSpotContent(
+                    key: ValueKey('empty-stamp-spot-card'),
+                  ),
+          ),
         ),
       ),
     );
@@ -2148,32 +2156,29 @@ class _SelectedStampSpotContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             height: 40,
-            child: KeyedSubtree(
-              key: FeatureTourTargets.stampVisit,
-              child: FilledButton.icon(
-                onPressed: onSpotTap == null
-                    ? null
-                    : () {
-                        FeatureTourScope.maybeOf(context)?.completeTarget(
-                          FeatureTourTargets.stampVisit,
-                        );
-                        onSpotTap!();
-                      },
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+            child: FilledButton.icon(
+              onPressed: onSpotTap == null
+                  ? null
+                  : () {
+                      FeatureTourScope.maybeOf(context)?.completeTarget(
+                        FeatureTourTargets.stampVisit,
+                      );
+                      onSpotTap!();
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                icon: const Icon(Icons.photo_camera_rounded, size: 20),
-                label: const Text(
-                  '방문 인증하기',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
+              ),
+              icon: const Icon(Icons.photo_camera_rounded, size: 20),
+              label: const Text(
+                '방문 인증하기',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
                 ),
               ),
             ),

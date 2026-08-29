@@ -7,6 +7,7 @@ import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../admin_notice/application/admin_notice_controller.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../feature_tour/presentation/feature_tour_host.dart';
 import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../../potato/application/potato_collection_controller.dart';
 import '../../../potato/domain/potato_collection.dart';
