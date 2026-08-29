@@ -3,6 +3,7 @@ package com.gamjamubwatna.global.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.api.AuthApiResponse;
 import com.gamjamubwatna.auth.infrastructure.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +36,8 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // 공개 API의 실패가 /error 재디스패치에서 401로 덮이지 않게 한다.
+                .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers(
                     "/auth/kakao",

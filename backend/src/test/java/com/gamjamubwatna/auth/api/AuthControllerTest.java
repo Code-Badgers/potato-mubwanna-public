@@ -1,5 +1,6 @@
 package com.gamjamubwatna.auth.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -13,6 +14,7 @@ import com.gamjamubwatna.auth.application.AuthService;
 import com.gamjamubwatna.auth.infrastructure.JwtAuthenticationFilter;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.global.config.SecurityConfig;
+import jakarta.servlet.DispatcherType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -78,6 +80,20 @@ class AuthControllerTest {
                 )))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.data.accessToken").doesNotExist());
+    }
+
+    @Test
+    void errorDispatchDoesNotReplaceLoginFailureWithAuthenticationError() throws Exception {
+        var response = mockMvc.perform(get("/error")
+                .with(request -> {
+                    request.setDispatcherType(DispatcherType.ERROR);
+                    return request;
+                }))
+            .andReturn()
+            .getResponse();
+
+        assertThat(response.getStatus()).isNotEqualTo(401);
+        assertThat(response.getContentAsString()).doesNotContain("인증이 필요합니다.");
     }
 
     @Test
