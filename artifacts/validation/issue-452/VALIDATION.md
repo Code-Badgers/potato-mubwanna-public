@@ -4,7 +4,7 @@
 
 - 이슈: #452 `fix: Coach Mark 노출 누락 및 반복 실행·버벅거림 개선`
 - 브랜치: `fix/452-coach-mark-stability-and-coverage`
-- 범위: 페이지별 Coach Mark lifecycle, 타깃 측정/스크롤, 주요 화면 타깃 복구, 안전 영역 보정
+- 범위: 페이지별 Coach Mark lifecycle, 타깃 측정/스크롤, 주요 화면 타깃 복구, 안전 영역 보정, 스탬프 선택 명소 카드 정보 보강
 - 제외 범위: API, DB, 기존 미션·스탬프·지도 기능 계약
 
 ## 변경 사항
@@ -14,6 +14,8 @@
 - 지도·스탬프·미션·마이페이지·여행 기록 타깃 연결 복구
 - Coach Mark 설명 카드가 Safe Area 밖으로 나가지 않도록 위치와 높이 보정
 - 스탬프 marker의 기존 테스트 식별자를 유지하고 방문 인증 타깃의 중복 GlobalKey 제거
+- 기존 `spotDetailProvider`를 재사용해 선택한 명소 카드에 이미지, 설명, 주소, 영업시간을 실제 값이 있을 때만 표시
+- 상세 응답이 없거나 실패해도 스탬프 명소명, 주소 fallback, 방문 인증 CTA와 이미지 placeholder를 유지
 
 ## 검증 결과
 
@@ -21,8 +23,8 @@
 | --- | --- |
 | `flutter analyze` | PASS, No issues found |
 | `flutter test test/features/feature_tour/feature_tour_test.dart` | PASS, 7 tests |
-| `flutter test test/features/stamp/stamp_book_screen_test.dart` | PASS, 14 tests |
-| `flutter test` | PASS, 337 tests |
+| `flutter test test/features/stamp/stamp_book_screen_test.dart` | PASS, 15 tests |
+| `flutter test` | PASS, 338 tests |
 | `git diff --check` | PASS |
 
 ## 수정 중 발견 및 해결한 문제
@@ -37,6 +39,7 @@
 - DB migration: 없음
 - 환경 변수: 없음
 - 기존 사용자 변경 `frontend/ios/Podfile.lock`: 수정하거나 스테이징하지 않음
+- 스탬프 카드 정보 보강은 기존 API/DB 계약과 장소 상세 provider를 재사용하며 별도 API/DB 변경 없음
 
 ## 남은 리스크
 
