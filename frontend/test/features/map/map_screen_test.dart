@@ -479,7 +479,16 @@ void main() {
     await tester.pump();
     expect(find.text('감자 카페'), findsOneWidget);
     expect(find.text('대표 메뉴'), findsOneWidget);
-    expect(find.text('상세보기'), findsNothing);
+    expect(find.byKey(const ValueKey('selected-spot-detail-button')),
+        findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('selected-spot-detail-button')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('selected-spot-detail-button')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('상세 2'), findsOneWidget);
   });
 
   testWidgets('keeps all category spots visible when a spot is bookmarked', (

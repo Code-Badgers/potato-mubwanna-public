@@ -15,6 +15,7 @@
 - 네이티브 카카오 지도 PlatformView가 생성되기 전에 위치 조회가 끝나는 경우에도 현재 위치·스팟·경로를 다시 동기화하도록 보완했다.
 - 미션 상세 화면에서 Android 시스템 뒤로가기를 누르면 앱 종료 대신 미션 목록으로 돌아가도록 `PopScope` 처리를 추가했다.
 - 릴리스 빌드에서 Firebase 클라이언트 설정이 누락되면 즉시 실패하도록 필수 Dart define 검사를 추가했다.
+- 지도에서 선택한 관광지 미리보기 시트에 `관광지 상세 보기` 버튼을 추가해 오디오가 포함된 상세 화면으로 바로 이동할 수 있게 했다.
 
 ## 검증
 
@@ -25,6 +26,7 @@
 - `flutter analyze`: 이슈 없음
 - `backend/gradlew.bat test`: 496개 테스트, 실패 0, 오류 0, 건너뜀 0
 - 최신 수정본 빌드: `flutter build apk --debug` 성공 후 실기기 재설치 확인
+- 지도 관광지 시트의 `관광지 상세 보기` 버튼 표시 및 상세 화면 이동을 실기기에서 확인
 - 릴리스 설정 누락 검증: 필요한 서명키·법적 문구·Firebase define이 없을 때 예상대로 빌드 차단
 
 ### 실기기 확인
@@ -41,6 +43,8 @@
 - `../issue-449-map-loaded.png`: 지도 로드
 - `../issue-449-full-map.png`: 전체 지도
 - `../issue-449-current-location.png`: 현재 위치 표식 및 재중심
+- `../issue-449-map-detail-button-fullmap.png`: 지도 선택 시 상세 보기 버튼 표시
+- `../issue-449-map-detail-opened.png`: 상세 보기 버튼을 통한 관광지 상세 화면 이동
 - `../issue-449-mission-list-guest.png`: 게스트 미션 목록
 - `AUDIO.md`: 오디오 제공 현황·캐시·응답 속도 기록
 
