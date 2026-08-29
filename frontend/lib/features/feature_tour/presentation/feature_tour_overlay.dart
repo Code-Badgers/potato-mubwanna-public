@@ -338,14 +338,22 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   Widget _buildDescriptionCard(Size size, Rect? target) {
     const horizontalInset = 16.0;
     final cardWidth = math.min(360.0, size.width - (horizontalInset * 2));
+    final padding = MediaQuery.paddingOf(context);
+    const safeInset = 8.0;
+    final safeTop = padding.top + safeInset;
+    final safeBottom = padding.bottom + safeInset;
     final targetRect = target ??
         Rect.fromLTWH(size.width / 2 - 26, size.height / 2 - 26, 52, 52);
-    final maxHeight = math.min(188.0, size.height - 28);
-    final spaceBelow = size.height - targetRect.bottom;
+    final availableHeight = math.max(0.0, size.height - safeTop - safeBottom);
+    final maxHeight = math.min(188.0, availableHeight);
+    final spaceBelow = size.height - safeBottom - targetRect.bottom;
     final showAbove = spaceBelow < maxHeight + 24;
     final top = showAbove
-        ? math.max(16.0, targetRect.top - maxHeight - 22)
-        : math.min(targetRect.bottom + 22, size.height - maxHeight - 16);
+        ? math.max(safeTop, targetRect.top - maxHeight - 22)
+        : math.min(
+            targetRect.bottom + 22,
+            math.max(safeTop, size.height - safeBottom - maxHeight),
+          );
     final left = math.max(
       horizontalInset,
       math.min(
