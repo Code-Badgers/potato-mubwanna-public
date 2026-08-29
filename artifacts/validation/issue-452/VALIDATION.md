@@ -24,8 +24,18 @@
 | `flutter analyze` | PASS, No issues found |
 | `flutter test test/features/feature_tour/feature_tour_test.dart` | PASS, 7 tests |
 | `flutter test test/features/stamp/stamp_book_screen_test.dart` | PASS, 15 tests |
-| `flutter test` | PASS, 338 tests |
+| `flutter test` | PASS, 340 tests |
 | `git diff --check` | PASS |
+
+## 최신 main 병합 충돌 해결
+
+PR #454의 최신 `main` 병합 과정에서 `stamp_book_screen_test.dart`가 충돌했습니다. 최신 main의 스탬프 오디오 해설 진입 테스트와 이 브랜치의 선택 명소 상세 정보 테스트를 모두 유지하고, 지도 모듈과 장소 모듈에 중복 정의된 `SpotDetail` 및 provider는 import 별칭으로 분리했습니다.
+
+- `git fetch origin main` 후 `git merge --no-commit --no-ff origin/main` 실행
+- 충돌 파일: `frontend/test/features/stamp/stamp_book_screen_test.dart`
+- 병합 후 스탬프 화면 테스트: PASS, 15 tests
+- 병합 후 전체 Flutter 테스트: PASS, 340 tests
+- 병합 후 `flutter analyze`: PASS, No issues found
 
 ## 수정 중 발견 및 해결한 문제
 
