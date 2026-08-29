@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
@@ -42,6 +43,36 @@ void main() {
     expect(service.cleared, isTrue);
     expect(pushLifecycle.synchronizeCalls, 1);
     expect(legalConsentLifecycle.synchronizeCalls, 1);
+  });
+
+  test('identifies a backend rejection after Kakao SDK login succeeds',
+      () async {
+    final controller = AuthController(
+      kakaoLoginService: _AccessTokenKakaoLoginService(),
+      authRepository: _RejectedLoginAuthRepository(),
+    );
+
+    final loggedIn = await controller.loginWithKakao();
+
+    expect(loggedIn, isFalse);
+    expect(controller.state.status, AuthStatus.failure);
+    expect(controller.state.message, contains('카카오 인증은 완료'));
+    expect(controller.state.message, contains('(401)'));
+  });
+
+  test('identifies an SDK failure before backend login starts', () async {
+    final repository = _RecordingAuthRepository();
+    final controller = AuthController(
+      kakaoLoginService: _FailingKakaoLoginService(),
+      authRepository: repository,
+    );
+
+    final loggedIn = await controller.loginWithKakao();
+
+    expect(loggedIn, isFalse);
+    expect(controller.state.status, AuthStatus.failure);
+    expect(controller.state.message, contains('카카오 인증 단계'));
+    expect(repository.accessTokenLoginCalls, 0);
   });
 
   test('resets auth state after the remote logout request fails', () async {
@@ -95,6 +126,20 @@ class _RedirectKakaoLoginService extends KakaoLoginService {
   }
 }
 
+class _AccessTokenKakaoLoginService extends KakaoLoginService {
+  @override
+  Future<KakaoLoginResult> login() async {
+    return const KakaoAccessTokenLoginResult('kakao-access-token');
+  }
+}
+
+class _FailingKakaoLoginService extends KakaoLoginService {
+  @override
+  Future<KakaoLoginResult> login() {
+    throw StateError('SDK login failed');
+  }
+}
+
 class _CallbackKakaoLoginService extends KakaoLoginService {
   bool cleared = false;
 
@@ -122,6 +167,12 @@ class _RecordingAuthRepository extends AuthRepository {
   String? authorizationCode;
   String? redirectUri;
   int withdrawalCalls = 0;
+  int accessTokenLoginCalls = 0;
+
+  @override
+  Future<void> loginWithKakaoToken(String kakaoAccessToken) async {
+    accessTokenLoginCalls++;
+  }
 
   @override
   Future<void> loginWithKakaoAuthorizationCode({
@@ -135,6 +186,23 @@ class _RecordingAuthRepository extends AuthRepository {
   @override
   Future<void> withdrawAccount() async {
     withdrawalCalls++;
+  }
+}
+
+class _RejectedLoginAuthRepository extends AuthRepository {
+  _RejectedLoginAuthRepository()
+      : super(
+          dio: Dio(),
+          tokenStorage: const TokenStorage(FlutterSecureStorage()),
+        );
+
+  @override
+  Future<void> loginWithKakaoToken(String kakaoAccessToken) {
+    throw const ApiException(
+      message: '인증이 필요합니다.',
+      code: 'AUTH_REQUIRED',
+      statusCode: 401,
+    );
   }
 }
 

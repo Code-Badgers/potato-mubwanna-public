@@ -7,8 +7,8 @@ import '../../../core/storage/token_storage.dart';
 
 class AuthRepository {
   const AuthRepository({required Dio dio, required TokenStorage tokenStorage})
-    : _dio = dio,
-      _tokenStorage = tokenStorage;
+      : _dio = dio,
+        _tokenStorage = tokenStorage;
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
@@ -45,9 +45,12 @@ class AuthRepository {
       throw const ApiException(message: '저장된 refresh token이 없습니다.');
     }
 
-    final tokens = await _requestTokens(ApiPaths.authRefresh, {
-      'refreshToken': refreshToken,
-    }, fallbackMessage: '로그인 세션 갱신에 실패했습니다.');
+    final tokens = await _requestTokens(
+        ApiPaths.authRefresh,
+        {
+          'refreshToken': refreshToken,
+        },
+        fallbackMessage: '로그인 세션 갱신에 실패했습니다.');
     await _tokenStorage.saveTokens(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -89,7 +92,14 @@ class AuthRepository {
     Map<String, String> data, {
     required String fallbackMessage,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(path, data: data);
+    late final Response<Map<String, dynamic>> response;
+    try {
+      response = await _dio.post<Map<String, dynamic>>(path, data: data);
+    } on DioException catch (error) {
+      // 인증 payload에는 외부 access token이 포함되므로 응답의 안전한
+      // message/code/status만 상위 계층에 전달하고 요청 본문은 남기지 않는다.
+      throw _mapLoginRequestError(error, fallbackMessage);
+    }
     final apiResponse = ApiResponse<AuthTokens>.fromJson(
       response.data ?? const <String, dynamic>{},
       AuthTokens.fromJson,
@@ -97,9 +107,8 @@ class AuthRepository {
 
     if (!apiResponse.success || apiResponse.data == null) {
       throw ApiException(
-        message: apiResponse.message.isEmpty
-            ? fallbackMessage
-            : apiResponse.message,
+        message:
+            apiResponse.message.isEmpty ? fallbackMessage : apiResponse.message,
         code: apiResponse.code,
         statusCode: response.statusCode,
       );
@@ -114,6 +123,39 @@ class AuthRepository {
     }
 
     return apiResponse.data!;
+  }
+
+  ApiException _mapLoginRequestError(
+    DioException error,
+    String fallbackMessage,
+  ) {
+    final response = error.response;
+    final responseData = response?.data;
+    final body = responseData is Map<String, dynamic> ? responseData : null;
+    final backendMessage = body?['message'];
+    final backendCode = body?['code'];
+
+    return ApiException(
+      message: backendMessage is String && backendMessage.trim().isNotEmpty
+          ? backendMessage
+          : _networkFallbackMessage(error, fallbackMessage),
+      code: backendCode is String ? backendCode : null,
+      statusCode: response?.statusCode,
+    );
+  }
+
+  String _networkFallbackMessage(
+    DioException error,
+    String fallbackMessage,
+  ) {
+    return switch (error.type) {
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout =>
+        '서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요.',
+      DioExceptionType.connectionError => '서버에 연결할 수 없습니다. 네트워크를 확인해주세요.',
+      _ => fallbackMessage,
+    };
   }
 }
 

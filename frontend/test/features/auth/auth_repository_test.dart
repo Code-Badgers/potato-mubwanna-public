@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 
@@ -46,6 +47,51 @@ void main() {
         tokenStorage: const TokenStorage(FlutterSecureStorage()),
       ).loginWithKakaoToken('kakao-access-token'),
       throwsA(isA<Exception>()),
+    );
+  });
+
+  test('maps backend login rejection without exposing request tokens',
+      () async {
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.reject(
+              DioException.badResponse(
+                statusCode: 401,
+                requestOptions: options,
+                response: Response<Map<String, dynamic>>(
+                  requestOptions: options,
+                  statusCode: 401,
+                  data: {
+                    'success': false,
+                    'message': '인증이 필요합니다.',
+                    'code': 'AUTH_REQUIRED',
+                    'data': null,
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+    await expectLater(
+      AuthRepository(
+        dio: dio,
+        tokenStorage: const TokenStorage(FlutterSecureStorage()),
+      ).loginWithKakaoToken('sensitive-kakao-access-token'),
+      throwsA(
+        isA<ApiException>()
+            .having((error) => error.statusCode, 'statusCode', 401)
+            .having((error) => error.code, 'code', 'AUTH_REQUIRED')
+            .having((error) => error.message, 'message', '인증이 필요합니다.')
+            .having(
+              (error) => error.toString(),
+              'serialized error',
+              isNot(contains('sensitive-kakao-access-token')),
+            ),
+      ),
     );
   });
 
