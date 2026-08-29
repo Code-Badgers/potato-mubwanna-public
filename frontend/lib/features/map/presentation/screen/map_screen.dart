@@ -626,8 +626,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                   favoriteSpotIds.contains(selectedSpot.id),
                               onNavigationPressed: () =>
                                   _openSpotNavigation(selectedSpot),
-                              onSpotDetailPressed: () =>
-                                  context.push('/spots/${selectedSpot.id}'),
                               onFavoritePressed: () async {
                                 await _toggleFavoriteSpot(
                                   selectedSpot.id,
@@ -2442,7 +2440,6 @@ class _RouteRecommendationSheet extends ConsumerWidget {
     required this.selectedSpot,
     required this.isFavorite,
     required this.onNavigationPressed,
-    required this.onSpotDetailPressed,
     required this.onFavoritePressed,
   });
 
@@ -2450,7 +2447,6 @@ class _RouteRecommendationSheet extends ConsumerWidget {
   final MapSpot selectedSpot;
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
-  final VoidCallback onSpotDetailPressed;
   final Future<void> Function() onFavoritePressed;
 
   @override
@@ -2515,7 +2511,6 @@ class _RouteRecommendationSheet extends ConsumerWidget {
                       spotDetail: spotDetail,
                       isFavorite: isFavorite,
                       onNavigationPressed: onNavigationPressed,
-                      onSpotDetailPressed: onSpotDetailPressed,
                       onFavoritePressed: onFavoritePressed,
                     ),
                   ),
@@ -3022,7 +3017,6 @@ class _SelectedSpotSummary extends StatelessWidget {
     required this.spotDetail,
     required this.isFavorite,
     required this.onNavigationPressed,
-    required this.onSpotDetailPressed,
     required this.onFavoritePressed,
   });
 
@@ -3030,7 +3024,6 @@ class _SelectedSpotSummary extends StatelessWidget {
   final AsyncValue<SpotDetail> spotDetail;
   final bool isFavorite;
   final VoidCallback onNavigationPressed;
-  final VoidCallback onSpotDetailPressed;
   final Future<void> Function() onFavoritePressed;
 
   @override
@@ -3104,49 +3097,25 @@ class _SelectedSpotSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onNavigationPressed,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _mapDark,
-                  side: const BorderSide(color: AppColors.line),
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                icon: const Icon(Icons.navigation_rounded, size: 18),
-                label: const Text('길찾기'),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onNavigationPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _mapDark,
+              side: const BorderSide(color: AppColors.line),
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                key: const ValueKey('selected-spot-detail-button'),
-                onPressed: onSpotDetailPressed,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _mapDark,
-                  side: const BorderSide(color: AppColors.line),
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: const Text('상세 보기'),
-              ),
-            ),
-          ],
+            icon: const Icon(Icons.navigation_rounded, size: 18),
+            label: const Text('길찾기'),
+          ),
         ),
         _SpotTourInfoSection(
           spot: spot,

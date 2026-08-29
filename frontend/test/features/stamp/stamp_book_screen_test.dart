@@ -6,10 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
+import 'package:potato_mubwanna/features/audio/application/audio_guide_controller.dart';
+import 'package:potato_mubwanna/features/audio/application/audio_playback_controller.dart';
+import 'package:potato_mubwanna/features/audio/domain/audio_guide.dart';
 import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller.dart';
 import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
 import 'package:potato_mubwanna/features/stamp/presentation/screen/stamp_book_screen.dart';
+import 'package:potato_mubwanna/features/spot/application/spot_detail_controller.dart';
+import 'package:potato_mubwanna/features/spot/domain/spot_detail.dart';
+import 'package:potato_mubwanna/features/spot/presentation/screen/spot_detail_screen.dart';
 
 void main() {
   testWidgets('renders a map-first stamp tour and selected city card', (
@@ -121,6 +127,70 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('상세 101'), findsOneWidget);
+  });
+
+  testWidgets('plays audio when entering an audio-enabled spot from stamps', (
+    tester,
+  ) async {
+    final engine = _StampAudioPlaybackEngine();
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, __) => const StampBookScreen()),
+        GoRoute(
+          path: '/spots/:spotId',
+          builder: (_, state) => SpotDetailScreen(
+            spotId: state.pathParameters['spotId']!,
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          stampBookProvider.overrideWith((ref) async => _stampBook()),
+          stampRallybookSpotsProvider.overrideWith(
+            (ref) async => _rallybookSpots,
+          ),
+          spotDetailProvider('102')
+              .overrideWith((ref) async => _stampAudioSpot),
+          audioGuideProvider('2').overrideWith((ref) async => _stampAudioGuide),
+          audioPlaybackEngineFactoryProvider.overrideWithValue(() => engine),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapMapMarker(tester, 102);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('방문 인증하기'));
+    for (var index = 0; index < 10; index++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.text('남이섬'), findsWidgets);
+    expect(find.text('관광 해설 오디오'), findsOneWidget);
+    expect(find.byKey(const ValueKey('audio-player-card')), findsOneWidget);
+
+    final playButton = find.byKey(const ValueKey('audio-play-toggle'));
+    await tester.scrollUntilVisible(
+      playButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(playButton);
+    await tester.pump();
+
+    expect(engine.playCount, 1);
   });
 
   testWidgets('selects nearby markers by their nearest map coordinate', (
@@ -560,3 +630,67 @@ final _claimResult = StampRewardClaimResult(
   couponName: '강원 감자 할인권',
   expiresAt: DateTime.parse('2026-09-20T00:00:00Z'),
 );
+
+const _stampAudioSpot = SpotDetail(
+  id: '2',
+  contentId: '128019',
+  name: '남이섬',
+  category: 'POTATO_TOUR',
+  latitude: 37.7962651,
+  longitude: 127.5254892,
+  address: '강원특별자치도 춘천시 남이섬길 1 남이섬',
+  cityName: '춘천시',
+  imageUrl: null,
+  potatoTags: ['관광', '산책', '호반', '스탬프'],
+  congestionLevel: 'NORMAL',
+  verificationRadiusMeter: 100,
+  stampEnabled: true,
+  description: '북한강에 떠 있는 섬입니다.',
+);
+
+const _stampAudioGuide = AudioGuide(
+  id: 10,
+  title: '남이섬',
+  audioUrl: 'https://example.com/nami-island.mp3',
+  script: '남이섬의 이야기를 들려드립니다.',
+  characterScript: null,
+);
+
+class _StampAudioPlaybackEngine implements AudioPlaybackEngine {
+  final _positionController = StreamController<Duration>.broadcast();
+  final _durationController = StreamController<Duration?>.broadcast();
+  final _statusController =
+      StreamController<AudioPlaybackEngineStatus>.broadcast();
+  int playCount = 0;
+
+  @override
+  Stream<Duration> get positionStream => _positionController.stream;
+
+  @override
+  Stream<Duration?> get durationStream => _durationController.stream;
+
+  @override
+  Stream<AudioPlaybackEngineStatus> get statusStream =>
+      _statusController.stream;
+
+  @override
+  Future<Duration?> setUrl(String url) async => const Duration(seconds: 90);
+
+  @override
+  Future<void> play() async {
+    playCount++;
+  }
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> seek(Duration position) async {}
+
+  @override
+  Future<void> dispose() async {
+    await _positionController.close();
+    await _durationController.close();
+    await _statusController.close();
+  }
+}
