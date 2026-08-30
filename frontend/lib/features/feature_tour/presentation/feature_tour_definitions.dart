@@ -2,12 +2,12 @@ import 'feature_tour_overlay.dart';
 import 'feature_tour_targets.dart';
 
 abstract final class FeatureTourIds {
-  static const map = 'map-v7';
-  static const stamp = 'stamp-v5';
+  static const map = 'map-v8';
+  static const stamp = 'stamp-v6';
   static const passport = 'passport-v5';
   static const potato = 'potato-v6';
   static const mission = 'mission-v4';
-  static const spot = 'spot-v1';
+  static const spot = 'spot-v2';
   static const myPage = 'my-page-v3';
   static const travelRecord = 'travel-record-v2';
 }
@@ -42,8 +42,6 @@ abstract final class FeatureTourDefinitions {
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapMarker,
-      spotlightTargetKey: FeatureTourTargets.mapSelectedSpotCard,
-      interactionTargetKey: FeatureTourTargets.mapMarker,
       title: '궁금한 장소를 눌러보세요',
       description: '장소를 고르면 방문 인증과 상세 정보를 확인할 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
@@ -89,7 +87,7 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.stampVisit,
       title: '방문 인증을 남겨보세요',
-      description: '현장에서 인증하면 여행 도장이 패스포트에 기록돼요.',
+      description: '현장에서 인증하면 스탬프를 얻고, 명소의 관광 오디오 해설도 들을 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '방문 인증하기를 눌러보세요',
     ),
@@ -152,14 +150,14 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.audioPlay,
       title: '관광 해설을 들어보세요',
-      description: '명소에 얽힌 이야기를 오디오로 천천히 들어볼 수 있어요.',
+      description: '명소 이야기를 들은 뒤 방문 인증을 마치면 스탬프가 패스포트에 기록돼요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '재생 버튼을 눌러보세요',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.visitVerify,
       title: '방문 인증을 남겨보세요',
-      description: '현장에서 인증하면 여행 도장이 패스포트에 기록돼요.',
+      description: '현장에서 인증하면 이 명소의 스탬프를 얻고 패스포트에 기록돼요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '방문 인증하기를 눌러보세요',
     ),

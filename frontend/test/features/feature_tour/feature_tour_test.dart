@@ -93,18 +93,17 @@ void main() {
       final mapMarkerStep = FeatureTourDefinitions.map.firstWhere(
         (step) => step.targetKey == FeatureTourTargets.mapMarker,
       );
-      expect(
-        mapMarkerStep.spotlightTargetKey,
-        same(FeatureTourTargets.mapSelectedSpotCard),
-      );
-      expect(
-        mapMarkerStep.interactionTargetKey,
-        same(FeatureTourTargets.mapMarker),
-      );
+      expect(mapMarkerStep.spotlightTargetKey, isNull);
+      expect(mapMarkerStep.interactionTargetKey, isNull);
       expect(
         mapMarkerStep.cardPlacement,
         FeatureTourCardPlacement.aboveFooter,
       );
+      final routeModeStep = FeatureTourDefinitions.map.firstWhere(
+        (step) => step.targetKey == FeatureTourTargets.routeMode,
+      );
+      expect(routeModeStep.title, contains('내 동선'));
+      expect(routeModeStep.advanceType, CoachMarkAdvanceType.targetTap);
       expect(
         FeatureTourDefinitions.stamp.map((step) => step.targetKey),
         contains(FeatureTourTargets.passportButton),
@@ -113,6 +112,11 @@ void main() {
         FeatureTourDefinitions.stamp.map((step) => step.targetKey),
         contains(FeatureTourTargets.stampVisit),
       );
+      final stampVisitStep = FeatureTourDefinitions.stamp.firstWhere(
+        (step) => step.targetKey == FeatureTourTargets.stampVisit,
+      );
+      expect(stampVisitStep.description, contains('스탬프'));
+      expect(stampVisitStep.description, contains('오디오 해설'));
       expect(
         FeatureTourDefinitions.mission.map((step) => step.targetKey),
         contains(FeatureTourTargets.missionDetailAction),
@@ -166,6 +170,7 @@ void main() {
         ),
         isTrue,
       );
+      expect(FeatureTourDefinitions.spot.first.description, contains('스탬프'));
       expect(
         FeatureTourDefinitions.passport.single.description,
         contains('스탬프'),

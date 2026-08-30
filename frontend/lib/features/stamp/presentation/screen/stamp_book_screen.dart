@@ -2077,30 +2077,41 @@ class _StampSpotActionCard extends ConsumerWidget {
           ),
         ],
       ),
-      child: KeyedSubtree(
-        key: FeatureTourTargets.stampVisit,
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 160),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeOutCubic,
-            child: hasSelection
-                ? _SelectedStampSpotContent(
-                    key: ValueKey(spot!.spotId),
-                    region: region!,
-                    stamp: stamp,
-                    spot: spot!,
-                    spotDetail: spotDetail,
-                    onSpotTap: onSpotTap,
-                  )
-                : const _EmptyStampSpotContent(
-                    key: ValueKey('empty-stamp-spot-card'),
-                  ),
+      child: Stack(
+        children: [
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 160),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeOutCubic,
+              child: hasSelection
+                  ? _SelectedStampSpotContent(
+                      key: ValueKey(spot!.spotId),
+                      region: region!,
+                      stamp: stamp,
+                      spot: spot!,
+                      spotDetail: spotDetail,
+                      onSpotTap: onSpotTap,
+                    )
+                  : const _EmptyStampSpotContent(
+                      key: ValueKey('empty-stamp-spot-card'),
+                    ),
+            ),
           ),
-        ),
+          if (hasSelection)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 40,
+              child: IgnorePointer(
+                child: SizedBox(key: FeatureTourTargets.stampVisit),
+              ),
+            ),
+        ],
       ),
     );
   }

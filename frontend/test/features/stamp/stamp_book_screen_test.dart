@@ -9,6 +9,7 @@ import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_guide_controller.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_playback_controller.dart';
 import 'package:potato_mubwanna/features/audio/domain/audio_guide.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller.dart';
 import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
@@ -68,6 +69,11 @@ void main() {
     expect(find.text('오디오 준비중'), findsNothing);
     expect(find.text('스탬프 준비중'), findsNothing);
     expect(find.text('방문 인증하기'), findsOneWidget);
+    expect(find.byKey(FeatureTourTargets.stampVisit), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(FeatureTourTargets.stampVisit)).height,
+      40,
+    );
     expect(find.text('투어 진행률'), findsNothing);
   });
 
