@@ -448,18 +448,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             spotsState: spotsState,
             onOpenFullMap: _openFullMap,
             onSpotPressed: (spot) {
-              final featureTour = FeatureTourScope.maybeOf(context);
-              final isGuidedGoodNowStep = featureTour?.isActive == true &&
-                  featureTour?.currentStep.targetKey ==
-                      FeatureTourTargets.mapGoodNowCard;
-              featureTour?.completeTarget(
+              FeatureTourScope.maybeOf(context)?.completeTarget(
                 FeatureTourTargets.mapGoodNowCard,
               );
-              // 안내 중에는 장소 카드 확인 뒤 `지도 크게 보기` 버튼을
-              // 직접 눌러보는 다음 단계가 이어지도록 홈을 유지한다.
-              if (isGuidedGoodNowStep) {
-                return;
-              }
               setState(() {
                 _showFullMap = true;
                 _selectedSpotId = spot.id;
@@ -475,208 +466,225 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     }
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          _returnToDiscoveryHome();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: spotsState.when(
-                    data: (spots) {
-                      final hasMapConfiguration = widget.hasMapConfiguration ??
-                          (kIsWeb
-                              ? AppEnvironment.kakaoJavaScriptKey.isNotEmpty
-                              : AppEnvironment.kakaoNativeAppKey.isNotEmpty);
-                      if (!hasMapConfiguration) {
-                        return const _MapConfigurationError();
-                      }
+    return Builder(
+      builder: (context) {
+        final scaffold = Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: spotsState.when(
+                      data: (spots) {
+                        final hasMapConfiguration = widget
+                                .hasMapConfiguration ??
+                            (kIsWeb
+                                ? AppEnvironment.kakaoJavaScriptKey.isNotEmpty
+                                : AppEnvironment.kakaoNativeAppKey.isNotEmpty);
+                        if (!hasMapConfiguration) {
+                          return const _MapConfigurationError();
+                        }
 
-                      final recommendations = recommendationState.valueOrNull ??
-                          const <SpotRecommendation>[];
-                      final displaySpots = _mergeRecommendations(
-                        spots,
-                        recommendations,
-                      );
-                      final visibleSpots = _visibleSpots(
-                        displaySpots,
-                        favoriteSpotIds,
-                      );
-                      final selectedSpot = _selectedSpot(
-                        visibleSpots,
-                        preferredSpotId: recommendations.isEmpty
-                            ? null
-                            : recommendations.first.spotId,
-                      );
-                      final backendRoute = favoriteSpotRouteState.valueOrNull;
-                      final orderedFavoriteSpots = _orderedFavoriteSpots(
-                        displaySpots,
-                        favoriteSpotIds,
-                        backendRoute,
-                        selectedSpot,
-                      );
-                      final activeMapSpots =
-                          _isRouteMode ? orderedFavoriteSpots : visibleSpots;
-                      final activeRoutePolyline = _isRouteMode
-                          ? orderedFavoriteSpots
-                              .map(
-                                (spot) => FavoriteSpotRoutePoint(
-                                  latitude: spot.latitude,
-                                  longitude: spot.longitude,
-                                ),
-                              )
-                              .toList()
-                          : const <FavoriteSpotRoutePoint>[];
-                      final activeSheetController = _isRouteMode
-                          ? _routeSheetController
-                          : _spotSheetController;
-                      final initialSheetSize = _isRouteMode
-                          ? (orderedFavoriteSpots.isEmpty ? 0.34 : 0.46)
-                          : selectedSpot == null
-                              ? 0.24
-                              : (selectedSpot.effectiveImageUrls.isNotEmpty ||
-                                      selectedSpot.menuItems.isNotEmpty ||
-                                      selectedSpot.hasBusinessInfo)
-                                  ? 0.40
-                                  : 0.28;
-                      return Stack(
-                        children: [
-                          Positioned.fill(
-                            child: _PotatoMapPreview(
-                              spots: activeMapSpots,
-                              routePolyline: activeRoutePolyline,
-                              routeSpotIds: _isRouteMode
-                                  ? orderedFavoriteSpots
-                                      .map((spot) => spot.id)
-                                      .toList(growable: false)
-                                  : const [],
-                              favoriteSpotIds: favoriteSpotIds,
-                              currentLocation: _currentLocation,
-                              currentLocationFocusTick:
-                                  _currentLocationFocusTick,
-                              onSpotSelected: _selectSpotById,
-                              mapViewBuilder: widget.mapViewBuilder,
-                            ),
-                          ),
-                          if (!_isRouteMode && activeMapSpots.isNotEmpty)
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: FractionallySizedBox(
-                                  alignment: Alignment.topCenter,
-                                  widthFactor: 1,
-                                  heightFactor: 1 - initialSheetSize,
-                                  child: SizedBox(
-                                    key: FeatureTourTargets.mapMarker,
+                        final recommendations =
+                            recommendationState.valueOrNull ??
+                                const <SpotRecommendation>[];
+                        final displaySpots = _mergeRecommendations(
+                          spots,
+                          recommendations,
+                        );
+                        final visibleSpots = _visibleSpots(
+                          displaySpots,
+                          favoriteSpotIds,
+                        );
+                        final selectedSpot = _selectedSpot(
+                          visibleSpots,
+                          preferredSpotId: recommendations.isEmpty
+                              ? null
+                              : recommendations.first.spotId,
+                        );
+                        final backendRoute = favoriteSpotRouteState.valueOrNull;
+                        final orderedFavoriteSpots = _orderedFavoriteSpots(
+                          displaySpots,
+                          favoriteSpotIds,
+                          backendRoute,
+                          selectedSpot,
+                        );
+                        final activeMapSpots =
+                            _isRouteMode ? orderedFavoriteSpots : visibleSpots;
+                        final activeRoutePolyline = _isRouteMode
+                            ? orderedFavoriteSpots
+                                .map(
+                                  (spot) => FavoriteSpotRoutePoint(
+                                    latitude: spot.latitude,
+                                    longitude: spot.longitude,
                                   ),
-                                ),
+                                )
+                                .toList()
+                            : const <FavoriteSpotRoutePoint>[];
+                        final activeSheetController = _isRouteMode
+                            ? _routeSheetController
+                            : _spotSheetController;
+                        final initialSheetSize = _isRouteMode
+                            ? (orderedFavoriteSpots.isEmpty ? 0.34 : 0.46)
+                            : selectedSpot == null
+                                ? 0.24
+                                : (selectedSpot.effectiveImageUrls.isNotEmpty ||
+                                        selectedSpot.menuItems.isNotEmpty ||
+                                        selectedSpot.hasBusinessInfo)
+                                    ? 0.40
+                                    : 0.28;
+                        return Stack(
+                          children: [
+                            Positioned.fill(
+                              child: _PotatoMapPreview(
+                                spots: activeMapSpots,
+                                routePolyline: activeRoutePolyline,
+                                routeSpotIds: _isRouteMode
+                                    ? orderedFavoriteSpots
+                                        .map((spot) => spot.id)
+                                        .toList(growable: false)
+                                    : const [],
+                                favoriteSpotIds: favoriteSpotIds,
+                                currentLocation: _currentLocation,
+                                currentLocationFocusTick:
+                                    _currentLocationFocusTick,
+                                onSpotSelected: _selectSpotById,
+                                mapViewBuilder: widget.mapViewBuilder,
                               ),
                             ),
-                          Positioned(
-                            left: 12,
-                            right: 12,
-                            top: 18,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _CategoryFilterBar(
-                                  categories: _categories,
-                                  selectedIndex: _selectedCategoryIndex,
-                                  onSelected: _selectCategory,
-                                ),
-                                const SizedBox(height: 10),
-                                _RouteModeChip(
-                                  favoriteCount: favoriteSpotIds.length,
-                                  selected: _isRouteMode,
-                                  onTap: _isRouteMode
-                                      ? _exitRouteMode
-                                      : () => _enterRouteMode(
-                                            orderedFavoriteSpots,
-                                          ),
-                                ),
-                                if (recommendationSourceSpotId != null) ...[
-                                  const SizedBox(height: 10),
-                                  _RecommendationStatusChip(
-                                    state: recommendationState,
-                                    onRetry: () => ref.invalidate(
-                                      spotRecommendationsProvider(
-                                        recommendationSourceSpotId,
-                                      ),
+                            if (!_isRouteMode && activeMapSpots.isNotEmpty)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.topCenter,
+                                    widthFactor: 1,
+                                    heightFactor: 1 - initialSheetSize,
+                                    child: SizedBox(
+                                      key: FeatureTourTargets.mapMarker,
                                     ),
                                   ),
+                                ),
+                              ),
+                            Positioned(
+                              left: 12,
+                              right: 12,
+                              top: 18,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _CategoryFilterBar(
+                                    categories: _categories,
+                                    selectedIndex: _selectedCategoryIndex,
+                                    onSelected: _selectCategory,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _RouteModeChip(
+                                    favoriteCount: favoriteSpotIds.length,
+                                    selected: _isRouteMode,
+                                    onTap: _isRouteMode
+                                        ? _exitRouteMode
+                                        : () => _enterRouteMode(
+                                              orderedFavoriteSpots,
+                                            ),
+                                  ),
+                                  if (recommendationSourceSpotId != null) ...[
+                                    const SizedBox(height: 10),
+                                    _RecommendationStatusChip(
+                                      state: recommendationState,
+                                      onRetry: () => ref.invalidate(
+                                        spotRecommendationsProvider(
+                                          recommendationSourceSpotId,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
-                            ),
-                          ),
-                          if (_isRouteMode)
-                            _FavoriteRouteSheet(
-                              sheetController: _routeSheetController,
-                              routeSpots: orderedFavoriteSpots,
-                              currentLocation: _currentLocation,
-                              onBrowsePressed: _exitRouteMode,
-                              onReorder: (oldIndex, newIndex) =>
-                                  _reorderRouteSpot(
-                                oldIndex,
-                                newIndex,
-                                orderedFavoriteSpots,
-                              ),
-                              onFavoritePressed: (spot) => _toggleFavoriteSpot(
-                                spot.id,
-                                wasFavorite: true,
-                              ),
-                            )
-                          else if (selectedSpot == null)
-                            const Positioned.fill(
-                              child: _EmptySpotMessage(),
-                            )
-                          else
-                            _RouteRecommendationSheet(
-                              key: const ValueKey('route-sheet'),
-                              sheetController: _spotSheetController,
-                              selectedSpot: selectedSpot,
-                              isFavorite:
-                                  favoriteSpotIds.contains(selectedSpot.id),
-                              onNavigationPressed: () =>
-                                  _openSpotNavigation(selectedSpot),
-                              onFavoritePressed: () async {
-                                await _toggleFavoriteSpot(
-                                  selectedSpot.id,
-                                  wasFavorite:
-                                      favoriteSpotIds.contains(selectedSpot.id),
-                                );
-                              },
-                            ),
-                          Positioned.fill(
-                            child: _SheetAnchoredMapControls(
-                              controller: activeSheetController,
-                              initialSheetSize: initialSheetSize,
-                              onHomePressed: _returnToDiscoveryHome,
-                              onLocatePressed: () => unawaited(
-                                _loadCurrentLocation(focusMap: true),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                    loading: () => const _MapLoading(),
-                    error: (_, __) => _MapDataError(
-                      onRetry: () => ref.invalidate(mapSpotsProvider),
+                            if (_isRouteMode)
+                              _FavoriteRouteSheet(
+                                sheetController: _routeSheetController,
+                                routeSpots: orderedFavoriteSpots,
+                                currentLocation: _currentLocation,
+                                onBrowsePressed: _exitRouteMode,
+                                onReorder: (oldIndex, newIndex) =>
+                                    _reorderRouteSpot(
+                                  oldIndex,
+                                  newIndex,
+                                  orderedFavoriteSpots,
+                                ),
+                                onFavoritePressed: (spot) =>
+                                    _toggleFavoriteSpot(
+                                  spot.id,
+                                  wasFavorite: true,
+                                ),
+                              )
+                            else if (selectedSpot == null)
+                              const Positioned.fill(
+                                child: _EmptySpotMessage(),
+                              )
+                            else
+                              _RouteRecommendationSheet(
+                                key: const ValueKey('route-sheet'),
+                                sheetController: _spotSheetController,
+                                selectedSpot: selectedSpot,
+                                isFavorite:
+                                    favoriteSpotIds.contains(selectedSpot.id),
+                                onNavigationPressed: () =>
+                                    _openSpotNavigation(selectedSpot),
+                                onFavoritePressed: () async {
+                                  await _toggleFavoriteSpot(
+                                    selectedSpot.id,
+                                    wasFavorite: favoriteSpotIds
+                                        .contains(selectedSpot.id),
+                                  );
+                                },
+                              ),
+                            Positioned.fill(
+                              child: _SheetAnchoredMapControls(
+                                controller: activeSheetController,
+                                initialSheetSize: initialSheetSize,
+                                onHomePressed: _returnToDiscoveryHome,
+                                onLocatePressed: () => unawaited(
+                                  _loadCurrentLocation(focusMap: true),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                      loading: () => const _MapLoading(),
+                      error: (_, __) => _MapDataError(
+                        onRetry: () => ref.invalidate(mapSpotsProvider),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+        if (Router.maybeOf(context) == null) {
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) {
+                _returnToDiscoveryHome();
+              }
+            },
+            child: scaffold,
+          );
+        }
+        return BackButtonListener(
+          onBackButtonPressed: () async {
+            _returnToDiscoveryHome();
+            return true;
+          },
+          child: scaffold,
+        );
+      },
     );
   }
 

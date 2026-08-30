@@ -18,11 +18,11 @@ class TokenStorage implements PushTokenStore {
   final FlutterSecureStorage _storage;
 
   Future<String?> readAccessToken() {
-    return _storage.read(key: _accessTokenKey);
+    return _read(_accessTokenKey);
   }
 
   Future<String?> readRefreshToken() {
-    return _storage.read(key: _refreshTokenKey);
+    return _read(_refreshTokenKey);
   }
 
   Future<void> saveTokens({
@@ -44,7 +44,7 @@ class TokenStorage implements PushTokenStore {
 
   @override
   Future<String?> readRegisteredPushToken() {
-    return _storage.read(key: _registeredPushTokenKey);
+    return _read(_registeredPushTokenKey);
   }
 
   @override
@@ -55,5 +55,20 @@ class TokenStorage implements PushTokenStore {
   @override
   Future<void> clearRegisteredPushToken() {
     return _storage.delete(key: _registeredPushTokenKey);
+  }
+
+  Future<String?> _read(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } catch (_) {
+      // Android 백업에서 암호화 값만 복원되는 등 저장소를 해독할 수 없는
+      // 경우에는 기존 세션을 폐기하고 비로그인 상태로 안전하게 복구한다.
+      try {
+        await _storage.deleteAll();
+      } catch (_) {
+        // 정리 실패가 공개 API 요청까지 막지 않도록 세션 없음으로 처리한다.
+      }
+      return null;
+    }
   }
 }
