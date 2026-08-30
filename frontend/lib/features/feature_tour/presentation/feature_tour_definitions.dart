@@ -2,10 +2,10 @@ import 'feature_tour_overlay.dart';
 import 'feature_tour_targets.dart';
 
 abstract final class FeatureTourIds {
-  static const map = 'map-v5';
+  static const map = 'map-v6';
   static const stamp = 'stamp-v4';
   static const passport = 'passport-v4';
-  static const potato = 'potato-v4';
+  static const potato = 'potato-v5';
   static const mission = 'mission-v3';
   static const spot = 'spot-v1';
   static const myPage = 'my-page-v2';
@@ -28,11 +28,17 @@ abstract final class FeatureTourDefinitions {
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapGoodNowCard,
-      fallbackTargetKey: FeatureTourTargets.mapFullView,
       title: '지금 가기 좋은 곳도 살펴보세요',
       description: '마음에 드는 장소를 누르면 지도에서 바로 확인할 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '장소 카드를 눌러보세요',
+    ),
+    FeatureTourStep(
+      targetKey: FeatureTourTargets.mapFullView,
+      title: '지도를 크게 열어보세요',
+      description: '장소 마커를 직접 눌러 자세히 살펴볼 수 있어요.',
+      advanceType: CoachMarkAdvanceType.targetTap,
+      interactionHint: '지도 크게 보기 버튼을 눌러보세요',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapMarker,

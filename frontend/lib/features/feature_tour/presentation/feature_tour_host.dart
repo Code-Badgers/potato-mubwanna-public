@@ -179,13 +179,23 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
   }
 
   Future<void> _loadCompletionState(int loadGeneration) async {
-    bool completed;
+    bool seen;
     try {
-      completed = await widget.statusStore.hasCompleted(widget.tourId);
+      seen = await widget.statusStore.hasSeen(widget.tourId);
     } catch (_) {
       return;
     }
-    if (!mounted || loadGeneration != _loadGeneration || completed) {
+    if (!mounted || loadGeneration != _loadGeneration || seen) {
+      return;
+    }
+    // Mark the page tour as seen before activation. If the user leaves a page
+    // midway, returning to it should not restart the same tour endlessly.
+    try {
+      await widget.statusStore.markSeen(widget.tourId);
+    } catch (_) {
+      // A local preference failure must not block the page itself.
+    }
+    if (!mounted || loadGeneration != _loadGeneration) {
       return;
     }
     // The host child is already mounted when the status read completes. The

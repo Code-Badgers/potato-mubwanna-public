@@ -30,6 +30,16 @@ void main() {
       expect(await store.hasCompleted('stamp-v2'), isTrue);
     });
 
+    test('stores seen state independently from completion', () async {
+      const store = SharedPreferencesFeatureTourStatusStore();
+
+      await store.markSeen('map-v3');
+
+      expect(await store.hasSeen('map-v3'), isTrue);
+      expect(await store.hasCompleted('map-v3'), isFalse);
+      expect(await store.hasSeen('stamp-v3'), isFalse);
+    });
+
     test('keeps compatibility with the legacy completion key', () async {
       SharedPreferences.setMockInitialValues({
         'completedFeatureTourVersion': '1',
@@ -50,6 +60,16 @@ void main() {
             (step) => step.targetKey,
             'targetKey',
             same(FeatureTourTargets.mapCourseCard),
+          ),
+        ),
+      );
+      expect(
+        FeatureTourDefinitions.map,
+        contains(
+          isA<FeatureTourStep>().having(
+            (step) => step.targetKey,
+            'targetKey',
+            same(FeatureTourTargets.mapFullView),
           ),
         ),
       );
@@ -370,6 +390,63 @@ void main() {
       expect(find.text('새 첫 단계'), findsNothing);
     });
 
+    testWidgets('does not restart a seen tour after leaving before completion',
+        (tester) async {
+      final firstKey = GlobalKey();
+      final secondKey = GlobalKey();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'leave-before-complete',
+          steps: [
+            FeatureTourStep(
+              targetKey: firstKey,
+              title: '첫 단계',
+              description: '첫 단계를 확인해보세요.',
+            ),
+            FeatureTourStep(
+              targetKey: secondKey,
+              title: '두 번째 단계',
+              description: '두 번째 단계를 확인해보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+      expect(find.text('첫 단계'), findsOneWidget);
+      expect(store.seenIds, contains('leave-before-complete'));
+      expect(store.completedIds, isNot(contains('leave-before-complete')));
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'leave-before-complete',
+          steps: [
+            FeatureTourStep(
+              targetKey: firstKey,
+              title: '첫 단계',
+              description: '첫 단계를 확인해보세요.',
+            ),
+            FeatureTourStep(
+              targetKey: secondKey,
+              title: '두 번째 단계',
+              description: '두 번째 단계를 확인해보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+
+      expect(find.text('첫 단계'), findsNothing);
+      expect(find.text('두 번째 단계'), findsNothing);
+    });
+
     testWidgets('completing one page tour does not hide another page tour',
         (tester) async {
       final mapKey = GlobalKey();
@@ -500,7 +577,18 @@ class _DelayedTargetPageState extends State<_DelayedTargetPage> {
 }
 
 class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
+  final seenIds = <String>{};
   final completedIds = <String>{};
+
+  @override
+  Future<bool> hasSeen(String version) async {
+    return seenIds.contains(version) || completedIds.contains(version);
+  }
+
+  @override
+  Future<void> markSeen(String version) async {
+    seenIds.add(version);
+  }
 
   @override
   Future<bool> hasCompleted(String version) async {
