@@ -39,7 +39,7 @@
 | `flutter analyze` | PASS, No issues found |
 | `flutter test test/features/feature_tour/feature_tour_test.dart --reporter expanded` | PASS, 17 tests |
 | 지도·스탬프·감자밭·미션·마이 화면 회귀 테스트 | PASS, 93 tests |
-| `flutter test --reporter compact` | PASS, 350 tests |
+| `flutter test --reporter compact` | PASS, 354 tests |
 | `git diff --check` | PASS |
 
 ## 최신 main 병합 충돌 해결
@@ -50,6 +50,12 @@ PR #454의 최신 `main` 병합 과정에서 `stamp_book_screen_test.dart`가 �
 - 충돌 파일: `frontend/test/features/stamp/stamp_book_screen_test.dart`
 - 병합 후 스탬프 화면 테스트: PASS, 15 tests
 - 병합 후 전체 Flutter 테스트: PASS, 340 tests
+- 병합 후 `flutter analyze`: PASS, No issues found
+
+추가로 최신 `main`의 인증 복구 변경을 반영하는 과정에서는 `map_screen.dart` 한 곳이 충돌했습니다. 최신 지도 화면 구조를 유지하고, 전체 지도 Coach Mark가 장소 카드 위의 실제 지도 영역 전체만 Spotlight하도록 결합했습니다.
+
+- 병합 후 지도·Coach Mark·미션 대상 테스트: PASS, 63 tests
+- 병합 후 전체 Flutter 테스트: PASS, 354 tests
 - 병합 후 `flutter analyze`: PASS, No issues found
 
 ## 수정 중 발견 및 해결한 문제
