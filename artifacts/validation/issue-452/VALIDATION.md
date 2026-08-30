@@ -4,7 +4,7 @@
 
 - 이슈: #452 `fix: Coach Mark 노출 누락 및 반복 실행·버벅거림 개선`
 - 브랜치: `fix/452-coach-mark-stability-and-coverage`
-- 범위: 페이지별 Coach Mark lifecycle, 타깃 측정/스크롤, 주요 화면 타깃 복구, 안전 영역 보정, 스탬프 선택 명소 카드 정보 보강
+- 범위: 설치별·페이지별 Coach Mark lifecycle, 타깃 측정/스크롤, 주요 화면 타깃 복구, 안전 영역 보정, 스탬프 선택 명소 카드 정보 보강
 - 제외 범위: API, DB, 기존 미션·스탬프·지도 기능 계약
 
 ## 변경 사항
@@ -16,6 +16,8 @@
 - 지도·스탬프·미션·마이페이지·여행 기록 타깃 연결 복구
 - 미션 목록이 비어도 첫 일일 미션 타깃을 사용할 수 있도록 안정적인 fallback 타깃 연결
 - 동일 페이지의 새 안내 단계가 이전 완료 기록에 가려지지 않도록 페이지별 tour version 갱신
+- 페이지별 tour를 처음 활성화할 때 본 상태를 먼저 영속화해, 중간에 다른 페이지로 이동해도 같은 설치에서 해당 tour가 다시 시작되지 않도록 보장
+- 기존 완료 기록도 본 상태로 호환하고, map `v6`에서 `지도 크게 보기`, potato `v5`에서 감자밭 안내를 다시 노출
 - Coach Mark 설명 카드가 Safe Area 밖으로 나가지 않도록 위치와 높이 보정
 - 스탬프 marker의 기존 테스트 식별자를 유지하고 방문 인증 타깃의 중복 GlobalKey 제거
 - 기존 `spotDetailProvider`를 재사용해 선택한 명소 카드에 이미지, 설명, 주소, 영업시간을 실제 값이 있을 때만 표시
@@ -26,9 +28,9 @@
 | 검증 | 결과 |
 | --- | --- |
 | `flutter analyze` | PASS, No issues found |
-| `flutter test test/features/feature_tour/feature_tour_test.dart` | PASS, 9 tests |
+| `flutter test test/features/feature_tour/feature_tour_test.dart` | PASS, 11 tests |
 | `flutter test test/features/stamp/stamp_book_screen_test.dart` | PASS, 15 tests |
-| `flutter test` | PASS, 342 tests |
+| `flutter test` | PASS, 344 tests |
 | `git diff --check` | PASS |
 
 ## 최신 main 병합 충돌 해결
@@ -54,10 +56,11 @@ PR #454의 최신 `main` 병합 과정에서 `stamp_book_screen_test.dart`가 �
 - 환경 변수: 없음
 - 기존 사용자 변경 `frontend/ios/Podfile.lock`: 수정하거나 스테이징하지 않음
 - 스탬프 카드 정보 보강은 기존 API/DB 계약과 장소 상세 provider를 재사용하며 별도 API/DB 변경 없음
-- 페이지별 Coach Mark 완료 상태는 기존 저장소를 재사용하며 map `v5`, stamp/passport `v4`, mission `v3`, my page `v2`로 안내 계약을 갱신함
+- 페이지별 Coach Mark 상태는 기존 SharedPreferences 저장소를 확장해 `seenFeatureTourVersions`에 최초 표시 여부를 저장함. map `v6`, stamp/passport `v4`, potato `v5`, mission `v3`, my page `v2`로 안내 계약을 관리함
+- 완료 상태(`completedFeatureTourVersion`, `completedFeatureTourVersions`)는 기존 호환성을 유지하며, 완료된 tour는 seen 상태로 간주함
 
 ## 남은 리스크
 
 - 실제 iPhone/Android에서 Kakao Map 늦은 렌더링, route 전환 직후 타깃 생성, 실제 스와이프는 수동 확인이 필요합니다.
 - 타깃이 준비되지 않으면 최대 약 7.2초까지 기다린 뒤 해당 Step을 안전하게 건너뜁니다.
-- 이전 앱 데이터에 이미 같은 페이지 완료 버전이 저장된 개발 기기에서는 재현을 위해 앱 데이터 초기화 또는 재설치가 필요할 수 있습니다.
+- 같은 설치에서 페이지 tour를 처음 표시한 직후 `seenFeatureTourVersions`가 저장되므로, 미완료 상태로 이탈해도 재진입 시 반복되지 않습니다. 실제 기기에서 새 tour를 확인하려면 앱 데이터 초기화 또는 재설치가 필요할 수 있습니다.
