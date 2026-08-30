@@ -338,7 +338,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     // 완료된 카드는 목록에서 제외되므로, 진행 수치는 필터 전 상태로 계산한다.
     final completedMissionCount = missions
         .where((mission) =>
-            mission.active && mission.status == MissionStatus.completed)
+            mission.active &&
+            mission.group == MissionGroup.daily &&
+            mission.status == MissionStatus.completed)
         .length
         .clamp(0, todayMissionTotalCount)
         .toInt();

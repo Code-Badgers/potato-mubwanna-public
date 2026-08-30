@@ -18,6 +18,8 @@
   without clearing or changing production users' stored tour state.
 - Mission home keeps the existing three daily missions and adds a visible but
   restrained daily summary with status copy and progress.
+- The daily summary counts only completed `DAILY` missions, so a previously
+  completed one-time Jumsooni mission cannot appear as today's completion.
 
 ## Verification
 
@@ -27,6 +29,7 @@
 | `flutter test test/features/feature_tour/feature_tour_test.dart test/features/mission/mission_screen_test.dart` | PASS, 37 tests |
 | `flutter analyze` | PASS, no issues found |
 | `flutter test` | PASS, 357 tests |
+| `flutter test test/features/mission/mission_repository_test.dart test/features/mission/mission_screen_test.dart` | PASS, 21 tests |
 
 ## Added coverage
 
@@ -37,10 +40,15 @@
 - An incomplete page tour resumes at the saved step during the same process.
 - The same incomplete tour stays hidden after a simulated app process restart.
 - Mission home renders a keyed daily summary, status copy, count, and progress.
+- Completing a Jumsooni special mission leaves the daily completion count
+  unchanged.
 
 ## Notes
 
 - No API, database, or production feature-tour reset behavior was changed.
+- Backend daily periods already use `Asia/Seoul` day boundaries and ignore
+  previous-day completion records; this fix corrects only the frontend's
+  cross-group aggregation.
 - Local QA can append
   `--dart-define=FEATURE_TOUR_PREVIEW_CYCLE=seohyeon-20260830` to display one
   fresh page-specific preview cycle. Reusing the same value still preserves

@@ -122,7 +122,7 @@ void main() {
     expect(find.byKey(FeatureTourTargets.missionDaily), findsOneWidget);
   });
 
-  testWidgets('opens mission detail and updates completion state',
+  testWidgets('special mission completion does not increase daily count',
       (tester) async {
     await _pumpMissionScreen(tester);
 
@@ -160,7 +160,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
     await tester.pumpAndSettle();
 
-    expect(find.text('2 / 3'), findsOneWidget);
+    expect(find.text('1 / 3'), findsOneWidget);
     expect(find.text('강원도 이야기 풀어볼까요?'), findsNothing);
   });
 
