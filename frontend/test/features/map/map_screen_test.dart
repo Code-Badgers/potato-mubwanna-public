@@ -110,10 +110,10 @@ void main() {
     expect(find.text('길찾기'), findsOneWidget);
     expect(find.text('상세보기'), findsNothing);
     expect(find.byKey(FeatureTourTargets.mapMarker), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(FeatureTourTargets.mapMarker)),
-      const Size(72, 88),
-    );
+    final mapTourTargetSize =
+        tester.getSize(find.byKey(FeatureTourTargets.mapMarker));
+    expect(mapTourTargetSize.width, greaterThan(300));
+    expect(mapTourTargetSize.height, greaterThan(250));
 
     await tester.tap(find.byKey(const ValueKey('full-map-home-button')));
     await tester.pumpAndSettle();

@@ -40,6 +40,20 @@ void main() {
       expect(await store.hasSeen('stamp-v3'), isFalse);
     });
 
+    test('stores page tour progress until that tour is completed', () async {
+      const store = SharedPreferencesFeatureTourStatusStore();
+
+      await store.markStepIndex('stamp-v7', 2);
+
+      expect(await store.readStepIndex('stamp-v7'), 2);
+      expect(await store.readStepIndex('mission-v5'), 0);
+
+      await store.markCompleted('stamp-v7');
+
+      expect(await store.readStepIndex('stamp-v7'), 0);
+      expect(await store.hasCompleted('stamp-v7'), isTrue);
+    });
+
     test('keeps compatibility with the legacy completion key', () async {
       SharedPreferences.setMockInitialValues({
         'completedFeatureTourVersion': '1',
@@ -200,6 +214,7 @@ void main() {
         onCompleted: () async {
           completed = true;
         },
+        onStepChanged: (_) async {},
       );
       addTearDown(controller.dispose);
 
@@ -229,10 +244,43 @@ void main() {
         onCompleted: () async {
           completed = true;
         },
+        onStepChanged: (_) async {},
       );
       addTearDown(controller.dispose);
 
       controller.activate();
+      controller.skipUnavailableStep();
+
+      expect(controller.isActive, isFalse);
+      expect(completed, isFalse);
+    });
+
+    test('does not complete when a later final target was never presented', () {
+      var completed = false;
+      final controller = FeatureTourController(
+        tourId: 'missing-final-target',
+        steps: [
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '표시된 첫 단계',
+            description: '첫 단계는 정상 표시됐어요.',
+          ),
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '아직 없는 마지막 단계',
+            description: '대상이 나타날 때까지 기다려야 해요.',
+          ),
+        ],
+        onCompleted: () async {
+          completed = true;
+        },
+        onStepChanged: (_) async {},
+      );
+      addTearDown(controller.dispose);
+
+      controller.activate();
+      controller.markStepPresented();
+      controller.next();
       controller.skipUnavailableStep();
 
       expect(controller.isActive, isFalse);
@@ -366,6 +414,46 @@ void main() {
       expect(store.completedIds, isEmpty);
     });
 
+    testWidgets('does not block the page while a delayed target is loading',
+        (tester) async {
+      final targetKey = GlobalKey();
+      var tapCount = 0;
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'mission-loading-target',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '미션을 골라보세요',
+              description: '미션을 불러온 뒤 안내를 시작해요.',
+            ),
+          ],
+          child: Stack(
+            children: [
+              Center(
+                child: _FeatureTourBlockingProbe(
+                  onTap: () => tapCount += 1,
+                ),
+              ),
+              _DelayedTargetPage(targetKey: targetKey),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.tap(find.byType(_FeatureTourBlockingProbe));
+      await tester.pump();
+
+      expect(tapCount, 1);
+      expect(find.text('미션을 골라보세요'), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 2500));
+      await tester.pumpAndSettle();
+    });
+
     testWidgets(
         'uses the host viewport when auto-scrolling above bottom navigation',
         (tester) async {
@@ -493,7 +581,7 @@ void main() {
       expect(find.text('새 첫 단계'), findsNothing);
     });
 
-    testWidgets('does not restart a seen tour after leaving before completion',
+    testWidgets('resumes the saved step after leaving before completion',
         (tester) async {
       final firstKey = GlobalKey();
       final secondKey = GlobalKey();
@@ -519,8 +607,12 @@ void main() {
       );
       await _settleTour(tester);
       expect(find.text('첫 단계'), findsOneWidget);
+      await tester.tap(find.text('다음'));
+      await _settleTour(tester);
+      expect(find.text('두 번째 단계'), findsOneWidget);
       expect(store.seenIds, contains('leave-before-complete'));
       expect(store.completedIds, isNot(contains('leave-before-complete')));
+      expect(store.stepIndices['leave-before-complete'], 1);
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
@@ -547,7 +639,7 @@ void main() {
       await _settleTour(tester);
 
       expect(find.text('첫 단계'), findsNothing);
-      expect(find.text('두 번째 단계'), findsNothing);
+      expect(find.text('두 번째 단계'), findsOneWidget);
     });
 
     testWidgets('completing one page tour does not hide another page tour',
@@ -704,9 +796,24 @@ class _DelayedTargetPageState extends State<_DelayedTargetPage> {
   }
 }
 
+class _FeatureTourBlockingProbe extends StatelessWidget {
+  const _FeatureTourBlockingProbe({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      child: const Text('화면 사용하기'),
+    );
+  }
+}
+
 class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
   final seenIds = <String>{};
   final completedIds = <String>{};
+  final stepIndices = <String, int>{};
 
   @override
   Future<bool> hasSeen(String version) async {
@@ -719,6 +826,16 @@ class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
   }
 
   @override
+  Future<int> readStepIndex(String version) async {
+    return stepIndices[version] ?? 0;
+  }
+
+  @override
+  Future<void> markStepIndex(String version, int stepIndex) async {
+    stepIndices[version] = stepIndex;
+  }
+
+  @override
   Future<bool> hasCompleted(String version) async {
     return completedIds.contains(version);
   }
@@ -726,5 +843,6 @@ class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
   @override
   Future<void> markCompleted(String version) async {
     completedIds.add(version);
+    stepIndices.remove(version);
   }
 }

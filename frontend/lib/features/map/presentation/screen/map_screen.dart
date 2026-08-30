@@ -569,12 +569,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           if (!_isRouteMode && activeMapSpots.isNotEmpty)
                             Positioned.fill(
                               child: IgnorePointer(
-                                child: Align(
-                                  alignment: Alignment.center,
+                                child: FractionallySizedBox(
+                                  alignment: Alignment.topCenter,
+                                  widthFactor: 1,
+                                  heightFactor: 1 - initialSheetSize,
                                   child: SizedBox(
                                     key: FeatureTourTargets.mapMarker,
-                                    width: 72,
-                                    height: 88,
                                   ),
                                 ),
                               ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
 import 'package:potato_mubwanna/features/potato/data/potato_repository.dart';
 import 'package:potato_mubwanna/features/potato/domain/potato_collection.dart';
@@ -43,6 +44,13 @@ void main() {
     expect(find.widgetWithText(OutlinedButton, '정보 보기'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '대표 감자 변경'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '아직 자라고 있어요'), findsOneWidget);
+    expect(find.byKey(FeatureTourTargets.potatoGrowth), findsOneWidget);
+    expect(find.byKey(FeatureTourTargets.potatoCareActions), findsOneWidget);
+    expect(find.byKey(FeatureTourTargets.potatoInfo), findsOneWidget);
+    expect(
+      find.byKey(FeatureTourTargets.representativePotato),
+      findsOneWidget,
+    );
     expect(find.text('나의 감자 도감'), findsNothing);
     expect(find.text('미획득'), findsNothing);
   });

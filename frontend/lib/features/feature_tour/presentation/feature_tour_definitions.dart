@@ -2,14 +2,14 @@ import 'feature_tour_overlay.dart';
 import 'feature_tour_targets.dart';
 
 abstract final class FeatureTourIds {
-  static const map = 'map-v8';
-  static const stamp = 'stamp-v6';
-  static const passport = 'passport-v5';
-  static const potato = 'potato-v6';
-  static const mission = 'mission-v4';
-  static const spot = 'spot-v2';
-  static const myPage = 'my-page-v3';
-  static const travelRecord = 'travel-record-v2';
+  static const map = 'map-v9';
+  static const stamp = 'stamp-v7';
+  static const passport = 'passport-v6';
+  static const potato = 'potato-v7';
+  static const mission = 'mission-v5';
+  static const spot = 'spot-v3';
+  static const myPage = 'my-page-v4';
+  static const travelRecord = 'travel-record-v3';
 }
 
 abstract final class FeatureTourDefinitions {

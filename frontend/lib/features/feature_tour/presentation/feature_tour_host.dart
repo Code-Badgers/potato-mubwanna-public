@@ -10,11 +10,13 @@ class FeatureTourController extends ChangeNotifier {
     required this.tourId,
     required this.steps,
     required this.onCompleted,
+    required this.onStepChanged,
   });
 
   final String tourId;
   final List<FeatureTourStep> steps;
   final Future<void> Function() onCompleted;
+  final Future<void> Function(int stepIndex) onStepChanged;
 
   int _stepIndex = 0;
   bool _isActive = false;
@@ -25,10 +27,11 @@ class FeatureTourController extends ChangeNotifier {
   int get stepIndex => _stepIndex;
   FeatureTourStep get currentStep => steps[_stepIndex];
 
-  void activate() {
+  void activate({int stepIndex = 0}) {
     if (_isActive || steps.isEmpty || _completionRequested) {
       return;
     }
+    _stepIndex = stepIndex.clamp(0, steps.length - 1).toInt();
     _isActive = true;
     notifyListeners();
   }
@@ -104,6 +107,8 @@ class FeatureTourController extends ChangeNotifier {
       return;
     }
     _stepIndex += 1;
+    _hasPresentedStep = false;
+    unawaited(onStepChanged(_stepIndex));
     notifyListeners();
   }
 
@@ -160,6 +165,7 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
       tourId: widget.tourId,
       steps: widget.steps,
       onCompleted: _persistCompletion,
+      onStepChanged: _persistProgress,
     );
   }
 
@@ -194,24 +200,27 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
   }
 
   Future<void> _loadCompletionState(int loadGeneration) async {
-    bool seen;
+    bool completed;
+    int stepIndex;
     try {
-      seen = await widget.statusStore.hasSeen(widget.tourId);
+      completed = await widget.statusStore.hasCompleted(widget.tourId);
+      stepIndex = await widget.statusStore.readStepIndex(widget.tourId);
     } catch (_) {
       return;
     }
-    if (!mounted || loadGeneration != _loadGeneration || seen) {
+    if (!mounted || loadGeneration != _loadGeneration || completed) {
       return;
     }
     // The host child is already mounted when the status read completes. The
     // overlay schedules its own post-frame target measurement, so activating
     // here also works when a route swaps to another page tour without a new
     // frame being requested afterward.
-    _controller.activate();
+    _controller.activate(stepIndex: stepIndex);
   }
 
   void _handleStepPresented() {
     _controller.markStepPresented();
+    unawaited(_persistProgress(_controller.stepIndex));
     if (_seenPersistRequested) {
       return;
     }
@@ -233,6 +242,14 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
       await widget.statusStore.markCompleted(widget.tourId);
     } catch (_) {
       // Coach Mark 저장 실패가 앱 사용을 막지는 않는다.
+    }
+  }
+
+  Future<void> _persistProgress(int stepIndex) async {
+    try {
+      await widget.statusStore.markStepIndex(widget.tourId, stepIndex);
+    } catch (_) {
+      // 진행 저장 실패가 현재 안내의 사용을 막지는 않는다.
     }
   }
 

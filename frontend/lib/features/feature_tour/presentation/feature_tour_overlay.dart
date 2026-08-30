@@ -69,7 +69,7 @@ class FeatureTourOverlay extends StatefulWidget {
 class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   // Auth and API-backed screens can mount their targets after the first frame.
   // Keep waiting bounded, but give those screens enough time to settle.
-  static const _maxTargetRetries = 60;
+  static const _maxTargetRetries = 120;
   static const _targetRetryDelay = Duration(milliseconds: 120);
   static const _targetStabilizationFrames = 2;
 
@@ -110,6 +110,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       _stableFrameCount = 0;
       _isPreparingTarget = false;
       _unavailableReported = false;
+      _presentationReported = false;
       _scheduleTargetRefresh();
     }
   }
@@ -301,6 +302,12 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
           final target = _isPreparingTarget ? null : _targetRect;
+          // API-backed pages can mount their target after this overlay. Keep
+          // the page usable and visually unchanged until the target is ready,
+          // then present the scrim and card together.
+          if (target == null) {
+            return const SizedBox.expand();
+          }
           return Stack(
             children: [
               Positioned.fill(
@@ -311,8 +318,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
                 ),
               ),
               ..._buildInteractionGuards(size, target),
-              if (!_isPreparingTarget && target != null)
-                _buildDescriptionCard(size, target),
+              _buildDescriptionCard(size, target),
             ],
           );
         },
