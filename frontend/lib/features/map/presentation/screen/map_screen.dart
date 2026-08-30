@@ -448,9 +448,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             spotsState: spotsState,
             onOpenFullMap: _openFullMap,
             onSpotPressed: (spot) {
-              FeatureTourScope.maybeOf(context)?.completeTarget(
+              final featureTour = FeatureTourScope.maybeOf(context);
+              final isGuidedGoodNowStep = featureTour?.isActive == true &&
+                  featureTour?.currentStep.targetKey ==
+                      FeatureTourTargets.mapGoodNowCard;
+              featureTour?.completeTarget(
                 FeatureTourTargets.mapGoodNowCard,
               );
+              // 안내 중에는 장소 카드 확인 뒤 `지도 크게 보기` 버튼을
+              // 직접 눌러보는 다음 단계가 이어지도록 홈을 유지한다.
+              if (isGuidedGoodNowStep) {
+                return;
+              }
               setState(() {
                 _showFullMap = true;
                 _selectedSpotId = spot.id;

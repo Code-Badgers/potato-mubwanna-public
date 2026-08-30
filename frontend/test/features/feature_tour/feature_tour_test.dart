@@ -209,6 +209,30 @@ void main() {
       expect(controller.isActive, isTrue);
       expect(completed, isFalse);
     });
+
+    test('does not complete a tour whose only target was never presented', () {
+      var completed = false;
+      final controller = FeatureTourController(
+        tourId: 'missing-target',
+        steps: [
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '찾을 수 없는 대상',
+            description: '아직 화면에 만들어지지 않았어요.',
+          ),
+        ],
+        onCompleted: () async {
+          completed = true;
+        },
+      );
+      addTearDown(controller.dispose);
+
+      controller.activate();
+      controller.skipUnavailableStep();
+
+      expect(controller.isActive, isFalse);
+      expect(completed, isFalse);
+    });
   });
 
   group('FeatureTourHost', () {
@@ -326,13 +350,87 @@ void main() {
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 2200));
+      expect(store.seenIds, isEmpty);
       expect(store.completedIds, isEmpty);
 
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
 
       expect(find.text('스탬프 장소 둘러보기'), findsOneWidget);
+      expect(store.seenIds, contains('stamp-delayed-target'));
       expect(store.completedIds, isEmpty);
+    });
+
+    testWidgets(
+        'uses the host viewport when auto-scrolling above bottom navigation',
+        (tester) async {
+      final scrollController = ScrollController();
+      final targetKey = GlobalKey();
+
+      addTearDown(scrollController.dispose);
+
+      await tester.pumpWidget(
+        _tourAppWithFooter(
+          store: store,
+          tourId: 'potato-host-viewport',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '아래 기능 확인하기',
+              description: '하단 기능이 보이도록 먼저 화면을 내려요.',
+            ),
+          ],
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              children: [
+                const SizedBox(height: 570),
+                Container(
+                  key: targetKey,
+                  height: 72,
+                  color: Colors.green,
+                ),
+                const SizedBox(height: 260),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await _settleTour(tester);
+
+      expect(scrollController.offset, greaterThan(0));
+      expect(find.text('아래 기능 확인하기'), findsOneWidget);
+    });
+
+    testWidgets('shows a card for a large non-scrollable map target',
+        (tester) async {
+      final mapKey = GlobalKey();
+
+      await tester.pumpWidget(
+        _tourAppWithFooter(
+          store: store,
+          tourId: 'map-large-target',
+          steps: [
+            FeatureTourStep(
+              targetKey: mapKey,
+              title: '궁금한 장소를 눌러보세요',
+              description: '지도에서 마커를 직접 골라보세요.',
+              advanceType: CoachMarkAdvanceType.targetTap,
+              cardPlacement: FeatureTourCardPlacement.aboveFooter,
+            ),
+          ],
+          child: SizedBox.expand(
+            key: mapKey,
+            child: const ColoredBox(color: Colors.lightBlue),
+          ),
+        ),
+      );
+
+      await _settleTour(tester);
+
+      expect(find.text('궁금한 장소를 눌러보세요'), findsOneWidget);
+      expect(store.seenIds, contains('map-large-target'));
     });
 
     testWidgets('does not restart an active tour when the host rebuilds',
@@ -505,6 +603,31 @@ Widget _tourApp({
       steps: steps,
       statusStore: store,
       child: child,
+    ),
+  );
+}
+
+Widget _tourAppWithFooter({
+  required _FakeFeatureTourStatusStore store,
+  required String tourId,
+  required List<FeatureTourStep> steps,
+  required Widget child,
+}) {
+  return MaterialApp(
+    home: Scaffold(
+      body: Column(
+        children: [
+          Expanded(
+            child: FeatureTourHost(
+              tourId: tourId,
+              steps: steps,
+              statusStore: store,
+              child: child,
+            ),
+          ),
+          const SizedBox(height: 180),
+        ],
+      ),
     ),
   );
 }

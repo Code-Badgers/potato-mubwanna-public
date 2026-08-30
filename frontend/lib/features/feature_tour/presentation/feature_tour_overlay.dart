@@ -49,6 +49,7 @@ class FeatureTourOverlay extends StatefulWidget {
     required this.totalSteps,
     required this.onNext,
     required this.onSkip,
+    required this.onPresented,
     required this.onTargetUnavailable,
     super.key,
   });
@@ -58,6 +59,7 @@ class FeatureTourOverlay extends StatefulWidget {
   final int totalSteps;
   final VoidCallback onNext;
   final VoidCallback onSkip;
+  final VoidCallback onPresented;
   final VoidCallback onTargetUnavailable;
 
   @override
@@ -80,6 +82,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   bool _refreshScheduled = false;
   bool _isPreparingTarget = false;
   bool _unavailableReported = false;
+  bool _presentationReported = false;
 
   @override
   void initState() {
@@ -163,7 +166,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
 
     _targetRetryCount = 0;
     final rect = _toOverlayRect(resolved.rect);
-    if (_shouldScrollToTarget(rect)) {
+    if (_shouldScrollToTarget(rect, resolved.key)) {
       unawaited(_prepareTarget(resolved.key, _measurementGeneration));
       return;
     }
@@ -186,6 +189,10 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     setState(() {
       _targetRect = rect;
     });
+    if (!_presentationReported) {
+      _presentationReported = true;
+      widget.onPresented();
+    }
   }
 
   _ResolvedTarget? _resolveTarget() {
@@ -223,8 +230,11 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     return globalRect;
   }
 
-  bool _shouldScrollToTarget(Rect rect) {
-    final size = MediaQuery.sizeOf(context);
+  bool _shouldScrollToTarget(Rect rect, GlobalKey key) {
+    final overlayRenderObject = context.findRenderObject();
+    final size = overlayRenderObject is RenderBox && overlayRenderObject.hasSize
+        ? overlayRenderObject.size
+        : MediaQuery.sizeOf(context);
     final padding = MediaQuery.paddingOf(context);
     const edgeTolerance = 8.0;
     final safeViewport = Rect.fromLTWH(
@@ -236,6 +246,16 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         size.height - padding.top - padding.bottom - (edgeTolerance * 2),
       ),
     );
+    final targetContext = key.currentContext;
+    final scrollable =
+        targetContext == null ? null : Scrollable.maybeOf(targetContext);
+    final coversMostOfViewport = rect.width >= safeViewport.width * 0.78 &&
+        rect.height >= safeViewport.height * 0.68;
+    // 전체 지도처럼 화면을 채우는 비스크롤 타깃은 ensureVisible로
+    // 이동할 수 없으므로, 현재 위치에서 바로 안내해야 한다.
+    if (scrollable == null || coversMostOfViewport) {
+      return false;
+    }
     return rect.left < safeViewport.left - edgeTolerance ||
         rect.top < safeViewport.top - edgeTolerance ||
         rect.right > safeViewport.right + edgeTolerance ||
@@ -315,7 +335,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     );
     final interactionTarget =
         interactionRect == null ? target : _toOverlayRect(interactionRect);
-    final hole = interactionTarget.inflate(10);
+    final hole = interactionTarget.inflate(10).intersect(Offset.zero & size);
     return [
       Positioned(
         left: 0,

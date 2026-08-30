@@ -19,6 +19,7 @@ class FeatureTourController extends ChangeNotifier {
   int _stepIndex = 0;
   bool _isActive = false;
   bool _completionRequested = false;
+  bool _hasPresentedStep = false;
 
   bool get isActive => _isActive;
   int get stepIndex => _stepIndex;
@@ -82,7 +83,19 @@ class FeatureTourController extends ChangeNotifier {
     if (!_isActive) {
       return;
     }
+    if (_stepIndex >= steps.length - 1 && !_hasPresentedStep) {
+      _isActive = false;
+      notifyListeners();
+      return;
+    }
     _advance();
+  }
+
+  void markStepPresented() {
+    if (!_isActive) {
+      return;
+    }
+    _hasPresentedStep = true;
   }
 
   void _advance() {
@@ -140,6 +153,7 @@ class FeatureTourHost extends StatefulWidget {
 class _FeatureTourHostState extends State<FeatureTourHost> {
   late FeatureTourController _controller = _createController();
   int _loadGeneration = 0;
+  bool _seenPersistRequested = false;
 
   FeatureTourController _createController() {
     return FeatureTourController(
@@ -174,6 +188,7 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
     final loadGeneration = ++_loadGeneration;
     _controller.dispose();
     _controller = _createController();
+    _seenPersistRequested = false;
     setState(() {});
     unawaited(_loadCompletionState(loadGeneration));
   }
@@ -188,21 +203,29 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
     if (!mounted || loadGeneration != _loadGeneration || seen) {
       return;
     }
-    // Mark the page tour as seen before activation. If the user leaves a page
-    // midway, returning to it should not restart the same tour endlessly.
-    try {
-      await widget.statusStore.markSeen(widget.tourId);
-    } catch (_) {
-      // A local preference failure must not block the page itself.
-    }
-    if (!mounted || loadGeneration != _loadGeneration) {
-      return;
-    }
     // The host child is already mounted when the status read completes. The
     // overlay schedules its own post-frame target measurement, so activating
     // here also works when a route swaps to another page tour without a new
     // frame being requested afterward.
     _controller.activate();
+  }
+
+  void _handleStepPresented() {
+    _controller.markStepPresented();
+    if (_seenPersistRequested) {
+      return;
+    }
+    _seenPersistRequested = true;
+    unawaited(_persistSeen());
+  }
+
+  Future<void> _persistSeen() async {
+    try {
+      await widget.statusStore.markSeen(widget.tourId);
+    } catch (_) {
+      // 저장 실패 시 다음 표시 프레임에서 한 번 더 시도할 수 있게 한다.
+      _seenPersistRequested = false;
+    }
   }
 
   Future<void> _persistCompletion() async {
@@ -231,6 +254,7 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
                   totalSteps: _controller.steps.length,
                   onNext: _controller.next,
                   onSkip: _controller.skipTour,
+                  onPresented: _handleStepPresented,
                   onTargetUnavailable: _controller.skipUnavailableStep,
                 ),
             ],
