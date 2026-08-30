@@ -80,6 +80,14 @@ void main() {
     expect(find.text('오늘의 일일 미션'), findsOneWidget);
     expect(find.text('1 / 3'), findsOneWidget);
     expect(
+      find.text('1개 완료했어요. 남은 미션도 가볍게 이어가요'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('mission-home-summary')),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const ValueKey('mission-home-progress')),
       findsOneWidget,
     );

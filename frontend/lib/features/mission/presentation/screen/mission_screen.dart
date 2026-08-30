@@ -1021,53 +1021,97 @@ class _MissionSectionTitle extends StatelessWidget {
     final progress = totalCount <= 0
         ? 0.0
         : (completedCount / totalCount).clamp(0.0, 1.0).toDouble();
+    final progressMessage = switch ((completedCount, totalCount)) {
+      (_, <= 0) => '오늘 등록된 일일 미션이 없어요',
+      (0, _) => '오늘은 세 가지 미션부터 가볍게 시작해봐요',
+      (final completed, final total) when completed >= total =>
+        '오늘의 일일 미션을 모두 완료했어요',
+      (final completed, _) => '$completed개 완료했어요. 남은 미션도 가볍게 이어가요',
+    };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                '오늘의 일일 미션',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
+    return Container(
+      key: const ValueKey('mission-home-summary'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
                 ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primaryTint,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '$completedCount / $totalCount',
-                style: const TextStyle(
+                child: const Icon(
+                  Icons.flag_rounded,
                   color: _missionPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
+                  size: 21,
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            key: const ValueKey('mission-home-progress'),
-            value: progress,
-            minHeight: 6,
-            color: _missionPrimary,
-            backgroundColor: const Color(0xFFF0EEE8),
+              const SizedBox(width: 11),
+              const Expanded(
+                child: Text(
+                  '오늘의 일일 미션',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+                ),
+                child: Text(
+                  '$completedCount / $totalCount',
+                  style: const TextStyle(
+                    color: _missionPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          Text(
+            progressMessage,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+            child: LinearProgressIndicator(
+              key: const ValueKey('mission-home-progress'),
+              value: progress,
+              minHeight: 6,
+              color: _missionPrimary,
+              backgroundColor: AppColors.surface.withValues(alpha: 0.84),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
