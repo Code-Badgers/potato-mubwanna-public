@@ -10,19 +10,19 @@
 ## 변경 사항
 
 - 페이지별 완료 상태와 프로세스 내 중복 실행 방지
-- 타깃이 실제로 렌더링되어 Coach Mark 카드가 표시된 뒤에만 페이지별 본 상태를 저장
-- 데이터 로딩 중 타깃을 찾지 못한 페이지는 본 상태로 소비하지 않고 다음 진입에서 다시 시도
-- 주기적 폴링을 제거하고 안정화된 타깃 측정과 약 7.2초 이내의 제한된 재시도로 전환
+- 페이지 이동이 필요한 tour는 현재 단계 번호를 저장하고 돌아왔을 때 같은 단계부터 재개
+- 데이터 로딩 중 타깃을 찾지 못한 페이지는 완료 상태로 소비하지 않고 다음 진입에서 다시 시도
+- 주기적 폴링을 제거하고 안정화된 타깃 측정과 약 14.4초 이내의 제한된 재시도로 전환
 - 타깃이 준비되기 전에는 설명 카드를 표시하지 않고, 실제 위치가 확인된 뒤에만 표시
 - 지도 marker 안내 카드는 타깃 위치를 따라 재배치하지 않고 하단 위에 고정해 깜빡임 방지
-- 지도·스탬프·미션·마이페이지·여행 기록 타깃 연결 복구
+- 지도·스탬프·패스포트·감자밭·미션·명소 상세·마이페이지·여행 기록 타깃 연결 복구
 - 미션 목록이 비어도 첫 일일 미션 타깃을 사용할 수 있도록 안정적인 fallback 타깃 연결
 - 동일 페이지의 새 안내 단계가 이전 완료 기록에 가려지지 않도록 페이지별 tour version 갱신
-- 페이지별 tour의 첫 카드가 실제 표시될 때 본 상태를 영속화해, 같은 설치에서 표시된 안내가 다시 시작되지 않도록 보장
+- 페이지별 tour는 완료 또는 건너뛰기 시에만 완료 상태로 고정하고, 중간에 다른 화면으로 이동하면 저장된 단계부터 이어서 표시
 - 하단 내비게이션을 제외한 실제 Coach Mark Host 높이로 viewport를 계산해 감자밭 하단 기능까지 자동 스크롤
 - 스크롤할 수 없는 전체 지도 타깃에는 불필요한 `ensureVisible`을 실행하지 않아 검은 scrim만 남는 상태를 방지
 - 지도 여행 홈의 장소 카드 안내 뒤에는 홈을 유지해 네 번째 `지도 크게 보기` 안내와 전체 지도 marker 안내가 이어지도록 수정
-- 전체 지도 marker 안내는 선택 장소 카드가 아니라 카메라 중심의 실제 marker 영역(72×88)만 Spotlight하고, 같은 영역의 지도 터치를 허용하도록 수정
+- 전체 지도 marker 안내는 선택 장소 카드가 아니라 장소 카드 위의 실제 지도 영역 전체를 Spotlight하고, 같은 영역의 지도 터치를 허용하도록 수정
 - marker 선택 뒤에는 장소 카드 펼치기와 `내 동선` 안내가 차례로 이어지도록 지도 7단계 구성을 테스트로 고정
 - 스탬프의 방문 인증 안내는 카드 전체가 아니라 `방문 인증하기` 버튼만 Spotlight하도록 타깃을 분리
 - 방문 인증 안내에서 스탬프 획득과 관광 오디오 해설을 함께 알리고, 장소 상세의 오디오 재생 → 방문 인증 안내로 이어지도록 문구와 tour version 갱신
@@ -37,11 +37,9 @@
 | 검증 | 결과 |
 | --- | --- |
 | `flutter analyze` | PASS, No issues found |
-| `flutter test test/features/feature_tour/feature_tour_test.dart --reporter expanded` | PASS, 14 tests |
-| `flutter test test/features/map/map_screen_test.dart --reporter expanded` | PASS, 29 tests |
-| `flutter test test/features/stamp/stamp_book_screen_test.dart` | PASS, 15 tests |
-| `flutter test test/features/spot/spot_detail_screen_test.dart` | PASS, 13 tests |
-| `flutter test --reporter compact` | PASS, 347 tests |
+| `flutter test test/features/feature_tour/feature_tour_test.dart --reporter expanded` | PASS, 17 tests |
+| 지도·스탬프·감자밭·미션·마이 화면 회귀 테스트 | PASS, 93 tests |
+| `flutter test --reporter compact` | PASS, 350 tests |
 | `git diff --check` | PASS |
 
 ## 최신 main 병합 충돌 해결
@@ -71,11 +69,13 @@ PR #454의 최신 `main` 병합 과정에서 `stamp_book_screen_test.dart`가 �
 - 환경 변수: 없음
 - 기존 사용자 변경 `frontend/ios/Podfile.lock`: 수정하거나 스테이징하지 않음
 - 스탬프 카드 정보 보강은 기존 API/DB 계약과 장소 상세 provider를 재사용하며 별도 API/DB 변경 없음
-- 페이지별 Coach Mark 상태는 기존 SharedPreferences 저장소의 `seenFeatureTourVersions`에 실제 최초 표시 여부를 저장함. map `v8`, stamp `v6`, passport `v5`, potato `v6`, mission `v4`, spot `v2`, my page `v3`, travel record `v2`로 안내 계약을 관리함
+- 페이지별 Coach Mark 상태는 기존 SharedPreferences 저장소의 완료 기록과 새 단계 진행 기록을 함께 사용함. map `v9`, stamp `v7`, passport `v6`, potato `v7`, mission `v5`, spot `v3`, my page `v4`, travel record `v3`로 안내 계약을 관리함
+- 진행 중인 단계는 `featureTourStepIndex.<tourId>`에 저장하고 완료 시 제거함
 - 완료 상태(`completedFeatureTourVersion`, `completedFeatureTourVersions`)는 기존 호환성을 유지하며, 완료된 tour는 seen 상태로 간주함
 
 ## 남은 리스크
 
 - 실제 iPhone/Android에서 Kakao Map 늦은 렌더링, route 전환 직후 타깃 생성, 실제 스와이프는 수동 확인이 필요합니다.
-- 타깃이 준비되지 않으면 최대 약 7.2초까지 기다린 뒤 해당 Step을 안전하게 건너뜁니다.
-- 같은 설치에서 페이지 tour의 첫 안내 카드가 실제 표시된 직후 `seenFeatureTourVersions`가 저장되므로, 미완료 상태로 이탈해도 재진입 시 반복되지 않습니다. 타깃이 끝내 렌더링되지 않은 페이지는 저장하지 않아 다음 진입에서 다시 시도합니다.
+- 타깃이 준비되지 않으면 최대 약 14.4초까지 기다린 뒤 해당 Step을 안전하게 건너뜁니다. 기다리는 동안 scrim과 설명 카드를 띄우지 않아 화면을 막지 않습니다.
+- 같은 설치에서 페이지 tour를 완료하거나 건너뛰면 다시 표시하지 않습니다. 중간 이탈 시에는 처음부터 반복하지 않고 저장된 단계부터 재개합니다.
+- 저장 정책은 계정 서버 동기화가 아닌 설치 단위 SharedPreferences입니다. 기기 변경이나 앱 데이터 삭제 뒤에는 다시 표시될 수 있습니다.
