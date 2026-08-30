@@ -79,6 +79,10 @@ void main() {
     expect(find.text('점순이의 미션'), findsOneWidget);
     expect(find.text('오늘의 일일 미션'), findsOneWidget);
     expect(find.text('1 / 3'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mission-home-progress')),
+      findsOneWidget,
+    );
     expect(find.text('스탬프 1개 획득하기'), findsNothing);
     expect(find.text('점순이의 미션'), findsOneWidget);
     expect(find.textContaining('코인'), findsNothing);

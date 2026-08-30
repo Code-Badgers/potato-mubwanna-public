@@ -1018,33 +1018,53 @@ class _MissionSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final progress = totalCount <= 0
+        ? 0.0
+        : (completedCount / totalCount).clamp(0.0, 1.0).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          child: Text(
-            '오늘의 일일 미션',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                '오늘의 일일 미션',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
             ),
-          ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primaryTint,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$completedCount / $totalCount',
+                style: const TextStyle(
+                  color: _missionPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primaryTint,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            '$completedCount / $totalCount',
-            style: const TextStyle(
-              color: _missionPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            key: const ValueKey('mission-home-progress'),
+            value: progress,
+            minHeight: 6,
+            color: _missionPrimary,
+            backgroundColor: const Color(0xFFF0EEE8),
           ),
         ),
       ],
