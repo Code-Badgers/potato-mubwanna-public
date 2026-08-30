@@ -10,8 +10,12 @@
 ## 변경 사항
 
 - 페이지별 완료 상태와 프로세스 내 중복 실행 방지
-- 주기적 폴링을 제거하고 안정화된 타깃 측정과 제한된 재시도로 전환
+- 주기적 폴링을 제거하고 안정화된 타깃 측정과 약 7.2초 이내의 제한된 재시도로 전환
+- 타깃이 준비되기 전에는 설명 카드를 표시하지 않고, 실제 위치가 확인된 뒤에만 표시
+- 지도 marker 안내 카드는 타깃 위치를 따라 재배치하지 않고 하단 위에 고정해 깜빡임 방지
 - 지도·스탬프·미션·마이페이지·여행 기록 타깃 연결 복구
+- 미션 목록이 비어도 첫 일일 미션 타깃을 사용할 수 있도록 안정적인 fallback 타깃 연결
+- 동일 페이지의 새 안내 단계가 이전 완료 기록에 가려지지 않도록 페이지별 tour version 갱신
 - Coach Mark 설명 카드가 Safe Area 밖으로 나가지 않도록 위치와 높이 보정
 - 스탬프 marker의 기존 테스트 식별자를 유지하고 방문 인증 타깃의 중복 GlobalKey 제거
 - 기존 `spotDetailProvider`를 재사용해 선택한 명소 카드에 이미지, 설명, 주소, 영업시간을 실제 값이 있을 때만 표시
@@ -22,9 +26,9 @@
 | 검증 | 결과 |
 | --- | --- |
 | `flutter analyze` | PASS, No issues found |
-| `flutter test test/features/feature_tour/feature_tour_test.dart` | PASS, 7 tests |
+| `flutter test test/features/feature_tour/feature_tour_test.dart` | PASS, 9 tests |
 | `flutter test test/features/stamp/stamp_book_screen_test.dart` | PASS, 15 tests |
-| `flutter test` | PASS, 340 tests |
+| `flutter test` | PASS, 342 tests |
 | `git diff --check` | PASS |
 
 ## 최신 main 병합 충돌 해결
@@ -50,8 +54,10 @@ PR #454의 최신 `main` 병합 과정에서 `stamp_book_screen_test.dart`가 �
 - 환경 변수: 없음
 - 기존 사용자 변경 `frontend/ios/Podfile.lock`: 수정하거나 스테이징하지 않음
 - 스탬프 카드 정보 보강은 기존 API/DB 계약과 장소 상세 provider를 재사용하며 별도 API/DB 변경 없음
+- 페이지별 Coach Mark 완료 상태는 기존 저장소를 재사용하며 map `v5`, stamp/passport `v4`, mission `v3`, my page `v2`로 안내 계약을 갱신함
 
 ## 남은 리스크
 
 - 실제 iPhone/Android에서 Kakao Map 늦은 렌더링, route 전환 직후 타깃 생성, 실제 스와이프는 수동 확인이 필요합니다.
-- 타깃이 약 2.16초 동안 준비되지 않으면 해당 Step을 안전하게 건너뛰도록 제한되어 있습니다.
+- 타깃이 준비되지 않으면 최대 약 7.2초까지 기다린 뒤 해당 Step을 안전하게 건너뜁니다.
+- 이전 앱 데이터에 이미 같은 페이지 완료 버전이 저장된 개발 기기에서는 재현을 위해 앱 데이터 초기화 또는 재설치가 필요할 수 있습니다.
