@@ -326,14 +326,14 @@ class _RewardGuideSheet extends StatelessWidget {
                 color: _couponBrown,
                 title: '패스포트 스탬프',
                 body:
-                    '스탬프 6개·12개·18개를 모으면 스탬프 탭에서 ‘보상 받기’를 눌러 단계별 쿠폰을 받을 수 있어요.',
+                    '스탬프 6개·12개·18개를 모으면 공모전 시연용 쿠폰을 받을 수 있어요. 현재 쿠폰은 실제 매장에서 사용할 수 없어요.',
               ),
               const _RewardGuideStep(
                 icon: Icons.flag_rounded,
                 color: Color(0xFF5577B8),
                 title: '미션 완료',
                 body:
-                    '각 미션 카드에 표시된 보상을 확인해 보세요. 사진 미션의 인증샷은 완료 후 여행 기록에 모이고, 쿠폰 보상은 이 보상함에서 확인할 수 있어요.',
+                    '각 미션 카드에 표시된 보상을 확인해 보세요. 사진 미션의 인증샷은 완료 후 여행 기록에 모이고, 시연용 쿠폰 보상은 이 보상함에서 확인할 수 있어요.',
                 showDivider: false,
               ),
               const SizedBox(height: 14),
@@ -523,6 +523,10 @@ class _CouponInboxState extends ConsumerState<_CouponInbox> {
 
         return Column(
           children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: _DemoCouponNotice(),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: _CouponTabBar(
@@ -784,7 +788,7 @@ class _CouponTabBar extends StatelessWidget {
         children: [
           Expanded(
             child: _SegmentButton(
-              label: '사용 가능 $availableCount',
+              label: '시연용 $availableCount',
               selected: selectedTab == _CouponTab.available,
               onTap: () => onChanged(_CouponTab.available),
             ),
@@ -792,7 +796,7 @@ class _CouponTabBar extends StatelessWidget {
           const SizedBox(width: 4),
           Expanded(
             child: _SegmentButton(
-              label: '사용 완료 $completedCount',
+              label: '지난 기록 $completedCount',
               selected: selectedTab == _CouponTab.completed,
               onTap: () => onChanged(_CouponTab.completed),
             ),
@@ -883,7 +887,7 @@ class _CouponSummaryCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '사용 가능 $available장 · 사용 완료 $completed장',
+                  '시연용 $available장 · 지난 기록 $completed장',
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
@@ -983,7 +987,7 @@ class _CouponStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, background, foreground) = switch (status) {
       CouponStatus.available => (
-          '사용 가능',
+          '시연용',
           const Color(0xFFE5F6EA),
           const Color(0xFF31764A),
         ),
@@ -1062,6 +1066,8 @@ class _CouponDetailSheet extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              const _DemoCouponNotice(),
+              const SizedBox(height: 16),
               Text(
                 coupon.name,
                 style: const TextStyle(
@@ -1111,7 +1117,7 @@ class _CouponDetailSheet extends ConsumerWidget {
                       ),
                     ),
                     icon: const Icon(Icons.qr_code_2_rounded),
-                    label: const Text('QR 코드 보기'),
+                    label: const Text('시연 QR 보기'),
                   ),
                 ),
               ],
@@ -1133,12 +1139,6 @@ class _CouponQrDialog extends ConsumerStatefulWidget {
 }
 
 class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
-  bool _isConfirming = false;
-  bool _isUsing = false;
-  String? _useError;
-
-  bool get _isBusy => _isConfirming || _isUsing;
-
   @override
   Widget build(BuildContext context) {
     final qr = ref.watch(couponQrProvider(widget.userCouponId));
@@ -1146,14 +1146,12 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
     return AlertDialog(
       title: Row(
         children: [
-          const Expanded(child: Text('쿠폰 QR')),
+          const Expanded(child: Text('시연용 쿠폰 QR')),
           IconButton(
             tooltip: 'QR 새로고침',
-            onPressed: _isBusy
-                ? null
-                : () => ref.invalidate(
-                      couponQrProvider(widget.userCouponId),
-                    ),
+            onPressed: () => ref.invalidate(
+              couponQrProvider(widget.userCouponId),
+            ),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -1176,6 +1174,8 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
           data: (value) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const _DemoCouponNotice(compact: true),
+              const SizedBox(height: 12),
               QrImageView(
                 data: value.payload,
                 size: 220,
@@ -1193,33 +1193,19 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
               ),
               const SizedBox(height: 8),
               const Text(
-                '현장에서 직원 확인 후 사용 완료를 눌러주세요.',
+                'QR 동작을 보여주기 위한 시연 화면입니다.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
                 ),
               ),
-              if (_useError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _useError!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.error, fontSize: 12),
-                ),
-              ],
               const SizedBox(height: 16),
-              SizedBox(
+              const SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _isBusy ? null : () => _confirmAndUse(value),
-                  child: _isUsing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('사용 완료 처리'),
+                  onPressed: null,
+                  child: Text('실제 사용 불가'),
                 ),
               ),
             ],
@@ -1228,72 +1214,56 @@ class _CouponQrDialogState extends ConsumerState<_CouponQrDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isBusy ? null : () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('닫기'),
         ),
       ],
     );
   }
+}
 
-  Future<void> _confirmAndUse(CouponQr qr) async {
-    if (_isBusy) {
-      return;
-    }
-    setState(() {
-      _isConfirming = true;
-      _useError = null;
-    });
+class _DemoCouponNotice extends StatelessWidget {
+  const _DemoCouponNotice({this.compact = false});
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('쿠폰을 사용하시겠어요?'),
-        content: const Text('사용 완료 후에는 되돌릴 수 없습니다.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('사용하기'),
-          ),
-        ],
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: '공모전 시연용 쿠폰, 실제 사용 불가',
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(compact ? 10 : 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF2E8),
+          borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+          border: Border.all(color: const Color(0xFFF0A15A)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.info_outline_rounded,
+              color: _couponBrown,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '공모전 시연용 쿠폰 · 실제 사용 불가',
+                style: TextStyle(
+                  color: _couponBrown,
+                  fontSize: compact ? 12 : 13,
+                  fontWeight: FontWeight.w900,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
-    if (!mounted) {
-      return;
-    }
-    if (confirmed == true) {
-      setState(() {
-        _isConfirming = false;
-        _isUsing = true;
-      });
-      await _useCoupon(qr);
-      return;
-    }
-    setState(() => _isConfirming = false);
-  }
-
-  Future<void> _useCoupon(CouponQr qr) async {
-    try {
-      await ref
-          .read(couponRepositoryProvider)
-          .useCoupon(widget.userCouponId, qr.payload);
-      ref.invalidate(couponListProvider);
-      ref.invalidate(couponDetailProvider(widget.userCouponId));
-      ref.invalidate(couponQrProvider(widget.userCouponId));
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isUsing = false;
-          _useError = '쿠폰 사용 처리에 실패했습니다. 다시 시도해주세요.';
-        });
-      }
-    }
   }
 }
 
