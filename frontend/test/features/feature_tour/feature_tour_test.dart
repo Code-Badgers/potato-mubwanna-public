@@ -50,6 +50,19 @@ void main() {
       expect(await secondStore.hasCompleted('mission-v5'), isFalse);
     });
 
+    test('distinguishes the current process from a previous app launch',
+        () async {
+      const store = SharedPreferencesFeatureTourStatusStore();
+
+      await store.markSeen('potato-v7');
+      expect(store.wasSeenInCurrentProcess('potato-v7'), isTrue);
+
+      SharedPreferencesFeatureTourStatusStore.resetInProcessForTesting();
+
+      expect(store.wasSeenInCurrentProcess('potato-v7'), isFalse);
+      expect(await store.hasSeen('potato-v7'), isTrue);
+    });
+
     test('stores page tour progress until that tour is completed', () async {
       const store = SharedPreferencesFeatureTourStatusStore();
 
@@ -591,7 +604,7 @@ void main() {
       expect(find.text('새 첫 단계'), findsNothing);
     });
 
-    testWidgets('does not show an already-seen tour after leaving incomplete',
+    testWidgets('resumes an incomplete tour during the same app process',
         (tester) async {
       final firstKey = GlobalKey();
       final secondKey = GlobalKey();
@@ -649,7 +662,52 @@ void main() {
       await _settleTour(tester);
 
       expect(find.text('첫 단계'), findsNothing);
-      expect(find.text('두 번째 단계'), findsNothing);
+      expect(find.text('두 번째 단계'), findsOneWidget);
+    });
+
+    testWidgets('does not show an incomplete tour after the app restarts',
+        (tester) async {
+      final targetKey = GlobalKey();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'restart-hidden-tour',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '설치 후 첫 안내',
+              description: '이 안내는 설치 후 한 번만 보여요.',
+            ),
+          ],
+          child: _TourPage(introKey: targetKey),
+        ),
+      );
+      await _settleTour(tester);
+      expect(find.text('설치 후 첫 안내'), findsOneWidget);
+      expect(store.seenIds, contains('restart-hidden-tour'));
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      store.simulateProcessRestart();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'restart-hidden-tour',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '설치 후 첫 안내',
+              description: '이 안내는 설치 후 한 번만 보여요.',
+            ),
+          ],
+          child: _TourPage(introKey: targetKey),
+        ),
+      );
+      await _settleTour(tester);
+
+      expect(find.text('설치 후 첫 안내'), findsNothing);
     });
 
     testWidgets('completing one page tour does not hide another page tour',
@@ -822,8 +880,19 @@ class _FeatureTourBlockingProbe extends StatelessWidget {
 
 class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
   final seenIds = <String>{};
+  final seenInCurrentProcessIds = <String>{};
   final completedIds = <String>{};
   final stepIndices = <String, int>{};
+
+  void simulateProcessRestart() {
+    seenInCurrentProcessIds.clear();
+  }
+
+  @override
+  bool wasSeenInCurrentProcess(String version) {
+    return seenInCurrentProcessIds.contains(version) ||
+        completedIds.contains(version);
+  }
 
   @override
   Future<bool> hasSeen(String version) async {
@@ -833,6 +902,7 @@ class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
   @override
   Future<void> markSeen(String version) async {
     seenIds.add(version);
+    seenInCurrentProcessIds.add(version);
   }
 
   @override

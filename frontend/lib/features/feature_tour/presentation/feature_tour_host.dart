@@ -200,17 +200,26 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
   }
 
   Future<void> _loadExposureState(int loadGeneration) async {
-    bool hasBeenSeen;
-    try {
-      hasBeenSeen = await widget.statusStore.hasSeen(widget.tourId);
-    } catch (_) {
-      return;
-    }
-    // Exposure is the install + page boundary. An interrupted tour must not
-    // reappear after a restart, while the step index remains useful during a
-    // live route transition in the same host.
-    if (!mounted || loadGeneration != _loadGeneration || hasBeenSeen) {
-      return;
+    final seenInCurrentProcess =
+        widget.statusStore.wasSeenInCurrentProcess(widget.tourId);
+    if (seenInCurrentProcess) {
+      try {
+        final completed = await widget.statusStore.hasCompleted(widget.tourId);
+        if (!mounted || loadGeneration != _loadGeneration || completed) {
+          return;
+        }
+      } catch (_) {
+        return;
+      }
+    } else {
+      try {
+        final hasBeenSeen = await widget.statusStore.hasSeen(widget.tourId);
+        if (!mounted || loadGeneration != _loadGeneration || hasBeenSeen) {
+          return;
+        }
+      } catch (_) {
+        return;
+      }
     }
     int stepIndex;
     try {

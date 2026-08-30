@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 abstract interface class FeatureTourStatusStore {
+  bool wasSeenInCurrentProcess(String version);
+
   Future<bool> hasSeen(String version);
 
   Future<void> markSeen(String version);
@@ -33,6 +35,12 @@ class SharedPreferencesFeatureTourStatusStore
     _seenInProcess.clear();
     _stepInProcess.clear();
     _completedInProcess.clear();
+  }
+
+  @override
+  bool wasSeenInCurrentProcess(String version) {
+    return _seenInProcess.contains(version) ||
+        _completedInProcess.contains(version);
   }
 
   @override
