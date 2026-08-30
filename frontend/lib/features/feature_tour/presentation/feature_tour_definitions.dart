@@ -2,14 +2,22 @@ import 'feature_tour_overlay.dart';
 import 'feature_tour_targets.dart';
 
 abstract final class FeatureTourIds {
-  static const map = 'map-v9';
-  static const stamp = 'stamp-v7';
-  static const passport = 'passport-v6';
-  static const potato = 'potato-v7';
-  static const mission = 'mission-v5';
-  static const spot = 'spot-v3';
-  static const myPage = 'my-page-v4';
-  static const travelRecord = 'travel-record-v3';
+  static const _previewCycle = String.fromEnvironment(
+    'FEATURE_TOUR_PREVIEW_CYCLE',
+  );
+
+  static String get map => _forPreview('map-v9');
+  static String get stamp => _forPreview('stamp-v7');
+  static String get passport => _forPreview('passport-v6');
+  static String get potato => _forPreview('potato-v7');
+  static String get mission => _forPreview('mission-v5');
+  static String get spot => _forPreview('spot-v3');
+  static String get myPage => _forPreview('my-page-v4');
+  static String get travelRecord => _forPreview('travel-record-v3');
+
+  static String _forPreview(String id) {
+    return _previewCycle.isEmpty ? id : '$id-preview-$_previewCycle';
+  }
 }
 
 abstract final class FeatureTourDefinitions {

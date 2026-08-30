@@ -172,7 +172,7 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
   @override
   void initState() {
     super.initState();
-    unawaited(_loadCompletionState(_loadGeneration));
+    unawaited(_loadExposureState(_loadGeneration));
   }
 
   @override
@@ -196,19 +196,38 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
     _controller = _createController();
     _seenPersistRequested = false;
     setState(() {});
-    unawaited(_loadCompletionState(loadGeneration));
+    unawaited(_loadExposureState(loadGeneration));
   }
 
-  Future<void> _loadCompletionState(int loadGeneration) async {
-    bool completed;
+  Future<void> _loadExposureState(int loadGeneration) async {
+    final seenInCurrentProcess =
+        widget.statusStore.wasSeenInCurrentProcess(widget.tourId);
+    if (seenInCurrentProcess) {
+      try {
+        final completed = await widget.statusStore.hasCompleted(widget.tourId);
+        if (!mounted || loadGeneration != _loadGeneration || completed) {
+          return;
+        }
+      } catch (_) {
+        return;
+      }
+    } else {
+      try {
+        final hasBeenSeen = await widget.statusStore.hasSeen(widget.tourId);
+        if (!mounted || loadGeneration != _loadGeneration || hasBeenSeen) {
+          return;
+        }
+      } catch (_) {
+        return;
+      }
+    }
     int stepIndex;
     try {
-      completed = await widget.statusStore.hasCompleted(widget.tourId);
       stepIndex = await widget.statusStore.readStepIndex(widget.tourId);
     } catch (_) {
       return;
     }
-    if (!mounted || loadGeneration != _loadGeneration || completed) {
+    if (!mounted || loadGeneration != _loadGeneration) {
       return;
     }
     // The host child is already mounted when the status read completes. The
