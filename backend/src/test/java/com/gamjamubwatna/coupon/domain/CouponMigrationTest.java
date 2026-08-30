@@ -46,7 +46,12 @@ class CouponMigrationTest {
                 "CP_STAMP_18_COMPLETE_10000"
             );
         assertThat(seededCoupons)
-            .allSatisfy(coupon -> assertThat(coupon.getValidDays()).isEqualTo(30));
+            .allSatisfy(coupon -> {
+                assertThat(coupon.getValidDays()).isEqualTo(30);
+                assertThat(coupon.getName()).startsWith("[공모전 시연용]");
+                assertThat(coupon.getDescription()).contains("실제 매장에서는 사용할 수 없습니다.");
+                assertThat(coupon.getUsagePlace()).isEqualTo("공모전 시연 전용 · 실제 사용처 없음");
+            });
         assertThat(seededCoupons.stream()
             .filter(coupon -> coupon.getCode().startsWith("CP_STAMP_")))
             .hasSize(3);
@@ -57,15 +62,15 @@ class CouponMigrationTest {
         assertThat(couponRepository.findByCode("CP_STAMP_6_LOCAL_3000"))
             .get()
             .extracting(Coupon::getName, Coupon::getBenefitAmount)
-            .containsExactly("강원 감자 제휴점 3,000원 할인권", 3000);
+            .containsExactly("[공모전 시연용] 강원 감자 제휴점 3,000원 할인권", 3000);
         assertThat(couponRepository.findByCode("CP_STAMP_12_LOCAL_5000"))
             .get()
             .extracting(Coupon::getName, Coupon::getBenefitAmount)
-            .containsExactly("강원 감자 제휴점 5,000원 할인권", 5000);
+            .containsExactly("[공모전 시연용] 강원 감자 제휴점 5,000원 할인권", 5000);
         assertThat(couponRepository.findByCode("CP_STAMP_18_COMPLETE_10000"))
             .get()
             .extracting(Coupon::getName, Coupon::getBenefitAmount)
-            .containsExactly("강원 관광지 18곳 달성 10,000원 할인권", 10000);
+            .containsExactly("[공모전 시연용] 강원 관광지 18곳 달성 10,000원 할인권", 10000);
     }
 
     @Test
