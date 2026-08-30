@@ -2,13 +2,13 @@ import 'feature_tour_overlay.dart';
 import 'feature_tour_targets.dart';
 
 abstract final class FeatureTourIds {
-  static const map = 'map-v4';
-  static const stamp = 'stamp-v3';
-  static const passport = 'passport-v3';
+  static const map = 'map-v5';
+  static const stamp = 'stamp-v4';
+  static const passport = 'passport-v4';
   static const potato = 'potato-v4';
-  static const mission = 'mission-v2';
+  static const mission = 'mission-v3';
   static const spot = 'spot-v1';
-  static const myPage = 'my-page-v1';
+  static const myPage = 'my-page-v2';
   static const travelRecord = 'travel-record-v1';
 }
 
@@ -42,6 +42,7 @@ abstract final class FeatureTourDefinitions {
       description: '장소를 고르면 방문 인증과 상세 정보를 확인할 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '지도에서 마커를 눌러보세요',
+      cardPlacement: FeatureTourCardPlacement.aboveFooter,
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.spotSheetHandle,
@@ -128,6 +129,7 @@ abstract final class FeatureTourDefinitions {
   static final mission = <FeatureTourStep>[
     FeatureTourStep(
       targetKey: FeatureTourTargets.missionFeatured,
+      fallbackTargetKey: FeatureTourTargets.missionDaily,
       title: '오늘의 미션을 골라보세요',
       description: '하나를 눌러 미션 방법과 인증 흐름을 확인해보세요.',
       advanceType: CoachMarkAdvanceType.targetTap,

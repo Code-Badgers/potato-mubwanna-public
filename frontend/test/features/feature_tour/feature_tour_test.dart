@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/feature_tour/data/feature_tour_status_store.dart';
@@ -80,6 +82,10 @@ void main() {
         same(FeatureTourTargets.mapMarker),
       );
       expect(
+        mapMarkerStep.cardPlacement,
+        FeatureTourCardPlacement.aboveFooter,
+      );
+      expect(
         FeatureTourDefinitions.stamp.map((step) => step.targetKey),
         contains(FeatureTourTargets.passportButton),
       );
@@ -90,6 +96,10 @@ void main() {
       expect(
         FeatureTourDefinitions.mission.map((step) => step.targetKey),
         contains(FeatureTourTargets.missionDetailAction),
+      );
+      expect(
+        FeatureTourDefinitions.mission.first.fallbackTargetKey,
+        same(FeatureTourTargets.missionDaily),
       );
       expect(
         FeatureTourDefinitions.potato.map((step) => step.targetKey),
@@ -275,6 +285,91 @@ void main() {
       expect(find.text('감자밭 돌보기'), findsOneWidget);
     });
 
+    testWidgets('keeps waiting for a target that appears after data loading',
+        (tester) async {
+      final targetKey = GlobalKey();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'stamp-delayed-target',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '스탬프 장소 둘러보기',
+              description: '지도의 명소를 확인해보세요.',
+            ),
+          ],
+          child: _DelayedTargetPage(targetKey: targetKey),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 2200));
+      expect(store.completedIds, isEmpty);
+
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+
+      expect(find.text('스탬프 장소 둘러보기'), findsOneWidget);
+      expect(store.completedIds, isEmpty);
+    });
+
+    testWidgets('does not restart an active tour when the host rebuilds',
+        (tester) async {
+      final firstKey = GlobalKey();
+      final secondKey = GlobalKey();
+      final initialSteps = [
+        FeatureTourStep(
+          targetKey: firstKey,
+          title: '첫 단계',
+          description: '첫 단계를 확인해보세요.',
+        ),
+        FeatureTourStep(
+          targetKey: secondKey,
+          title: '두 번째 단계',
+          description: '두 번째 단계를 확인해보세요.',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'rebuild-stable-tour',
+          steps: initialSteps,
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+      await tester.tap(find.text('다음'));
+      await _settleTour(tester);
+      expect(find.text('두 번째 단계'), findsOneWidget);
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'rebuild-stable-tour',
+          steps: [
+            FeatureTourStep(
+              targetKey: firstKey,
+              title: '새 첫 단계',
+              description: '첫 단계를 다시 확인해보세요.',
+            ),
+            FeatureTourStep(
+              targetKey: secondKey,
+              title: '새 두 번째 단계',
+              description: '두 번째 단계를 다시 확인해보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+
+      expect(find.text('두 번째 단계'), findsOneWidget);
+      expect(find.text('새 첫 단계'), findsNothing);
+    });
+
     testWidgets('completing one page tour does not hide another page tour',
         (tester) async {
       final mapKey = GlobalKey();
@@ -371,6 +466,36 @@ class _TourPage extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+class _DelayedTargetPage extends StatefulWidget {
+  const _DelayedTargetPage({required this.targetKey});
+
+  final GlobalKey targetKey;
+
+  @override
+  State<_DelayedTargetPage> createState() => _DelayedTargetPageState();
+}
+
+class _DelayedTargetPageState extends State<_DelayedTargetPage> {
+  bool _showTarget = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(Future<void>.delayed(const Duration(milliseconds: 2400), () {
+      if (mounted) {
+        setState(() => _showTarget = true);
+      }
+    }));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _showTarget
+        ? SizedBox(key: widget.targetKey, height: 100, width: 200)
+        : const SizedBox(height: 100, width: 200);
   }
 }
 

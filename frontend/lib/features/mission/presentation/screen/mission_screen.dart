@@ -804,11 +804,26 @@ class _MissionGentleStart extends StatelessWidget {
             const _MissionEmptyState()
           else
             for (final entry in missions.indexed) ...[
-              _MissionCompactTile(
-                index: entry.$1,
-                mission: entry.$2,
-                onTap: () => onMissionTap(entry.$2.id),
-              ),
+              if (entry.$1 == 0)
+                KeyedSubtree(
+                  key: FeatureTourTargets.missionDaily,
+                  child: _MissionCompactTile(
+                    index: entry.$1,
+                    mission: entry.$2,
+                    onTap: () {
+                      FeatureTourScope.maybeOf(context)?.completeTarget(
+                        FeatureTourTargets.missionDaily,
+                      );
+                      onMissionTap(entry.$2.id);
+                    },
+                  ),
+                )
+              else
+                _MissionCompactTile(
+                  index: entry.$1,
+                  mission: entry.$2,
+                  onTap: () => onMissionTap(entry.$2.id),
+                ),
               const SizedBox(height: 10),
             ],
         ],

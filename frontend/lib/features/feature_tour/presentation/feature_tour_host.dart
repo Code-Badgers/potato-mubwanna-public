@@ -165,8 +165,9 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
   @override
   void didUpdateWidget(covariant FeatureTourHost oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Tour IDs version the step contract. Keeping the controller for the same
+    // ID prevents route/data rebuilds from restarting an active tour.
     if (oldWidget.tourId == widget.tourId &&
-        oldWidget.steps == widget.steps &&
         oldWidget.statusStore == widget.statusStore) {
       return;
     }
@@ -217,7 +218,7 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
                 FeatureTourOverlay(
                   step: _controller.currentStep,
                   stepIndex: _controller.stepIndex,
-                  totalSteps: widget.steps.length,
+                  totalSteps: _controller.steps.length,
                   onNext: _controller.next,
                   onSkip: _controller.skipTour,
                   onTargetUnavailable: _controller.skipUnavailableStep,

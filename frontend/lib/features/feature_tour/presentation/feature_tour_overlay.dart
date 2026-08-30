@@ -13,6 +13,11 @@ enum CoachMarkAdvanceType {
   navigationResult,
 }
 
+enum FeatureTourCardPlacement {
+  target,
+  aboveFooter,
+}
+
 class FeatureTourStep {
   const FeatureTourStep({
     required this.targetKey,
@@ -23,6 +28,7 @@ class FeatureTourStep {
     this.interactionTargetKey,
     this.advanceType = CoachMarkAdvanceType.nextButton,
     this.interactionHint,
+    this.cardPlacement = FeatureTourCardPlacement.target,
   });
 
   final GlobalKey targetKey;
@@ -33,6 +39,7 @@ class FeatureTourStep {
   final String description;
   final CoachMarkAdvanceType advanceType;
   final String? interactionHint;
+  final FeatureTourCardPlacement cardPlacement;
 }
 
 class FeatureTourOverlay extends StatefulWidget {
@@ -58,7 +65,9 @@ class FeatureTourOverlay extends StatefulWidget {
 }
 
 class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
-  static const _maxTargetRetries = 18;
+  // Auth and API-backed screens can mount their targets after the first frame.
+  // Keep waiting bounded, but give those screens enough time to settle.
+  static const _maxTargetRetries = 60;
   static const _targetRetryDelay = Duration(milliseconds: 120);
   static const _targetStabilizationFrames = 2;
 
@@ -87,7 +96,8 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         oldWidget.step.fallbackTargetKey != widget.step.fallbackTargetKey ||
         oldWidget.step.spotlightTargetKey != widget.step.spotlightTargetKey ||
         oldWidget.step.interactionTargetKey !=
-            widget.step.interactionTargetKey) {
+            widget.step.interactionTargetKey ||
+        oldWidget.step.cardPlacement != widget.step.cardPlacement) {
       _measurementGeneration += 1;
       _targetRefreshTimer?.cancel();
       _refreshScheduled = false;
@@ -159,8 +169,10 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     }
 
     if (rect != _pendingTargetRect) {
-      _pendingTargetRect = rect;
-      _stableFrameCount = 1;
+      setState(() {
+        _pendingTargetRect = rect;
+        _stableFrameCount = 1;
+      });
       _scheduleTargetRefresh();
       return;
     }
@@ -279,7 +291,8 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
                 ),
               ),
               ..._buildInteractionGuards(size, target),
-              if (!_isPreparingTarget) _buildDescriptionCard(size, target),
+              if (!_isPreparingTarget && target != null)
+                _buildDescriptionCard(size, target),
             ],
           );
         },
@@ -342,10 +355,26 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     const safeInset = 8.0;
     final safeTop = padding.top + safeInset;
     final safeBottom = padding.bottom + safeInset;
-    final targetRect = target ??
-        Rect.fromLTWH(size.width / 2 - 26, size.height / 2 - 26, 52, 52);
     final availableHeight = math.max(0.0, size.height - safeTop - safeBottom);
     final maxHeight = math.min(188.0, availableHeight);
+    if (widget.step.cardPlacement == FeatureTourCardPlacement.aboveFooter) {
+      return Positioned(
+        left: horizontalInset,
+        width: cardWidth,
+        bottom: safeBottom + 12,
+        child: _FeatureTourCard(
+          step: widget.step,
+          stepIndex: widget.stepIndex,
+          totalSteps: widget.totalSteps,
+          maxHeight: maxHeight,
+          onNext: widget.onNext,
+          onSkip: widget.onSkip,
+        ),
+      );
+    }
+
+    final targetRect = target ??
+        Rect.fromLTWH(size.width / 2 - 26, size.height / 2 - 26, 52, 52);
     final spaceBelow = size.height - safeBottom - targetRect.bottom;
     final showAbove = spaceBelow < maxHeight + 24;
     final top = showAbove
@@ -362,9 +391,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       ),
     );
 
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
+    return Positioned(
       left: left,
       top: top,
       width: cardWidth,
