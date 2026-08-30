@@ -83,7 +83,11 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/travel-records',
-      builder: (context, state) => const TravelRecordScreen(),
+      builder: (context, state) => FeatureTourHost(
+        tourId: FeatureTourIds.travelRecord,
+        steps: FeatureTourDefinitions.travelRecord,
+        child: const TravelRecordScreen(),
+      ),
     ),
     GoRoute(
       path: '/notices',

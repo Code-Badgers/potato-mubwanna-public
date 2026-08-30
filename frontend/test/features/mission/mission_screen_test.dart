@@ -14,6 +14,7 @@ import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
 import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 import 'package:potato_mubwanna/features/mission/application/mission_controller.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_native_input_service.dart';
 import 'package:potato_mubwanna/features/mission/data/mission_repository.dart';
@@ -102,6 +103,11 @@ void main() {
     expect(find.text('매일 가볍게 여행 미션을 이어가보세요!'), findsNothing);
     expect(find.text('속초 시장 QR 찾기'), findsNothing);
     expect(find.text('시군 2곳 방문하기'), findsNothing);
+    expect(
+      find.byKey(FeatureTourTargets.missionFeatured),
+      findsOneWidget,
+    );
+    expect(find.byKey(FeatureTourTargets.missionDaily), findsOneWidget);
   });
 
   testWidgets('opens mission detail and updates completion state',
@@ -112,6 +118,10 @@ void main() {
 
     expect(find.text('미션 상세'), findsOneWidget);
     expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
+    expect(
+      find.byKey(FeatureTourTargets.missionDetailAction),
+      findsOneWidget,
+    );
     expect(find.textContaining('보상은 공모전 MVP 기준으로'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('문제 미리보기'),

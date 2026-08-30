@@ -13,6 +13,11 @@ enum CoachMarkAdvanceType {
   navigationResult,
 }
 
+enum FeatureTourCardPlacement {
+  target,
+  aboveFooter,
+}
+
 class FeatureTourStep {
   const FeatureTourStep({
     required this.targetKey,
@@ -23,6 +28,7 @@ class FeatureTourStep {
     this.interactionTargetKey,
     this.advanceType = CoachMarkAdvanceType.nextButton,
     this.interactionHint,
+    this.cardPlacement = FeatureTourCardPlacement.target,
   });
 
   final GlobalKey targetKey;
@@ -33,6 +39,7 @@ class FeatureTourStep {
   final String description;
   final CoachMarkAdvanceType advanceType;
   final String? interactionHint;
+  final FeatureTourCardPlacement cardPlacement;
 }
 
 class FeatureTourOverlay extends StatefulWidget {
@@ -42,6 +49,7 @@ class FeatureTourOverlay extends StatefulWidget {
     required this.totalSteps,
     required this.onNext,
     required this.onSkip,
+    required this.onPresented,
     required this.onTargetUnavailable,
     super.key,
   });
@@ -51,6 +59,7 @@ class FeatureTourOverlay extends StatefulWidget {
   final int totalSteps;
   final VoidCallback onNext;
   final VoidCallback onSkip;
+  final VoidCallback onPresented;
   final VoidCallback onTargetUnavailable;
 
   @override
@@ -58,36 +67,50 @@ class FeatureTourOverlay extends StatefulWidget {
 }
 
 class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
-  static const _maxTargetRetries = 10;
+  // Auth and API-backed screens can mount their targets after the first frame.
+  // Keep waiting bounded, but give those screens enough time to settle.
+  static const _maxTargetRetries = 120;
+  static const _targetRetryDelay = Duration(milliseconds: 120);
+  static const _targetStabilizationFrames = 2;
 
   Rect? _targetRect;
+  Rect? _pendingTargetRect;
   Timer? _targetRefreshTimer;
   int _targetRetryCount = 0;
+  int _stableFrameCount = 0;
+  int _measurementGeneration = 0;
+  bool _refreshScheduled = false;
   bool _isPreparingTarget = false;
   bool _unavailableReported = false;
+  bool _presentationReported = false;
 
   @override
   void initState() {
     super.initState();
     _scheduleTargetRefresh();
-    _targetRefreshTimer = Timer.periodic(
-      const Duration(milliseconds: 120),
-      (_) => _refreshTargetRect(),
-    );
   }
 
   @override
   void didUpdateWidget(covariant FeatureTourOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.step.targetKey != widget.step.targetKey ||
+    if (oldWidget.stepIndex != widget.stepIndex ||
+        oldWidget.totalSteps != widget.totalSteps ||
+        oldWidget.step.targetKey != widget.step.targetKey ||
         oldWidget.step.fallbackTargetKey != widget.step.fallbackTargetKey ||
         oldWidget.step.spotlightTargetKey != widget.step.spotlightTargetKey ||
         oldWidget.step.interactionTargetKey !=
-            widget.step.interactionTargetKey) {
+            widget.step.interactionTargetKey ||
+        oldWidget.step.cardPlacement != widget.step.cardPlacement) {
+      _measurementGeneration += 1;
+      _targetRefreshTimer?.cancel();
+      _refreshScheduled = false;
       _targetRect = null;
+      _pendingTargetRect = null;
       _targetRetryCount = 0;
+      _stableFrameCount = 0;
       _isPreparingTarget = false;
       _unavailableReported = false;
+      _presentationReported = false;
       _scheduleTargetRefresh();
     }
   }
@@ -99,7 +122,26 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   }
 
   void _scheduleTargetRefresh() {
+    if (_refreshScheduled || _isPreparingTarget) {
+      return;
+    }
+    _refreshScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshScheduled = false;
+      if (mounted) {
+        _refreshTargetRect();
+      }
+    });
+  }
+
+  void _scheduleRetry() {
+    if (_refreshScheduled || _isPreparingTarget || !mounted) {
+      return;
+    }
+    _refreshScheduled = true;
+    _targetRefreshTimer?.cancel();
+    _targetRefreshTimer = Timer(_targetRetryDelay, () {
+      _refreshScheduled = false;
       if (mounted) {
         _refreshTargetRect();
       }
@@ -113,28 +155,45 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
 
     final resolved = _resolveTarget();
     if (resolved == null) {
-      _targetRect = null;
       _targetRetryCount += 1;
       if (_targetRetryCount >= _maxTargetRetries && !_unavailableReported) {
         _unavailableReported = true;
         widget.onTargetUnavailable();
+        return;
       }
-      setState(() {});
+      _scheduleRetry();
       return;
     }
 
     _targetRetryCount = 0;
     final rect = _toOverlayRect(resolved.rect);
-    if (_shouldScrollToTarget(rect)) {
-      unawaited(_prepareTarget(resolved.key));
+    if (_shouldScrollToTarget(rect, resolved.key)) {
+      unawaited(_prepareTarget(resolved.key, _measurementGeneration));
       return;
     }
-    if (rect == _targetRect) {
+
+    if (rect != _pendingTargetRect) {
+      setState(() {
+        _pendingTargetRect = rect;
+        _stableFrameCount = 1;
+      });
+      _scheduleTargetRefresh();
       return;
     }
+
+    _stableFrameCount += 1;
+    if (_stableFrameCount < _targetStabilizationFrames || rect == _targetRect) {
+      _scheduleTargetRefresh();
+      return;
+    }
+
     setState(() {
       _targetRect = rect;
     });
+    if (!_presentationReported) {
+      _presentationReported = true;
+      widget.onPresented();
+    }
   }
 
   _ResolvedTarget? _resolveTarget() {
@@ -172,22 +231,39 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     return globalRect;
   }
 
-  bool _shouldScrollToTarget(Rect rect) {
-    final size = MediaQuery.sizeOf(context);
-    const edgeTolerance = 2.0;
+  bool _shouldScrollToTarget(Rect rect, GlobalKey key) {
+    final overlayRenderObject = context.findRenderObject();
+    final size = overlayRenderObject is RenderBox && overlayRenderObject.hasSize
+        ? overlayRenderObject.size
+        : MediaQuery.sizeOf(context);
+    final padding = MediaQuery.paddingOf(context);
+    const edgeTolerance = 8.0;
     final safeViewport = Rect.fromLTWH(
       0,
-      0,
+      padding.top + edgeTolerance,
       size.width,
-      size.height,
+      math.max(
+        0,
+        size.height - padding.top - padding.bottom - (edgeTolerance * 2),
+      ),
     );
+    final targetContext = key.currentContext;
+    final scrollable =
+        targetContext == null ? null : Scrollable.maybeOf(targetContext);
+    final coversMostOfViewport = rect.width >= safeViewport.width * 0.78 &&
+        rect.height >= safeViewport.height * 0.68;
+    // 전체 지도처럼 화면을 채우는 비스크롤 타깃은 ensureVisible로
+    // 이동할 수 없으므로, 현재 위치에서 바로 안내해야 한다.
+    if (scrollable == null || coversMostOfViewport) {
+      return false;
+    }
     return rect.left < safeViewport.left - edgeTolerance ||
         rect.top < safeViewport.top - edgeTolerance ||
         rect.right > safeViewport.right + edgeTolerance ||
         rect.bottom > safeViewport.bottom + edgeTolerance;
   }
 
-  Future<void> _prepareTarget(GlobalKey key) async {
+  Future<void> _prepareTarget(GlobalKey key, int generation) async {
     if (_isPreparingTarget || !mounted) {
       return;
     }
@@ -198,6 +274,8 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     setState(() {
       _isPreparingTarget = true;
       _targetRect = null;
+      _pendingTargetRect = null;
+      _stableFrameCount = 0;
     });
     try {
       await Scrollable.ensureVisible(
@@ -206,9 +284,9 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOutCubic,
       );
-      await Future<void>.delayed(const Duration(milliseconds: 160));
+      await Future<void>.delayed(const Duration(milliseconds: 120));
     } finally {
-      if (mounted) {
+      if (mounted && generation == _measurementGeneration) {
         setState(() {
           _isPreparingTarget = false;
         });
@@ -224,6 +302,12 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
           final target = _isPreparingTarget ? null : _targetRect;
+          // API-backed pages can mount their target after this overlay. Keep
+          // the page usable and visually unchanged until the target is ready,
+          // then present the scrim and card together.
+          if (target == null) {
+            return const SizedBox.expand();
+          }
           return Stack(
             children: [
               Positioned.fill(
@@ -234,7 +318,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
                 ),
               ),
               ..._buildInteractionGuards(size, target),
-              if (!_isPreparingTarget) _buildDescriptionCard(size, target),
+              _buildDescriptionCard(size, target),
             ],
           );
         },
@@ -257,7 +341,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
     );
     final interactionTarget =
         interactionRect == null ? target : _toOverlayRect(interactionRect);
-    final hole = interactionTarget.inflate(10);
+    final hole = interactionTarget.inflate(10).intersect(Offset.zero & size);
     return [
       Positioned(
         left: 0,
@@ -293,14 +377,38 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   Widget _buildDescriptionCard(Size size, Rect? target) {
     const horizontalInset = 16.0;
     final cardWidth = math.min(360.0, size.width - (horizontalInset * 2));
+    final padding = MediaQuery.paddingOf(context);
+    const safeInset = 8.0;
+    final safeTop = padding.top + safeInset;
+    final safeBottom = padding.bottom + safeInset;
+    final availableHeight = math.max(0.0, size.height - safeTop - safeBottom);
+    final maxHeight = math.min(188.0, availableHeight);
+    if (widget.step.cardPlacement == FeatureTourCardPlacement.aboveFooter) {
+      return Positioned(
+        left: horizontalInset,
+        width: cardWidth,
+        bottom: safeBottom + 12,
+        child: _FeatureTourCard(
+          step: widget.step,
+          stepIndex: widget.stepIndex,
+          totalSteps: widget.totalSteps,
+          maxHeight: maxHeight,
+          onNext: widget.onNext,
+          onSkip: widget.onSkip,
+        ),
+      );
+    }
+
     final targetRect = target ??
         Rect.fromLTWH(size.width / 2 - 26, size.height / 2 - 26, 52, 52);
-    final maxHeight = math.min(188.0, size.height - 28);
-    final spaceBelow = size.height - targetRect.bottom;
+    final spaceBelow = size.height - safeBottom - targetRect.bottom;
     final showAbove = spaceBelow < maxHeight + 24;
     final top = showAbove
-        ? math.max(16.0, targetRect.top - maxHeight - 22)
-        : math.min(targetRect.bottom + 22, size.height - maxHeight - 16);
+        ? math.max(safeTop, targetRect.top - maxHeight - 22)
+        : math.min(
+            targetRect.bottom + 22,
+            math.max(safeTop, size.height - safeBottom - maxHeight),
+          );
     final left = math.max(
       horizontalInset,
       math.min(
@@ -309,9 +417,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       ),
     );
 
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
+    return Positioned(
       left: left,
       top: top,
       width: cardWidth,

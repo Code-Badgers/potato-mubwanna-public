@@ -8,6 +8,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../shared/widgets/auth_required_view.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../application/travel_record_controller.dart';
 import '../../domain/travel_record.dart';
 
@@ -39,32 +40,35 @@ class TravelRecordScreen extends ConsumerWidget {
               },
             ),
             Expanded(
-              child: switch (authStatus) {
-                AuthStatus.authenticated => recordsState!.when(
-                    data: (records) => records.isEmpty
-                        ? const _TravelRecordEmptyState()
-                        : _TravelRecordList(
-                            records: records,
-                            onRefresh: () =>
-                                ref.refresh(travelRecordsProvider.future),
-                            onRecordSelected: (record) =>
-                                _showTravelRecordPreview(context, record),
-                          ),
-                    loading: () => const _TravelRecordLoadingState(),
-                    error: (error, _) => _TravelRecordErrorState(
-                      message: error is ApiException
-                          ? error.message
-                          : '여행 기록을 불러오지 못했습니다.',
-                      onRetry: () => ref.invalidate(travelRecordsProvider),
+              child: KeyedSubtree(
+                key: FeatureTourTargets.travelRecordGallery,
+                child: switch (authStatus) {
+                  AuthStatus.authenticated => recordsState!.when(
+                      data: (records) => records.isEmpty
+                          ? const _TravelRecordEmptyState()
+                          : _TravelRecordList(
+                              records: records,
+                              onRefresh: () =>
+                                  ref.refresh(travelRecordsProvider.future),
+                              onRecordSelected: (record) =>
+                                  _showTravelRecordPreview(context, record),
+                            ),
+                      loading: () => const _TravelRecordLoadingState(),
+                      error: (error, _) => _TravelRecordErrorState(
+                        message: error is ApiException
+                            ? error.message
+                            : '여행 기록을 불러오지 못했습니다.',
+                        onRetry: () => ref.invalidate(travelRecordsProvider),
+                      ),
                     ),
-                  ),
-                AuthStatus.loading =>
-                  const Center(child: CircularProgressIndicator()),
-                AuthStatus.idle || AuthStatus.failure => AuthRequiredView(
-                    description: '여행 기록을 확인하려면 로그인해주세요.',
-                    onLogin: () => context.go('/login'),
-                  ),
-              },
+                  AuthStatus.loading =>
+                    const Center(child: CircularProgressIndicator()),
+                  AuthStatus.idle || AuthStatus.failure => AuthRequiredView(
+                      description: '여행 기록을 확인하려면 로그인해주세요.',
+                      onLogin: () => context.go('/login'),
+                    ),
+                },
+              ),
             ),
           ],
         ),

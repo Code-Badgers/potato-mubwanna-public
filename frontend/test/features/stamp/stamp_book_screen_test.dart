@@ -9,13 +9,18 @@ import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_guide_controller.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_playback_controller.dart';
 import 'package:potato_mubwanna/features/audio/domain/audio_guide.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 import 'package:potato_mubwanna/features/stamp/application/stamp_book_controller.dart';
 import 'package:potato_mubwanna/features/stamp/data/stamp_repository.dart';
 import 'package:potato_mubwanna/features/stamp/domain/stamp_book.dart';
 import 'package:potato_mubwanna/features/stamp/presentation/screen/stamp_book_screen.dart';
-import 'package:potato_mubwanna/features/spot/application/spot_detail_controller.dart';
-import 'package:potato_mubwanna/features/spot/domain/spot_detail.dart';
+import 'package:potato_mubwanna/features/map/application/map_spot_controller.dart'
+    as map;
+import 'package:potato_mubwanna/features/map/domain/spot_detail.dart' as map;
 import 'package:potato_mubwanna/features/spot/presentation/screen/spot_detail_screen.dart';
+import 'package:potato_mubwanna/features/spot/application/spot_detail_controller.dart'
+    as spot;
+import 'package:potato_mubwanna/features/spot/domain/spot_detail.dart' as spot;
 
 void main() {
   testWidgets('renders a map-first stamp tour and selected city card', (
@@ -64,6 +69,11 @@ void main() {
     expect(find.text('오디오 준비중'), findsNothing);
     expect(find.text('스탬프 준비중'), findsNothing);
     expect(find.text('방문 인증하기'), findsOneWidget);
+    expect(find.byKey(FeatureTourTargets.stampVisit), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(FeatureTourTargets.stampVisit)).height,
+      40,
+    );
     expect(find.text('투어 진행률'), findsNothing);
   });
 
@@ -90,6 +100,43 @@ void main() {
     expect(find.text('춘천 · 방문 인증 대기'), findsNothing);
   });
 
+  testWidgets('shows available selected spot details in the action card', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+      rallybookSpotsOverride: stampRallybookSpotsProvider.overrideWith(
+        (ref) async => _rallybookSpots,
+      ),
+      spotDetailOverride: map.spotDetailProvider.overrideWith(
+        (ref, spotId) async => map.SpotDetail(
+          id: spotId,
+          name: '정선 5일장',
+          category: 'POTATO_MARKET',
+          cityName: '정선군',
+          address: '강원특별자치도 정선군 정선길 12',
+          imageUrl: 'https://example.com/jeongseon-market.jpg',
+          description: '<p>정선의 맛과 이야기를 만나는 전통시장입니다.</p>',
+          openingHours: '09:00 - 18:00',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapMapMarker(tester, 101);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stamp-spot-image-101')),
+      findsOneWidget,
+    );
+    expect(find.text('정선군 · 시장·상권'), findsOneWidget);
+    expect(find.text('정선의 맛과 이야기를 만나는 전통시장입니다.'), findsOneWidget);
+    expect(find.text('강원특별자치도 정선군 정선길 12'), findsOneWidget);
+    expect(find.text('09:00 - 18:00'), findsOneWidget);
+  });
+
   testWidgets('opens the selected stamp spot detail', (tester) async {
     final router = GoRouter(
       initialLocation: '/',
@@ -114,6 +161,7 @@ void main() {
           stampRallybookSpotsProvider.overrideWith(
             (ref) async => _rallybookSpots,
           ),
+          map.spotDetailProvider.overrideWith(_emptySpotDetail),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -159,7 +207,8 @@ void main() {
           stampRallybookSpotsProvider.overrideWith(
             (ref) async => _rallybookSpots,
           ),
-          spotDetailProvider('102')
+          spot
+              .spotDetailProvider('102')
               .overrideWith((ref) async => _stampAudioSpot),
           audioGuideProvider('2').overrideWith((ref) async => _stampAudioGuide),
           audioPlaybackEngineFactoryProvider.overrideWithValue(() => engine),
@@ -469,6 +518,7 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required Override override,
   Override? rallybookSpotsOverride,
+  Override? spotDetailOverride,
   List<Override> additionalOverrides = const [],
 }) async {
   tester.view.physicalSize = const Size(430, 932);
@@ -484,10 +534,22 @@ Future<void> _pumpScreen(
             stampRallybookSpotsProvider.overrideWith(
               (ref) async => const <RallybookSpot>[],
             ),
+        spotDetailOverride ??
+            map.spotDetailProvider.overrideWith(_emptySpotDetail),
         ...additionalOverrides,
       ],
       child: const MaterialApp(home: StampBookScreen()),
     ),
+  );
+}
+
+Future<map.SpotDetail> _emptySpotDetail(Ref ref, String spotId) async {
+  return map.SpotDetail(
+    id: spotId,
+    name: '',
+    category: '',
+    cityName: '',
+    address: '',
   );
 }
 
@@ -631,7 +693,7 @@ final _claimResult = StampRewardClaimResult(
   expiresAt: DateTime.parse('2026-09-20T00:00:00Z'),
 );
 
-const _stampAudioSpot = SpotDetail(
+const _stampAudioSpot = spot.SpotDetail(
   id: '2',
   contentId: '128019',
   name: '남이섬',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/feature_tour/data/feature_tour_status_store.dart';
@@ -11,6 +13,7 @@ void main() {
   group('SharedPreferencesFeatureTourStatusStore', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
+      SharedPreferencesFeatureTourStatusStore.resetInProcessForTesting();
     });
 
     test('stores completion independently for each page tour', () async {
@@ -25,6 +28,30 @@ void main() {
 
       expect(await store.hasCompleted('map-v2'), isTrue);
       expect(await store.hasCompleted('stamp-v2'), isTrue);
+    });
+
+    test('stores seen state independently from completion', () async {
+      const store = SharedPreferencesFeatureTourStatusStore();
+
+      await store.markSeen('map-v3');
+
+      expect(await store.hasSeen('map-v3'), isTrue);
+      expect(await store.hasCompleted('map-v3'), isFalse);
+      expect(await store.hasSeen('stamp-v3'), isFalse);
+    });
+
+    test('stores page tour progress until that tour is completed', () async {
+      const store = SharedPreferencesFeatureTourStatusStore();
+
+      await store.markStepIndex('stamp-v7', 2);
+
+      expect(await store.readStepIndex('stamp-v7'), 2);
+      expect(await store.readStepIndex('mission-v5'), 0);
+
+      await store.markCompleted('stamp-v7');
+
+      expect(await store.readStepIndex('stamp-v7'), 0);
+      expect(await store.hasCompleted('stamp-v7'), isTrue);
     });
 
     test('keeps compatibility with the legacy completion key', () async {
@@ -56,6 +83,16 @@ void main() {
           isA<FeatureTourStep>().having(
             (step) => step.targetKey,
             'targetKey',
+            same(FeatureTourTargets.mapFullView),
+          ),
+        ),
+      );
+      expect(
+        FeatureTourDefinitions.map,
+        contains(
+          isA<FeatureTourStep>().having(
+            (step) => step.targetKey,
+            'targetKey',
             same(FeatureTourTargets.mapGoodNowCard),
           ),
         ),
@@ -70,17 +107,37 @@ void main() {
       final mapMarkerStep = FeatureTourDefinitions.map.firstWhere(
         (step) => step.targetKey == FeatureTourTargets.mapMarker,
       );
+      expect(mapMarkerStep.spotlightTargetKey, isNull);
+      expect(mapMarkerStep.interactionTargetKey, isNull);
       expect(
-        mapMarkerStep.spotlightTargetKey,
-        same(FeatureTourTargets.mapSelectedSpotCard),
+        mapMarkerStep.cardPlacement,
+        FeatureTourCardPlacement.aboveFooter,
       );
-      expect(
-        mapMarkerStep.interactionTargetKey,
-        same(FeatureTourTargets.mapMarker),
+      final routeModeStep = FeatureTourDefinitions.map.firstWhere(
+        (step) => step.targetKey == FeatureTourTargets.routeMode,
       );
+      expect(routeModeStep.title, contains('내 동선'));
+      expect(routeModeStep.advanceType, CoachMarkAdvanceType.targetTap);
       expect(
         FeatureTourDefinitions.stamp.map((step) => step.targetKey),
         contains(FeatureTourTargets.passportButton),
+      );
+      expect(
+        FeatureTourDefinitions.stamp.map((step) => step.targetKey),
+        contains(FeatureTourTargets.stampVisit),
+      );
+      final stampVisitStep = FeatureTourDefinitions.stamp.firstWhere(
+        (step) => step.targetKey == FeatureTourTargets.stampVisit,
+      );
+      expect(stampVisitStep.description, contains('스탬프'));
+      expect(stampVisitStep.description, contains('오디오 해설'));
+      expect(
+        FeatureTourDefinitions.mission.map((step) => step.targetKey),
+        contains(FeatureTourTargets.missionDetailAction),
+      );
+      expect(
+        FeatureTourDefinitions.mission.first.fallbackTargetKey,
+        same(FeatureTourTargets.missionDaily),
       );
       expect(
         FeatureTourDefinitions.potato.map((step) => step.targetKey),
@@ -118,11 +175,16 @@ void main() {
         same(FeatureTourTargets.myPageTravelRecord),
       );
       expect(
+        FeatureTourDefinitions.travelRecord.single.targetKey,
+        same(FeatureTourTargets.travelRecordGallery),
+      );
+      expect(
         FeatureTourDefinitions.spot.every(
           (step) => step.advanceType == CoachMarkAdvanceType.targetTap,
         ),
         isTrue,
       );
+      expect(FeatureTourDefinitions.spot.first.description, contains('스탬프'));
       expect(
         FeatureTourDefinitions.passport.single.description,
         contains('스탬프'),
@@ -152,6 +214,7 @@ void main() {
         onCompleted: () async {
           completed = true;
         },
+        onStepChanged: (_) async {},
       );
       addTearDown(controller.dispose);
 
@@ -164,6 +227,63 @@ void main() {
 
       expect(controller.stepIndex, 1);
       expect(controller.isActive, isTrue);
+      expect(completed, isFalse);
+    });
+
+    test('does not complete a tour whose only target was never presented', () {
+      var completed = false;
+      final controller = FeatureTourController(
+        tourId: 'missing-target',
+        steps: [
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '찾을 수 없는 대상',
+            description: '아직 화면에 만들어지지 않았어요.',
+          ),
+        ],
+        onCompleted: () async {
+          completed = true;
+        },
+        onStepChanged: (_) async {},
+      );
+      addTearDown(controller.dispose);
+
+      controller.activate();
+      controller.skipUnavailableStep();
+
+      expect(controller.isActive, isFalse);
+      expect(completed, isFalse);
+    });
+
+    test('does not complete when a later final target was never presented', () {
+      var completed = false;
+      final controller = FeatureTourController(
+        tourId: 'missing-final-target',
+        steps: [
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '표시된 첫 단계',
+            description: '첫 단계는 정상 표시됐어요.',
+          ),
+          FeatureTourStep(
+            targetKey: GlobalKey(),
+            title: '아직 없는 마지막 단계',
+            description: '대상이 나타날 때까지 기다려야 해요.',
+          ),
+        ],
+        onCompleted: () async {
+          completed = true;
+        },
+        onStepChanged: (_) async {},
+      );
+      addTearDown(controller.dispose);
+
+      controller.activate();
+      controller.markStepPresented();
+      controller.next();
+      controller.skipUnavailableStep();
+
+      expect(controller.isActive, isFalse);
       expect(completed, isFalse);
     });
   });
@@ -262,6 +382,266 @@ void main() {
       expect(find.text('감자밭 돌보기'), findsOneWidget);
     });
 
+    testWidgets('keeps waiting for a target that appears after data loading',
+        (tester) async {
+      final targetKey = GlobalKey();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'stamp-delayed-target',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '스탬프 장소 둘러보기',
+              description: '지도의 명소를 확인해보세요.',
+            ),
+          ],
+          child: _DelayedTargetPage(targetKey: targetKey),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 2200));
+      expect(store.seenIds, isEmpty);
+      expect(store.completedIds, isEmpty);
+
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+
+      expect(find.text('스탬프 장소 둘러보기'), findsOneWidget);
+      expect(store.seenIds, contains('stamp-delayed-target'));
+      expect(store.completedIds, isEmpty);
+    });
+
+    testWidgets('does not block the page while a delayed target is loading',
+        (tester) async {
+      final targetKey = GlobalKey();
+      var tapCount = 0;
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'mission-loading-target',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '미션을 골라보세요',
+              description: '미션을 불러온 뒤 안내를 시작해요.',
+            ),
+          ],
+          child: Stack(
+            children: [
+              Center(
+                child: _FeatureTourBlockingProbe(
+                  onTap: () => tapCount += 1,
+                ),
+              ),
+              _DelayedTargetPage(targetKey: targetKey),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.tap(find.byType(_FeatureTourBlockingProbe));
+      await tester.pump();
+
+      expect(tapCount, 1);
+      expect(find.text('미션을 골라보세요'), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 2500));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+        'uses the host viewport when auto-scrolling above bottom navigation',
+        (tester) async {
+      final scrollController = ScrollController();
+      final targetKey = GlobalKey();
+
+      addTearDown(scrollController.dispose);
+
+      await tester.pumpWidget(
+        _tourAppWithFooter(
+          store: store,
+          tourId: 'potato-host-viewport',
+          steps: [
+            FeatureTourStep(
+              targetKey: targetKey,
+              title: '아래 기능 확인하기',
+              description: '하단 기능이 보이도록 먼저 화면을 내려요.',
+            ),
+          ],
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              children: [
+                const SizedBox(height: 570),
+                Container(
+                  key: targetKey,
+                  height: 72,
+                  color: Colors.green,
+                ),
+                const SizedBox(height: 260),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await _settleTour(tester);
+
+      expect(scrollController.offset, greaterThan(0));
+      expect(find.text('아래 기능 확인하기'), findsOneWidget);
+    });
+
+    testWidgets('shows a card for a large non-scrollable map target',
+        (tester) async {
+      final mapKey = GlobalKey();
+
+      await tester.pumpWidget(
+        _tourAppWithFooter(
+          store: store,
+          tourId: 'map-large-target',
+          steps: [
+            FeatureTourStep(
+              targetKey: mapKey,
+              title: '궁금한 장소를 눌러보세요',
+              description: '지도에서 마커를 직접 골라보세요.',
+              advanceType: CoachMarkAdvanceType.targetTap,
+              cardPlacement: FeatureTourCardPlacement.aboveFooter,
+            ),
+          ],
+          child: SizedBox.expand(
+            key: mapKey,
+            child: const ColoredBox(color: Colors.lightBlue),
+          ),
+        ),
+      );
+
+      await _settleTour(tester);
+
+      expect(find.text('궁금한 장소를 눌러보세요'), findsOneWidget);
+      expect(store.seenIds, contains('map-large-target'));
+    });
+
+    testWidgets('does not restart an active tour when the host rebuilds',
+        (tester) async {
+      final firstKey = GlobalKey();
+      final secondKey = GlobalKey();
+      final initialSteps = [
+        FeatureTourStep(
+          targetKey: firstKey,
+          title: '첫 단계',
+          description: '첫 단계를 확인해보세요.',
+        ),
+        FeatureTourStep(
+          targetKey: secondKey,
+          title: '두 번째 단계',
+          description: '두 번째 단계를 확인해보세요.',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'rebuild-stable-tour',
+          steps: initialSteps,
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+      await tester.tap(find.text('다음'));
+      await _settleTour(tester);
+      expect(find.text('두 번째 단계'), findsOneWidget);
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'rebuild-stable-tour',
+          steps: [
+            FeatureTourStep(
+              targetKey: firstKey,
+              title: '새 첫 단계',
+              description: '첫 단계를 다시 확인해보세요.',
+            ),
+            FeatureTourStep(
+              targetKey: secondKey,
+              title: '새 두 번째 단계',
+              description: '두 번째 단계를 다시 확인해보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+
+      expect(find.text('두 번째 단계'), findsOneWidget);
+      expect(find.text('새 첫 단계'), findsNothing);
+    });
+
+    testWidgets('resumes the saved step after leaving before completion',
+        (tester) async {
+      final firstKey = GlobalKey();
+      final secondKey = GlobalKey();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'leave-before-complete',
+          steps: [
+            FeatureTourStep(
+              targetKey: firstKey,
+              title: '첫 단계',
+              description: '첫 단계를 확인해보세요.',
+            ),
+            FeatureTourStep(
+              targetKey: secondKey,
+              title: '두 번째 단계',
+              description: '두 번째 단계를 확인해보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+      expect(find.text('첫 단계'), findsOneWidget);
+      await tester.tap(find.text('다음'));
+      await _settleTour(tester);
+      expect(find.text('두 번째 단계'), findsOneWidget);
+      expect(store.seenIds, contains('leave-before-complete'));
+      expect(store.completedIds, isNot(contains('leave-before-complete')));
+      expect(store.stepIndices['leave-before-complete'], 1);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+
+      await tester.pumpWidget(
+        _tourApp(
+          store: store,
+          tourId: 'leave-before-complete',
+          steps: [
+            FeatureTourStep(
+              targetKey: firstKey,
+              title: '첫 단계',
+              description: '첫 단계를 확인해보세요.',
+            ),
+            FeatureTourStep(
+              targetKey: secondKey,
+              title: '두 번째 단계',
+              description: '두 번째 단계를 확인해보세요.',
+            ),
+          ],
+          child: _TourPage(introKey: firstKey, actionKey: secondKey),
+        ),
+      );
+      await _settleTour(tester);
+
+      expect(find.text('첫 단계'), findsNothing);
+      expect(find.text('두 번째 단계'), findsOneWidget);
+    });
+
     testWidgets('completing one page tour does not hide another page tour',
         (tester) async {
       final mapKey = GlobalKey();
@@ -324,6 +704,31 @@ Widget _tourApp({
   );
 }
 
+Widget _tourAppWithFooter({
+  required _FakeFeatureTourStatusStore store,
+  required String tourId,
+  required List<FeatureTourStep> steps,
+  required Widget child,
+}) {
+  return MaterialApp(
+    home: Scaffold(
+      body: Column(
+        children: [
+          Expanded(
+            child: FeatureTourHost(
+              tourId: tourId,
+              steps: steps,
+              statusStore: store,
+              child: child,
+            ),
+          ),
+          const SizedBox(height: 180),
+        ],
+      ),
+    ),
+  );
+}
+
 Future<void> _settleTour(WidgetTester tester) async {
   await tester.pump();
   await tester.pump();
@@ -361,8 +766,74 @@ class _TourPage extends StatelessWidget {
   }
 }
 
+class _DelayedTargetPage extends StatefulWidget {
+  const _DelayedTargetPage({required this.targetKey});
+
+  final GlobalKey targetKey;
+
+  @override
+  State<_DelayedTargetPage> createState() => _DelayedTargetPageState();
+}
+
+class _DelayedTargetPageState extends State<_DelayedTargetPage> {
+  bool _showTarget = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(Future<void>.delayed(const Duration(milliseconds: 2400), () {
+      if (mounted) {
+        setState(() => _showTarget = true);
+      }
+    }));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _showTarget
+        ? SizedBox(key: widget.targetKey, height: 100, width: 200)
+        : const SizedBox(height: 100, width: 200);
+  }
+}
+
+class _FeatureTourBlockingProbe extends StatelessWidget {
+  const _FeatureTourBlockingProbe({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      child: const Text('화면 사용하기'),
+    );
+  }
+}
+
 class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
+  final seenIds = <String>{};
   final completedIds = <String>{};
+  final stepIndices = <String, int>{};
+
+  @override
+  Future<bool> hasSeen(String version) async {
+    return seenIds.contains(version) || completedIds.contains(version);
+  }
+
+  @override
+  Future<void> markSeen(String version) async {
+    seenIds.add(version);
+  }
+
+  @override
+  Future<int> readStepIndex(String version) async {
+    return stepIndices[version] ?? 0;
+  }
+
+  @override
+  Future<void> markStepIndex(String version, int stepIndex) async {
+    stepIndices[version] = stepIndex;
+  }
 
   @override
   Future<bool> hasCompleted(String version) async {
@@ -372,5 +843,6 @@ class _FakeFeatureTourStatusStore implements FeatureTourStatusStore {
   @override
   Future<void> markCompleted(String version) async {
     completedIds.add(version);
+    stepIndices.remove(version);
   }
 }

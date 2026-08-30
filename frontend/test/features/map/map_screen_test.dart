@@ -12,6 +12,7 @@ import 'package:potato_mubwanna/features/map/domain/map_spot.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_detail.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 
 void main() {
   testWidgets('renders map discovery home and opens the full Kakao map', (
@@ -108,6 +109,11 @@ void main() {
     expect(find.text('정선 5일장'), findsOneWidget);
     expect(find.text('길찾기'), findsOneWidget);
     expect(find.text('상세보기'), findsNothing);
+    expect(find.byKey(FeatureTourTargets.mapMarker), findsOneWidget);
+    final mapTourTargetSize =
+        tester.getSize(find.byKey(FeatureTourTargets.mapMarker));
+    expect(mapTourTargetSize.width, greaterThan(300));
+    expect(mapTourTargetSize.height, greaterThan(250));
 
     await tester.tap(find.byKey(const ValueKey('full-map-home-button')));
     await tester.pumpAndSettle();

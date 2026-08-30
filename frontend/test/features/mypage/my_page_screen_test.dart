@@ -17,6 +17,7 @@ import 'package:potato_mubwanna/features/auth/data/auth_repository.dart';
 import 'package:potato_mubwanna/features/auth/data/kakao_login_service.dart';
 import 'package:potato_mubwanna/features/coupon/application/coupon_controller.dart';
 import 'package:potato_mubwanna/features/coupon/presentation/screen/coupon_screen.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 import 'package:potato_mubwanna/features/mypage/application/user_profile_controller.dart';
 import 'package:potato_mubwanna/features/mypage/domain/user_profile.dart';
 import 'package:potato_mubwanna/features/mypage/presentation/screen/my_page_screen.dart';
@@ -111,6 +112,10 @@ void main() {
     expect(find.text('로그아웃'), findsNothing);
     expect(find.text('회원 탈퇴'), findsNothing);
     expect(find.text('관리자 공지 관리'), findsNothing);
+    expect(
+      find.byKey(FeatureTourTargets.myPageTravelRecord),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows the admin menu only after the admin API succeeds',

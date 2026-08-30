@@ -538,25 +538,35 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         return Stack(
                           children: [
                             Positioned.fill(
-                              child: KeyedSubtree(
-                                key: FeatureTourTargets.mapMarker,
-                                child: _PotatoMapPreview(
-                                  spots: activeMapSpots,
-                                  routePolyline: activeRoutePolyline,
-                                  routeSpotIds: _isRouteMode
-                                      ? orderedFavoriteSpots
-                                          .map((spot) => spot.id)
-                                          .toList(growable: false)
-                                      : const [],
-                                  favoriteSpotIds: favoriteSpotIds,
-                                  currentLocation: _currentLocation,
-                                  currentLocationFocusTick:
-                                      _currentLocationFocusTick,
-                                  onSpotSelected: _selectSpotById,
-                                  mapViewBuilder: widget.mapViewBuilder,
-                                ),
+                              child: _PotatoMapPreview(
+                                spots: activeMapSpots,
+                                routePolyline: activeRoutePolyline,
+                                routeSpotIds: _isRouteMode
+                                    ? orderedFavoriteSpots
+                                        .map((spot) => spot.id)
+                                        .toList(growable: false)
+                                    : const [],
+                                favoriteSpotIds: favoriteSpotIds,
+                                currentLocation: _currentLocation,
+                                currentLocationFocusTick:
+                                    _currentLocationFocusTick,
+                                onSpotSelected: _selectSpotById,
+                                mapViewBuilder: widget.mapViewBuilder,
                               ),
                             ),
+                            if (!_isRouteMode && activeMapSpots.isNotEmpty)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.topCenter,
+                                    widthFactor: 1,
+                                    heightFactor: 1 - initialSheetSize,
+                                    child: SizedBox(
+                                      key: FeatureTourTargets.mapMarker,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             Positioned(
                               left: 12,
                               right: 12,
