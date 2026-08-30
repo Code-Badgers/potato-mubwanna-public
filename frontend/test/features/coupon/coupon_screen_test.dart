@@ -51,7 +51,7 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('filters real coupons by available and completed tabs', (
+  testWidgets('filters demo coupons by available and completed tabs', (
     tester,
   ) async {
     await _pumpScreen(
@@ -60,13 +60,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('사용 가능 1'), findsOneWidget);
-    expect(find.text('사용 완료 2'), findsOneWidget);
+    expect(find.text('시연용 1'), findsOneWidget);
+    expect(find.text('지난 기록 2'), findsOneWidget);
+    expect(find.text('공모전 시연용 쿠폰 · 실제 사용 불가'), findsOneWidget);
     expect(find.byKey(const ValueKey('coupon-1')), findsOneWidget);
     expect(find.text('감자빵 1개 교환권'), findsOneWidget);
     expect(find.text('사용한 쿠폰'), findsNothing);
 
-    await tester.tap(find.text('사용 완료 2'));
+    await tester.tap(find.text('지난 기록 2'));
     await tester.pumpAndSettle();
 
     expect(find.text('감자빵 1개 교환권'), findsNothing);
@@ -117,7 +118,7 @@ void main() {
     expect(find.text('QR 코드는 다음 업데이트에서 제공됩니다.'), findsNothing);
   });
 
-  testWidgets('shows QR and refreshes coupon status after use', (tester) async {
+  testWidgets('shows demo QR but prevents real coupon use', (tester) async {
     final repository = _DetailCouponRepository();
     await _pumpScreen(
       tester,
@@ -127,56 +128,23 @@ void main() {
 
     await tester.tap(find.text('감자빵 1개 교환권'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('QR 코드 보기'));
+    await tester.tap(find.text('시연 QR 보기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('쿠폰 QR'), findsOneWidget);
-    expect(find.text('사용 완료 처리'), findsOneWidget);
+    expect(find.text('시연용 쿠폰 QR'), findsOneWidget);
+    expect(find.text('공모전 시연용 쿠폰 · 실제 사용 불가'), findsWidgets);
+    expect(find.text('실제 사용 불가'), findsOneWidget);
     expect(find.bySemanticsLabel('쿠폰 사용 QR 코드'), findsOneWidget);
 
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
-    expect(find.text('쿠폰 QR'), findsOneWidget);
+    expect(find.text('시연용 쿠폰 QR'), findsOneWidget);
 
-    await tester.tap(find.text('사용 완료 처리'));
-    await tester.pumpAndSettle();
-    expect(find.text('사용 완료 후에는 되돌릴 수 없습니다.'), findsOneWidget);
-    await tester.tap(find.text('사용하기'));
-    await tester.pumpAndSettle();
-
-    expect(repository.usedPayload, 'signed-payload');
-    expect(find.text('쿠폰 QR'), findsNothing);
-    expect(find.text('2026. 07. 15. 사용'), findsOneWidget);
-    expect(find.text('QR 코드 보기'), findsNothing);
-  });
-
-  testWidgets('ignores repeated use taps while confirmation is opening', (
-    tester,
-  ) async {
-    final repository = _DetailCouponRepository();
-    await _pumpScreen(
-      tester,
-      overrides: [couponRepositoryProvider.overrideWithValue(repository)],
+    final disabledButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '실제 사용 불가'),
     );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('감자빵 1개 교환권'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('QR 코드 보기'));
-    await tester.pumpAndSettle();
-
-    final useButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '사용 완료 처리'),
-    );
-    useButton.onPressed!.call();
-    useButton.onPressed!.call();
-    await tester.pumpAndSettle();
-
-    expect(find.text('쿠폰을 사용하시겠어요?'), findsOneWidget);
-    await tester.tap(find.text('사용하기'));
-    await tester.pumpAndSettle();
-
-    expect(repository.useCount, 1);
+    expect(disabledButton.onPressed, isNull);
+    expect(repository.useCount, 0);
   });
 
   testWidgets('shows a loading state while coupons are requested', (
