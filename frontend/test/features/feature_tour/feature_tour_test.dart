@@ -40,6 +40,16 @@ void main() {
       expect(await store.hasSeen('stamp-v3'), isFalse);
     });
 
+    test('persists first exposure independently from completion', () async {
+      const firstStore = SharedPreferencesFeatureTourStatusStore();
+
+      await firstStore.markSeen('mission-v5');
+
+      const secondStore = SharedPreferencesFeatureTourStatusStore();
+      expect(await secondStore.hasSeen('mission-v5'), isTrue);
+      expect(await secondStore.hasCompleted('mission-v5'), isFalse);
+    });
+
     test('stores page tour progress until that tour is completed', () async {
       const store = SharedPreferencesFeatureTourStatusStore();
 
@@ -581,7 +591,7 @@ void main() {
       expect(find.text('새 첫 단계'), findsNothing);
     });
 
-    testWidgets('resumes the saved step after leaving before completion',
+    testWidgets('does not show an already-seen tour after leaving incomplete',
         (tester) async {
       final firstKey = GlobalKey();
       final secondKey = GlobalKey();
@@ -639,7 +649,7 @@ void main() {
       await _settleTour(tester);
 
       expect(find.text('첫 단계'), findsNothing);
-      expect(find.text('두 번째 단계'), findsOneWidget);
+      expect(find.text('두 번째 단계'), findsNothing);
     });
 
     testWidgets('completing one page tour does not hide another page tour',

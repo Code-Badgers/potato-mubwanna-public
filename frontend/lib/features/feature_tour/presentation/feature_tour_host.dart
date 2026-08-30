@@ -172,7 +172,7 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
   @override
   void initState() {
     super.initState();
-    unawaited(_loadCompletionState(_loadGeneration));
+    unawaited(_loadExposureState(_loadGeneration));
   }
 
   @override
@@ -196,19 +196,29 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
     _controller = _createController();
     _seenPersistRequested = false;
     setState(() {});
-    unawaited(_loadCompletionState(loadGeneration));
+    unawaited(_loadExposureState(loadGeneration));
   }
 
-  Future<void> _loadCompletionState(int loadGeneration) async {
-    bool completed;
+  Future<void> _loadExposureState(int loadGeneration) async {
+    bool hasBeenSeen;
+    try {
+      hasBeenSeen = await widget.statusStore.hasSeen(widget.tourId);
+    } catch (_) {
+      return;
+    }
+    // Exposure is the install + page boundary. An interrupted tour must not
+    // reappear after a restart, while the step index remains useful during a
+    // live route transition in the same host.
+    if (!mounted || loadGeneration != _loadGeneration || hasBeenSeen) {
+      return;
+    }
     int stepIndex;
     try {
-      completed = await widget.statusStore.hasCompleted(widget.tourId);
       stepIndex = await widget.statusStore.readStepIndex(widget.tourId);
     } catch (_) {
       return;
     }
-    if (!mounted || loadGeneration != _loadGeneration || completed) {
+    if (!mounted || loadGeneration != _loadGeneration) {
       return;
     }
     // The host child is already mounted when the status read completes. The
