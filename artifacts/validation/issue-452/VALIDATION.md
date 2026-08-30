@@ -22,6 +22,10 @@
 - 하단 내비게이션을 제외한 실제 Coach Mark Host 높이로 viewport를 계산해 감자밭 하단 기능까지 자동 스크롤
 - 스크롤할 수 없는 전체 지도 타깃에는 불필요한 `ensureVisible`을 실행하지 않아 검은 scrim만 남는 상태를 방지
 - 지도 여행 홈의 장소 카드 안내 뒤에는 홈을 유지해 네 번째 `지도 크게 보기` 안내와 전체 지도 marker 안내가 이어지도록 수정
+- 전체 지도 marker 안내는 선택 장소 카드가 아니라 카메라 중심의 실제 marker 영역(72×88)만 Spotlight하고, 같은 영역의 지도 터치를 허용하도록 수정
+- marker 선택 뒤에는 장소 카드 펼치기와 `내 동선` 안내가 차례로 이어지도록 지도 7단계 구성을 테스트로 고정
+- 스탬프의 방문 인증 안내는 카드 전체가 아니라 `방문 인증하기` 버튼만 Spotlight하도록 타깃을 분리
+- 방문 인증 안내에서 스탬프 획득과 관광 오디오 해설을 함께 알리고, 장소 상세의 오디오 재생 → 방문 인증 안내로 이어지도록 문구와 tour version 갱신
 - 잘못 저장된 기존 본 상태를 무효화하고 수정된 안내를 페이지별로 한 번 다시 제공하도록 tour version 갱신
 - Coach Mark 설명 카드가 Safe Area 밖으로 나가지 않도록 위치와 높이 보정
 - 스탬프 marker의 기존 테스트 식별자를 유지하고 방문 인증 타깃의 중복 GlobalKey 제거
@@ -36,6 +40,7 @@
 | `flutter test test/features/feature_tour/feature_tour_test.dart --reporter expanded` | PASS, 14 tests |
 | `flutter test test/features/map/map_screen_test.dart --reporter expanded` | PASS, 29 tests |
 | `flutter test test/features/stamp/stamp_book_screen_test.dart` | PASS, 15 tests |
+| `flutter test test/features/spot/spot_detail_screen_test.dart` | PASS, 13 tests |
 | `flutter test --reporter compact` | PASS, 347 tests |
 | `git diff --check` | PASS |
 
@@ -66,7 +71,7 @@ PR #454의 최신 `main` 병합 과정에서 `stamp_book_screen_test.dart`가 �
 - 환경 변수: 없음
 - 기존 사용자 변경 `frontend/ios/Podfile.lock`: 수정하거나 스테이징하지 않음
 - 스탬프 카드 정보 보강은 기존 API/DB 계약과 장소 상세 provider를 재사용하며 별도 API/DB 변경 없음
-- 페이지별 Coach Mark 상태는 기존 SharedPreferences 저장소의 `seenFeatureTourVersions`에 실제 최초 표시 여부를 저장함. map `v7`, stamp/passport `v5`, potato `v6`, mission `v4`, my page `v3`, travel record `v2`로 안내 계약을 관리함
+- 페이지별 Coach Mark 상태는 기존 SharedPreferences 저장소의 `seenFeatureTourVersions`에 실제 최초 표시 여부를 저장함. map `v8`, stamp `v6`, passport `v5`, potato `v6`, mission `v4`, spot `v2`, my page `v3`, travel record `v2`로 안내 계약을 관리함
 - 완료 상태(`completedFeatureTourVersion`, `completedFeatureTourVersions`)는 기존 호환성을 유지하며, 완료된 tour는 seen 상태로 간주함
 
 ## 남은 리스크
