@@ -1,76 +1,237 @@
 <div align="center">
 
+<img width="920" alt="감자무봤나 서비스 소개" src="https://github.com/user-attachments/assets/8a320d10-ea22-43b7-8a22-f805db54c3bd" />
+
 # 🥔 감자무봤나
 
-### 강원 18개 시·군의 29개 관광지를 패스포트 스탬프로 연결하는 위치 기반 로컬 관광 서비스
+### 감자를 따라 발견하는 강원의 숨은 매력
 
-감자 무봤나? 관광지는 보고, 스탬프는 찍고, 감자는 모으고
+강원특별자치도 18개 시·군의 관광지를 탐색하고, 방문 스탬프와 지역 감자 캐릭터를 모으는 위치 기반 여행 서비스
+
+<p>
+  <img src="https://img.shields.io/badge/Flutter-3.44.1-02569B?logo=flutter&logoColor=white" alt="Flutter 3.44.1" />
+  <img src="https://img.shields.io/badge/Dart-3.12.1-0175C2?logo=dart&logoColor=white" alt="Dart 3.12.1" />
+  <img src="https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 3.5" />
+  <img src="https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white" alt="Java 21" />
+  <img src="https://img.shields.io/badge/App_Version-1.0.0%2B1-52C88A" alt="App version 1.0.0+1" />
+</p>
+
+[서비스 소개](#-서비스-소개) · [앱 미리보기](#-앱-미리보기) · [주요 기능](#-주요-기능) · [기술 스택](#-기술-스택) · [시작하기](#-시작하기) · [배포 안내](#-릴리스와-배포)
 
 </div>
 
 ---
 
-## 1. 프로젝트 소개
+## 🌱 서비스 소개
 
-<img width="1672" height="941" alt="ChatGPT Image 2026년 7월 12일 오후 09_15_54" src="https://github.com/user-attachments/assets/8a320d10-ea22-43b7-8a22-f805db54c3bd" />
+**감자무봤나**는 관광 정보와 수집형 게임 경험을 결합한 강원 여행 패스포트입니다.
 
-**감자무봤나**는 강원특별자치도 18개 시·군의 관광지, 음식점, 카페, 체험 시설을  
-강원도의 대표 지역 IP인 감자와 게임 요소로 연결한 위치 기반 관광 서비스입니다.
+사용자는 카카오맵에서 주변 관광지를 발견하고, 현장 방문을 인증해 디지털 스탬프를 획득합니다. 여행 과정에서 지역별 감자 캐릭터를 수집·성장시키고, 점순이 미션과 쿠폰 보상을 통해 다음 여행으로 자연스럽게 이어집니다.
 
-사용자는 지도에서 주변 관광지를 탐색하고, 실제 관광지에 방문해 디지털 스탬프를 획득하며,  
-지역별 감자 캐릭터와 미션 보상을 수집할 수 있습니다.
+| 🗺️ 발견 | 🏆 성취 | 🥔 수집 |
+| :---: | :---: | :---: |
+| 관광지·맛집·카페·체험 장소를 지도에서 탐색 | GPS 방문 인증과 29개 관광지 패스포트 완성 | 걸음과 미션으로 지역 감자 캐릭터 성장 |
 
----
-
-## 2. 주요 기능
-
-| 기능 | 설명 |
-| --- | --- |
-| 감자 지도 | 강원도 관광지와 감자 관련 장소 탐색 |
-| 스탬프 랠리 | 29개 관광지 방문 및 패스포트 스탬프 수집 |
-| 감자 도감 | 지역별 감자 캐릭터 수집과 성장 |
-| 점순이 미션 | 위치·퀴즈·걸음·QR 기반 미션 |
-| 보상함 | 쿠폰과 미션·스탬프 보상 관리 |
-| 여행 기록 | 방문 장소와 획득 기록 조회 |
-| 관리자 | 관광지, 스탬프, 미션, 보상 관리 |
+> **서비스 범위**: 강원특별자치도 18개 시·군 · 스탬프 관광지 29곳 · 저장소 앱 버전 `1.0.0+1`
 
 ---
 
-## 3. 활용 API
+## 📱 앱 미리보기
 
-한국관광공사 국문 관광정보 서비스<br/>
-한국관광공사 관광지 오디오 가이드 정보<br/>
-한국관광공사 관광지 집중률 방문자 추이 예측 정보<br/>
-한국관광공사 관광지별 연관 관광지 정보<br/>
-Kakao Login API<br/>
-Kakao Maps API<br/>
-Kakao Local API<br/>
-Firebase Cloud Messaging<br/>
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="artifacts/validation/issue-257/android-app.png" width="220" alt="감자무봤나 온보딩 화면" /><br />
+      <b>여행 시작</b><br />감자와 함께 만나는 강원
+    </td>
+    <td align="center" width="33%">
+      <img src="artifacts/validation/issue-239/android-arm64-map.png" width="220" alt="강원 관광지 카카오맵 화면" /><br />
+      <b>감자 지도</b><br />내 주변 관광지 탐색
+    </td>
+    <td align="center" width="33%">
+      <img src="artifacts/validation/issue-249/03-rallybook.png" width="220" alt="강원 스탬프 랠리북 화면" /><br />
+      <b>스탬프 랠리북</b><br />18개 시·군 여행 기록
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="artifacts/validation/issue-447/spot-2-audio-playing.png" width="220" alt="관광지 오디오 가이드 재생 화면" /><br />
+      <b>관광 해설 오디오</b><br />여행지의 이야기를 듣는 경험
+    </td>
+    <td align="center" width="33%">
+      <img src="artifacts/validation/issue-399/photo-mission-success-device.png" width="220" alt="점순이 사진 미션 화면" /><br />
+      <b>점순이 미션</b><br />위치·사진·걸음·퀴즈 도전
+    </td>
+    <td align="center" width="33%">
+      <img src="artifacts/validation/issue-185/coupon-list-mobile.png" width="220" alt="여행 보상 쿠폰함 화면" /><br />
+      <b>여행 보상</b><br />미션과 스탬프로 받은 혜택
+    </td>
+  </tr>
+</table>
 
-## 4. 기술 스택
+---
 
-<img width="1448" height="1086" alt="ChatGPT Image 2026년 7월 12일 오후 09_38_26" src="https://github.com/user-attachments/assets/5868d421-9fb9-4ce2-9c73-4aeb837195e6" />
+## ✨ 주요 기능
 
-### Backend
+| 기능 | 사용자 경험 | 핵심 기술 |
+| --- | --- | --- |
+| **감자 지도** | 관광지·맛집·카페·체험 장소 탐색, 저장 동선과 길찾기 | Kakao Maps, Geolocation |
+| **스탬프 랠리** | 관광지 반경 내 GPS 방문 인증, 패스포트 스탬프 수집 | PostGIS, 위치 권한, 거리 검증 |
+| **감자 도감** | 지역별 감자 캐릭터 수집, 대표 감자 설정과 성장 | Health Connect, Workmanager |
+| **점순이 미션** | 위치·사진·걸음·퀴즈·QR 미션과 일일 로테이션 | Camera, QR Scanner, Push |
+| **관광 오디오** | 한국관광공사 Odii 기반 관광지 해설 재생 | Just Audio, TourAPI |
+| **여행 기록·보상함** | 방문 및 사진 기록, 스탬프·미션 보상과 쿠폰 관리 | S3, Cached Image, Reward Domain |
+| **관리자 기능** | 관광지, 스탬프, 미션, 보상, 공지 운영 | Role-based Access Control |
 
-| 분류 | 기술 |
-| --- | --- |
-| Language | Java 21 |
-| Framework | Spring Boot 3.5.0 |
-| Security | Spring Security, JWT |
-| ORM | Spring Data JPA, QueryDSL 의존성 |
-| Database | PostgreSQL |
-| Migration | Flyway |
-| Cache | Redis 의존성 및 연결 설정 |
-| API Docs | Springdoc OpenAPI / Swagger UI |
-| Build | Gradle 8.14.3 Wrapper |
+### 활용 데이터와 외부 서비스
+
+- 한국관광공사 관광정보·오디오 가이드·관광객 집중도·연관 관광지 API
+- Kakao Login, Kakao Maps, Kakao Local API
+- Firebase Cloud Messaging
+- Google Places 기반 관광지 상세정보 보강
+
+---
+
+## 🧭 시스템 구성
+
+```mermaid
+flowchart LR
+    APP[Flutter App<br/>Android · iOS · Web Preview]
+    API[Spring Boot API<br/>Modular Monolith]
+    DB[(PostgreSQL<br/>PostGIS)]
+    CACHE[(Redis)]
+    S3[(AWS S3)]
+    EXTERNAL[TourAPI · Kakao<br/>Google Places · FCM]
+    CD[GitHub Actions<br/>AWS SSM]
+    EC2[Docker Compose<br/>EC2 · Nginx · Caddy]
+
+    APP -->|REST · JWT| API
+    API --> DB
+    API --> CACHE
+    API --> S3
+    API --> EXTERNAL
+    CD --> EC2
+    EC2 --> API
+```
+
+- 프론트엔드는 기능 단위 `data / domain / presentation` 계층과 Riverpod 기반 상태 관리를 사용합니다.
+- 백엔드는 도메인별 `api / application / domain / infrastructure` 계층을 갖는 모듈형 모놀리스입니다.
+- 운영 환경은 GitHub Actions와 AWS SSM으로 EC2의 Docker Compose 배포를 수행합니다.
+
+---
+
+## 🛠 기술 스택
 
 ### Frontend
 
-| 분류 | 기술 |
+| 영역 | 기술 |
 | --- | --- |
-| Framework | Flutter |
-| Map | Kakao Maps JavaScript SDK, Android/iOS Native SDK Bridge |
-| Login | Kakao Flutter SDK |
-| Local Storage | Flutter Secure Storage, SharedPreferences |
-| Push | Firebase Messaging 의존성 |
+| Framework | Flutter 3.44.1, Dart 3.12.1 |
+| State / Routing | Riverpod, GoRouter |
+| Network / Model | Dio, Freezed, Json Serializable |
+| Map / Location | Kakao Maps SDK, Geolocator, Permission Handler |
+| Auth / Storage | Kakao Flutter SDK, Flutter Secure Storage, SharedPreferences |
+| Device | Health Connect, Workmanager, Image Picker, Mobile Scanner, Just Audio |
+| Push | Firebase Cloud Messaging |
+
+### Backend
+
+| 영역 | 기술 |
+| --- | --- |
+| Runtime | Java 21, Spring Boot 3.5.x, Gradle |
+| Security | Spring Security, JWT |
+| Data | Spring Data JPA, QueryDSL, Flyway |
+| Database / Cache | PostgreSQL, PostGIS, Redis |
+| API Docs | Springdoc OpenAPI, Swagger UI |
+
+### Infrastructure
+
+| 영역 | 기술 |
+| --- | --- |
+| Cloud | AWS EC2, RDS, S3, Systems Manager |
+| Runtime / Proxy | Docker Compose, Nginx, Caddy |
+| CI/CD | GitHub Actions, AWS OIDC |
+
+---
+
+## 📂 저장소 구조
+
+```text
+potato-mubwanna/
+├── frontend/        # Flutter Android · iOS · Web
+├── backend/         # Spring Boot modular monolith
+├── deploy/          # EC2 Docker Compose 및 운영 스크립트
+├── agents_docs/     # 제품·API·아키텍처·협업 문서
+└── artifacts/       # 이슈별 검증 기록과 화면 캡처
+```
+
+설계의 기준 문서는 [`agents_docs/`](agents_docs/)에 있습니다.
+
+- [프로젝트 개요](agents_docs/01_project_overview.md)
+- [기술 스택](agents_docs/02_tech_stack.md)
+- [기능 명세](agents_docs/05_functional_specification.md)
+- [API 명세](agents_docs/07_api_specification.md)
+- [프론트엔드 아키텍처](agents_docs/08_frontend_architecture.md)
+- [백엔드 아키텍처](agents_docs/09_backend_architecture.md)
+
+---
+
+## 🚀 시작하기
+
+### 요구 환경
+
+- Flutter `3.44.1` / Dart `3.12.1`
+- Android 빌드 JDK `17`
+- Backend Java `21`
+- PostgreSQL + PostGIS, Redis 또는 Docker Compose
+
+### Frontend
+
+```powershell
+cd frontend
+flutter pub get
+flutter run
+```
+
+로컬 백엔드를 사용할 때는 API 주소를 명시합니다.
+
+```powershell
+flutter run -d <device-id> --dart-define=API_BASE_URL=http://localhost:8080/api
+```
+
+### Backend
+
+```powershell
+cd backend
+.\gradlew.bat test
+.\gradlew.bat bootRun
+```
+
+로컬 실행 전 PostgreSQL/PostGIS와 Redis를 준비하고, 필요한 백엔드 환경 변수는 [`backend/.env.example`](backend/.env.example)을 참고해 현재 셸 또는 실행 환경에 설정합니다. 실제 API 키·서명 키·운영 정보는 저장소에 커밋하지 않습니다. 플랫폼별 설정과 ARM64 Android 에뮬레이터 실행법은 [Frontend README](frontend/README.md), 백엔드 명령은 [Backend README](backend/README.md)를 확인하세요.
+
+---
+
+## 📦 릴리스와 배포
+
+원스토어에 이미 업로드된 APK와 GitHub의 소스·백엔드 배포는 서로 다른 릴리스 단위입니다.
+
+| 변경 범위 | 기존 원스토어 APK | 자동 백엔드 배포 |
+| --- | --- | --- |
+| `README.md`, `docs/**` | 영향 없음 | 실행되지 않음 |
+| `frontend/**` | 기존 APK는 그대로 유지 | 실행되지 않음 |
+| `backend/**`, `deploy/**`를 `main`에 반영 | 앱 파일 자체는 그대로지만 API 동작에 영향 가능 | 운영 배포 실행 |
+| `.github/workflows/backend-deploy.yml` | 앱 파일 자체는 그대로지만 배포 방식에 영향 가능 | 운영 배포 실행 |
+
+- 앱 코드 변경은 새 버전으로 빌드·서명한 APK를 원스토어에 다시 업로드해야 사용자에게 반영됩니다.
+- 백엔드 변경은 현재 설치된 앱도 같은 운영 API를 사용하므로 하위 호환성, DB migration, API 계약을 반드시 확인해야 합니다.
+- 운영 백엔드 배포는 `main`에 지정 경로가 반영되거나 `backend-v*` 태그가 푸시될 때 실행되며, 필요하면 수동으로도 시작할 수 있습니다.
+
+자세한 운영 절차는 [배포 가이드](deploy/README.md)를 확인하세요.
+
+---
+
+<div align="center">
+
+**관광지는 보고 · 스탬프는 찍고 · 감자는 모으고**
+
+</div>
