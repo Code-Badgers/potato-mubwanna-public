@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/App_Version-1.0.0%2B1-52C88A" alt="App version 1.0.0+1" />
 </p>
 
-[서비스 소개](#-서비스-소개) · [주요 화면](#-주요-화면) · [기술 스택](#-기술-스택) · [시작하기](#-시작하기) · [배포 안내](#-릴리스와-배포)
+[서비스 소개](#-서비스-소개) · [주요 화면](#-주요-화면) · [기술 스택](#-기술-스택)
 
 </div>
 
@@ -118,141 +118,13 @@
 
 ---
 
-## 🧭 시스템 구성
-
-```mermaid
-flowchart LR
-    APP[Flutter App<br/>Android · iOS · Web Preview]
-    API[Spring Boot API<br/>Modular Monolith]
-    DB[(PostgreSQL<br/>PostGIS)]
-    CACHE[(Redis)]
-    S3[(AWS S3)]
-    EXTERNAL[TourAPI · Kakao<br/>Google Places · FCM]
-    CD[GitHub Actions<br/>AWS SSM]
-    EC2[Docker Compose<br/>EC2 · Nginx · Caddy]
-
-    APP -->|REST · JWT| API
-    API --> DB
-    API --> CACHE
-    API --> S3
-    API --> EXTERNAL
-    CD --> EC2
-    EC2 --> API
-```
-
-- 프론트엔드는 기능 단위 `data / domain / presentation` 계층과 Riverpod 기반 상태 관리를 사용합니다.
-- 백엔드는 도메인별 `api / application / domain / infrastructure` 계층을 갖는 모듈형 모놀리스입니다.
-- 운영 환경은 GitHub Actions와 AWS SSM으로 EC2의 Docker Compose 배포를 수행합니다.
-
----
-
 ## 🛠 기술 스택
 
-### Frontend
+<div align="center">
 
-| 영역 | 기술 |
-| --- | --- |
-| Framework | Flutter 3.44.1, Dart 3.12.1 |
-| State / Routing | Riverpod, GoRouter |
-| Network / Model | Dio, Freezed, Json Serializable |
-| Map / Location | Kakao Maps SDK, Geolocator, Permission Handler |
-| Auth / Storage | Kakao Flutter SDK, Flutter Secure Storage, SharedPreferences |
-| Device | Health Connect, Workmanager, Image Picker, Mobile Scanner, Just Audio |
-| Push | Firebase Cloud Messaging |
+<img width="920" alt="감자무봤나 기술 스택" src="https://github.com/user-attachments/assets/5868d421-9fb9-4ce2-9c73-4aeb837195e6" />
 
-### Backend
-
-| 영역 | 기술 |
-| --- | --- |
-| Runtime | Java 21, Spring Boot 3.5.x, Gradle |
-| Security | Spring Security, JWT |
-| Data | Spring Data JPA, QueryDSL, Flyway |
-| Database / Cache | PostgreSQL, PostGIS, Redis |
-| API Docs | Springdoc OpenAPI, Swagger UI |
-
-### Infrastructure
-
-| 영역 | 기술 |
-| --- | --- |
-| Cloud | AWS EC2, RDS, S3, Systems Manager |
-| Runtime / Proxy | Docker Compose, Nginx, Caddy |
-| CI/CD | GitHub Actions, AWS OIDC |
-
----
-
-## 📂 저장소 구조
-
-```text
-potato-mubwanna/
-├── frontend/        # Flutter Android · iOS · Web
-├── backend/         # Spring Boot modular monolith
-├── deploy/          # EC2 Docker Compose 및 운영 스크립트
-├── agents_docs/     # 제품·API·아키텍처·협업 문서
-└── artifacts/       # 이슈별 검증 기록과 화면 캡처
-```
-
-설계의 기준 문서는 [`agents_docs/`](agents_docs/)에 있습니다.
-
-- [프로젝트 개요](agents_docs/01_project_overview.md)
-- [기술 스택](agents_docs/02_tech_stack.md)
-- [기능 명세](agents_docs/05_functional_specification.md)
-- [API 명세](agents_docs/07_api_specification.md)
-- [프론트엔드 아키텍처](agents_docs/08_frontend_architecture.md)
-- [백엔드 아키텍처](agents_docs/09_backend_architecture.md)
-
----
-
-## 🚀 시작하기
-
-### 요구 환경
-
-- Flutter `3.44.1` / Dart `3.12.1`
-- Android 빌드 JDK `17`
-- Backend Java `21`
-- PostgreSQL + PostGIS, Redis 또는 Docker Compose
-
-### Frontend
-
-```powershell
-cd frontend
-flutter pub get
-flutter run
-```
-
-로컬 백엔드를 사용할 때는 API 주소를 명시합니다.
-
-```powershell
-flutter run -d <device-id> --dart-define=API_BASE_URL=http://localhost:8080/api
-```
-
-### Backend
-
-```powershell
-cd backend
-.\gradlew.bat test
-.\gradlew.bat bootRun
-```
-
-로컬 실행 전 PostgreSQL/PostGIS와 Redis를 준비하고, 필요한 백엔드 환경 변수는 [`backend/.env.example`](backend/.env.example)을 참고해 현재 셸 또는 실행 환경에 설정합니다. 실제 API 키·서명 키·운영 정보는 저장소에 커밋하지 않습니다. 플랫폼별 설정과 ARM64 Android 에뮬레이터 실행법은 [Frontend README](frontend/README.md), 백엔드 명령은 [Backend README](backend/README.md)를 확인하세요.
-
----
-
-## 📦 릴리스와 배포
-
-원스토어에 이미 업로드된 APK와 GitHub의 소스·백엔드 배포는 서로 다른 릴리스 단위입니다.
-
-| 변경 범위 | 기존 원스토어 APK | 자동 백엔드 배포 |
-| --- | --- | --- |
-| `README.md`, `docs/**` | 영향 없음 | 실행되지 않음 |
-| `frontend/**` | 기존 APK는 그대로 유지 | 실행되지 않음 |
-| `backend/**`, `deploy/**`를 `main`에 반영 | 앱 파일 자체는 그대로지만 API 동작에 영향 가능 | 운영 배포 실행 |
-| `.github/workflows/backend-deploy.yml` | 앱 파일 자체는 그대로지만 배포 방식에 영향 가능 | 운영 배포 실행 |
-
-- 앱 코드 변경은 새 버전으로 빌드·서명한 APK를 원스토어에 다시 업로드해야 사용자에게 반영됩니다.
-- 백엔드 변경은 현재 설치된 앱도 같은 운영 API를 사용하므로 하위 호환성, DB migration, API 계약을 반드시 확인해야 합니다.
-- 운영 백엔드 배포는 `main`에 지정 경로가 반영되거나 `backend-v*` 태그가 푸시될 때 실행되며, 필요하면 수동으로도 시작할 수 있습니다.
-
-자세한 운영 절차는 [배포 가이드](deploy/README.md)를 확인하세요.
+</div>
 
 ---
 
