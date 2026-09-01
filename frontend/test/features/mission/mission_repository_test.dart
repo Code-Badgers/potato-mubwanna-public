@@ -32,7 +32,9 @@ void main() {
     expect(result.first.status, MissionStatus.ready);
     expect(result.first.rewardType, MissionRewardType.potato);
     expect(result.first.isNew, isTrue);
+    expect(result.first.todaySelected, isTrue);
     expect(result.last.status, MissionStatus.completed);
+    expect(result.last.todaySelected, isFalse);
     expect(result.last.progress, result.last.target);
   });
 
@@ -174,6 +176,7 @@ const _missionListResponse = <String, Object?>{
         'new': true,
         'completed': false,
         'completedAt': null,
+        'todaySelected': true,
       },
       {
         'missionId': 1004,
@@ -195,6 +198,7 @@ const _missionListResponse = <String, Object?>{
         'new': false,
         'completed': true,
         'completedAt': '2026-07-02T00:00:00Z',
+        'todaySelected': false,
       },
     ],
   },

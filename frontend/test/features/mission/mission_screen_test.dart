@@ -69,7 +69,7 @@ void main() {
     expect(find.text('login destination'), findsOneWidget);
   });
 
-  testWidgets('renders only three daily requests on mission home',
+  testWidgets('renders selected daily and grouped missions on mission home',
       (tester) async {
     await _pumpMissionScreen(tester);
 
@@ -97,24 +97,23 @@ void main() {
     expect(find.textContaining('쿠폰'), findsNothing);
     expect(find.textContaining('CP_'), findsNothing);
     expect(find.text('전체 미션 보기'), findsNothing);
-    expect(find.text('일일'), findsNothing);
-    expect(find.text('주간'), findsNothing);
-    expect(find.text('이벤트'), findsNothing);
+    expect(find.text('이번 주의 미션'), findsOneWidget);
+    expect(find.text('기간 한정 미션'), findsNothing);
 
     await tester.scrollUntilVisible(
-      find.text('천천히 걸어볼까요?'),
+      find.text('10,000걸음 걷기'),
       160,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
-    expect(find.text('강원도 이야기 풀어볼까요?'), findsOneWidget);
-    expect(find.text('작은 표식을 찾아봐요'), findsOneWidget);
+    expect(find.text('10,000걸음 걷기'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
 
     expect(find.text('시작하기'), findsNothing);
     expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     expect(find.text('매일 가볍게 여행 미션을 이어가보세요!'), findsNothing);
-    expect(find.text('속초 시장 QR 찾기'), findsNothing);
-    expect(find.text('시군 2곳 방문하기'), findsNothing);
+    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
+    expect(find.text('시군 2곳 방문하기'), findsOneWidget);
     expect(
       find.byKey(FeatureTourTargets.missionFeatured),
       findsOneWidget,
@@ -126,7 +125,7 @@ void main() {
       (tester) async {
     await _pumpMissionScreen(tester);
 
-    await _openMission(tester, '강원도 이야기 풀어볼까요?');
+    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
 
     expect(find.text('미션 상세'), findsOneWidget);
     expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
@@ -161,14 +160,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('1 / 3'), findsOneWidget);
-    expect(find.text('강원도 이야기 풀어볼까요?'), findsNothing);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsNothing);
   });
 
   testWidgets('returns to mission list on system back from detail',
       (tester) async {
     await _pumpMissionScreen(tester);
 
-    await _openMission(tester, '강원도 이야기 풀어볼까요?');
+    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
     expect(find.text('미션 상세'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
@@ -183,7 +182,7 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _openMission(tester, '강원도 이야기 풀어볼까요?');
+    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
 
     await _tapVisibleText(tester, '옥수수감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
@@ -199,7 +198,7 @@ void main() {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);
 
-    await _openMission(tester, '천천히 걸어볼까요?');
+    await _openMission(tester, '10,000걸음 걷기');
 
     await tester.tap(find.widgetWithText(FilledButton, '걸음 인증하기'));
     await tester.pumpAndSettle();
@@ -376,7 +375,7 @@ void main() {
       ),
     );
 
-    await _openMission(tester, '강원도 이야기 풀어볼까요?');
+    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
 
     await _tapVisibleText(tester, '곤드레감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
@@ -430,9 +429,9 @@ void main() {
 
     expect(find.text('스탬프 1개 획득하기'), findsNothing);
     expect(find.text('[시즌 한정] 얼음나라 산천어 미션'), findsNothing);
-    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
-    expect(find.text('강원도 이야기 풀어볼까요?'), findsOneWidget);
-    expect(find.text('작은 표식을 찾아봐요'), findsOneWidget);
+    expect(find.text('10,000걸음 걷기'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
   });
 
   testWidgets('shows visit mission entry banner from spot verification',
@@ -452,9 +451,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('오늘의 미션'), findsNothing);
-    expect(find.text('천천히 걸어볼까요?'), findsOneWidget);
-    expect(find.text('강원도 이야기 풀어볼까요?'), findsOneWidget);
-    expect(find.text('작은 표식을 찾아봐요'), findsOneWidget);
+    expect(find.text('10,000걸음 걷기'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
+    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
   });
 
   testWidgets('opens visit unlocked mission detail from mission id',
@@ -804,6 +803,7 @@ const _missions = [
     rewardLabel: '감자 코인 x2',
     progress: 7642,
     target: 10000,
+    todaySelected: true,
   ),
   MissionChallenge(
     id: 'daily-stamp',
@@ -820,6 +820,24 @@ const _missions = [
     rewardLabel: '감자 코인 x1',
     progress: 1,
     target: 1,
+    todaySelected: true,
+  ),
+  MissionChallenge(
+    id: 'daily-cities',
+    group: MissionGroup.daily,
+    type: MissionType.collection,
+    status: MissionStatus.ready,
+    title: '오늘 새로운 시·군 2곳 방문하기',
+    spotName: '강원 18개 시·군',
+    cityName: '일일 미션',
+    description: '오늘 서로 다른 강원 시·군 두 곳의 감자 스팟을 방문해보세요.',
+    dialogue: '강원도는 한 곳만 보고 가기엔 조금 넓다 얘.',
+    conditionLabel: '서로 다른 시·군 2곳 방문',
+    rewardType: MissionRewardType.coin,
+    rewardLabel: '감자 코인 x3',
+    progress: 0,
+    target: 2,
+    todaySelected: true,
   ),
   MissionChallenge(
     id: 'weekly-cities',

@@ -323,27 +323,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
   Widget _buildMissionList(List<MissionChallenge> missions) {
     final featuredMission = _featuredMission(missions);
-    final todayMissions = _todayMissions(
+    final selectedDailyMissions = _selectedDailyMissions(missions);
+    final todayMissions = selectedDailyMissions
+        .where((mission) => mission.status != MissionStatus.completed)
+        .toList();
+    final specialMissions = _missionsForGroup(
       missions,
+      MissionGroup.jumsooni,
       excludedMissionId: featuredMission?.id,
     );
-    final todayMissionTotalCount = missions
-        .where((mission) =>
-            mission.active &&
-            mission.status != MissionStatus.locked &&
-            mission.id != featuredMission?.id)
-        .length
-        .clamp(0, _todayMissionLimit)
-        .toInt();
-    // 완료된 카드는 목록에서 제외되므로, 진행 수치는 필터 전 상태로 계산한다.
-    final completedMissionCount = missions
-        .where((mission) =>
-            mission.active &&
-            mission.group == MissionGroup.daily &&
-            mission.status == MissionStatus.completed)
-        .length
-        .clamp(0, todayMissionTotalCount)
-        .toInt();
+    final weeklyMissions = _missionsForGroup(missions, MissionGroup.weekly);
+    final eventMissions = _missionsForGroup(missions, MissionGroup.event);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -359,9 +349,15 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             SliverToBoxAdapter(
               child: _MissionGentleStart(
                 featuredMission: featuredMission,
-                missions: todayMissions,
-                completedCount: completedMissionCount,
-                totalCount: todayMissionTotalCount,
+                dailyMissions: todayMissions,
+                specialMissions: specialMissions,
+                weeklyMissions: weeklyMissions,
+                eventMissions: eventMissions,
+                completedCount: selectedDailyMissions
+                    .where(
+                        (mission) => mission.status == MissionStatus.completed)
+                    .length,
+                totalCount: selectedDailyMissions.length,
                 onMissionTap: _showMissionDetail,
               ),
             ),
@@ -372,12 +368,11 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 }
 
-const _todayMissionLimit = 3;
-
 MissionChallenge? _featuredMission(List<MissionChallenge> missions) {
   final candidates = missions
       .where((mission) =>
           mission.active &&
+          mission.group == MissionGroup.jumsooni &&
           mission.status != MissionStatus.locked &&
           mission.status != MissionStatus.completed)
       .toList()
@@ -391,52 +386,33 @@ MissionChallenge? _featuredMission(List<MissionChallenge> missions) {
   return candidates.isEmpty ? null : candidates.first;
 }
 
-List<MissionChallenge> _todayMissions(
-  List<MissionChallenge> missions, {
-  String? excludedMissionId,
-}) {
-  final candidates = missions
+List<MissionChallenge> _selectedDailyMissions(
+  List<MissionChallenge> missions,
+) {
+  return missions
       .where((mission) =>
           mission.active &&
+          mission.group == MissionGroup.daily &&
+          mission.status != MissionStatus.locked &&
+          mission.todaySelected)
+      .toList()
+    ..sort(_compareMissionPriority);
+}
+
+List<MissionChallenge> _missionsForGroup(
+  List<MissionChallenge> missions,
+  MissionGroup group, {
+  String? excludedMissionId,
+}) {
+  return missions
+      .where((mission) =>
+          mission.active &&
+          mission.group == group &&
           mission.status != MissionStatus.locked &&
           mission.status != MissionStatus.completed &&
           mission.id != excludedMissionId)
       .toList()
     ..sort(_compareMissionPriority);
-  final selected = <MissionChallenge>[];
-
-  void addFirstWhere(bool Function(MissionChallenge mission) test) {
-    for (final mission in candidates) {
-      final alreadySelected =
-          selected.any((selectedMission) => selectedMission.id == mission.id);
-      if (!alreadySelected &&
-          test(mission) &&
-          selected.length < _todayMissionLimit) {
-        selected.add(mission);
-        return;
-      }
-    }
-  }
-
-  addFirstWhere((mission) => mission.type == MissionType.visitAndStep);
-  addFirstWhere((mission) =>
-      mission.type == MissionType.photo ||
-      mission.type == MissionType.photoOcr);
-  addFirstWhere((mission) => mission.type == MissionType.quiz);
-  addFirstWhere((mission) => mission.type == MissionType.qrScan);
-  addFirstWhere((mission) =>
-      mission.type == MissionType.visit || mission.type == MissionType.stamp);
-
-  for (final mission in candidates) {
-    if (selected.length >= _todayMissionLimit) {
-      break;
-    }
-    if (!selected.any((selectedMission) => selectedMission.id == mission.id)) {
-      selected.add(mission);
-    }
-  }
-
-  return selected;
 }
 
 class _VisitMissionEntryBanner extends StatelessWidget {
@@ -776,14 +752,20 @@ class _MissionEmptyState extends StatelessWidget {
 class _MissionGentleStart extends StatelessWidget {
   const _MissionGentleStart({
     required this.featuredMission,
-    required this.missions,
+    required this.dailyMissions,
+    required this.specialMissions,
+    required this.weeklyMissions,
+    required this.eventMissions,
     required this.completedCount,
     required this.totalCount,
     required this.onMissionTap,
   });
 
   final MissionChallenge? featuredMission;
-  final List<MissionChallenge> missions;
+  final List<MissionChallenge> dailyMissions;
+  final List<MissionChallenge> specialMissions;
+  final List<MissionChallenge> weeklyMissions;
+  final List<MissionChallenge> eventMissions;
   final int completedCount;
   final int totalCount;
   final ValueChanged<String> onMissionTap;
@@ -815,10 +797,10 @@ class _MissionGentleStart extends StatelessWidget {
             totalCount: totalCount,
           ),
           const SizedBox(height: 12),
-          if (missions.isEmpty)
+          if (dailyMissions.isEmpty)
             const _MissionEmptyState()
           else
-            for (final entry in missions.indexed) ...[
+            for (final entry in dailyMissions.indexed) ...[
               if (entry.$1 == 0)
                 KeyedSubtree(
                   key: FeatureTourTargets.missionDaily,
@@ -841,6 +823,81 @@ class _MissionGentleStart extends StatelessWidget {
                 ),
               const SizedBox(height: 10),
             ],
+          _MissionGroupSection(
+            title: '점순이 특별 미션',
+            subtitle: '강원도 곳곳의 이야기를 직접 만나보세요',
+            missions: specialMissions,
+            onMissionTap: onMissionTap,
+          ),
+          _MissionGroupSection(
+            title: '이번 주의 미션',
+            subtitle: '이번 주 여행을 조금 더 넓혀봐요',
+            missions: weeklyMissions,
+            onMissionTap: onMissionTap,
+          ),
+          _MissionGroupSection(
+            title: '기간 한정 미션',
+            subtitle: '지금 열려 있는 특별한 여행을 만나보세요',
+            missions: eventMissions,
+            onMissionTap: onMissionTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissionGroupSection extends StatelessWidget {
+  const _MissionGroupSection({
+    required this.title,
+    required this.subtitle,
+    required this.missions,
+    required this.onMissionTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<MissionChallenge> missions;
+  final ValueChanged<String> onMissionTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (missions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final entry in missions.indexed) ...[
+            _MissionCompactTile(
+              index: entry.$1,
+              mission: entry.$2,
+              onTap: () => onMissionTap(entry.$2.id),
+            ),
+            if (entry.$1 != missions.length - 1) const SizedBox(height: 10),
+          ],
         ],
       ),
     );
@@ -1157,7 +1214,7 @@ class _MissionCompactTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _gentleMissionLine(mission),
+                      mission.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1272,16 +1329,6 @@ String _completionRewardMessage(MissionChallenge mission) {
     MissionRewardType.potato => '감자 카드 수집 후보로 기록됐어요.',
     MissionRewardType.coupon => '제휴 혜택은 준비되는 대로 보상함에 이어집니다.',
     MissionRewardType.item || MissionRewardType.coin => '미션 참여 기록이 저장됐어요.',
-  };
-}
-
-String _gentleMissionLine(MissionChallenge mission) {
-  return switch (mission.type) {
-    MissionType.visitAndStep => '천천히 걸어볼까요?',
-    MissionType.photo || MissionType.photoOcr => '사진 한 장 남겨볼까요?',
-    MissionType.qrScan => '작은 표식을 찾아봐요',
-    MissionType.quiz => '강원도 이야기 풀어볼까요?',
-    _ => '가볍게 들러볼까요?',
   };
 }
 
