@@ -32,7 +32,8 @@ public record MissionItemResponse(
     boolean completed,
     Instant completedAt,
     Instant periodStartsAt,
-    Instant periodEndsAt
+    Instant periodEndsAt,
+    boolean todaySelected
 ) {
 
     public static MissionItemResponse from(
@@ -40,7 +41,8 @@ public record MissionItemResponse(
         UserMission userMission,
         MissionPeriod period,
         int progress,
-        boolean available
+        boolean available,
+        boolean todaySelected
     ) {
         boolean completed = userMission != null;
         return new MissionItemResponse(
@@ -66,7 +68,8 @@ public record MissionItemResponse(
             completed,
             completed ? userMission.getCompletedAt() : null,
             period.startInclusive(),
-            period.endExclusive()
+            period.endExclusive(),
+            todaySelected
         );
     }
 }

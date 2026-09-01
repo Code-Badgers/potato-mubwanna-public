@@ -37,6 +37,8 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MissionService {
 
     private static final String MISSION_UPLOAD_KEY_PREFIX = "mission-uploads/";
+    private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
 
     private final MissionRepository missionRepository;
     private final MissionVerificationPolicyRepository missionVerificationPolicyRepository;
@@ -177,6 +180,11 @@ public class MissionService {
 
         Instant now = Instant.now(clock);
         List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
+        Set<String> todaySelectedCodes = DailyMissionSelector.selectCodes(
+            missions,
+            userId,
+            LocalDate.ofInstant(now, SERVICE_ZONE)
+        );
         Map<Long, MissionPeriod> periodsByMissionId = missions.stream()
             .collect(Collectors.toMap(
                 Mission::getId,
@@ -206,7 +214,8 @@ public class MissionService {
                 userId,
                 mission,
                 periodsByMissionId.get(mission.getId()),
-                completions
+                completions,
+                todaySelectedCodes
             ))
             .toList();
 
@@ -224,7 +233,14 @@ public class MissionService {
         Instant now = Instant.now(clock);
         MissionPeriod period = MissionPeriod.current(mission, now);
         UserMission userMission = findCompletion(userId, mission, period);
-        return missionItem(userId, mission, period, userMission);
+        Set<String> todaySelectedCodes = mission.getGroup() == MissionGroup.DAILY
+            ? DailyMissionSelector.selectCodes(
+                missionRepository.findAllByOrderByDisplayOrderAsc(),
+                userId,
+                LocalDate.ofInstant(now, SERVICE_ZONE)
+            )
+            : Set.of();
+        return missionItem(userId, mission, period, userMission, todaySelectedCodes);
     }
 
     @Transactional
@@ -406,19 +422,21 @@ public class MissionService {
         Long userId,
         Mission mission,
         MissionPeriod period,
-        Map<CompletionKey, UserMission> completions
+        Map<CompletionKey, UserMission> completions,
+        Set<String> todaySelectedCodes
     ) {
         UserMission userMission = period.available()
             ? completions.get(new CompletionKey(mission.getId(), period.key()))
             : null;
-        return missionItem(userId, mission, period, userMission);
+        return missionItem(userId, mission, period, userMission, todaySelectedCodes);
     }
 
     private MissionItemResponse missionItem(
         Long userId,
         Mission mission,
         MissionPeriod period,
-        UserMission userMission
+        UserMission userMission,
+        Set<String> todaySelectedCodes
     ) {
         boolean available = isAvailable(mission, period);
         int progress = currentProgress(userId, mission, period, userMission, available);
@@ -427,7 +445,8 @@ public class MissionService {
             userMission,
             period,
             progress,
-            available
+            available,
+            todaySelectedCodes.contains(mission.getCode())
         );
     }
 
