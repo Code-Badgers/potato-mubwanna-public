@@ -75,8 +75,8 @@
       <b>관광지 목록</b><br />29개 관광지의 방문 현황
     </td>
     <td align="center" width="50%">
-      <img src="artifacts/validation/issue-257/stamp_contact_sheet.png" width="430" alt="29개 관광지 패스포트 스탬프" /><br />
-      <b>패스포트 스탬프</b><br />관광지별 디지털 스탬프
+      <img src="frontend/assets/stamps/anmok_beach_stamp.png" width="430" alt="안목해변 방문 인증 스탬프" /><br />
+      <b>방문 인증 스탬프</b><br />관광지의 풍경을 담은 수집 이미지
     </td>
   </tr>
 </table>
