@@ -63,13 +63,49 @@ class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 34),
                   child: _isOpeningInitialRoute
-                      ? const SizedBox.shrink()
+                      ? const _StartupLoadingIndicator()
                       : const _BlinkingStartText(label: '터치하여 시작하기'),
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StartupLoadingIndicator extends StatelessWidget {
+  const _StartupLoadingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '여행을 준비하는 중',
+      liveRegion: true,
+      child: const Row(
+        key: Key('session-startup-loading'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppColors.primaryDark,
+            ),
+          ),
+          SizedBox(width: 10),
+          Text(
+            '여행을 준비하고 있어요',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
       ),
     );
   }

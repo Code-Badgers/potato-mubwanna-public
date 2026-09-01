@@ -55,6 +55,11 @@ void main() {
 
     await tester.tap(find.byKey(const Key('session-startup-brand-image')));
     await tester.pump();
+
+    expect(find.byKey(const Key('session-startup-loading')), findsOneWidget);
+    expect(find.text('여행을 준비하고 있어요'), findsOneWidget);
+    expect(find.text('터치하여 시작하기'), findsNothing);
+
     refreshTokenCompleter.complete(null);
     await tester.pumpAndSettle();
 
