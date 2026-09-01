@@ -13,6 +13,8 @@ import 'features/push/data/firebase_push_initializer.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // callback 등록은 비동기 Firebase 초기화와 달리 첫 프레임을 막지 않는다.
+  FirebasePushInitializer.registerBackgroundHandler();
   final pushMessagingClient = Completer<PushMessagingClient>();
   runApp(
     ProviderScope(
