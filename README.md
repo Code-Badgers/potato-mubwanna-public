@@ -4,7 +4,7 @@
   <img width="920" alt="감자무봤나 서비스 소개 및 원스토어 바로가기" src="https://github.com/user-attachments/assets/8a320d10-ea22-43b7-8a22-f805db54c3bd" />
 </a>
 
-# 감자무봤나
+# 🥔 감자무봤나
 
 강원특별자치도 18개 시·군을 여행하며 관광지 스탬프와 지역 감자 캐릭터를 모으는 위치 기반 관광 앱입니다.
 
@@ -43,6 +43,23 @@
     <td align="center" width="50%">
       <img src="artifacts/validation/issue-447/spot-2-audio-playing.png" width="320" alt="관광지 오디오 가이드 재생 화면" /><br />
       <b>관광지 상세</b><br />관광 정보와 오디오 해설
+    </td>
+  </tr>
+</table>
+
+### 혼잡도와 여행 코스
+
+관광지별 혼잡도를 여유·보통·혼잡으로 표시하고, 여섯 가지 테마 코스를 제안합니다. 선택한 코스의 장소는 한 번에 내 동선에 담아 지도에서 확인할 수 있습니다.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="artifacts/validation/issue-188/map-navigation-mobile.jpg" width="320" alt="관광지 혼잡도와 내 동선 화면" /><br />
+      <b>혼잡도와 내 동선</b><br />관광지의 혼잡 상태와 저장한 장소 확인
+    </td>
+    <td align="center" width="50%">
+      <img src="artifacts/validation/issue-188/map-recommended-route-mobile.jpg" width="320" alt="관광지 추천 코스 화면" /><br />
+      <b>추천 코스</b><br />테마 코스를 내 동선에 저장
     </td>
   </tr>
 </table>
