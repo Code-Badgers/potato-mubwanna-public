@@ -8,8 +8,15 @@ class AuthInterceptor extends Interceptor {
     this._tokenStorage, {
     required String baseUrl,
     required Dio dio,
-  })  : _dio = dio,
-        _refreshDio = Dio(BaseOptions(baseUrl: baseUrl));
+  }) : _dio = dio,
+       _refreshDio = Dio(
+         BaseOptions(
+           baseUrl: baseUrl,
+           connectTimeout: dio.options.connectTimeout,
+           sendTimeout: dio.options.sendTimeout,
+           receiveTimeout: dio.options.receiveTimeout,
+         ),
+       );
 
   final TokenStorage _tokenStorage;
   final Dio _dio;
@@ -60,19 +67,13 @@ class AuthInterceptor extends Interceptor {
         queryParameters: options.queryParameters,
         options: Options(
           method: options.method,
-          headers: {
-            ...options.headers,
-            'Authorization': 'Bearer $accessToken',
-          },
+          headers: {...options.headers, 'Authorization': 'Bearer $accessToken'},
           responseType: options.responseType,
           contentType: options.contentType,
           followRedirects: options.followRedirects,
           receiveDataWhenStatusError: options.receiveDataWhenStatusError,
           validateStatus: options.validateStatus,
-          extra: {
-            ...options.extra,
-            'authRetry': true,
-          },
+          extra: {...options.extra, 'authRetry': true},
         ),
       );
       handler.resolve(retryResponse);
