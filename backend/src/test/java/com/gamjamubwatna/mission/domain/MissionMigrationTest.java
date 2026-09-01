@@ -38,9 +38,9 @@ class MissionMigrationTest {
     void seedsMvpMissionsInDisplayOrder() {
         List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
 
-        assertThat(missions).hasSize(24);
+        assertThat(missions).hasSize(32);
         assertThat(missions.getFirst().getCode()).isEqualTo("MISSION_JEONGSEON_MARKET_QUIZ");
-        assertThat(missions.getLast().getCode()).isEqualTo("MISSION_YANGGU_DUTAYEON_VISIT");
+        assertThat(missions.getLast().getCode()).isEqualTo("MISSION_DAILY_STAMP_2");
         assertThat(missions.getFirst().getGroup()).isEqualTo(MissionGroup.JUMSOONI);
         assertThat(missions)
             .extracting(Mission::getType)
@@ -51,11 +51,69 @@ class MissionMigrationTest {
     void seedsMissionVerificationPolicies() {
         List<MissionVerificationPolicy> policies = missionVerificationPolicyRepository.findAll();
 
-        assertThat(policies).hasSize(17);
+        assertThat(policies).hasSize(20);
         assertThat(missionVerificationPolicyRepository.findByMissionId(1L))
             .get()
             .extracting(MissionVerificationPolicy::getExpectedAnswer)
             .isEqualTo("곤드레감자");
+    }
+
+    @Test
+    void seedsExperienceMissionsAndDailyRotationPool() {
+        List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
+
+        assertThat(missions)
+            .filteredOn(mission -> mission.getGroup() == MissionGroup.JUMSOONI)
+            .extracting(Mission::getCode)
+            .contains(
+                "MISSION_YANGGU_PARKSUKEUN_VISIT",
+                "MISSION_GANGNEUNG_JUMUNJIN_MARKET_VISIT",
+                "MISSION_SOKCHO_YEONGGEUMJEONG_PHOTO",
+                "MISSION_YANGYANG_SURFYBEACH_VISIT"
+            );
+        assertThat(missions)
+            .filteredOn(mission -> mission.getGroup() == MissionGroup.DAILY)
+            .extracting(Mission::getCode)
+            .contains(
+                "MISSION_DAILY_STEPS_3000",
+                "MISSION_DAILY_STEPS_5000",
+                "MISSION_DAILY_CITIES_2",
+                "MISSION_DAILY_STAMP_2"
+            );
+    }
+
+    @Test
+    void configuresNewPhotoAndStepVerificationPolicies() throws Exception {
+        try (
+            Connection connection = dataSource.getConnection();
+            ResultSet rows = connection.createStatement().executeQuery("""
+                SELECT m.code, p.required_upload, p.min_step_count
+                FROM mission_verification_policies p
+                JOIN missions m ON m.mission_id = p.mission_id
+                WHERE m.code IN (
+                    'MISSION_SOKCHO_YEONGGEUMJEONG_PHOTO',
+                    'MISSION_DAILY_STEPS_3000',
+                    'MISSION_DAILY_STEPS_5000'
+                )
+                ORDER BY m.code
+                """)
+        ) {
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("CODE")).isEqualTo("MISSION_DAILY_STEPS_3000");
+            assertThat(rows.getBoolean("REQUIRED_UPLOAD")).isFalse();
+            assertThat(rows.getInt("MIN_STEP_COUNT")).isEqualTo(3000);
+
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("CODE")).isEqualTo("MISSION_DAILY_STEPS_5000");
+            assertThat(rows.getBoolean("REQUIRED_UPLOAD")).isFalse();
+            assertThat(rows.getInt("MIN_STEP_COUNT")).isEqualTo(5000);
+
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("CODE")).isEqualTo("MISSION_SOKCHO_YEONGGEUMJEONG_PHOTO");
+            assertThat(rows.getBoolean("REQUIRED_UPLOAD")).isTrue();
+            assertThat(rows.getObject("MIN_STEP_COUNT")).isNull();
+            assertThat(rows.next()).isFalse();
+        }
     }
 
     @Test

@@ -67,6 +67,7 @@ class MissionChallenge {
     required this.target,
     this.isNew = false,
     this.active = true,
+    this.todaySelected = false,
   });
 
   final String id;
@@ -85,6 +86,7 @@ class MissionChallenge {
   final int target;
   final bool isNew;
   final bool active;
+  final bool todaySelected;
 
   MissionChallenge copyWith({
     MissionStatus? status,
@@ -109,6 +111,7 @@ class MissionChallenge {
       target: target,
       isNew: isNew ?? this.isNew,
       active: active ?? this.active,
+      todaySelected: todaySelected,
     );
   }
 
@@ -135,6 +138,7 @@ class MissionChallenge {
       target: _intFromJson(map['target'], fallback: 1),
       isNew: map['new'] as bool? ?? map['isNew'] as bool? ?? false,
       active: map['active'] as bool? ?? true,
+      todaySelected: map['todaySelected'] as bool? ?? false,
     );
   }
 
