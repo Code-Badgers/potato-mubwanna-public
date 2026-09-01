@@ -3,22 +3,26 @@ import 'package:dio/dio.dart';
 import '../logging/app_logger.dart';
 import '../storage/token_storage.dart';
 import 'auth_interceptor.dart';
+import 'network_timeouts.dart';
 
 class DioClient {
   DioClient({
     required TokenStorage tokenStorage,
     String baseUrl = '/api',
-  }) : dio = Dio(BaseOptions(baseUrl: baseUrl)) {
-    AppLogger.debug(
-      'API base: ${_safeBaseUrl(baseUrl)}',
-      name: 'network',
-    );
+    Duration connectTimeout = NetworkTimeouts.connect,
+    Duration sendTimeout = NetworkTimeouts.send,
+    Duration receiveTimeout = NetworkTimeouts.receive,
+  }) : dio = Dio(
+         BaseOptions(
+           baseUrl: baseUrl,
+           connectTimeout: connectTimeout,
+           sendTimeout: sendTimeout,
+           receiveTimeout: receiveTimeout,
+         ),
+       ) {
+    AppLogger.debug('API base: ${_safeBaseUrl(baseUrl)}', name: 'network');
     dio.interceptors.add(
-      AuthInterceptor(
-        tokenStorage,
-        baseUrl: baseUrl,
-        dio: dio,
-      ),
+      AuthInterceptor(tokenStorage, baseUrl: baseUrl, dio: dio),
     );
   }
 

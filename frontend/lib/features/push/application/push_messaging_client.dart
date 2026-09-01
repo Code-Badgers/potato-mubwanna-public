@@ -43,6 +43,70 @@ abstract interface class PushMessagingClient {
   Future<void> setAutoInitEnabled(bool enabled);
 }
 
+class DeferredPushMessagingClient implements PushMessagingClient {
+  DeferredPushMessagingClient(Future<PushMessagingClient> client)
+      : _client = client;
+
+  final Future<PushMessagingClient> _client;
+  PushMessagingClient? _resolvedClient;
+
+  Future<PushMessagingClient> get _resolved async {
+    return _resolvedClient ??= await _client;
+  }
+
+  @override
+  bool get isAvailable => _resolvedClient?.isAvailable ?? true;
+
+  @override
+  PushClientPlatform? get platform => _resolvedClient?.platform;
+
+  @override
+  Stream<String> get tokenRefreshes {
+    return Stream.fromFuture(_resolved).asyncExpand(
+      (client) => client.tokenRefreshes,
+    );
+  }
+
+  @override
+  Stream<PushMessage> get foregroundMessages {
+    return Stream.fromFuture(_resolved).asyncExpand(
+      (client) => client.foregroundMessages,
+    );
+  }
+
+  @override
+  Stream<PushMessage> get openedMessages {
+    return Stream.fromFuture(_resolved).asyncExpand(
+      (client) => client.openedMessages,
+    );
+  }
+
+  @override
+  Future<PushAuthorizationStatus> authorizationStatus() async {
+    return (await _resolved).authorizationStatus();
+  }
+
+  @override
+  Future<void> deleteToken() async {
+    await (await _resolved).deleteToken();
+  }
+
+  @override
+  Future<PushMessage?> getInitialMessage() async {
+    return (await _resolved).getInitialMessage();
+  }
+
+  @override
+  Future<String?> getToken() async {
+    return (await _resolved).getToken();
+  }
+
+  @override
+  Future<void> setAutoInitEnabled(bool enabled) async {
+    await (await _resolved).setAutoInitEnabled(enabled);
+  }
+}
+
 class DisabledPushMessagingClient implements PushMessagingClient {
   const DisabledPushMessagingClient();
 

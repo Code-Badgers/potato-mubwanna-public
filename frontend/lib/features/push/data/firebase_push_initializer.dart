@@ -9,6 +9,13 @@ import 'firebase_push_messaging_client.dart';
 class FirebasePushInitializer {
   const FirebasePushInitializer._();
 
+  static void registerBackgroundHandler() {
+    if (!AppEnvironment.hasFirebaseMessagingConfig) {
+      return;
+    }
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
+
   static Future<PushMessagingClient> initialize() async {
     if (!AppEnvironment.hasFirebaseMessagingConfig) {
       return const DisabledPushMessagingClient();
@@ -17,7 +24,6 @@ class FirebasePushInitializer {
     try {
       await Firebase.initializeApp(options: _firebaseOptions());
       await FirebaseMessaging.instance.setAutoInitEnabled(false);
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
       await FirebaseMessaging.instance
           .setForegroundNotificationPresentationOptions(
         alert: false,

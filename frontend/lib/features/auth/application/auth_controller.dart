@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,9 +103,7 @@ class AuthController extends StateNotifier<AuthState> {
       final kakaoAccessToken =
           (result as KakaoAccessTokenLoginResult).accessToken;
       await _authRepository.loginWithKakaoToken(kakaoAccessToken);
-      await _synchronizePushToken();
-      await _synchronizeLegalConsent();
-      state = const AuthState.authenticated();
+      _completeAuthentication();
       return true;
     } on KakaoLoginUnsupportedException catch (error) {
       state = AuthState.failure(error.message);
@@ -135,9 +134,7 @@ class AuthController extends StateNotifier<AuthState> {
         authorizationCode: callback.authorizationCode,
         redirectUri: callback.redirectUri,
       );
-      await _synchronizePushToken();
-      await _synchronizeLegalConsent();
-      state = const AuthState.authenticated();
+      _completeAuthentication();
       return true;
     } on KakaoLoginUnsupportedException catch (error) {
       state = AuthState.failure(error.message);
@@ -163,9 +160,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = const AuthState.loading();
     try {
       await _authRepository.refreshSession();
-      await _synchronizePushToken();
-      await _synchronizeLegalConsent();
-      state = const AuthState.authenticated();
+      _completeAuthentication();
       return true;
     } catch (_) {
       state = const AuthState.idle();
@@ -215,6 +210,17 @@ class AuthController extends StateNotifier<AuthState> {
     } catch (_) {
       // 네트워크 장애가 로그인을 막지 않게 하고 다음 세션에서 재시도한다.
     }
+  }
+
+  void _completeAuthentication() {
+    state = const AuthState.authenticated();
+    // 푸시 및 약관 보강 실패는 인증 결과와 무관하므로 첫 화면을 연 뒤 병렬 처리한다.
+    unawaited(
+      Future.wait([
+        _synchronizePushToken(),
+        _synchronizeLegalConsent(),
+      ]),
+    );
   }
 
   Future<void> _unregisterPushToken() async {

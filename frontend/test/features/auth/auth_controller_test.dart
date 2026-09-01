@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,6 +45,32 @@ void main() {
     expect(service.cleared, isTrue);
     expect(pushLifecycle.synchronizeCalls, 1);
     expect(legalConsentLifecycle.synchronizeCalls, 1);
+  });
+
+  test('restores auth before optional startup synchronization completes',
+      () async {
+    final repository = _RecordingAuthRepository();
+    final pushLifecycle = _BlockingPushTokenLifecycle();
+    final legalConsentLifecycle = _BlockingLegalConsentLifecycle();
+    final controller = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: repository,
+      pushTokenLifecycle: pushLifecycle,
+      legalConsentLifecycle: legalConsentLifecycle,
+    );
+
+    final restored = await controller.refreshSession();
+
+    expect(restored, isTrue);
+    expect(controller.state.status, AuthStatus.authenticated);
+    expect(repository.refreshSessionCalls, 1);
+    expect(pushLifecycle.synchronizeCalls, 1);
+    expect(legalConsentLifecycle.synchronizeCalls, 1);
+    expect(pushLifecycle.hasCompleted, isFalse);
+    expect(legalConsentLifecycle.hasCompleted, isFalse);
+
+    pushLifecycle.complete();
+    legalConsentLifecycle.complete();
   });
 
   test('identifies a backend rejection after Kakao SDK login succeeds',
@@ -168,6 +196,7 @@ class _RecordingAuthRepository extends AuthRepository {
   String? redirectUri;
   int withdrawalCalls = 0;
   int accessTokenLoginCalls = 0;
+  int refreshSessionCalls = 0;
 
   @override
   Future<void> loginWithKakaoToken(String kakaoAccessToken) async {
@@ -181,6 +210,11 @@ class _RecordingAuthRepository extends AuthRepository {
   }) async {
     this.authorizationCode = authorizationCode;
     this.redirectUri = redirectUri;
+  }
+
+  @override
+  Future<void> refreshSession() async {
+    refreshSessionCalls++;
   }
 
   @override
@@ -253,5 +287,42 @@ class _RecordingLegalConsentLifecycle implements LegalConsentLifecycle {
   @override
   Future<void> synchronize() async {
     synchronizeCalls++;
+  }
+}
+
+class _BlockingPushTokenLifecycle implements PushTokenLifecycle {
+  final _completion = Completer<void>();
+  int synchronizeCalls = 0;
+  bool hasCompleted = false;
+
+  void complete() {
+    hasCompleted = true;
+    _completion.complete();
+  }
+
+  @override
+  Future<void> synchronize() {
+    synchronizeCalls++;
+    return _completion.future;
+  }
+
+  @override
+  Future<void> unregister() async {}
+}
+
+class _BlockingLegalConsentLifecycle implements LegalConsentLifecycle {
+  final _completion = Completer<void>();
+  int synchronizeCalls = 0;
+  bool hasCompleted = false;
+
+  void complete() {
+    hasCompleted = true;
+    _completion.complete();
+  }
+
+  @override
+  Future<void> synchronize() {
+    synchronizeCalls++;
+    return _completion.future;
   }
 }

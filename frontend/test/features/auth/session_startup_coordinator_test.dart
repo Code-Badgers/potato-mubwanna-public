@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/auth/application/session_startup_coordinator.dart';
 import 'package:potato_mubwanna/features/push/domain/push_message.dart';
@@ -60,7 +62,7 @@ void main() {
 
     final route = await coordinator.resolveInitialRoute();
 
-    expect(route, '/coupons');
+    expect(route, '/coupons', reason: events.toString());
     expect(events, [
       'read-onboarding',
       'read-refresh-token',
@@ -85,6 +87,56 @@ void main() {
     expect(route, '/onboarding');
     expect(refreshCalls, 0);
     expect(initialPushCalls, 0);
+  });
+
+  test('reads onboarding state and stored token concurrently', () async {
+    final onboarding = Completer<bool>();
+    final refreshToken = Completer<String?>();
+    var onboardingReads = 0;
+    var refreshTokenReads = 0;
+    final coordinator = SessionStartupCoordinator(
+      hasKakaoAuthorizationCallback: false,
+      hasCompletedOnboarding: () {
+        onboardingReads++;
+        return onboarding.future;
+      },
+      markOnboardingCompleted: () async {},
+      readRefreshToken: () {
+        refreshTokenReads++;
+        return refreshToken.future;
+      },
+      refreshSession: () async => false,
+      unregisterPushToken: () async {},
+      clearLocalTokens: () async {},
+      readInitialPushMessage: () async => null,
+    );
+
+    final route = coordinator.resolveInitialRoute();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(onboardingReads, 1);
+    expect(refreshTokenReads, 1);
+
+    onboarding.complete(false);
+    refreshToken.complete(null);
+    expect(await route, '/onboarding');
+  });
+
+  test('does not hold startup when initial push lookup times out', () async {
+    final initialMessage = Completer<PushMessage?>();
+    final coordinator = SessionStartupCoordinator(
+      hasKakaoAuthorizationCallback: false,
+      hasCompletedOnboarding: () async => true,
+      markOnboardingCompleted: () async {},
+      readRefreshToken: () async => 'stored-refresh-token',
+      refreshSession: () async => true,
+      unregisterPushToken: () async {},
+      clearLocalTokens: () async {},
+      readInitialPushMessage: () => initialMessage.future,
+      initialMessageTimeout: const Duration(milliseconds: 1),
+    );
+
+    expect(await coordinator.resolveInitialRoute(), '/main/map');
   });
 
   test('sends a returning signed-out user directly to login', () async {

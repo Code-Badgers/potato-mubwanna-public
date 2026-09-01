@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/config/app_environment.dart';
@@ -38,6 +40,7 @@ class SessionStartupCoordinator {
     required Future<void> Function() unregisterPushToken,
     required Future<void> Function() clearLocalTokens,
     required Future<PushMessage?> Function() readInitialPushMessage,
+    Duration initialMessageTimeout = const Duration(seconds: 2),
   })  : _hasKakaoAuthorizationCallback = hasKakaoAuthorizationCallback,
         _hasAcceptedRequiredDocuments =
             hasAcceptedRequiredDocuments ?? _acceptExistingTestSession,
@@ -47,7 +50,8 @@ class SessionStartupCoordinator {
         _refreshSession = refreshSession,
         _unregisterPushToken = unregisterPushToken,
         _clearLocalTokens = clearLocalTokens,
-        _readInitialPushMessage = readInitialPushMessage;
+        _readInitialPushMessage = readInitialPushMessage,
+        _initialMessageTimeout = initialMessageTimeout;
 
   final bool _hasKakaoAuthorizationCallback;
   final Future<bool> Function() _hasAcceptedRequiredDocuments;
@@ -58,6 +62,7 @@ class SessionStartupCoordinator {
   final Future<void> Function() _unregisterPushToken;
   final Future<void> Function() _clearLocalTokens;
   final Future<PushMessage?> Function() _readInitialPushMessage;
+  final Duration _initialMessageTimeout;
 
   Future<String>? _initialRoute;
   bool _hasAcceptedRequiredDocumentsForSession = false;
@@ -83,14 +88,18 @@ class SessionStartupCoordinator {
       return '/login';
     }
 
-    final hasCompletedOnboarding = await _readOnboardingStatus();
-    final refreshToken = await _readStoredRefreshToken();
+    final localSession = await Future.wait<Object?>([
+      _readOnboardingStatus(),
+      _readStoredRefreshToken(),
+    ]);
+    final hasCompletedOnboarding = localSession[0] as bool;
+    final refreshToken = localSession[1] as String?;
     if (refreshToken == null || refreshToken.isEmpty) {
       return hasCompletedOnboarding ? '/login' : '/onboarding';
     }
 
     // 기존 설치 사용자는 저장 플래그가 없더라도 유효한 세션이 있으면 재온보딩하지 않는다.
-    await _recordCompletedOnboarding();
+    unawaited(_recordCompletedOnboarding());
     final hasRestoredSession = await _restoreSession();
     if (!hasRestoredSession) {
       await _unregisterStalePushToken();
@@ -163,7 +172,7 @@ class SessionStartupCoordinator {
 
   Future<PushMessage?> _readInitialMessage() async {
     try {
-      return await _readInitialPushMessage();
+      return await _readInitialPushMessage().timeout(_initialMessageTimeout);
     } catch (_) {
       return null;
     }
