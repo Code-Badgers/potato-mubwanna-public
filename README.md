@@ -1,6 +1,8 @@
 <div align="center">
 
-<img width="920" alt="감자무봤나 서비스 소개" src="https://github.com/user-attachments/assets/8a320d10-ea22-43b7-8a22-f805db54c3bd" />
+<a href="https://m.onestore.co.kr/v2/ko-kr/app/0001008521" title="원스토어에서 감자무봤나 만나보기">
+  <img width="920" alt="감자무봤나 서비스 소개 및 원스토어 바로가기" src="https://github.com/user-attachments/assets/8a320d10-ea22-43b7-8a22-f805db54c3bd" />
+</a>
 
 # 🥔 감자무봤나
 
@@ -14,6 +16,10 @@
   <img src="https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 3.5" />
   <img src="https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white" alt="Java 21" />
   <img src="https://img.shields.io/badge/App_Version-1.0.0%2B1-52C88A" alt="App version 1.0.0+1" />
+</p>
+
+<p>
+  <a href="https://m.onestore.co.kr/v2/ko-kr/app/0001008521"><strong>📲 원스토어에서 감자무봤나 다운로드</strong></a>
 </p>
 
 [서비스 소개](#-서비스-소개) · [주요 화면](#-주요-화면) · [기술 스택](#-기술-스택)
