@@ -37,7 +37,7 @@ void main() {
 
     expect(attractionStampAssets.keys.toSet(), officialAttractions);
     expect(attractionStampAssets.values.toSet(), hasLength(29));
-    expect(attractionStampAssetFor(' 남이섬 '), endsWith('nami_island.png'));
+    expect(attractionStampAssetFor(' 남이섬 '), endsWith('nami_island_stamp.png'));
     expect(attractionStampAssetFor('등록되지 않은 관광지'), isNull);
   });
 }
