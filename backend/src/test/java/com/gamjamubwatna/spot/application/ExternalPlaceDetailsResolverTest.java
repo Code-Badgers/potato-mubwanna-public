@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -104,6 +105,31 @@ class ExternalPlaceDetailsResolverTest {
 
         assertThat(details.googlePlaceId()).isEqualTo("google-place-id");
         assertThat(details.imageUrls()).containsExactly("https://google.example.com/cached.jpg");
+        verify(googlePlacesClient, never()).searchText(anyString());
+        verify(googlePlacesClient, never()).findDetails(anyString());
+    }
+
+    @Test
+    void resolvesCachedDetailsInBatchWithoutCallingGoogle() throws JsonProcessingException {
+        TouristSpot spot = spot(7L, "감자 카페", SpotCategory.POTATO_CAFE);
+        ExternalPlaceDetails cachedDetails = googleDetails(
+            "google-place-id",
+            "https://google.example.com/list.jpg"
+        );
+        GooglePlaceDetailsCache persistedCache = persistedCache(
+            7L,
+            cachedDetails,
+            Instant.now().minus(Duration.ofDays(1)),
+            Duration.ofSeconds(1)
+        );
+        when(googlePlaceDetailsCacheRepository.findAllById(List.of(7L)))
+            .thenReturn(List.of(persistedCache));
+
+        Map<Long, ExternalPlaceDetails> detailsBySpotId =
+            resolver.resolveCached(List.of(spot));
+
+        assertThat(detailsBySpotId.get(7L).imageUrls())
+            .containsExactly("https://google.example.com/list.jpg");
         verify(googlePlacesClient, never()).searchText(anyString());
         verify(googlePlacesClient, never()).findDetails(anyString());
     }
