@@ -196,6 +196,8 @@ void main() {
     expect(repository.lastRequest?.latitude, 37.3801);
     expect(find.byKey(const ValueKey('visit-result-sheet')), findsOneWidget);
     expect(find.byKey(const ValueKey('visit-stamp-impact')), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-stamp-press')), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-stamp-imprint')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('attraction-stamp-정선 5일장')),
       findsOneWidget,
@@ -251,6 +253,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('감자 도감'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('정선 5일장'), findsWidgets);
+    expect(find.text('감자 도감'), findsNothing);
   });
 
   testWidgets('distinguishes an already owned potato in visit result', (
@@ -276,6 +284,7 @@ void main() {
     expect(find.text('이미 보유한 감자예요'), findsOneWidget);
     expect(find.text('감자 획득'), findsNothing);
     expect(find.text('황금감자'), findsOneWidget);
+    expect(find.byKey(const ValueKey('visit-stamp-press')), findsNothing);
   });
 
   testWidgets('passes the verified spot to the recommendation map', (

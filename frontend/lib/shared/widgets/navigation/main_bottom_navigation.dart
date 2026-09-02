@@ -43,7 +43,11 @@ class MainBottomNavigation extends StatelessWidget {
                             icon: destination.icon,
                             label: destination.label,
                             isSelected: selectedIndex == index,
-                            onTap: () => context.go(_paths[index]),
+                            onTap: () {
+                              if (selectedIndex != index) {
+                                context.push(_paths[index]);
+                              }
+                            },
                           ),
                         ),
                       );

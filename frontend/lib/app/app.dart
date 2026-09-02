@@ -56,7 +56,7 @@ class _PotatoMubwannaAppState extends ConsumerState<PotatoMubwannaApp>
     // its root, which Android interprets as a request to finish the activity.
     // Consume that root-level back action so repeated presses never leave the
     // app unexpectedly. Nested routes still flow through GoRouter normally.
-    if (appRouter.location != '/main/map') {
+    if (appRouter.location != '/main/map' || appRouter.canPop()) {
       return false;
     }
     _scaffoldMessengerKey.currentState
