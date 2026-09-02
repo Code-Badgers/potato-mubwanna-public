@@ -327,11 +327,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     final todayMissions = selectedDailyMissions
         .where((mission) => mission.status != MissionStatus.completed)
         .toList();
-    final specialMissions = _missionsForGroup(
-      missions,
-      MissionGroup.jumsooni,
-      excludedMissionId: featuredMission?.id,
-    );
     final weeklyMissions = _missionsForGroup(missions, MissionGroup.weekly);
     final eventMissions = _missionsForGroup(missions, MissionGroup.event);
 
@@ -350,7 +345,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               child: _MissionGentleStart(
                 featuredMission: featuredMission,
                 dailyMissions: todayMissions,
-                specialMissions: specialMissions,
                 weeklyMissions: weeklyMissions,
                 eventMissions: eventMissions,
                 completedCount: selectedDailyMissions
@@ -401,16 +395,14 @@ List<MissionChallenge> _selectedDailyMissions(
 
 List<MissionChallenge> _missionsForGroup(
   List<MissionChallenge> missions,
-  MissionGroup group, {
-  String? excludedMissionId,
-}) {
+  MissionGroup group,
+) {
   return missions
       .where((mission) =>
           mission.active &&
           mission.group == group &&
           mission.status != MissionStatus.locked &&
-          mission.status != MissionStatus.completed &&
-          mission.id != excludedMissionId)
+          mission.status != MissionStatus.completed)
       .toList()
     ..sort(_compareMissionPriority);
 }
@@ -753,7 +745,6 @@ class _MissionGentleStart extends StatelessWidget {
   const _MissionGentleStart({
     required this.featuredMission,
     required this.dailyMissions,
-    required this.specialMissions,
     required this.weeklyMissions,
     required this.eventMissions,
     required this.completedCount,
@@ -763,7 +754,6 @@ class _MissionGentleStart extends StatelessWidget {
 
   final MissionChallenge? featuredMission;
   final List<MissionChallenge> dailyMissions;
-  final List<MissionChallenge> specialMissions;
   final List<MissionChallenge> weeklyMissions;
   final List<MissionChallenge> eventMissions;
   final int completedCount;
@@ -823,12 +813,6 @@ class _MissionGentleStart extends StatelessWidget {
                 ),
               const SizedBox(height: 10),
             ],
-          _MissionGroupSection(
-            title: '점순이 특별 미션',
-            subtitle: '강원도 곳곳의 이야기를 직접 만나보세요',
-            missions: specialMissions,
-            onMissionTap: onMissionTap,
-          ),
           _MissionGroupSection(
             title: '이번 주의 미션',
             subtitle: '이번 주 여행을 조금 더 넓혀봐요',
