@@ -446,6 +446,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         body: SafeArea(
           child: _MapDiscoveryHome(
             spotsState: spotsState,
+            onRetry: () => ref.invalidate(mapSpotsProvider),
             onOpenFullMap: _openFullMap,
             onSpotPressed: (spot) {
               FeatureTourScope.maybeOf(context)?.completeTarget(
@@ -750,6 +751,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 class _MapDiscoveryHome extends StatelessWidget {
   const _MapDiscoveryHome({
     required this.spotsState,
+    required this.onRetry,
     required this.onOpenFullMap,
     required this.onSpotPressed,
     required this.onSpotDetailPressed,
@@ -757,6 +759,7 @@ class _MapDiscoveryHome extends StatelessWidget {
   });
 
   final AsyncValue<List<MapSpot>> spotsState;
+  final VoidCallback onRetry;
   final VoidCallback onOpenFullMap;
   final ValueChanged<MapSpot> onSpotPressed;
   final ValueChanged<MapSpot> onSpotDetailPressed;
@@ -765,14 +768,24 @@ class _MapDiscoveryHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return spotsState.when(
-      data: (spots) {
-        final previewSpots = _previewSpots(spots);
-        final courses = buildTravelCourses(spots);
+      data: _buildContent,
+      loading: () => _buildContent(const [], isLoading: true),
+      error: (_, __) => _buildContent(const [], hasError: true),
+    );
+  }
 
-        return CustomScrollView(
-          key: const ValueKey('map-discovery-home'),
-          physics: const BouncingScrollPhysics(),
-          slivers: [
+  Widget _buildContent(
+    List<MapSpot> spots, {
+    bool isLoading = false,
+    bool hasError = false,
+  }) {
+    final previewSpots = _previewSpots(spots);
+    final courses = buildTravelCourses(spots);
+
+    return CustomScrollView(
+      key: const ValueKey('map-discovery-home'),
+      physics: const BouncingScrollPhysics(),
+      slivers: [
             const SliverPadding(
               padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
               sliver: SliverToBoxAdapter(
@@ -791,6 +804,16 @@ class _MapDiscoveryHome extends StatelessWidget {
                 ),
               ),
             ),
+            if (isLoading || hasError)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _DiscoverySpotsStatus(
+                    isLoading: isLoading,
+                    onRetry: onRetry,
+                  ),
+                ),
+              ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 26, 0, 0),
               sliver: SliverToBoxAdapter(
@@ -810,20 +833,7 @@ class _MapDiscoveryHome extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        );
-      },
-      loading: () => const PotatoLoadingView.fullScreen(
-        subtitle: '가볍게 둘러볼 장소를 불러오는 중입니다',
-      ),
-      error: (_, __) => const Padding(
-        padding: EdgeInsets.all(20),
-        child: _DiscoverySectionStatus(
-          icon: Icons.cloud_off_rounded,
-          title: '여행 정보를 불러오지 못했습니다',
-          description: '네트워크 연결을 확인한 뒤 다시 시도해주세요.',
-        ),
-      ),
+      ],
     );
   }
 
@@ -851,6 +861,62 @@ class _MapDiscoveryHome extends StatelessWidget {
       }
     }
     return selected;
+  }
+}
+
+class _DiscoverySpotsStatus extends StatelessWidget {
+  const _DiscoverySpotsStatus({
+    required this.isLoading,
+    required this.onRetry,
+  });
+
+  final bool isLoading;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: ValueKey(isLoading ? 'map-spots-progress' : 'map-spots-error'),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          if (isLoading)
+            const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.4,
+                color: _mapPrimary,
+              ),
+            )
+          else
+            const Icon(Icons.cloud_off_rounded, color: _mapPrimary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isLoading
+                  ? '장소 정보는 불러오는 대로 채워드릴게요'
+                  : '장소 정보를 불러오지 못했어요',
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          if (!isLoading)
+            TextButton(
+              key: const ValueKey('map-spots-retry'),
+              onPressed: onRetry,
+              child: const Text('다시 시도'),
+            ),
+        ],
+      ),
+    );
   }
 }
 
