@@ -19,9 +19,10 @@
   <img
     width="920"
     alt="감자무봤나 서비스 소개 및 원스토어 바로가기"
-    src="https://github.com/user-attachments/assets/8a320d10-ea22-43b7-8a22-f805db54c3bd"
+    src="https://github.com/user-attachments/assets/637f6975-20e0-45e3-9ad3-a234139bf1d7"
   />
 </a>
+
 
 </div>
 
@@ -252,7 +253,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
 감자는 단순한 마스코트가 아니라
 **사용자가 강원도에서 경험한 장소와 여행을 기록하는 수집 요소**입니다.
 
---
+---
 
 ## 5. 점순이 미션
 
