@@ -1193,7 +1193,7 @@ class _TravelCourseSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _DiscoverySectionHeader(title: '오늘 어떤 여행이 끌리나요? 🌿'),
+        const _DiscoverySectionHeader(title: '오늘 어떤 여행이 끌리나요?'),
         const SizedBox(height: 12),
         SizedBox(
           height: 304,
@@ -2152,7 +2152,7 @@ class _GoodNowSpotSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _DiscoverySectionHeader(title: '지금 가기 좋은 곳 ☀️'),
+        const _DiscoverySectionHeader(title: '지금 가기 좋은 곳'),
         const SizedBox(height: 6),
         const Text(
           '관광지 집중률 예측을 바탕으로 골라봤어요.',

@@ -89,7 +89,7 @@ void main() {
     expect(find.text('내 동선 0곳'), findsNothing);
     expect(find.byKey(const ValueKey('discovery-route-button')), findsNothing);
     expect(find.byKey(const ValueKey('preview-route-button')), findsNothing);
-    expect(find.text('오늘 어떤 여행이 끌리나요? 🌿'), findsOneWidget);
+    expect(find.text('오늘 어떤 여행이 끌리나요?'), findsOneWidget);
     expect(find.text('지도 크게 보기'), findsOneWidget);
     expect(renderedSpots, isEmpty);
 
@@ -115,7 +115,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('지금 가기 좋은 곳 ☀️'), findsOneWidget);
+    expect(find.text('지금 가기 좋은 곳'), findsOneWidget);
     await tester.drag(
       find.byKey(const ValueKey('map-discovery-home')),
       const Offset(0, -420),
