@@ -36,6 +36,7 @@
 **숨은 강원은 찾고 · 스탬프는 찍고 · 감자는 모으고**
 
 </div>
+<br/>
 
 ### 강원도 여행, 유명 관광지만 보고 끝내지 않도록.
 
@@ -46,11 +47,10 @@
 또한 일반적인 관광 서비스는 장소를 검색하고 정보를 확인하는 데서 끝나는 경우가 많아,
 관광정보가 실제 방문 행동으로 이어지지 않는 경우가 있습니다.
 
-<div align="center">
+<br/>
 
 ### 발견 → 이동 → 인증 → 수집 → 체험 → 다음 탐험
 
-</div>
 
 **감자무봤나**는 한국관광공사의 관광정보와 관광객 집중도 데이터를 활용해
 강원도의 새로운 관광지를 발견하도록 돕고,
@@ -63,7 +63,6 @@
 
 > **관광정보를 보는 데서 끝나지 않고,  
 > 사용자가 직접 강원도를 돌아다니게 만드는 것이 감자무봤나의 목표입니다.**
-> 
 
 감자무봤나의 지도, 스탬프, 감자, 미션은
 각각 분리된 기능이 아니라 **하나의 반복적인 여행 경험**으로 연결됩니다.
@@ -72,39 +71,8 @@
 
 # 🗺️ 주요 기능
 
-## 1. 지도 탐색과 관광지 상세
 
-강원도의 관광지·음식점·카페·시장·체험 장소를 지도에서 탐색합니다.
-
-관광지 상세에서는 장소 정보와 이미지를 확인하고,
-**한국관광공사 Odii 공식 오디오가 제공되는 관광지에서는 현장 오디오 해설**을 함께 들을 수 있습니다.
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img
-        src="https://github.com/user-attachments/assets/2a64c869-80a3-4b80-b701-0391ba30c87a"
-        width="320"
-        alt="강원 관광지 카카오맵 화면"
-      /><br />
-      <b>지도 탐색</b><br />
-      주변 관광지 탐색과 내 동선 저장
-    </td>
-    <td align="center" width="50%">
-      <img
-        src="artifacts/validation/issue-447/spot-2-audio-playing.png"
-        width="320"
-        alt="관광지 오디오 가이드 재생 화면"
-      /><br />
-      <b>관광지 상세</b><br />
-      관광정보와 지원 관광지의 Odii 오디오 해설
-    </td>
-  </tr>
-</table>
-
----
-
-## 2. 관광객 집중도와 지금 가기 좋은 곳
+## 1. 관광객 집중도와 지금 가기 좋은 곳
 
 관광객 집중도를 활용해 관광지의 상태를
 **여유 · 보통 · 혼잡**으로 제공합니다.
@@ -118,23 +86,63 @@
 
 <table>
   <tr>
+    <td align="center" width="33%">
+      <img
+        src="https://github.com/user-attachments/assets/6b46c897-5b4f-45e5-9e1f-7b5468e69007"
+        width="260"
+        alt="강원도 여행 코스 탐색 화면"
+      /><br />
+      <b>지도 탐색</b><br />
+      주변 관광지와 여행 콘텐츠 발견
+    </td>
+    <td align="center" width="33%">
+      <img
+        src="https://github.com/user-attachments/assets/2b4be4d0-aca5-4d96-be05-2f31e6a5001d"
+        width="260"
+        alt="강원 관광지 지도 화면"
+      /><br />
+      <b>관광지 탐색</b><br />
+      지도에서 장소와 관광 정보를 확인
+    </td>
+    <td align="center" width="33%">
+      <img
+        src="https://github.com/user-attachments/assets/67587540-e112-4723-bcf2-9e2e76c53d16"
+        width="260"
+        alt="강원도 추천 여행 코스 상세 화면"
+      /><br />
+      <b>여행 코스</b><br />
+      추천 장소를 여행 흐름으로 확인
+    </td>
+  </tr>
+</table>
+
+---
+
+## 2. 지도 탐색과 관광지 상세
+
+강원도의 관광지·음식점·카페·시장·체험 장소를 지도에서 탐색합니다.
+
+관광지 상세에서는 장소 정보와 이미지를 확인할 수 있습니다.
+
+<table>
+  <tr>
     <td align="center" width="50%">
       <img
-        src=""
+        src="https://github.com/user-attachments/assets/6302189d-ead9-4770-b28f-d3725d90b758"
         width="320"
-        alt="관광지 혼잡도와 내 동선 화면"
+        alt="관광지 혼잡도와 상세 정보 화면"
       /><br />
-      <b>혼잡도와 내 동선</b><br />
-      관광지의 현재 상태와 저장한 여행 장소 확인
+      <b>관광객 집중도</b><br />
+      관광지의 현재 혼잡 상태 확인
     </td>
     <td align="center" width="50%">
       <img
-        src=""
+        src="https://github.com/user-attachments/assets/aa2a3c12-e926-4272-ba9c-4fa1feddc01a"
         width="320"
-        alt="관광지 추천 코스 화면"
+        alt="관광지 추천 코스와 내 동선 화면"
       /><br />
-      <b>추천 코스</b><br />
-      테마별 강원 여행 코스를 한 번에 내 동선으로
+      <b>추천 코스와 내 동선</b><br />
+      선택한 장소를 순서대로 내 동선에 저장
     </td>
   </tr>
 </table>
@@ -160,12 +168,41 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src=""
+        src="https://github.com/user-attachments/assets/821a966d-d65f-4363-92b5-33b1a87b1c17"
         width="320"
-        alt="강원 18개 시군 관광지 스탬프 랠리북"
+        alt="강원도 스탬프 투어 관광지 선택 화면"
+      /><br />
+      <b>스탬프 투어</b><br />
+      강원 곳곳의 방문 인증 장소 탐색
+    </td>
+    <td align="center" width="50%">
+      <img
+        src="https://github.com/user-attachments/assets/cb6f2640-cd8a-4f0e-bb4a-352e7e4a6d47"
+        width="320"
+        alt="강원 여행 관광 패스포트 화면"
       /><br />
       <b>관광 패스포트</b><br />
-      29개 관광지의 실제 방문 현황
+      29개 관광지의 방문 현황을 패스포트에 기록
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img
+        src="https://github.com/user-attachments/assets/f698f132-2385-4bed-9ba7-2c4478f09560"
+        width="320"
+        alt="관광지 상세와 방문 인증 화면"
+      /><br />
+      <b>방문 인증</b><br />
+      관광지 상세에서 현장 인증 진행
+    </td>
+    <td align="center" width="50%">
+      <img
+        src="https://github.com/user-attachments/assets/3fe87a83-fc36-46fa-958d-e30646315ae1"
+        width="320"
+        alt="한국관광공사 Odii 관광 해설 오디오 화면"
+      /><br />
+      <b>현장 오디오 해설</b><br />
+      지원 장소에서는 Odii 관광 해설 제공
     </td>
   </tr>
 </table>
@@ -193,21 +230,21 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src=""
-        width="460"
-        alt="지역별 감자 캐릭터 도감"
+        src="https://github.com/user-attachments/assets/60f12b72-5b08-429a-a6de-658231691b59"
+        width="320"
+        alt="감자 캐릭터 수집 화면"
       /><br />
-      <b>감자 도감</b><br />
-      강원 여행에서 만난 감자 캐릭터 수집
+      <b>감자 수집</b><br />
+      강원 여행에서 새로운 감자 캐릭터 발견
     </td>
     <td align="center" width="50%">
       <img
-        src=""
+        src="https://github.com/user-attachments/assets/965a680e-8d63-4d5c-9d50-524db5064ae3"
         width="320"
-        alt="점순이 사진 미션 완료 화면"
+        alt="감자 캐릭터 성장 화면"
       /><br />
-      <b>여행과 함께 성장</b><br />
-      방문과 걸음 활동을 수집·성장 경험으로 연결
+      <b>감자 성장</b><br />
+      여행과 걸음 활동을 성장 경험으로 연결
     </td>
   </tr>
 </table>
@@ -229,21 +266,21 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src=""
+        src="https://github.com/user-attachments/assets/defe08fb-22a0-435f-8ffa-e6614ac77220"
         width="320"
         alt="강원 여행 기록 화면"
       /><br />
       <b>여행 기록</b><br />
-      방문 장소와 인증 사진을 하나의 여행 기록으로
+      방문 장소와 인증 사진을 여행 기록으로 저장
     </td>
     <td align="center" width="50%">
       <img
-        src="artifacts/validation/issue-185/coupon-list-mobile.png"
+        src="https://github.com/user-attachments/assets/9e41ddce-2a58-4bf5-ab6f-54ae0b0613bd"
         width="320"
-        alt="여행 보상 관리 화면"
+        alt="강원 여행 사진 기록 화면"
       /><br />
-      <b>보상함</b><br />
-      미션과 스탬프로 획득한 보상 내역 관리
+      <b>여행 사진</b><br />
+      여행 중 남긴 사진과 추억을 다시 확인
     </td>
   </tr>
 </table>
@@ -255,6 +292,39 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
 감자무봤나는 관광데이터를
 **“몇 개의 API를 사용했는가”**보다
 **“사용자의 어떤 행동을 바꾸는가”**에 집중해 활용합니다.
+
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <img
+        src="https://github.com/user-attachments/assets/39dee8a1-10b1-4e6e-ba5c-3e9d5b9714ae"
+        width="320"
+        alt="감자무봤나 관광데이터 활용 화면 1"
+      />
+    </td>
+    <td align="center" width="25%">
+      <img
+        src="https://github.com/user-attachments/assets/d7f12193-93e5-4353-b83f-9d2919414160"
+        width="320"
+        alt="감자무봤나 관광데이터 활용 화면 2"
+      />
+    </td>
+    <td align="center" width="25%">
+      <img
+        src="https://github.com/user-attachments/assets/59cb905d-562e-4e3b-a18a-a761019e3fa0"
+        width="320"
+        alt="감자무봤나 관광데이터 활용 화면 3"
+      />
+    </td>
+    <td align="center" width="25%">
+      <img
+        src="https://github.com/user-attachments/assets/ff4b5ab9-fc38-46b5-8fb9-827936a551b7"
+        width="320"
+        alt="감자무봤나 관광데이터 활용 화면 4"
+      />
+    </td>
+  </tr>
+</table>
 
 | 관광데이터 / 서비스 | 감자무봤나에서의 활용 | 사용자에게 주는 가치 |
 | --- | --- | --- |
