@@ -305,8 +305,12 @@ class _VisitResultSheet extends StatefulWidget {
 class _VisitResultSheetState extends State<_VisitResultSheet>
     with SingleTickerProviderStateMixin {
   late final AnimationController _stampController;
-  late final Animation<double> _stampScale;
-  late final Animation<double> _stampTurns;
+  late final Animation<double> _imprintScale;
+  late final Animation<double> _imprintTurns;
+  late final Animation<double> _imprintOpacity;
+  late final Animation<double> _stampPressOffset;
+  late final Animation<double> _stampPressScale;
+  late final Animation<double> _stampPressOpacity;
   late final Animation<double> _impactScale;
   late final Animation<double> _impactOpacity;
   bool _didHapticImpact = false;
@@ -318,25 +322,53 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
       vsync: this,
       duration: const Duration(milliseconds: 720),
     );
-    _stampScale = TweenSequence<double>([
+    _imprintScale = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(
-          begin: 1.65,
-          end: 0.82,
-        ).chain(CurveTween(curve: Curves.easeInCubic)),
-        weight: 46,
+        tween: ConstantTween(0.72),
+        weight: 40,
       ),
       TweenSequenceItem(
         tween: Tween<double>(
-          begin: 0.82,
+          begin: 0.72,
           end: 1.0,
         ).chain(CurveTween(curve: Curves.elasticOut)),
-        weight: 54,
+        weight: 60,
       ),
     ]).animate(_stampController);
-    _stampTurns = Tween<double>(begin: -0.035, end: 0).animate(
-      CurvedAnimation(parent: _stampController, curve: Curves.easeOutBack),
+    _imprintTurns = Tween<double>(begin: -0.025, end: 0).animate(
+      CurvedAnimation(
+        parent: _stampController,
+        curve: const Interval(0.4, 1, curve: Curves.easeOutBack),
+      ),
     );
+    _imprintOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: ConstantTween(0), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 8),
+      TweenSequenceItem(tween: ConstantTween(1), weight: 52),
+    ]).animate(_stampController);
+    _stampPressOffset = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: -72.0, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeInCubic)),
+        weight: 42,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: -78.0)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 34,
+      ),
+      TweenSequenceItem(tween: ConstantTween(-78), weight: 24),
+    ]).animate(_stampController);
+    _stampPressScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.94), weight: 42),
+      TweenSequenceItem(tween: Tween(begin: 0.94, end: 1.0), weight: 34),
+      TweenSequenceItem(tween: ConstantTween(1), weight: 24),
+    ]).animate(_stampController);
+    _stampPressOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: ConstantTween(1), weight: 56),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
+      TweenSequenceItem(tween: ConstantTween(0), weight: 24),
+    ]).animate(_stampController);
     _impactScale = Tween<double>(begin: 0.75, end: 1.35).animate(
       CurvedAnimation(
         parent: _stampController,
@@ -393,11 +425,12 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
             if (result.stampIssued)
               SizedBox(
                 key: const ValueKey('visit-stamp-impact'),
-                height: 112,
+                height: 132,
                 child: AnimatedBuilder(
                   animation: _stampController,
                   builder: (context, child) => Stack(
                     alignment: Alignment.center,
+                    clipBehavior: Clip.none,
                     children: [
                       Opacity(
                         opacity: _impactOpacity.value,
@@ -416,11 +449,25 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
                           ),
                         ),
                       ),
-                      Transform.rotate(
-                        angle: _stampTurns.value * 6.283185307179586,
-                        child: Transform.scale(
-                          scale: _stampScale.value,
-                          child: child,
+                      Opacity(
+                        key: const ValueKey('visit-stamp-imprint'),
+                        opacity: _imprintOpacity.value,
+                        child: Transform.rotate(
+                          angle: _imprintTurns.value * 6.283185307179586,
+                          child: Transform.scale(
+                            scale: _imprintScale.value,
+                            child: child,
+                          ),
+                        ),
+                      ),
+                      Opacity(
+                        opacity: _stampPressOpacity.value,
+                        child: Transform.translate(
+                          offset: Offset(0, _stampPressOffset.value),
+                          child: Transform.scale(
+                            scale: _stampPressScale.value,
+                            child: const _PhysicalStampPress(),
+                          ),
                         ),
                       ),
                     ],
@@ -480,7 +527,7 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
                 key: const ValueKey('visit-result-mission-entry'),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  context.go(
+                  context.push(
                     Uri(
                       path: '/main/missions',
                       queryParameters: {
@@ -510,7 +557,7 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
                 key: const ValueKey('visit-result-potato-book'),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  context.go('/main/potatoes');
+                  context.push('/main/potatoes');
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF56C787),
@@ -529,7 +576,7 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
               key: const ValueKey('visit-result-next-route'),
               onPressed: () {
                 Navigator.of(context).pop();
-                context.go(
+                context.push(
                   Uri(
                     path: '/main/map',
                     queryParameters: {'recommendFrom': result.spotId},
@@ -546,6 +593,63 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
               ),
               icon: const Icon(Icons.map_rounded),
               label: const Text('다음 장소 추천'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhysicalStampPress extends StatelessWidget {
+  const _PhysicalStampPress();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '스탬프를 찍는 중',
+      child: SizedBox(
+        key: const ValueKey('visit-stamp-press'),
+        width: 76,
+        height: 92,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Container(
+              width: 34,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFF8C5A32),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(18),
+                  bottom: Radius.circular(8),
+                ),
+                border: Border.all(color: const Color(0xFF68401F), width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 58,
+              height: 10,
+              decoration: const BoxDecoration(
+                color: Color(0xFF6A4325),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
+              ),
+            ),
+            Container(
+              width: 76,
+              height: 24,
+              decoration: BoxDecoration(
+                color: const Color(0xFF3F7654),
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: const Color(0xFF28563B), width: 2),
+              ),
             ),
           ],
         ),
