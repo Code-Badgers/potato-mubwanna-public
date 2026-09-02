@@ -122,9 +122,33 @@ void main() {
       find.byKey(const ValueKey('travel-record-preview-card')),
       findsOneWidget,
     );
+    expect(find.text('1 / 2'), findsOneWidget);
     expect(find.text('감자 카페'), findsOneWidget);
     expect(find.text('2026. 07. 27'), findsWidgets);
     expect(find.text('spot 20'), findsNothing);
+
+    await tester.drag(
+      find.byKey(const ValueKey('travel-record-preview-gallery')),
+      const Offset(-300, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('travel-record-preview-gallery')),
+      const Offset(-300, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('travel-record-preview-gallery')),
+      const Offset(300, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 / 2'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('travel-record-preview-close')));
     await tester.pumpAndSettle();
@@ -133,6 +157,12 @@ void main() {
       find.byKey(const ValueKey('travel-record-preview-card')),
       findsNothing,
     );
+
+    await tester.tap(find.byKey(const ValueKey('travel-record-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.text('정선 5일장'), findsOneWidget);
   });
 
   testWidgets('keeps tappable polaroid placeholders without empty copy',

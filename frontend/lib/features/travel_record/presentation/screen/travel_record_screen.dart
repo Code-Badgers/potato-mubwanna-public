@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,8 +51,12 @@ class TravelRecordScreen extends ConsumerWidget {
                               records: records,
                               onRefresh: () =>
                                   ref.refresh(travelRecordsProvider.future),
-                              onRecordSelected: (record) =>
-                                  _showTravelRecordPreview(context, record),
+                              onRecordSelected: (index) =>
+                                  _showTravelRecordPreview(
+                                    context,
+                                    records,
+                                    index,
+                                  ),
                             ),
                       loading: () => const _TravelRecordLoadingState(),
                       error: (error, _) => _TravelRecordErrorState(
@@ -129,7 +134,11 @@ class _TravelRecordHeader extends StatelessWidget {
   }
 }
 
-void _showTravelRecordPreview(BuildContext context, TravelRecord record) {
+void _showTravelRecordPreview(
+  BuildContext context,
+  List<TravelRecord> records,
+  int initialPage,
+) {
   showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
@@ -137,7 +146,10 @@ void _showTravelRecordPreview(BuildContext context, TravelRecord record) {
     barrierColor: Colors.black.withValues(alpha: 0.62),
     transitionDuration: const Duration(milliseconds: 180),
     pageBuilder: (context, animation, secondaryAnimation) {
-      return _TravelRecordPreviewModal(record: record);
+      return _TravelRecordPreviewModal(
+        records: records,
+        initialPage: initialPage,
+      );
     },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(
@@ -193,7 +205,7 @@ class _TravelRecordList extends StatelessWidget {
 
   final List<TravelRecord> records;
   final Future<void> Function() onRefresh;
-  final ValueChanged<TravelRecord> onRecordSelected;
+  final ValueChanged<int> onRecordSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +237,7 @@ class _TravelRecordPhotoBoard extends StatelessWidget {
   });
 
   final List<TravelRecord> records;
-  final ValueChanged<TravelRecord> onRecordSelected;
+  final ValueChanged<int> onRecordSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +262,7 @@ class _TravelRecordPhotoBoard extends StatelessWidget {
               index: index,
               variant: variant,
               width: width,
-              onTap: () => onRecordSelected(record),
+              onTap: () => onRecordSelected(index),
             ),
           );
         }
@@ -548,11 +560,12 @@ class _TravelRecordPhoto extends ConsumerWidget {
     if (touristImageUrl == null || touristImageUrl.isEmpty) {
       return _fallbackIcon();
     }
-    return Image.network(
+    return CachedNetworkImage(
       touristImageUrl,
       key: ValueKey('travel-record-tourist-image-${record.visitId}'),
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _fallbackIcon(),
+      placeholder: (_, __) => _fallbackIcon(),
+      errorWidget: (_, __, ___) => _fallbackIcon(),
     );
   }
 
@@ -580,10 +593,37 @@ class _TravelRecordPhoto extends ConsumerWidget {
   }
 }
 
-class _TravelRecordPreviewModal extends StatelessWidget {
-  const _TravelRecordPreviewModal({required this.record});
+class _TravelRecordPreviewModal extends StatefulWidget {
+  const _TravelRecordPreviewModal({
+    required this.records,
+    required this.initialPage,
+  });
 
-  final TravelRecord record;
+  final List<TravelRecord> records;
+  final int initialPage;
+
+  @override
+  State<_TravelRecordPreviewModal> createState() =>
+      _TravelRecordPreviewModalState();
+}
+
+class _TravelRecordPreviewModalState extends State<_TravelRecordPreviewModal> {
+  late final PageController _pageController;
+  late int _currentPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPage =
+        widget.initialPage.clamp(0, widget.records.length - 1).toInt();
+    _pageController = PageController(initialPage: _currentPage);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -618,7 +658,7 @@ class _TravelRecordPreviewModal extends StatelessWidget {
                               angle: -0.13,
                               child: _TravelRecordBackdropFrame(
                                 width: cardWidth * 0.76,
-                                record: record,
+                                record: widget.records[_currentPage],
                                 opacity: 0.34,
                               ),
                             ),
@@ -629,15 +669,67 @@ class _TravelRecordPreviewModal extends StatelessWidget {
                               angle: 0.12,
                               child: _TravelRecordBackdropFrame(
                                 width: cardWidth * 0.7,
-                                record: record,
+                                record: widget.records[_currentPage],
                                 opacity: 0.24,
                               ),
                             ),
                           ),
-                          _TravelRecordPreviewCard(
-                            width: cardWidth,
-                            record: record,
+                          PageView.builder(
+                            key: const ValueKey(
+                              'travel-record-preview-gallery',
+                            ),
+                            controller: _pageController,
+                            itemCount: widget.records.length,
+                            onPageChanged: (index) {
+                              setState(() => _currentPage = index);
+                            },
+                            itemBuilder: (context, index) {
+                              final record = widget.records[index];
+                              return Center(
+                                child: _TravelRecordPreviewCard(
+                                  key: ValueKey(
+                                    index == _currentPage
+                                        ? 'travel-record-preview-card'
+                                        : 'travel-record-preview-card-${record.visitId}',
+                                  ),
+                                  width: cardWidth,
+                                  record: record,
+                                ),
+                              );
+                            },
                           ),
+                          if (widget.records.length > 1)
+                            Positioned(
+                              top: 8,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.32),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 11,
+                                      vertical: 5,
+                                    ),
+                                    child: Text(
+                                      '${_currentPage + 1} / ${widget.records.length}',
+                                      key: const ValueKey(
+                                        'travel-record-preview-counter',
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           Positioned(
                             bottom: 10,
                             child: IconButton(
@@ -673,6 +765,7 @@ class _TravelRecordPreviewModal extends StatelessWidget {
 
 class _TravelRecordPreviewCard extends StatelessWidget {
   const _TravelRecordPreviewCard({
+    super.key,
     required this.width,
     required this.record,
   });
@@ -683,7 +776,7 @@ class _TravelRecordPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      key: const ValueKey('travel-record-preview-card'),
+      key: key ?? ValueKey('travel-record-preview-card-${record.visitId}'),
       width: width,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 26),
       decoration: BoxDecoration(
