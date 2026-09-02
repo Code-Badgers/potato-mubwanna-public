@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -78,6 +79,43 @@ public class ExternalPlaceDetailsResolver {
         ExternalPlaceDetails details = fetchOrFallback(spot, persistedCache);
         cache.put(spot.getId(), new CachedExternalPlaceDetails(details, Instant.now()));
         return details;
+    }
+
+    public Map<Long, ExternalPlaceDetails> resolveCached(List<TouristSpot> spots) {
+        Map<Long, ExternalPlaceDetails> detailsBySpotId = new HashMap<>();
+        List<Long> persistedCacheSpotIds = new ArrayList<>();
+
+        for (TouristSpot spot : spots) {
+            if (!shouldUseGooglePlaces(spot)) {
+                continue;
+            }
+            CachedExternalPlaceDetails cached = cache.get(spot.getId());
+            if (cached != null) {
+                detailsBySpotId.put(spot.getId(), cached.details());
+            } else {
+                persistedCacheSpotIds.add(spot.getId());
+            }
+        }
+
+        if (persistedCacheSpotIds.isEmpty()) {
+            return Map.copyOf(detailsBySpotId);
+        }
+
+        for (GooglePlaceDetailsCache persistedCache
+            : googlePlaceDetailsCacheRepository.findAllById(persistedCacheSpotIds)) {
+            Optional<ExternalPlaceDetails> details = readCachedDetails(persistedCache);
+            if (details.isEmpty()) {
+                continue;
+            }
+            Instant fetchedAt = Optional.ofNullable(persistedCache.getDetailsFetchedAt())
+                .orElse(Instant.EPOCH);
+            cache.put(
+                persistedCache.getTouristSpotId(),
+                new CachedExternalPlaceDetails(details.get(), fetchedAt)
+            );
+            detailsBySpotId.put(persistedCache.getTouristSpotId(), details.get());
+        }
+        return Map.copyOf(detailsBySpotId);
     }
 
     private ExternalPlaceDetails fetchOrFallback(

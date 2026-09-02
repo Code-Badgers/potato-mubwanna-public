@@ -2,7 +2,10 @@ package com.gamjamubwatna.spot.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.gamjamubwatna.spot.api.SpotDetailResponse;
@@ -39,16 +42,10 @@ class SpotServiceTest {
         TouristSpot attraction = spot(2L, "남이섬", SpotCategory.POTATO_TOUR);
         when(spotImageResolver.resolveStoredImageUrls(cafe, 3))
             .thenReturn(List.of("https://example.com/cafe.jpg"));
-        when(spotImageResolver.resolveTourApiImageUrls(cafe, 3))
-            .thenReturn(List.of());
         when(spotImageResolver.resolveStoredImageUrls(attraction, 3))
             .thenReturn(List.of("https://example.com/attraction.jpg"));
-        when(spotImageResolver.resolveTourApiImageUrls(attraction, 3))
-            .thenReturn(List.of());
-        when(externalPlaceDetailsResolver.resolve(cafe))
-            .thenReturn(ExternalPlaceDetails.empty());
-        when(externalPlaceDetailsResolver.resolve(attraction))
-            .thenReturn(ExternalPlaceDetails.empty());
+        when(externalPlaceDetailsResolver.resolveCached(anyList()))
+            .thenReturn(java.util.Map.of());
         when(touristSpotRepository.findActiveSpots(null, null, null))
             .thenReturn(List.of(cafe, attraction));
         when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
@@ -67,6 +64,8 @@ class SpotServiceTest {
         assertThat(responses.get(0).imageUrl()).isEqualTo("https://example.com/cafe.jpg");
         assertThat(responses.get(0).imageUrls()).containsExactly("https://example.com/cafe.jpg");
         assertThat(responses.get(1).menuItems()).isEmpty();
+        verify(externalPlaceDetailsResolver, never()).resolve(cafe);
+        verify(spotImageResolver, never()).resolveTourApiImageUrls(cafe, 3);
     }
 
     @Test
@@ -76,19 +75,18 @@ class SpotServiceTest {
             .thenReturn(List.of(cafe));
         when(spotImageResolver.resolveStoredImageUrls(cafe, 3))
             .thenReturn(List.of());
-        when(spotImageResolver.resolveTourApiImageUrls(cafe, 3))
-            .thenReturn(List.of());
         when(spotMenuItemRepository.findActiveByTouristSpotIds(anyCollection()))
             .thenReturn(List.of(menu(3L, "감자라떼", 5500, 1)));
-        when(externalPlaceDetailsResolver.resolve(cafe))
-            .thenReturn(new ExternalPlaceDetails(
+        ExternalPlaceDetails cachedDetails = new ExternalPlaceDetails(
                 "google-place-id",
                 "033-000-0000",
                 "https://example.com",
                 4.3,
                 new PlaceOpeningHours(true, "화요일: 오전 11:00~오후 8:00", List.of("화요일: 오전 11:00~오후 8:00")),
                 List.of("https://google.example.com/photo.jpg")
-            ));
+            );
+        when(externalPlaceDetailsResolver.resolveCached(anyList()))
+            .thenReturn(java.util.Map.of(3L, cachedDetails));
 
         List<SpotListResponse> responses = spotService.getSpots(null, null, null);
 
@@ -103,6 +101,8 @@ class SpotServiceTest {
         assertThat(response.menuItems())
             .extracting(item -> item.name())
             .containsExactly("감자라떼");
+        verify(externalPlaceDetailsResolver, never()).resolve(cafe);
+        verify(spotImageResolver, never()).resolveTourApiImageUrls(cafe, 3);
     }
 
     @Test

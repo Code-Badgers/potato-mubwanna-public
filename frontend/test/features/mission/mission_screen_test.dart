@@ -106,13 +106,14 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('10,000걸음 걷기'), findsOneWidget);
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
-    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
+    expect(find.text('점순이 특별 미션'), findsNothing);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsNothing);
+    expect(find.text('속초 시장 QR 찾기'), findsNothing);
 
     expect(find.text('시작하기'), findsNothing);
     expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     expect(find.text('매일 가볍게 여행 미션을 이어가보세요!'), findsNothing);
-    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
+    expect(find.text('속초 시장 QR 찾기'), findsNothing);
     expect(find.text('시군 2곳 방문하기'), findsOneWidget);
     expect(
       find.byKey(FeatureTourTargets.missionFeatured),
@@ -123,9 +124,7 @@ void main() {
 
   testWidgets('special mission completion does not increase daily count',
       (tester) async {
-    await _pumpMissionScreen(tester);
-
-    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
+    await _pumpMissionScreen(tester, visitEntryMissionId: '1004');
 
     expect(find.text('미션 상세'), findsOneWidget);
     expect(find.text('강원도 감자 퀴즈'), findsOneWidget);
@@ -165,9 +164,7 @@ void main() {
 
   testWidgets('returns to mission list on system back from detail',
       (tester) async {
-    await _pumpMissionScreen(tester);
-
-    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
+    await _pumpMissionScreen(tester, visitEntryMissionId: '1004');
     expect(find.text('미션 상세'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
@@ -180,9 +177,11 @@ void main() {
   testWidgets('does not complete quiz mission when selected answer is wrong',
       (tester) async {
     final repository = _FakeMissionRepository();
-    await _pumpMissionScreen(tester, repository: repository);
-
-    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
+    await _pumpMissionScreen(
+      tester,
+      repository: repository,
+      visitEntryMissionId: '1004',
+    );
 
     await _tapVisibleText(tester, '옥수수감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
@@ -259,6 +258,19 @@ void main() {
     expect(repository.lastPayload?.longitude, 128.6609);
     expect(inputService.lastPhotoSource, MissionPhotoSource.gallery);
     expect(uploadRepository.lastMissionId, '1002');
+
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(FeatureTourTargets.missionFeatured), findsOneWidget);
+    await tester.tap(find.byKey(FeatureTourTargets.missionFeatured));
+    await tester.pumpAndSettle();
+
+    expect(find.text('미션 상세'), findsOneWidget);
+    expect(find.text('숨은 QR 찾기'), findsOneWidget);
+    expect(find.text('사진으로 추억 남기기'), findsNothing);
   });
 
   testWidgets('does not upload photo when current location is unavailable',
@@ -373,9 +385,8 @@ void main() {
           statusCode: 409,
         ),
       ),
+      visitEntryMissionId: '1004',
     );
-
-    await _openMission(tester, '정선 5일장 곤드레 퀴즈');
 
     await _tapVisibleText(tester, '곤드레감자');
     await tester.tap(find.widgetWithText(FilledButton, '정답 제출하기'));
@@ -430,8 +441,8 @@ void main() {
     expect(find.text('스탬프 1개 획득하기'), findsNothing);
     expect(find.text('[시즌 한정] 얼음나라 산천어 미션'), findsNothing);
     expect(find.text('10,000걸음 걷기'), findsOneWidget);
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
-    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsNothing);
+    expect(find.text('속초 시장 QR 찾기'), findsNothing);
   });
 
   testWidgets('shows visit mission entry banner from spot verification',
@@ -452,8 +463,8 @@ void main() {
     );
     expect(find.text('오늘의 미션'), findsNothing);
     expect(find.text('10,000걸음 걷기'), findsOneWidget);
-    expect(find.text('정선 5일장 곤드레 퀴즈'), findsOneWidget);
-    expect(find.text('속초 시장 QR 찾기'), findsOneWidget);
+    expect(find.text('정선 5일장 곤드레 퀴즈'), findsNothing);
+    expect(find.text('속초 시장 QR 찾기'), findsNothing);
   });
 
   testWidgets('opens visit unlocked mission detail from mission id',

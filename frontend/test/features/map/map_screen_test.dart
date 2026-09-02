@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,8 +15,44 @@ import 'package:potato_mubwanna/features/map/domain/spot_detail.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
 import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
+import 'package:potato_mubwanna/shared/widgets/loading/potato_loading_view.dart';
 
 void main() {
+  testWidgets('renders the discovery home before spot loading completes', (
+    tester,
+  ) async {
+    final spots = Completer<List<MapSpot>>();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
+          mapSpotsProvider.overrideWith((ref) => spots.future),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(
+          home: MapScreen(hasMapConfiguration: true),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('map-discovery-home')), findsOneWidget);
+    expect(find.byKey(const ValueKey('map-spots-progress')), findsOneWidget);
+    expect(find.text('강원도 여행 코스 짜기'), findsOneWidget);
+    expect(find.byKey(const ValueKey('open-full-map-button')), findsOneWidget);
+    expect(find.byType(PotatoLoadingView), findsNothing);
+
+    spots.complete(_spots);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('map-spots-progress')), findsNothing);
+    expect(find.text('오늘 감자로 배 채워볼까? 🥔'), findsOneWidget);
+  });
+
   testWidgets('renders map discovery home and opens the full Kakao map', (
     tester,
   ) async {
@@ -51,7 +89,7 @@ void main() {
     expect(find.text('내 동선 0곳'), findsNothing);
     expect(find.byKey(const ValueKey('discovery-route-button')), findsNothing);
     expect(find.byKey(const ValueKey('preview-route-button')), findsNothing);
-    expect(find.text('오늘 어떤 여행이 끌리나요? 🌿'), findsOneWidget);
+    expect(find.text('오늘 어떤 여행이 끌리나요?'), findsOneWidget);
     expect(find.text('지도 크게 보기'), findsOneWidget);
     expect(renderedSpots, isEmpty);
 
@@ -77,7 +115,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('지금 가기 좋은 곳 ☀️'), findsOneWidget);
+    expect(find.text('지금 가기 좋은 곳'), findsOneWidget);
     await tester.drag(
       find.byKey(const ValueKey('map-discovery-home')),
       const Offset(0, -420),

@@ -561,7 +561,7 @@ class _TravelRecordPhoto extends ConsumerWidget {
       return _fallbackIcon();
     }
     return CachedNetworkImage(
-      touristImageUrl,
+      imageUrl: touristImageUrl,
       key: ValueKey('travel-record-tourist-image-${record.visitId}'),
       fit: BoxFit.cover,
       placeholder: (_, __) => _fallbackIcon(),
@@ -776,7 +776,6 @@ class _TravelRecordPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      key: key ?? ValueKey('travel-record-preview-card-${record.visitId}'),
       width: width,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 26),
       decoration: BoxDecoration(

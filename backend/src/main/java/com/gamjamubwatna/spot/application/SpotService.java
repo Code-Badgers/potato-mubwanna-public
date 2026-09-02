@@ -52,10 +52,15 @@ public class SpotService {
         );
 
         Map<Long, List<SpotMenuItemResponse>> menuItemsBySpotId = menuItemsBySpotId(spots);
+        Map<Long, ExternalPlaceDetails> cachedDetailsBySpotId =
+            externalPlaceDetailsResolver.resolveCached(spots);
         return spots.stream()
             .map(spot -> {
-                ExternalPlaceDetails externalDetails = externalPlaceDetailsResolver.resolve(spot);
-                List<String> imageUrls = resolvedImageUrls(spot, externalDetails, 3);
+                ExternalPlaceDetails externalDetails = cachedDetailsBySpotId.getOrDefault(
+                    spot.getId(),
+                    ExternalPlaceDetails.empty()
+                );
+                List<String> imageUrls = resolvedListImageUrls(spot, externalDetails, 3);
                 return SpotListResponse.from(
                     spot,
                     imageUrls.isEmpty() ? null : imageUrls.get(0),
@@ -65,6 +70,18 @@ public class SpotService {
                 );
             })
             .toList();
+    }
+
+    private List<String> resolvedListImageUrls(
+        TouristSpot spot,
+        ExternalPlaceDetails externalDetails,
+        int limit
+    ) {
+        // 목록 조회는 첫 화면을 여는 경로이므로 저장 데이터와 마지막 성공 캐시만 사용한다.
+        List<String> imageUrls = new ArrayList<>();
+        appendImages(imageUrls, spotImageResolver.resolveStoredImageUrls(spot, limit), limit);
+        appendImages(imageUrls, externalDetails.imageUrls(), limit);
+        return List.copyOf(imageUrls);
     }
 
     @Transactional(readOnly = true)
