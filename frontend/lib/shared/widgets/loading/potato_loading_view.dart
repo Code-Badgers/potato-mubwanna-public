@@ -73,6 +73,7 @@ class PotatoLoadingView extends StatefulWidget {
 class _PotatoLoadingViewState extends State<PotatoLoadingView> {
   Timer? _timer;
   int _playbackIndex = 0;
+  bool _didSchedulePrecache = false;
 
   @override
   void initState() {
@@ -83,8 +84,23 @@ class _PotatoLoadingViewState extends State<PotatoLoadingView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    for (final asset in PotatoLoadingView.frameAssets) {
-      precacheImage(AssetImage(asset), context);
+    if (!_didSchedulePrecache) {
+      _didSchedulePrecache = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_precacheFramesInOrder());
+        }
+      });
+    }
+  }
+
+  Future<void> _precacheFramesInOrder() async {
+    for (final asset in PotatoLoadingView.frameAssets.skip(1)) {
+      if (!mounted) {
+        return;
+      }
+      await precacheImage(AssetImage(asset), context);
+      await WidgetsBinding.instance.endOfFrame;
     }
   }
 
