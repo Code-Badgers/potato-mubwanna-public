@@ -41,6 +41,12 @@ final appRouter = GoRouter(
       builder: (context, state) => const SessionStartupScreen(),
     ),
     GoRoute(
+      path: '/startup/loading',
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: SessionStartupLoadingScreen(),
+      ),
+    ),
+    GoRoute(
       path: '/legal-consent',
       builder: (context, state) => Consumer(
         builder: (context, ref, child) => LegalConsentScreen(

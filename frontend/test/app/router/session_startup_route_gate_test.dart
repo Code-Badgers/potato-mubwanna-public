@@ -34,6 +34,7 @@ void main() {
 
     expect(gate.redirectBeforeSessionStartup('/startup'), isNull);
     expect(gate.redirectBeforeSessionStartup('/startup?source=push'), isNull);
+    expect(gate.redirectBeforeSessionStartup('/startup/loading'), isNull);
   });
 
   test('allows legal consent and document screens during startup', () {

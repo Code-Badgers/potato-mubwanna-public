@@ -4,42 +4,26 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/session_startup_route_gate.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../shared/widgets/loading/potato_loading_view.dart';
 import '../../application/auth_controller.dart';
 import '../../application/session_startup_coordinator.dart';
 
-class SessionStartupScreen extends ConsumerStatefulWidget {
+class SessionStartupScreen extends StatefulWidget {
   const SessionStartupScreen({super.key});
 
   @override
-  ConsumerState<SessionStartupScreen> createState() =>
-      _SessionStartupScreenState();
+  State<SessionStartupScreen> createState() => _SessionStartupScreenState();
 }
 
-class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
-  bool _isOpeningInitialRoute = false;
+class _SessionStartupScreenState extends State<SessionStartupScreen> {
+  bool _didContinue = false;
 
-  Future<void> _openInitialRoute() async {
-    if (_isOpeningInitialRoute) {
+  void _openInitialRoute() {
+    if (_didContinue) {
       return;
     }
-    setState(() => _isOpeningInitialRoute = true);
-
-    final fallbackRoute =
-        await ref.read(sessionStartupCoordinatorProvider).resolveInitialRoute();
-    if (fallbackRoute == '/legal-consent') {
-      if (mounted) {
-        context.go(fallbackRoute);
-      }
-      return;
-    }
-    final route = sessionStartupRouteGate.completeSessionStartup(
-      fallbackRoute: fallbackRoute,
-      isAuthenticated:
-          ref.read(authControllerProvider).status == AuthStatus.authenticated,
-    );
-    if (mounted) {
-      context.go(route);
-    }
+    _didContinue = true;
+    context.go('/startup/loading');
   }
 
   @override
@@ -57,14 +41,12 @@ class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
               key: const Key('session-startup-brand-image'),
               fit: BoxFit.cover,
             ),
-            SafeArea(
+            const SafeArea(
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 34),
-                  child: _isOpeningInitialRoute
-                      ? const _StartupLoadingIndicator()
-                      : const _BlinkingStartText(label: '터치하여 시작하기'),
+                  padding: EdgeInsets.fromLTRB(24, 0, 24, 34),
+                  child: _BlinkingStartText(label: '터치하여 시작하기'),
                 ),
               ),
             ),
@@ -75,37 +57,49 @@ class _SessionStartupScreenState extends ConsumerState<SessionStartupScreen> {
   }
 }
 
-class _StartupLoadingIndicator extends StatelessWidget {
-  const _StartupLoadingIndicator();
+class SessionStartupLoadingScreen extends ConsumerStatefulWidget {
+  const SessionStartupLoadingScreen({super.key});
+
+  @override
+  ConsumerState<SessionStartupLoadingScreen> createState() =>
+      _SessionStartupLoadingScreenState();
+}
+
+class _SessionStartupLoadingScreenState
+    extends ConsumerState<SessionStartupLoadingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resolveInitialRoute());
+  }
+
+  Future<void> _resolveInitialRoute() async {
+    final fallbackRoute =
+        await ref.read(sessionStartupCoordinatorProvider).resolveInitialRoute();
+    if (!mounted) {
+      return;
+    }
+    if (fallbackRoute == '/legal-consent') {
+      context.go(fallbackRoute);
+      return;
+    }
+    final route = sessionStartupRouteGate.completeSessionStartup(
+      fallbackRoute: fallbackRoute,
+      isAuthenticated:
+          ref.read(authControllerProvider).status == AuthStatus.authenticated,
+    );
+    if (mounted) {
+      context.go(route);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: '여행을 준비하는 중',
-      liveRegion: true,
-      child: const Row(
-        key: Key('session-startup-loading'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: AppColors.primaryDark,
-            ),
-          ),
-          SizedBox(width: 10),
-          Text(
-            '여행을 준비하고 있어요',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
+    return const Scaffold(
+      key: Key('session-startup-loading'),
+      body: PotatoLoadingView.fullScreen(
+        message: '여행을 준비하고 있어요',
+        subtitle: '필요한 정보는 화면이 열린 뒤에도 이어서 불러올게요',
       ),
     );
   }
