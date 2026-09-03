@@ -320,7 +320,7 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
     super.initState();
     _stampController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 720),
+      duration: const Duration(milliseconds: 840),
     );
     _imprintScale = TweenSequence<double>([
       TweenSequenceItem(
