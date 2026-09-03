@@ -198,6 +198,16 @@ void main() {
     expect(find.byKey(const ValueKey('visit-stamp-impact')), findsOneWidget);
     expect(find.byKey(const ValueKey('visit-stamp-press')), findsOneWidget);
     expect(find.byKey(const ValueKey('visit-stamp-imprint')), findsOneWidget);
+    final stampAnimation = tester.widget<AnimatedBuilder>(
+      find.descendant(
+        of: find.byKey(const ValueKey('visit-stamp-impact')),
+        matching: find.byType(AnimatedBuilder),
+      ),
+    );
+    expect(
+      (stampAnimation.animation as AnimationController).duration,
+      const Duration(milliseconds: 840),
+    );
     expect(
       find.byKey(const ValueKey('attraction-stamp-정선 5일장')),
       findsOneWidget,
