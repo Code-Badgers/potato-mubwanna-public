@@ -312,6 +312,11 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         }
         return BackButtonListener(
           onBackButtonPressed: () async {
+            // 상세가 가려졌을 때는 현재 탭이나 팝업의 뒤로가기를 가로채지 않는다.
+            if (ModalRoute.of(context)?.isCurrent != true ||
+                ModalRoute.of(Navigator.of(context).context)?.isCurrent == false) {
+              return false;
+            }
             _closeMissionDetail();
             return true;
           },

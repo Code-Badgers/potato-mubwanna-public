@@ -680,6 +680,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
         return BackButtonListener(
           onBackButtonPressed: () async {
+            // 다른 탭 또는 안쪽/루트 Navigator의 팝업이 먼저 뒤로가기를 처리한다.
+            if (ModalRoute.of(context)?.isCurrent != true ||
+                ModalRoute.of(Navigator.of(context).context)?.isCurrent == false) {
+              return false;
+            }
             _returnToDiscoveryHome();
             return true;
           },

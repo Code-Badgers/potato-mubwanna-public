@@ -12,6 +12,14 @@ class MainBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Shell의 route state는 push된 탭을 반영하지 않으므로 실제 경로를 구독한다.
+    return AnimatedBuilder(
+      animation: GoRouter.of(context),
+      builder: (context, _) => _buildNavigation(context),
+    );
+  }
+
+  Widget _buildNavigation(BuildContext context) {
     final selectedIndex = _selectedIndex(context);
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -45,7 +53,7 @@ class MainBottomNavigation extends StatelessWidget {
                             isSelected: selectedIndex == index,
                             onTap: () {
                               if (selectedIndex != index) {
-                                context.push(_paths[index]);
+                                _openTab(context, _paths[index]);
                               }
                             },
                           ),
@@ -63,9 +71,24 @@ class MainBottomNavigation extends StatelessWidget {
   }
 
   int _selectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).location;
+    final location = GoRouter.of(context).location;
     final index = _paths.indexWhere(location.startsWith);
     return index < 0 ? 0 : index;
+  }
+
+  void _openTab(BuildContext context, String path) {
+    final router = GoRouter.of(context);
+    final alreadyOpen = router.routerDelegate.currentConfiguration.matches.any(
+      (match) => match.route is GoRoute && match.matchedLocation == path,
+    );
+    // 같은 화면을 중복 push하면 안내용 GlobalKey와 화면 상태가 충돌한다.
+    if (alreadyOpen) {
+      while (Uri.parse(router.location).path != path && router.canPop()) {
+        router.pop();
+      }
+      return;
+    }
+    router.push(path);
   }
 
   static const _paths = [

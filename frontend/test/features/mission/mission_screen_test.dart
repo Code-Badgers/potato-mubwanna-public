@@ -24,8 +24,45 @@ import 'package:potato_mubwanna/features/mission/presentation/mission_jumsooni_d
 import 'package:potato_mubwanna/features/mission/presentation/screen/mission_screen.dart';
 import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
 import 'package:potato_mubwanna/features/potato/data/step_count_reader_stub.dart';
+import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
 
 void main() {
+  for (final rootModal in [false, true]) {
+    testWidgets('mission detail yields back to modal (root: $rootModal)',
+        (tester) async {
+      final router = _missionDetailRouter();
+      addTearDown(router.dispose);
+      await _pumpMissionScreen(tester, router: router);
+      final context = tester.element(find.byType(MissionScreen));
+      showModalBottomSheet<void>(
+        context: context,
+        useRootNavigator: rootModal,
+        builder: (_) => const Text('mission modal'),
+      );
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('mission modal'), findsNothing);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+    });
+  }
+
+  testWidgets('hidden mission detail does not consume another tab back',
+      (tester) async {
+    final router = _missionDetailRouter();
+    addTearDown(router.dispose);
+    await _pumpMissionScreen(tester, router: router);
+    await tester.tap(find.text('스탬프'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('stamp tab'), findsNothing);
+    expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+  });
+
   testWidgets('shows login prompt without loading missions for guests',
       (tester) async {
     final repository = _FakeMissionRepository();
@@ -483,6 +520,7 @@ void main() {
 
 Future<void> _pumpMissionScreen(
   WidgetTester tester, {
+  GoRouter? router,
   MissionRepository? repository,
   MissionNativeInputService? inputService,
   MissionUploadRepository? uploadRepository,
@@ -512,16 +550,36 @@ Future<void> _pumpMissionScreen(
           const UnsupportedStepCountReader(),
         ),
       ],
-      child: MaterialApp(
-        home: MissionScreen(
-          visitEntrySpotName: visitEntrySpotName,
-          visitEntryMissionId: visitEntryMissionId,
-        ),
-      ),
+      child: router != null
+          ? MaterialApp.router(routerConfig: router)
+          : MaterialApp(
+              home: MissionScreen(
+                visitEntrySpotName: visitEntrySpotName,
+                visitEntryMissionId: visitEntryMissionId,
+              ),
+            ),
     ),
   );
   await tester.pumpAndSettle();
 }
+
+GoRouter _missionDetailRouter() => GoRouter(
+      initialLocation: '/main/missions',
+      routes: [
+        ShellRoute(
+          builder: (_, __, child) => MainShell(child: child),
+          routes: [
+            GoRoute(
+                path: '/main/missions',
+                builder: (_, __) =>
+                    const MissionScreen(visitEntryMissionId: '1004')),
+            GoRoute(
+                path: '/main/stamps',
+                builder: (_, __) => const Center(child: Text('stamp tab'))),
+          ],
+        )
+      ],
+    );
 
 Future<void> _openMission(WidgetTester tester, String title) async {
   await tester.scrollUntilVisible(
