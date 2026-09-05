@@ -569,6 +569,7 @@ class MissionServiceTest {
         ArgumentCaptor<UserVisit> visitCaptor = ArgumentCaptor.forClass(UserVisit.class);
         verify(userVisitRepository).save(visitCaptor.capture());
         assertThat(visitCaptor.getValue().getTouristSpot()).isSameAs(touristSpot);
+        assertThat(visitCaptor.getValue().isVisitRewardsProcessed()).isFalse();
         assertThat(visitCaptor.getValue().getDistanceMeters()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(visitCaptor.getValue().getVisitedAt())
             .isEqualTo(Instant.parse("2026-07-01T00:00:00Z"));

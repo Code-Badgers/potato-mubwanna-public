@@ -311,7 +311,7 @@ public class MissionService {
         if (userVisitRepository.existsByUserIdAndTouristSpotId(user.getId(), evidenceSpot.getId())) {
             return;
         }
-        userVisitRepository.save(new UserVisit(
+        userVisitRepository.save(UserVisit.fromPhotoEvidence(
             user,
             evidenceSpot,
             photoEvidence.distanceMeters(),

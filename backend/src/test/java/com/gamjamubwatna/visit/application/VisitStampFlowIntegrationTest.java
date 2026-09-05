@@ -1,6 +1,7 @@
 package com.gamjamubwatna.visit.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.gamjamubwatna.auth.domain.AuthProvider;
 import com.gamjamubwatna.auth.domain.User;
@@ -17,9 +18,13 @@ import com.gamjamubwatna.stamp.domain.UserStampRepository;
 import com.gamjamubwatna.visit.api.VisitVerifyRequest;
 import com.gamjamubwatna.visit.api.VisitVerifyResponse;
 import com.gamjamubwatna.visit.domain.UserVisitRepository;
+import com.gamjamubwatna.visit.domain.UserVisit;
 import com.gamjamubwatna.potato.domain.UserPotatoRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -99,9 +104,42 @@ class VisitStampFlowIntegrationTest {
         assertThat(second.stampIssued()).isTrue();
         assertThat(second.potatoAcquired()).isFalse();
         assertThat(second.acquiredPotato().alreadyOwned()).isTrue();
-        assertThat(userVisitRepository.count()).isEqualTo(2);
+        assertThat(userVisitRepository.findByUserIdOrderByVisitedAtDesc(user.getId())).hasSize(2);
         assertThat(userStampRepository.countByUserId(user.getId())).isEqualTo(2);
         assertThat(userPotatoRepository.countByUserId(user.getId())).isEqualTo(1);
+    }
+
+    @Test
+    void photoTravelRecordCanAcquireRewardsOnlyOnceEvenWithConcurrentRequests() throws Exception {
+        Instant now = Instant.parse("2026-09-05T00:00:00Z");
+        User user = userRepository.save(new User(AuthProvider.KAKAO, "photo-visit-rewards",
+            null, "사진 방문 사용자", null, now));
+        TouristSpot spot = saveSpot("photo-visit-rewards", "사진 보상 스팟", now);
+        stampRepository.save(new Stamp("PHOTO_VISIT_REWARDS", spot, null, 103, now));
+        UserVisit photoVisit = userVisitRepository.save(UserVisit.fromPhotoEvidence(user, spot, BigDecimal.ZERO, now));
+
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Boolean> attempt = () -> {
+                start.await(5, TimeUnit.SECONDS);
+                try {
+                    verify(user, spot);
+                    return true;
+                } catch (VisitDuplicateException expected) {
+                    return false;
+                }
+            };
+            var first = executor.submit(attempt);
+            var second = executor.submit(attempt);
+            start.countDown();
+            assertThat(java.util.List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS)))
+                .containsExactlyInAnyOrder(true, false);
+        }
+        assertThat(userVisitRepository.findById(photoVisit.getId()).orElseThrow().isVisitRewardsProcessed()).isTrue();
+        assertThat(userVisitRepository.findByUserIdOrderByVisitedAtDesc(user.getId())).hasSize(1);
+        assertThat(userStampRepository.countByUserId(user.getId())).isEqualTo(1);
+        assertThat(userPotatoRepository.countByUserId(user.getId())).isEqualTo(1);
+        assertThatThrownBy(() -> verify(user, spot)).isInstanceOf(VisitDuplicateException.class);
     }
 
     private VisitVerifyResponse verify(User user, TouristSpot spot) {
