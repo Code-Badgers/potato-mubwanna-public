@@ -31,18 +31,24 @@ final missionLocationServiceProvider = Provider<LocationService>(
 
 final missionsProvider = StateNotifierProvider<MissionController,
     AsyncValue<List<MissionChallenge>>>(
-  (ref) => MissionController(
-    ref.watch(missionRepositoryProvider),
-    onCouponReward: () => ref.invalidate(couponListProvider),
-    beforeLoad: () async {
-      try {
-        ref.invalidate(missionStepActivitySyncProvider);
-        await ref.read(missionStepActivitySyncProvider.future);
-      } catch (_) {
-        // 걸음 동기화 실패가 걸음 외 미션 목록 진입을 막지 않게 한다.
-      }
-    },
-  )..load(),
+  (ref) {
+    final authStatus =
+        ref.watch(authControllerProvider.select((state) => state.status));
+    final controller = MissionController(
+      ref.watch(missionRepositoryProvider),
+      isAuthenticated: authStatus == AuthStatus.authenticated,
+      onCouponReward: () => ref.invalidate(couponListProvider),
+      beforeLoad: () async {
+        try {
+          ref.invalidate(missionStepActivitySyncProvider);
+          await ref.read(missionStepActivitySyncProvider.future);
+        } catch (_) {
+          // 걸음 동기화 실패가 걸음 외 미션 목록 진입을 막지 않게 한다.
+        }
+      },
+    );
+    return controller..load();
+  },
 );
 
 final missionByIdProvider = Provider.family<MissionChallenge?, String>(
@@ -63,21 +69,36 @@ class MissionController
     this._repository, {
     void Function()? onCouponReward,
     Future<void> Function()? beforeLoad,
+    bool isAuthenticated = true,
   })  : _onCouponReward = onCouponReward,
         _beforeLoad = beforeLoad,
+        _isAuthenticated = isAuthenticated,
         super(const AsyncValue.loading());
 
   final MissionRepository _repository;
   final void Function()? _onCouponReward;
   final Future<void> Function()? _beforeLoad;
+  final bool _isAuthenticated;
+  int _loadGeneration = 0;
 
   Future<void> load() async {
+    if (!_isAuthenticated) {
+      state = const AsyncValue.data([]);
+      return;
+    }
+    final generation = ++_loadGeneration;
     state = const AsyncValue.loading();
     try {
       await _beforeLoad?.call();
-      state = AsyncValue.data(await _repository.fetchMissions());
+      if (!mounted || generation != _loadGeneration) return;
+      final missions = await _repository.fetchMissions();
+      if (mounted && generation == _loadGeneration) {
+        state = AsyncValue.data(missions);
+      }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      if (mounted && generation == _loadGeneration) {
+        state = AsyncValue.error(error, stackTrace);
+      }
     }
   }
 
@@ -92,6 +113,9 @@ class MissionController
       status: MissionStatus.completed,
       progress: mission.target,
     );
+    // 로그아웃 후 도착한 응답은 폐기된 세션의 상태/보상 캐시를 변경하지 않는다.
+    if (!mounted) return completedMission;
+    ++_loadGeneration;
     state = AsyncValue.data([
       for (final item in missions)
         if (item.id == missionId) completedMission else item,

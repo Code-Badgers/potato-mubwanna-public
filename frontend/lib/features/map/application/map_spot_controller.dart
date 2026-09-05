@@ -29,7 +29,20 @@ final spotDetailProvider =
 );
 
 final favoriteSpotRouteProvider = FutureProvider<FavoriteSpotRoute>(
-  (ref) => ref.watch(mapSpotRepositoryProvider).fetchFavoriteSpotRoute(),
+  (ref) {
+    final status =
+        ref.watch(authControllerProvider.select((state) => state.status));
+    if (status != AuthStatus.authenticated) {
+      return const FavoriteSpotRoute(
+        routeName: '나만의 감자 동선',
+        totalDistanceKm: 0,
+        estimatedMinutes: 0,
+        waypoints: [],
+        polyline: [],
+      );
+    }
+    return ref.watch(mapSpotRepositoryProvider).fetchFavoriteSpotRoute();
+  },
 );
 
 final favoriteSpotControllerProvider =
@@ -37,33 +50,45 @@ final favoriteSpotControllerProvider =
   (ref) => FavoriteSpotController(
     ref.watch(mapSpotRepositoryProvider),
     const LocalFavoriteSpotStorage(),
+    isAuthenticated:
+        ref.watch(authControllerProvider.select((state) => state.status)) ==
+            AuthStatus.authenticated,
   )..load(),
 );
 
 class FavoriteSpotController extends StateNotifier<AsyncValue<Set<String>>> {
-  FavoriteSpotController(this._repository, this._localStorage)
-      : super(const AsyncValue.loading());
+  FavoriteSpotController(this._repository, this._localStorage,
+      {bool isAuthenticated = true})
+      : _isAuthenticated = isAuthenticated,
+        super(const AsyncValue.loading());
 
   final MapSpotRepository _repository;
   final LocalFavoriteSpotStorage _localStorage;
+  final bool _isAuthenticated;
+  int _loadGeneration = 0;
 
   Future<void> load() async {
+    final generation = ++_loadGeneration;
     state = const AsyncValue.loading();
-    final localSpotIds = await _localStorage.readSpotIds();
-    state = AsyncValue.data(localSpotIds);
-
     try {
-      final favoriteSpots = await _repository.fetchFavoriteSpots();
-      final remoteSpotIds = favoriteSpots.map((spot) => spot.spotId).toSet();
-      final mergedSpotIds = {...localSpotIds, ...remoteSpotIds};
-      await _localStorage.saveSpotIds(mergedSpotIds);
-      state = AsyncValue.data(mergedSpotIds);
-    } catch (_) {
-      state = AsyncValue.data(localSpotIds);
+      // 로그인 찜은 서버가 기준이다. 기기 공통 캐시를 합치면 원격 삭제와 계정 분리가 깨진다.
+      final spotIds = _isAuthenticated
+          ? (await _repository.fetchFavoriteSpots())
+              .map((spot) => spot.spotId)
+              .toSet()
+          : await _localStorage.readSpotIds();
+      if (mounted && generation == _loadGeneration) {
+        state = AsyncValue.data(spotIds);
+      }
+    } catch (error, stackTrace) {
+      if (mounted && generation == _loadGeneration) {
+        state = AsyncValue.error(error, stackTrace);
+      }
     }
   }
 
   Future<void> toggle(String spotId) async {
+    ++_loadGeneration;
     final previous = state.valueOrNull ?? <String>{};
     final shouldAdd = !previous.contains(spotId);
     final next = {...previous};
@@ -73,20 +98,17 @@ class FavoriteSpotController extends StateNotifier<AsyncValue<Set<String>>> {
       next.remove(spotId);
     }
     state = AsyncValue.data(next);
-    await _localStorage.saveSpotIds(next);
-
     try {
-      if (shouldAdd) {
+      if (!_isAuthenticated) {
+        await _localStorage.saveSpotIds(next);
+      } else if (shouldAdd) {
         await _repository.addFavoriteSpot(spotId);
       } else {
         await _repository.removeFavoriteSpot(spotId);
       }
     } catch (error, stackTrace) {
-      if (_isAuthenticationError(error)) {
-        return;
-      }
+      if (!mounted) return;
       state = AsyncValue.data(previous);
-      await _localStorage.saveSpotIds(previous);
       Error.throwWithStackTrace(
         FavoriteSpotToggleException.from(error),
         stackTrace,
@@ -95,33 +117,28 @@ class FavoriteSpotController extends StateNotifier<AsyncValue<Set<String>>> {
   }
 
   Future<void> reorder(List<String> spotIds) async {
-    await _localStorage.saveSpotOrder(spotIds);
-
     try {
-      await _repository.updateFavoriteSpotOrder(spotIds);
-    } catch (error, stackTrace) {
-      if (_isAuthenticationError(error)) {
-        return;
+      if (_isAuthenticated) {
+        await _repository.updateFavoriteSpotOrder(spotIds);
+      } else {
+        await _localStorage.saveSpotOrder(spotIds);
       }
+    } catch (error, stackTrace) {
+      if (!mounted) return;
       Error.throwWithStackTrace(
         FavoriteSpotToggleException.from(error),
         stackTrace,
       );
     }
   }
-
-  bool _isAuthenticationError(Object error) {
-    return error is DioException &&
-        (error.response?.statusCode == 401 ||
-            error.response?.statusCode == 403);
-  }
 }
 
 class LocalFavoriteSpotStorage {
   const LocalFavoriteSpotStorage();
 
-  static const _key = 'favoriteSpotIds';
-  static const _orderKey = 'favoriteSpotOrder';
+  // 기존 키는 여러 계정의 데이터가 섞여 있을 수 있으므로 자동으로 가져오지 않는다.
+  static const _key = 'guestFavoriteSpotIdsV2';
+  static const _orderKey = 'guestFavoriteSpotOrderV2';
 
   Future<Set<String>> readSpotIds() async {
     final preferences = await SharedPreferences.getInstance();

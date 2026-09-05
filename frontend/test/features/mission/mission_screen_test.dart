@@ -27,6 +27,19 @@ import 'package:potato_mubwanna/features/potato/data/step_count_reader_stub.dart
 import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
 
 void main() {
+  testWidgets('refresh gesture and app resume reload mission progress', (tester) async {
+    final repository = _FakeMissionRepository();
+    await _pumpMissionScreen(tester, repository: repository);
+    final firstCount = repository.fetchCallCount;
+    await tester.widget<RefreshIndicator>(find.byType(RefreshIndicator)).onRefresh();
+    await tester.pumpAndSettle();
+    expect(repository.fetchCallCount, firstCount + 1);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(repository.fetchCallCount, firstCount + 2);
+  });
+
   for (final rootModal in [false, true]) {
     testWidgets('mission detail yields back to modal (root: $rootModal)',
         (tester) async {
