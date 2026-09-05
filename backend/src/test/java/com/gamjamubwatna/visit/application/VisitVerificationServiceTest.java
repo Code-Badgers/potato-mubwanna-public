@@ -82,6 +82,7 @@ class VisitVerificationServiceTest {
             pushEventPublisher,
             Clock.fixed(Instant.parse("2026-07-22T00:00:00Z"), ZoneOffset.UTC)
         );
+        when(userVisitRepository.save(any(UserVisit.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(missionRepository.findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(any(), any()))
             .thenReturn(Optional.empty());
         when(missionRepository.findFirstBySpotNameAndActiveTrueOrderByDisplayOrderAsc(any()))
@@ -94,7 +95,7 @@ class VisitVerificationServiceTest {
         TouristSpot spot = spot();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
-        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L)).thenReturn(Optional.empty());
         when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
         when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
             .thenReturn(new PotatoAcquisitionResult(
@@ -153,7 +154,7 @@ class VisitVerificationServiceTest {
         Mission mission = mission();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
-        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L)).thenReturn(Optional.empty());
         when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
         when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
             .thenReturn(new PotatoAcquisitionResult(false, null));
@@ -186,7 +187,7 @@ class VisitVerificationServiceTest {
         Mission mission = mission();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
-        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L)).thenReturn(Optional.empty());
         when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
         when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
             .thenReturn(new PotatoAcquisitionResult(false, null));
@@ -213,7 +214,7 @@ class VisitVerificationServiceTest {
     void rejectsVisitWhenUserIsOutsideSpotRadius() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot()));
-        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(false);
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> visitVerificationService.verifyVisit(
             1L,
@@ -236,7 +237,8 @@ class VisitVerificationServiceTest {
     void rejectsDuplicateVisit() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
         when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot()));
-        when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 10L)).thenReturn(true);
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L))
+            .thenReturn(Optional.of(new UserVisit(user(), spot(), BigDecimal.ZERO, Instant.EPOCH)));
 
         assertThatThrownBy(() -> visitVerificationService.verifyVisit(
             1L,
@@ -258,6 +260,45 @@ class VisitVerificationServiceTest {
         ))
             .isInstanceOf(VisitVerificationException.class)
             .hasMessage("방문 인증 위치를 확인할 수 없습니다.");
+    }
+
+    @Test
+    void processesPhotoVisitRewardsOnceWithoutDuplicatingTravelRecord() {
+        User user = user();
+        TouristSpot spot = spot();
+        UserVisit photoVisit = UserVisit.fromPhotoEvidence(user, spot, BigDecimal.ZERO, Instant.EPOCH);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L)).thenReturn(Optional.of(photoVisit));
+        when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
+        when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
+            .thenReturn(new PotatoAcquisitionResult(true, null));
+        VisitVerifyRequest request = new VisitVerifyRequest(10L, spot.getLatitude(), spot.getLongitude());
+
+        VisitVerifyResponse response = visitVerificationService.verifyVisit(1L, request);
+
+        assertThat(response.stampIssued()).isTrue();
+        assertThat(response.potatoAcquired()).isTrue();
+        assertThat(photoVisit.isVisitRewardsProcessed()).isTrue();
+        assertThat(photoVisit.getVisitedAt()).isEqualTo(Instant.EPOCH);
+        org.mockito.Mockito.verify(userVisitRepository, org.mockito.Mockito.never()).save(any());
+        assertThatThrownBy(() -> visitVerificationService.verifyVisit(1L, request))
+            .isInstanceOf(VisitDuplicateException.class);
+        verify(visitPotatoAcquisitionService).acquireForVisit(any(), any(), any());
+    }
+
+    @Test
+    void photoEvidenceDoesNotBypassCurrentLocationVerification() {
+        UserVisit photoVisit = UserVisit.fromPhotoEvidence(user(), spot(), BigDecimal.ZERO, Instant.EPOCH);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
+        when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot()));
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L)).thenReturn(Optional.of(photoVisit));
+
+        assertThatThrownBy(() -> visitVerificationService.verifyVisit(1L,
+            new VisitVerifyRequest(10L, new BigDecimal("38"), new BigDecimal("128"))))
+            .isInstanceOf(VisitVerificationException.class);
+        assertThat(photoVisit.isVisitRewardsProcessed()).isFalse();
+        org.mockito.Mockito.verifyNoInteractions(visitStampIssuanceService, visitPotatoAcquisitionService);
     }
 
     private User user() {

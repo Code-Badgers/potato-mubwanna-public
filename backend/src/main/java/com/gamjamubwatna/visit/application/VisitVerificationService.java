@@ -132,7 +132,10 @@ public class VisitVerificationService {
             .orElseThrow(() -> new VisitAuthenticationException("인증 정보를 확인할 수 없습니다."));
         TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(request.spotId())
             .orElseThrow(() -> new VisitNotFoundException("감자 스팟을 찾을 수 없습니다."));
-        if (userVisitRepository.existsByUserIdAndTouristSpotId(userId, spot.getId())) {
+        Optional<UserVisit> existingVisit = userVisitRepository.findByUserIdAndSpotIdForUpdate(
+            userId, spot.getId()
+        );
+        if (existingVisit.filter(UserVisit::isVisitRewardsProcessed).isPresent()) {
             throw new VisitDuplicateException("이미 방문 인증한 감자 스팟입니다.");
         }
 
@@ -152,10 +155,14 @@ public class VisitVerificationService {
             throw new VisitVerificationException("방문 인증 가능 범위를 벗어났습니다.");
         }
 
-        userVisitRepository.save(new UserVisit(user, spot, distanceMeters, verifiedAt));
+        UserVisit visit = existingVisit.orElseGet(() ->
+            userVisitRepository.save(new UserVisit(user, spot, distanceMeters, verifiedAt))
+        );
         boolean stampIssued = visitStampIssuanceService.issueStamp(user, spot, verifiedAt);
         PotatoAcquisitionResult potatoAcquisition =
             visitPotatoAcquisitionService.acquireForVisit(user, spot, verifiedAt);
+        // 보상 지급과 같은 트랜잭션에서 확정한다. 실패하면 사진 기록은 재시도 가능 상태로 남는다.
+        visit.markVisitRewardsProcessed();
         UnlockedMissionResponse unlockedMission = unlockedMission(userId, spot)
             .map(UnlockedMissionResponse::from)
             .orElse(null);

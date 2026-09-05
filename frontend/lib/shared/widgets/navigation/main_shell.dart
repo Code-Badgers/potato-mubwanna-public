@@ -27,7 +27,7 @@ class MainShell extends StatelessWidget {
   }
 
   void _handleRootBack(BuildContext context) {
-    final location = GoRouterState.of(context).location;
+    final location = GoRouter.of(context).location;
     if (location != '/main/map' && location.startsWith('/main/')) {
       context.go('/main/map');
       return;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -50,7 +51,8 @@ class MissionScreen extends ConsumerStatefulWidget {
   ConsumerState<MissionScreen> createState() => _MissionScreenState();
 }
 
-class _MissionScreenState extends ConsumerState<MissionScreen> {
+class _MissionScreenState extends ConsumerState<MissionScreen>
+    with WidgetsBindingObserver {
   static const _verificationService = MissionVerificationService();
 
   String? _selectedMissionId;
@@ -59,7 +61,24 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _selectedMissionId = widget.visitEntryMissionId;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        !_isCompleting &&
+        ref.read(authControllerProvider).status == AuthStatus.authenticated) {
+      // 날짜가 바뀌거나 외부에서 걸음/방문 상태가 바뀐 뒤 복귀했을 수 있다.
+      unawaited(ref.read(missionsProvider.notifier).load());
+    }
   }
 
   void _showMissionDetail(String missionId) {
@@ -312,6 +331,11 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         }
         return BackButtonListener(
           onBackButtonPressed: () async {
+            // 상세가 가려졌을 때는 현재 탭이나 팝업의 뒤로가기를 가로채지 않는다.
+            if (ModalRoute.of(context)?.isCurrent != true ||
+                ModalRoute.of(Navigator.of(context).context)?.isCurrent == false) {
+              return false;
+            }
             _closeMissionDetail();
             return true;
           },
@@ -333,29 +357,33 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            if (widget.visitEntrySpotName != null)
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(missionsProvider.notifier).load(),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              if (widget.visitEntrySpotName != null)
+                SliverToBoxAdapter(
+                  child: _VisitMissionEntryBanner(
+                    spotName: widget.visitEntrySpotName!,
+                  ),
+                ),
               SliverToBoxAdapter(
-                child: _VisitMissionEntryBanner(
-                  spotName: widget.visitEntrySpotName!,
+                child: _MissionGentleStart(
+                  featuredMission: featuredMission,
+                  dailyMissions: todayMissions,
+                  weeklyMissions: weeklyMissions,
+                  eventMissions: eventMissions,
+                  completedCount: selectedDailyMissions
+                      .where(
+                          (mission) => mission.status == MissionStatus.completed)
+                      .length,
+                  totalCount: selectedDailyMissions.length,
+                  onMissionTap: _showMissionDetail,
                 ),
               ),
-            SliverToBoxAdapter(
-              child: _MissionGentleStart(
-                featuredMission: featuredMission,
-                dailyMissions: todayMissions,
-                weeklyMissions: weeklyMissions,
-                eventMissions: eventMissions,
-                completedCount: selectedDailyMissions
-                    .where(
-                        (mission) => mission.status == MissionStatus.completed)
-                    .length,
-                totalCount: selectedDailyMissions.length,
-                onMissionTap: _showMissionDetail,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

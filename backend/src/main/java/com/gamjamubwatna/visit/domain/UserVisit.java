@@ -46,6 +46,9 @@ public class UserVisit {
     @Column(name = "visited_at", nullable = false, updatable = false)
     private Instant visitedAt;
 
+    @Column(name = "visit_rewards_processed", nullable = false)
+    private boolean visitRewardsProcessed = true;
+
     protected UserVisit() {
     }
 
@@ -54,6 +57,23 @@ public class UserVisit {
         this.touristSpot = touristSpot;
         this.distanceMeters = distanceMeters;
         this.visitedAt = visitedAt;
+    }
+
+    public static UserVisit fromPhotoEvidence(
+        User user, TouristSpot touristSpot, BigDecimal distanceMeters, Instant visitedAt
+    ) {
+        UserVisit visit = new UserVisit(user, touristSpot, distanceMeters, visitedAt);
+        // 사진 미션은 여행 기록만 생성한다. 별도 방문 인증에서 보상을 처리해야 한다.
+        visit.visitRewardsProcessed = false;
+        return visit;
+    }
+
+    public boolean isVisitRewardsProcessed() {
+        return visitRewardsProcessed;
+    }
+
+    public void markVisitRewardsProcessed() {
+        visitRewardsProcessed = true;
     }
 
     public Long getId() {

@@ -809,7 +809,7 @@ void main() {
           spotDetailProvider.overrideWith(_testSpotDetail),
           mapSpotsProvider.overrideWith((ref) async => _spots),
           favoriteSpotControllerProvider.overrideWith(
-            (ref) => _favoriteController({'1', '2', '3'}),
+            (ref) => _toggleableFavoriteController({'1', '2', '3'}),
           ),
           favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
         ],
