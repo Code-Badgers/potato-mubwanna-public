@@ -3,6 +3,40 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/audio/data/audio_guide_repository.dart';
 
 void main() {
+  for (final type in [
+    DioExceptionType.connectionTimeout,
+    DioExceptionType.sendTimeout,
+    DioExceptionType.receiveTimeout,
+    DioExceptionType.connectionError,
+  ]) {
+    test('maps $type to retryable failure with audio-only timeouts', () async {
+      final dio = Dio()
+        ..interceptors.add(InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.sendTimeout, const Duration(seconds: 3));
+            expect(options.receiveTimeout, const Duration(seconds: 8));
+            handler.reject(DioException(requestOptions: options, type: type));
+          },
+        ));
+      await expectLater(
+        AudioGuideRepository(dio: dio).fetchAudioGuide('17'),
+        throwsA(isA<AudioGuideException>()
+            .having(
+                (e) => e.type, 'type', AudioGuideFailureType.serviceUnavailable)
+            .having((e) => e.message, 'message', contains('방문 인증은 계속'))),
+      );
+      expect(dio.options.receiveTimeout, isNull);
+    });
+  }
+
+  for (final status in [502, 503, 504]) {
+    test('gateway $status does not imply missing audio', () {
+      final error = AudioGuideException.fromStatus(status, '');
+      expect(error.type, AudioGuideFailureType.serviceUnavailable);
+      expect(error.message, contains('다시 시도'));
+    });
+  }
+
   test('fetches and maps audio guide', () async {
     final requestedPaths = <String>[];
     final dio = _dioWithResponse(

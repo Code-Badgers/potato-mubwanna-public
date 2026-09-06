@@ -1441,7 +1441,7 @@ class _AudioGuideError extends StatelessWidget {
     return _AudioMessagePanel(
       key: const ValueKey('audio-guide-error'),
       icon: Icons.wifi_off_rounded,
-      title: '오디오 가이드를 불러오지 못했습니다',
+      title: '지금은 오디오를 불러올 수 없어요',
       message: message,
       action: OutlinedButton.icon(
         onPressed: onRetry,

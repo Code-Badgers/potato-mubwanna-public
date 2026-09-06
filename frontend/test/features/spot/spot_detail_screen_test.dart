@@ -101,10 +101,7 @@ void main() {
         engine: _FakeAudioPlaybackEngine(),
         spotOverride: (ref) async => _spot,
         audioOverride: (ref) => Future<AudioGuide>.error(
-          const AudioGuideException(
-            type: AudioGuideFailureType.serviceUnavailable,
-            message: '오디오 가이드 제공 서비스에 연결할 수 없습니다.',
-          ),
+          AudioGuideException.fromStatus(503, ''),
         ),
       ),
     );
@@ -112,6 +109,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('audio-guide-error')), findsOneWidget);
     expect(find.text('다시 시도'), findsOneWidget);
+    expect(find.text('지금은 오디오를 불러올 수 없어요'), findsOneWidget);
   });
 
   testWidgets('shows loading and error states for spot detail', (tester) async {
