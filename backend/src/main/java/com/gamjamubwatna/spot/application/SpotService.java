@@ -110,7 +110,9 @@ public class SpotService {
         List<String> imageUrls = new ArrayList<>();
         appendImages(imageUrls, spotImageResolver.resolveStoredImageUrls(spot, limit), limit);
         appendImages(imageUrls, externalDetails.imageUrls(), limit);
-        appendImages(imageUrls, spotImageResolver.resolveTourApiImageUrls(spot, limit), limit);
+        if (imageUrls.size() < limit) {
+            appendImages(imageUrls, spotImageResolver.resolveTourApiImageUrls(spot, limit), limit);
+        }
         return List.copyOf(imageUrls);
     }
 

@@ -63,7 +63,7 @@ public class GooglePlacesClient {
         @Value("${external.google-places.region-code}") String regionCode,
         @Value("${external.google-places.max-photo-count}") int maxPhotoCount
     ) {
-        this.restClient = restClientBuilder.build();
+        this.restClient = SpotEnrichmentHttp.build(restClientBuilder);
         this.baseUrl = stripTrailingSlash(baseUrl);
         this.apiKey = apiKey;
         this.languageCode = languageCode;
