@@ -51,7 +51,7 @@ public class TourApiClient {
         @Value("${external.tour-api.legal-region-code}") String legalRegionCode,
         @Value("${external.tour-api.spot-keywords}") String spotKeywords
     ) {
-        this.restClient = restClientBuilder.build();
+        this.restClient = SpotEnrichmentHttp.build(restClientBuilder);
         this.baseUrl = baseUrl;
         this.searchKeywordPath = searchKeywordPath;
         this.detailImagePath = detailImagePath;
