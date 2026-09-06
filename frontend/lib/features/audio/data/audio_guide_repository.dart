@@ -13,6 +13,10 @@ class AudioGuideRepository {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiPaths.spotAudioGuide(spotId),
+        options: Options(
+          sendTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 8),
+        ),
       );
       final result = ApiResponse<AudioGuide>.fromJson(
         response.data ?? const <String, dynamic>{},
@@ -32,6 +36,16 @@ class AudioGuideRepository {
       }
       return result.data!;
     } on DioException catch (error) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        throw const AudioGuideException(
+          type: AudioGuideFailureType.serviceUnavailable,
+          message:
+              '오디오 연결이 원활하지 않아요. 잠시 후 다시 시도해 주세요. 장소 조회와 방문 인증은 계속 이용할 수 있어요.',
+        );
+      }
       final data = error.response?.data;
       final message =
           data is Map<String, dynamic> ? data['message'] as String? ?? '' : '';
@@ -55,10 +69,11 @@ class AudioGuideException implements Exception {
         message: message.isEmpty ? '이 관광지의 오디오 가이드를 찾을 수 없습니다.' : message,
       );
     }
-    if (statusCode == 503) {
+    if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
       return AudioGuideException(
         type: AudioGuideFailureType.serviceUnavailable,
-        message: message.isEmpty ? '오디오 가이드 제공 서비스에 연결할 수 없습니다.' : message,
+        message:
+            '오디오 연결이 원활하지 않아요. 잠시 후 다시 시도해 주세요. 장소 조회와 방문 인증은 계속 이용할 수 있어요.',
       );
     }
     return AudioGuideException(

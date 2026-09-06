@@ -3,10 +3,12 @@ package com.gamjamubwatna.audio.infrastructure.external;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriUtils;
 
@@ -30,7 +32,11 @@ public class OdiiApiClient {
         @Value("${external.odii-api.mobile-app}") String mobileApp,
         @Value("${external.odii-api.language}") String language
     ) {
-        this.restClient = restClientBuilder.build();
+        // 오디 연결 실패가 오디오 영역을 무기한 로딩 상태로 남기지 않도록 제한한다.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(2));
+        factory.setReadTimeout(Duration.ofSeconds(3));
+        this.restClient = restClientBuilder.clone().requestFactory(factory).build();
         this.baseUrl = baseUrl;
         this.storySearchPath = storySearchPath;
         this.serviceKey = serviceKey;

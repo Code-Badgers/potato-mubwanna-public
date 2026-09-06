@@ -7,6 +7,9 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,30 @@ import org.springframework.web.client.RestClient;
 class OdiiApiClientTest {
 
     private HttpServer server;
+
+    @Test
+    void stopsWaitingWhenOdiiDoesNotRespond() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/storySearchList", exchange -> {
+            try {
+                release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+        try {
+            org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(Duration.ofSeconds(6), () ->
+                assertThatThrownBy(() -> client("test-key").searchStories("영금정"))
+                    .isInstanceOf(OdiiApiException.class)
+                    .hasMessage("오디 API 호출에 실패했습니다."));
+        } finally {
+            release.countDown();
+        }
+    }
 
     @AfterEach
     void stopServer() {
