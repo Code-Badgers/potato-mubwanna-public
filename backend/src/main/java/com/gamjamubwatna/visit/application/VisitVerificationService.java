@@ -238,17 +238,24 @@ public class VisitVerificationService {
     }
 
     private Optional<Mission> missionBySpot(TouristSpot spot) {
+        Optional<Mission> linked = missionRepository
+            .findFirstByTargetSpotIdAndActiveTrueOrderByDisplayOrderAsc(spot.getId())
+            .filter(Mission::hasAvailablePhotoTarget);
+        if (linked.isPresent()) {
+            return linked;
+        }
         if (hasText(spot.getCityName())) {
             Optional<Mission> mission = missionRepository
                 .findFirstBySpotNameAndCityNameAndActiveTrueOrderByDisplayOrderAsc(
                     spot.getName(),
                     spot.getCityName()
-                );
+                ).filter(candidate -> !candidate.requiresPhotoTarget());
             if (mission.isPresent()) {
                 return mission;
             }
         }
-        return missionRepository.findFirstBySpotNameAndActiveTrueOrderByDisplayOrderAsc(spot.getName());
+        return missionRepository.findFirstBySpotNameAndActiveTrueOrderByDisplayOrderAsc(spot.getName())
+            .filter(candidate -> !candidate.requiresPhotoTarget());
     }
 
     private boolean hasText(String value) {

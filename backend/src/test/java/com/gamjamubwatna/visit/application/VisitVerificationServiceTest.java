@@ -181,6 +181,27 @@ class VisitVerificationServiceTest {
     }
 
     @Test
+    void returnsPhotoMissionByTargetIdWhenDisplayNamesDiffer() {
+        TouristSpot spot = spot();
+        Mission photo = mission();
+        ReflectionTestUtils.setField(photo, "type", MissionType.PHOTO);
+        ReflectionTestUtils.setField(photo, "spotName", "옛 장소 이름");
+        photo.assignTargetSpot(spot);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user()));
+        when(touristSpotRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(spot));
+        when(userVisitRepository.findByUserIdAndSpotIdForUpdate(1L, 10L)).thenReturn(Optional.empty());
+        when(visitStampIssuanceService.issueStamp(any(), any(), any())).thenReturn(true);
+        when(visitPotatoAcquisitionService.acquireForVisit(any(), any(), any()))
+            .thenReturn(new PotatoAcquisitionResult(false, null));
+        when(missionRepository.findFirstByTargetSpotIdAndActiveTrueOrderByDisplayOrderAsc(10L))
+            .thenReturn(Optional.of(photo));
+        VisitVerifyResponse result = visitVerificationService.verifyVisit(1L,
+            new VisitVerifyRequest(10L, new BigDecimal("37.3801000"), new BigDecimal("128.6609000")));
+        assertThat(result.missionAvailable()).isTrue();
+        assertThat(result.unlockedMission().missionId()).isEqualTo(photo.getId());
+    }
+
+    @Test
     void doesNotReturnUnlockedMissionWhenMissionAlreadyCompleted() {
         User user = user();
         TouristSpot spot = spot();

@@ -253,6 +253,10 @@ public class TouristSpot {
         return stampEnabled;
     }
 
+    public Boolean isActive() {
+        return active;
+    }
+
     public Boolean getRallybookFeatured() {
         return rallybookFeatured;
     }
