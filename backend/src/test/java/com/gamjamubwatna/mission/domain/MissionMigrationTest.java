@@ -48,6 +48,43 @@ class MissionMigrationTest {
     }
 
     @Test
+    void linksOnlyUnambiguousPhotoTargetsAndDisablesUnresolvedOnes() throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             ResultSet rows = connection.createStatement().executeQuery("""
+                 SELECT m.code, m.active, m.target_spot_id, s.active AS spot_active
+                 FROM missions m LEFT JOIN tourist_spots s ON s.tourist_spot_id = m.target_spot_id
+                 WHERE m.mission_type IN ('PHOTO', 'PHOTO_OCR')
+                 """)) {
+            int linked = 0;
+            boolean unresolvedBread = false;
+            while (rows.next()) {
+                if (rows.getBoolean("active")) {
+                    assertThat(rows.getObject("target_spot_id")).isNotNull();
+                    assertThat(rows.getBoolean("spot_active")).isTrue();
+                    linked++;
+                }
+                if (rows.getString("code").equals("MISSION_GANGNEUNG_PHOTO")) {
+                    assertThat(rows.getBoolean("active")).isFalse();
+                    assertThat(rows.getObject("target_spot_id")).isNull();
+                    unresolvedBread = true;
+                }
+            }
+            assertThat(linked).isPositive();
+            assertThat(unresolvedBread).isTrue();
+        }
+    }
+
+    @Test
+    void databaseRejectsActivatingPhotoMissionWithoutTarget() throws Exception {
+        try (Connection connection = dataSource.getConnection(); Statement statement = connection.createStatement()) {
+            assertThatThrownBy(() -> statement.executeUpdate("""
+                UPDATE missions SET active = TRUE
+                WHERE code = 'MISSION_GANGNEUNG_PHOTO'
+                """)).isInstanceOf(java.sql.SQLException.class);
+        }
+    }
+
+    @Test
     void seedsMissionVerificationPolicies() {
         List<MissionVerificationPolicy> policies = missionVerificationPolicyRepository.findAll();
 

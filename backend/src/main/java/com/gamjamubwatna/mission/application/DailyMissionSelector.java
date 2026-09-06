@@ -45,6 +45,7 @@ public final class DailyMissionSelector {
     private static boolean isCandidate(Mission mission) {
         return mission.getGroup() == MissionGroup.DAILY
             && mission.isActive()
+            && mission.hasAvailablePhotoTarget()
             && mission.getDefaultStatus() != MissionStatus.LOCKED;
     }
 

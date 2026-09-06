@@ -42,7 +42,6 @@ import com.gamjamubwatna.push.application.PushNotificationMessage;
 import com.gamjamubwatna.push.domain.PushDestination;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
-import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.visit.application.VisitDistancePolicy;
 import com.gamjamubwatna.visit.domain.UserVisit;
 import com.gamjamubwatna.visit.domain.UserVisitRepository;
@@ -90,8 +89,6 @@ class MissionServiceTest {
     @Mock
     private MissionEvidenceValidator missionEvidenceValidator;
 
-    @Mock
-    private TouristSpotRepository touristSpotRepository;
 
     @Mock
     private UserVisitRepository userVisitRepository;
@@ -118,7 +115,6 @@ class MissionServiceTest {
             userRepository,
             missionEvidenceValidator,
             missionPhotoStorage,
-            touristSpotRepository,
             userVisitRepository,
             new VisitDistancePolicy(),
             locationUsageLogService,
@@ -396,7 +392,6 @@ class MissionServiceTest {
         verify(userMissionRepository).save(completionCaptor.capture());
         assertThat(completionCaptor.getValue().getEvidenceUploadKey()).isNull();
         assertThat(completionCaptor.getValue().getTouristSpot()).isNull();
-        verifyNoInteractions(touristSpotRepository);
     }
 
     @Test
@@ -538,10 +533,10 @@ class MissionServiceTest {
     }
 
     @Test
-    void linksVerifiedPhotoMissionEvidenceToMatchingTouristSpot() {
+    void linksVerifiedPhotoMissionEvidenceByIdAfterSpotRename() {
         User user = user(1L);
         Mission mission = mission(1L, "MISSION_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
-        TouristSpot touristSpot = spot(20L, mission.getSpotName(), mission.getCityName());
+        TouristSpot touristSpot = spot(20L, "변경된 관광지 이름", mission.getCityName());
         String uploadKey = "mission-uploads/1/1/test-photo.jpg";
         missionPhotoStorage.put(uploadKey, new byte[] {1, 2, 3});
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -549,10 +544,7 @@ class MissionServiceTest {
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(missionVerificationPolicyRepository.findByMissionId(1L))
             .thenReturn(Optional.of(uploadPolicy(mission)));
-        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
-            mission.getSpotName(),
-            mission.getCityName()
-        )).thenReturn(Optional.of(touristSpot));
+        mission.assignTargetSpot(touristSpot);
         when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         MissionVerifyResponse result = missionService.verifyMission(
@@ -587,10 +579,7 @@ class MissionServiceTest {
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(missionVerificationPolicyRepository.findByMissionId(1L))
             .thenReturn(Optional.of(uploadPolicy(mission)));
-        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
-            mission.getSpotName(),
-            mission.getCityName()
-        )).thenReturn(Optional.of(touristSpot));
+        mission.assignTargetSpot(touristSpot);
         when(userVisitRepository.existsByUserIdAndTouristSpotId(1L, 20L)).thenReturn(true);
         when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -616,10 +605,7 @@ class MissionServiceTest {
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(missionVerificationPolicyRepository.findByMissionId(1L))
             .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
-        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
-            mission.getSpotName(),
-            mission.getCityName()
-        )).thenReturn(Optional.of(touristSpot));
+        mission.assignTargetSpot(touristSpot);
         when(userMissionRepository.save(any(UserMission.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         MissionVerifyResponse result = missionService.verifyMission(
@@ -652,10 +638,7 @@ class MissionServiceTest {
         when(userMissionRepository.existsByUserIdAndMissionId(1L, 1L)).thenReturn(false);
         when(missionVerificationPolicyRepository.findByMissionId(1L))
             .thenReturn(Optional.of(uploadPolicy(mission, "하지감자")));
-        when(touristSpotRepository.findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
-            mission.getSpotName(),
-            mission.getCityName()
-        )).thenReturn(Optional.of(touristSpot));
+        mission.assignTargetSpot(touristSpot);
 
         assertThatThrownBy(() -> missionService.verifyMission(
             1L,
@@ -866,6 +849,40 @@ class MissionServiceTest {
             .isInstanceOf(MissionAuthenticationException.class);
     }
 
+    @Test
+    void hidesUnlinkedPhotoMissionAndRejectsDirectVerification() {
+        Mission photo = mission(1L, "UNLINKED_PHOTO", MissionStatus.READY, true, MissionType.PHOTO);
+        ReflectionTestUtils.setField(photo, "targetSpot", null);
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(missionRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of(photo));
+        assertThat(missionService.getMissions(1L).missions()).isEmpty();
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(photo));
+        assertThat(missionService.getMission(1L, 1L).active()).isFalse();
+        assertThat(missionService.getMission(1L, 1L).status()).isEqualTo(MissionStatus.LOCKED);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        assertThatThrownBy(() -> missionService.verifyMission(1L, 1L,
+            photoRequest(MissionType.PHOTO, "mission-uploads/1/1/photo.jpg")))
+            .isInstanceOf(MissionVerificationException.class)
+            .hasMessage("사진 미션 관광지 정보를 확인할 수 없습니다.");
+        verifyNoInteractions(rewardHistoryRepository);
+        verify(userMissionRepository, times(0)).save(any(UserMission.class));
+    }
+
+    @Test
+    void hidesPhotoMissionWhenItsTargetIsDeactivated() {
+        Mission photo = mission(1L, "INACTIVE_TARGET", MissionStatus.READY, true, MissionType.PHOTO);
+        ReflectionTestUtils.setField(photo.getTargetSpot(), "active", false);
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(missionRepository.findAllByOrderByDisplayOrderAsc()).thenReturn(List.of(photo));
+        assertThat(missionService.getMissions(1L).missions()).isEmpty();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(missionRepository.findById(1L)).thenReturn(Optional.of(photo));
+        assertThatThrownBy(() -> missionService.verifyMission(1L, 1L,
+            photoRequest(MissionType.PHOTO, "mission-uploads/1/1/photo.jpg")))
+            .isInstanceOf(MissionVerificationException.class);
+        verifyNoInteractions(rewardHistoryRepository);
+    }
+
     private Mission mission(Long id, String code, MissionStatus status, boolean active) {
         return mission(id, code, status, active, MissionType.QUIZ);
     }
@@ -909,6 +926,9 @@ class MissionServiceTest {
             Instant.parse("2026-07-01T00:00:00Z")
         );
         ReflectionTestUtils.setField(mission, "id", id);
+        if (mission.requiresPhotoTarget()) {
+            mission.assignTargetSpot(spot(20L, mission.getSpotName(), mission.getCityName()));
+        }
         return mission;
     }
 
@@ -945,7 +965,6 @@ class MissionServiceTest {
             userRepository,
             missionEvidenceValidator,
             missionPhotoStorage,
-            touristSpotRepository,
             userVisitRepository,
             new VisitDistancePolicy(),
             locationUsageLogService,

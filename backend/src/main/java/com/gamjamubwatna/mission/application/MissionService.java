@@ -29,7 +29,6 @@ import com.gamjamubwatna.push.application.PushEventPublisher;
 import com.gamjamubwatna.push.application.PushNotificationMessage;
 import com.gamjamubwatna.push.domain.PushDestination;
 import com.gamjamubwatna.spot.domain.TouristSpot;
-import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import com.gamjamubwatna.visit.application.VisitDistancePolicy;
 import com.gamjamubwatna.visit.domain.UserVisit;
 import com.gamjamubwatna.visit.domain.UserVisitRepository;
@@ -62,7 +61,6 @@ public class MissionService {
     private final UserRepository userRepository;
     private final MissionEvidenceValidator missionEvidenceValidator;
     private final MissionPhotoStorage missionPhotoStorage;
-    private final TouristSpotRepository touristSpotRepository;
     private final UserVisitRepository userVisitRepository;
     private final VisitDistancePolicy visitDistancePolicy;
     private final LocationUsageLogService locationUsageLogService;
@@ -80,7 +78,6 @@ public class MissionService {
         UserRepository userRepository,
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
-        TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
         LocationUsageLogService locationUsageLogService,
@@ -96,7 +93,6 @@ public class MissionService {
             userRepository,
             missionEvidenceValidator,
             missionPhotoStorage,
-            touristSpotRepository,
             userVisitRepository,
             visitDistancePolicy,
             locationUsageLogService,
@@ -115,7 +111,6 @@ public class MissionService {
         UserRepository userRepository,
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
-        TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
         LocationUsageLogService locationUsageLogService,
@@ -131,7 +126,6 @@ public class MissionService {
             userRepository,
             missionEvidenceValidator,
             missionPhotoStorage,
-            touristSpotRepository,
             userVisitRepository,
             visitDistancePolicy,
             locationUsageLogService,
@@ -150,7 +144,6 @@ public class MissionService {
         UserRepository userRepository,
         MissionEvidenceValidator missionEvidenceValidator,
         MissionPhotoStorage missionPhotoStorage,
-        TouristSpotRepository touristSpotRepository,
         UserVisitRepository userVisitRepository,
         VisitDistancePolicy visitDistancePolicy,
         LocationUsageLogService locationUsageLogService,
@@ -166,7 +159,6 @@ public class MissionService {
         this.userRepository = userRepository;
         this.missionEvidenceValidator = missionEvidenceValidator;
         this.missionPhotoStorage = missionPhotoStorage;
-        this.touristSpotRepository = touristSpotRepository;
         this.userVisitRepository = userVisitRepository;
         this.visitDistancePolicy = visitDistancePolicy;
         this.locationUsageLogService = locationUsageLogService;
@@ -179,7 +171,10 @@ public class MissionService {
         validateUser(userId);
 
         Instant now = Instant.now(clock);
-        List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc();
+        List<Mission> missions = missionRepository.findAllByOrderByDisplayOrderAsc().stream()
+            .filter(mission -> !mission.requiresPhotoTarget()
+                || (mission.isActive() && mission.hasAvailablePhotoTarget()))
+            .toList();
         Set<String> todaySelectedCodes = DailyMissionSelector.selectCodes(
             missions,
             userId,
@@ -364,6 +359,9 @@ public class MissionService {
         Mission mission,
         MissionPeriod period
     ) {
+        if (!mission.hasAvailablePhotoTarget()) {
+            throw new MissionVerificationException("사진 미션 관광지 정보를 확인할 수 없습니다.");
+        }
         if (!isAvailable(mission, period)) {
             throw new MissionCompletionException("아직 완료할 수 없는 미션입니다.");
         }
@@ -471,6 +469,7 @@ public class MissionService {
 
     private boolean isAvailable(Mission mission, MissionPeriod period) {
         return mission.isActive()
+            && mission.hasAvailablePhotoTarget()
             && mission.getDefaultStatus() != MissionStatus.LOCKED
             && period.available();
     }
@@ -571,14 +570,8 @@ public class MissionService {
         }
         validatePhotoLocationCoordinates(request.latitude(), request.longitude());
 
-        TouristSpot touristSpot = touristSpotRepository
-            .findFirstByNameAndCityNameAndActiveTrueOrderByIdAsc(
-                mission.getSpotName(),
-                mission.getCityName()
-            )
-            .orElseThrow(() -> new MissionVerificationException(
-                "사진 미션 관광지 정보를 확인할 수 없습니다."
-            ));
+        // 표시 이름이 변경되어도 동일한 장소에서 인증되도록 저장된 FK를 사용한다.
+        TouristSpot touristSpot = mission.getTargetSpot();
         BigDecimal distanceMeters = visitDistancePolicy.distanceMeters(
             touristSpot.getLatitude(),
             touristSpot.getLongitude(),

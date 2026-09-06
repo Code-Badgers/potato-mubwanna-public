@@ -1,12 +1,16 @@
 package com.gamjamubwatna.mission.domain;
 
+import com.gamjamubwatna.spot.domain.TouristSpot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
@@ -42,6 +46,10 @@ public class Mission {
 
     @Column(name = "city_name", nullable = false, length = 80)
     private String cityName;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_spot_id")
+    private TouristSpot targetSpot;
 
     @Column(name = "description", nullable = false, length = 500)
     private String description;
@@ -211,6 +219,25 @@ public class Mission {
 
     public String getCityName() {
         return cityName;
+    }
+
+    public TouristSpot getTargetSpot() {
+        return targetSpot;
+    }
+
+    public boolean requiresPhotoTarget() {
+        return type == MissionType.PHOTO || type == MissionType.PHOTO_OCR;
+    }
+
+    public boolean hasAvailablePhotoTarget() {
+        return !requiresPhotoTarget() || (targetSpot != null && Boolean.TRUE.equals(targetSpot.isActive()));
+    }
+
+    public void assignTargetSpot(TouristSpot spot) {
+        if (spot == null || !Boolean.TRUE.equals(spot.isActive())) {
+            throw new IllegalArgumentException("활성 관광지를 선택해주세요.");
+        }
+        this.targetSpot = spot;
     }
 
     public String getDescription() {
