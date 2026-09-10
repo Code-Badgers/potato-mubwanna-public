@@ -2161,7 +2161,13 @@ class _GoodNowSpotSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final calmSpots = _spotsByCongestion('LOW');
     final hotSpots = _spotsByCongestion('HIGH');
-    final firstTargetGroup = calmSpots.isNotEmpty ? 'calm' : 'hot';
+    final otherSpots = spots
+        .where((spot) => !const ['LOW', 'HIGH'].contains(spot.congestionLevel))
+        .take(2)
+        .toList();
+    final firstTargetGroup = calmSpots.isNotEmpty
+        ? 'calm'
+        : hotSpots.isNotEmpty ? 'hot' : 'other';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2169,7 +2175,7 @@ class _GoodNowSpotSection extends StatelessWidget {
         const _DiscoverySectionHeader(title: '지금 가기 좋은 곳'),
         const SizedBox(height: 6),
         const Text(
-          '관광지 집중률 예측을 바탕으로 골라봤어요.',
+          '예상 혼잡도를 보고, 오늘 끌리는 곳을 골라보세요.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 13,
@@ -2189,8 +2195,9 @@ class _GoodNowSpotSection extends StatelessWidget {
           Column(
             children: [
               _GoodNowSpotGroup(
-                title: '내향인 전용 여유로운 장소',
-                description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
+                key: const ValueKey('good-now-calm'),
+                title: '조용히 둘러보고 싶어요',
+                description: '비교적 여유로울 것으로 예상되는 곳이에요.',
                 spots: calmSpots,
                 onSpotPressed: onSpotPressed,
                 targetKey: firstTargetGroup == 'calm'
@@ -2199,14 +2206,28 @@ class _GoodNowSpotSection extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               _GoodNowSpotGroup(
-                title: '외향인 전용 사람 좋아 핫플',
-                description: '활기 있는 분위기를 즐기고 싶을 때 좋아요.',
+                key: const ValueKey('good-now-hot'),
+                title: '북적이는 곳이 좋아요',
+                description: '방문객이 많을 것으로 예상되는 곳이에요.',
                 spots: hotSpots,
                 onSpotPressed: onSpotPressed,
                 targetKey: firstTargetGroup == 'hot'
                     ? FeatureTourTargets.mapGoodNowCard
                     : null,
               ),
+              if (otherSpots.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _GoodNowSpotGroup(
+                  key: const ValueKey('good-now-other'),
+                  title: '이런 곳도 있어요',
+                  description: '혼잡도가 보통이거나 아직 정보가 없는 곳이에요.',
+                  spots: otherSpots,
+                  onSpotPressed: onSpotPressed,
+                  targetKey: firstTargetGroup == 'other'
+                      ? FeatureTourTargets.mapGoodNowCard
+                      : null,
+                ),
+              ],
             ],
           ),
       ],
@@ -2214,15 +2235,9 @@ class _GoodNowSpotSection extends StatelessWidget {
   }
 
   List<MapSpot> _spotsByCongestion(String level) {
-    final fallbackLevel = level == 'HIGH' ? 'NORMAL' : 'LOW';
-    final prioritized = [
-      ...spots.where((spot) => spot.congestionLevel == level),
-      ...spots.where((spot) => spot.congestionLevel == fallbackLevel),
-      ...spots.where((spot) => spot.stampEnabled),
-      ...spots,
-    ];
     final unique = <String, MapSpot>{};
-    for (final spot in prioritized) {
+    // Filling a shortage with other levels mislabels the place's congestion.
+    for (final spot in spots.where((spot) => spot.congestionLevel == level)) {
       unique.putIfAbsent(spot.id, () => spot);
       if (unique.length >= 2) {
         break;
@@ -2234,6 +2249,7 @@ class _GoodNowSpotSection extends StatelessWidget {
 
 class _GoodNowSpotGroup extends StatelessWidget {
   const _GoodNowSpotGroup({
+    super.key,
     required this.title,
     required this.description,
     required this.spots,
@@ -2296,6 +2312,11 @@ class _GoodNowSpotGroup extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (spots.isEmpty)
+            const Text(
+              '지금은 이 조건에 맞는 장소가 없어요.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
           for (var index = 0; index < spots.length; index++) ...[
             if (index == 0 && targetKey != null)
               KeyedSubtree(

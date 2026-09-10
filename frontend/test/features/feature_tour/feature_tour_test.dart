@@ -209,7 +209,7 @@ void main() {
       );
       expect(FeatureTourDefinitions.spot.first.description, contains('스탬프'));
       expect(
-        FeatureTourDefinitions.passport.single.description,
+        FeatureTourDefinitions.passport.single.title,
         contains('스탬프'),
       );
     });

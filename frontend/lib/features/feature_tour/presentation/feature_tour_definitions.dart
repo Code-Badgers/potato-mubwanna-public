@@ -30,14 +30,14 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapCourseCard,
       title: '취향에 맞는 코스를 골라보세요',
-      description: '카드를 눌러 오늘의 여행 이야기를 펼쳐볼 수 있어요.',
+      description: '코스에 담긴 장소를 살펴보세요. 돌아오면 다음 안내가 이어져요.',
       advanceType: CoachMarkAdvanceType.navigationResult,
       interactionHint: '코스 카드를 눌러보세요',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapGoodNowCard,
       title: '지금 가기 좋은 곳도 살펴보세요',
-      description: '마음에 드는 장소를 누르면 지도에서 바로 확인할 수 있어요.',
+      description: '장소를 눌러 지도에서 확인해보세요. 뒤로가기를 누르면 다음 안내가 이어져요.',
       advanceType: CoachMarkAdvanceType.navigationResult,
       interactionHint: '장소 카드를 눌러보세요',
     ),
@@ -51,7 +51,7 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapMarker,
       title: '궁금한 장소를 눌러보세요',
-      description: '장소를 고르면 방문 인증과 상세 정보를 확인할 수 있어요.',
+      description: '마커를 누르면 아래 카드에 장소 정보가 나와요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '지도에서 마커를 눌러보세요',
       cardPlacement: FeatureTourCardPlacement.aboveFooter,
@@ -65,8 +65,8 @@ abstract final class FeatureTourDefinitions {
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.routeMode,
-      title: '마음에 드는 곳은 내 동선에 담아보세요',
-      description: '담은 장소만 모아보고 여행 순서도 확인할 수 있어요.',
+      title: '내 동선에 담은 곳을 모아봐요',
+      description: '장소 카드의 북마크로 저장한 곳이에요. 내 동선을 눌러 여행 순서를 확인해보세요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '내 동선 버튼을 눌러보세요',
     ),
@@ -76,12 +76,12 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.stampMap,
       title: '스탬프를 찍을 장소를 찾아보세요',
-      description: '지도의 깃발을 누르면 방문 인증으로 이어져요.',
+      description: '깃발을 누르면 아래에 장소 정보와 방문 인증 버튼이 나와요.',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.passportButton,
       title: '패스포트를 열어보세요',
-      description: '모은 여행 도장을 패스포트에서 한눈에 볼 수 있어요.',
+      description: '방문한 곳의 스탬프가 모여 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '패스포트 버튼을 눌러보세요',
     ),
@@ -104,8 +104,8 @@ abstract final class FeatureTourDefinitions {
   static final passport = <FeatureTourStep>[
     FeatureTourStep(
       targetKey: FeatureTourTargets.passportBook,
-      title: '방문 인증한 도장이 여기에 채워져요',
-      description: '스탬프를 찍으면 이 패스포트에 여행 도장이 하나씩 표시돼요.',
+      title: '방문한 곳마다 스탬프가 찍혀요',
+      description: '방문 인증을 마친 곳은 이 패스포트에서 확인할 수 있어요.',
     ),
   ];
 
@@ -118,7 +118,7 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.potatoCareActions,
       title: '감자를 돌봐보세요',
-      description: '돌봄 버튼을 누르면 감자의 상태가 달라져요.',
+      description: '쓰다듬거나 물과 영양제를 주면 감자가 자라요. 남은 횟수도 확인해보세요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '돌봄 버튼을 눌러보세요',
     ),
@@ -143,14 +143,14 @@ abstract final class FeatureTourDefinitions {
       targetKey: FeatureTourTargets.missionFeatured,
       fallbackTargetKey: FeatureTourTargets.missionDaily,
       title: '오늘의 미션을 골라보세요',
-      description: '하나를 눌러 미션 방법과 인증 흐름을 확인해보세요.',
+      description: '카드를 누르면 할 일과 인증 방법을 볼 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '미션 카드를 눌러보세요',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.missionDetailAction,
       title: '하단 버튼으로 미션을 시작해요',
-      description: '미션 유형에 맞는 인증을 마치면 오늘의 기록에 남아요.',
+      description: '미션마다 인증 방법이 달라요. 조건을 확인하고 시작해보세요.',
     ),
   ];
 
@@ -158,7 +158,7 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.audioPlay,
       title: '관광 해설을 들어보세요',
-      description: '명소 이야기를 들은 뒤 방문 인증을 마치면 스탬프가 패스포트에 기록돼요.',
+      description: '재생을 눌러 이곳의 이야기를 들어보세요. 방문 인증을 마치면 스탬프도 남아요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '재생 버튼을 눌러보세요',
     ),
@@ -185,7 +185,7 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.travelRecordGallery,
       title: '여행 사진을 한곳에 모아보세요',
-      description: '스탬프와 미션으로 남긴 사진이 여행 기록에 차곡차곡 쌓여요.',
+      description: '사진을 누르면 크게 볼 수 있어요. 스탬프와 미션 인증 사진이 여기에 모여요.',
     ),
   ];
 }

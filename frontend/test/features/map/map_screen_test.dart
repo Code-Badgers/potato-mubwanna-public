@@ -23,6 +23,31 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:potato_mubwanna/shared/widgets/loading/potato_loading_view.dart';
 
 void main() {
+  testWidgets('recommendation groups never fill hot places with quiet ones',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => [_spots[0], _spots[1]]),
+        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: const MaterialApp(home: MapScreen(hasMapConfiguration: true)),
+    ));
+    await tester.pumpAndSettle();
+    final calm = find.byKey(const ValueKey('good-now-calm'));
+    final hot = find.byKey(const ValueKey('good-now-hot'));
+    final other = find.byKey(const ValueKey('good-now-other'));
+    await tester.scrollUntilVisible(calm, 300,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: calm, matching: find.text('감자 카페')), findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('감자 카페')), findsNothing);
+    expect(find.descendant(of: hot, matching: find.text('정선 5일장')), findsNothing);
+    expect(find.descendant(of: hot, matching: find.text('지금은 이 조건에 맞는 장소가 없어요.')), findsOneWidget);
+    expect(find.descendant(of: other, matching: find.text('정선 5일장')), findsOneWidget);
+  });
+
   testWidgets('map tour resumes after course and recommended place visits',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -191,8 +216,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('내향인 전용 여유로운 장소'), findsOneWidget);
-    expect(find.text('외향인 전용 사람 좋아 핫플'), findsOneWidget);
+    expect(find.text('조용히 둘러보고 싶어요'), findsOneWidget);
+    expect(find.text('북적이는 곳이 좋아요'), findsOneWidget);
     expect(find.text('혼잡도 여유'), findsAtLeastNWidgets(1));
     expect(find.text('방문자 많음'), findsNothing);
     expect(find.text('강원 정선군'), findsAtLeastNWidgets(1));
