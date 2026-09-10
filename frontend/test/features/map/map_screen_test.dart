@@ -247,8 +247,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('조용히 둘러보고 싶어요'), findsOneWidget);
-    expect(find.text('북적이는 곳이 좋아요'), findsOneWidget);
+    expect(find.text('내향인 전용 여유로운 장소'), findsOneWidget);
+    expect(find.text('외향인 전용 사람 좋아 핫플'), findsOneWidget);
     expect(find.text('혼잡도 여유'), findsAtLeastNWidgets(1));
     expect(find.text('방문자 많음'), findsNothing);
     expect(find.text('강원 정선군'), findsAtLeastNWidgets(1));

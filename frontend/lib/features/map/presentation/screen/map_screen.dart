@@ -2219,8 +2219,8 @@ class _GoodNowSpotSection extends StatelessWidget {
             children: [
               _GoodNowSpotGroup(
                 key: const ValueKey('good-now-calm'),
-                title: '조용히 둘러보고 싶어요',
-                description: '비교적 여유로울 것으로 예상되는 곳이에요.',
+                title: '내향인 전용 여유로운 장소',
+                description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
                 spots: calmSpots,
                 onSpotPressed: onSpotPressed,
                 targetKey: firstTargetGroup == 'calm'
@@ -2230,8 +2230,8 @@ class _GoodNowSpotSection extends StatelessWidget {
               const SizedBox(height: 14),
               _GoodNowSpotGroup(
                 key: const ValueKey('good-now-hot'),
-                title: '북적이는 곳이 좋아요',
-                description: '방문객이 많을 것으로 예상되는 곳이에요.',
+                title: '외향인 전용 사람 좋아 핫플',
+                description: '활기찬 분위기를 즐기고 싶을 때 좋아요.',
                 spots: hotSpots,
                 onSpotPressed: onSpotPressed,
                 targetKey: firstTargetGroup == 'hot'

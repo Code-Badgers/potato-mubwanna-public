@@ -65,8 +65,8 @@ abstract final class FeatureTourDefinitions {
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.routeMode,
-      title: '내 동선에 담은 곳을 모아봐요',
-      description: '장소 카드의 북마크로 저장한 곳이에요. 내 동선을 눌러 여행 순서를 확인해보세요.',
+      title: '마음에 드는 곳은 내 동선에 담아보세요',
+      description: '담은 장소만 모아보고 여행 순서도 확인할 수 있어요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '내 동선 버튼을 눌러보세요',
     ),
@@ -118,7 +118,7 @@ abstract final class FeatureTourDefinitions {
     FeatureTourStep(
       targetKey: FeatureTourTargets.potatoCareActions,
       title: '감자를 돌봐보세요',
-      description: '쓰다듬거나 물과 영양제를 주면 감자가 자라요. 남은 횟수도 확인해보세요.',
+      description: '돌봄 버튼을 누르면 감자의 상태가 달라져요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '돌봄 버튼을 눌러보세요',
       allowContinueWithoutAction: true,
