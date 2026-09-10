@@ -83,6 +83,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
   bool _isPreparingTarget = false;
   bool _unavailableReported = false;
   bool _presentationReported = false;
+  final _preparedTargets = <GlobalKey>{};
 
   @override
   void initState() {
@@ -111,6 +112,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       _isPreparingTarget = false;
       _unavailableReported = false;
       _presentationReported = false;
+      _preparedTargets.clear();
       _scheduleTargetRefresh();
     }
   }
@@ -126,7 +128,11 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       return;
     }
     _refreshScheduled = true;
+    final generation = _measurementGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _measurementGeneration) {
+        return;
+      }
       _refreshScheduled = false;
       if (mounted) {
         _refreshTargetRect();
@@ -167,7 +173,10 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
 
     _targetRetryCount = 0;
     final rect = _toOverlayRect(resolved.rect);
-    if (_shouldScrollToTarget(rect, resolved.key)) {
+    if (!_preparedTargets.contains(resolved.key) &&
+        _shouldScrollToTarget(rect, resolved.key)) {
+      // Oversized targets cannot fit completely, even at the scroll limit.
+      _preparedTargets.add(resolved.key);
       unawaited(_prepareTarget(resolved.key, _measurementGeneration));
       return;
     }
@@ -219,7 +228,11 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         renderObject.size.isEmpty) {
       return null;
     }
-    return renderObject.localToGlobal(Offset.zero) & renderObject.size;
+    if (!renderObject.attached) {
+      return null;
+    }
+    final rect = renderObject.localToGlobal(Offset.zero) & renderObject.size;
+    return rect.isFinite ? rect : null;
   }
 
   Rect _toOverlayRect(Rect globalRect) {
@@ -301,11 +314,13 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
-          final target = _isPreparingTarget ? null : _targetRect;
+          final target = _isPreparingTarget
+              ? null
+              : _targetRect?.intersect(Offset.zero & size);
           // API-backed pages can mount their target after this overlay. Keep
           // the page usable and visually unchanged until the target is ready,
           // then present the scrim and card together.
-          if (target == null) {
+          if (target == null || target.isEmpty) {
             return const SizedBox.expand();
           }
           return Stack(

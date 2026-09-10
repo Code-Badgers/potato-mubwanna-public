@@ -31,14 +31,14 @@ abstract final class FeatureTourDefinitions {
       targetKey: FeatureTourTargets.mapCourseCard,
       title: '취향에 맞는 코스를 골라보세요',
       description: '카드를 눌러 오늘의 여행 이야기를 펼쳐볼 수 있어요.',
-      advanceType: CoachMarkAdvanceType.targetTap,
+      advanceType: CoachMarkAdvanceType.navigationResult,
       interactionHint: '코스 카드를 눌러보세요',
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.mapGoodNowCard,
       title: '지금 가기 좋은 곳도 살펴보세요',
       description: '마음에 드는 장소를 누르면 지도에서 바로 확인할 수 있어요.',
-      advanceType: CoachMarkAdvanceType.targetTap,
+      advanceType: CoachMarkAdvanceType.navigationResult,
       interactionHint: '장소 카드를 눌러보세요',
     ),
     FeatureTourStep(

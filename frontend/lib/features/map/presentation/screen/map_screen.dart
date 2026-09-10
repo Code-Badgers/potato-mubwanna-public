@@ -314,6 +314,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _showFullMap = false;
       _isRouteMode = false;
     });
+    FeatureTourScope.maybeOf(context)?.completeNavigation(
+      targetKey: FeatureTourTargets.mapGoodNowCard,
+    );
   }
 
   void _reorderRouteSpot(
@@ -449,7 +452,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             onRetry: () => ref.invalidate(mapSpotsProvider),
             onOpenFullMap: _openFullMap,
             onSpotPressed: (spot) {
-              FeatureTourScope.maybeOf(context)?.completeTarget(
+              FeatureTourScope.maybeOf(context)?.beginNavigation(
                 FeatureTourTargets.mapGoodNowCard,
               );
               setState(() {
@@ -1219,16 +1222,22 @@ class _TravelCourseSection extends StatelessWidget {
                     final course = courses[index];
                     final card = _TravelCourseCard(
                       course: course,
-                      onPressed: () {
-                        FeatureTourScope.maybeOf(context)?.completeTarget(
+                      onPressed: () async {
+                        final tour = FeatureTourScope.maybeOf(context);
+                        tour?.beginNavigation(
                           FeatureTourTargets.mapCourseCard,
                         );
-                        _showTravelCourseDetail(
+                        await _showTravelCourseDetail(
                           context,
                           course,
                           onAddCourseToRoute,
                           onSpotDetailPressed,
                         );
+                        if (context.mounted) {
+                          tour?.completeNavigation(
+                            targetKey: FeatureTourTargets.mapCourseCard,
+                          );
+                        }
                       },
                     );
                     return index == 0
@@ -1246,13 +1255,13 @@ class _TravelCourseSection extends StatelessWidget {
     );
   }
 
-  void _showTravelCourseDetail(
+  Future<void> _showTravelCourseDetail(
     BuildContext context,
     TravelCourse course,
     Future<void> Function(List<MapSpot> spots) onAddCourseToRoute,
     ValueChanged<MapSpot> onSpotDetailPressed,
-  ) {
-    Navigator.of(context).push<void>(
+  ) async {
+    await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (pageContext) {
           return _TravelCourseDetailPage(
