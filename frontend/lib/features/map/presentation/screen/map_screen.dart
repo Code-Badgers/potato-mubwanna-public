@@ -250,9 +250,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
+        if (focusMap) {
+          _showLocationError('현재 위치를 보려면 위치 권한을 허용해 주세요.');
+        }
         return;
       }
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 10),
+      );
       if (!mounted) {
         return;
       }
@@ -266,8 +271,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
       });
     } catch (_) {
-      // 현재 위치는 지도 보조 정보라 실패해도 감자 스팟 탐색 흐름은 유지한다.
+      if (focusMap) {
+        _showLocationError('현재 위치를 찾지 못했어요. 위치 설정을 확인하고 다시 눌러주세요.');
+      }
     }
+  }
+
+  void _showLocationError(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _selectSpotById(String spotId) {
@@ -314,6 +330,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _showFullMap = false;
       _isRouteMode = false;
     });
+    final tour = FeatureTourScope.maybeOf(context);
+    if (tour != null && tour.isActive && tour.isNavigating) {
+      // Adding a course can open route mode before the course page returns.
+      // Resume its pending help when discovery is visible again.
+      final target = tour.currentStep.targetKey;
+      if (target == FeatureTourTargets.mapGoodNowCard ||
+          target == FeatureTourTargets.mapCourseCard) {
+        tour.completeNavigation(targetKey: target);
+      }
+    }
   }
 
   void _reorderRouteSpot(
@@ -449,7 +475,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             onRetry: () => ref.invalidate(mapSpotsProvider),
             onOpenFullMap: _openFullMap,
             onSpotPressed: (spot) {
-              FeatureTourScope.maybeOf(context)?.completeTarget(
+              FeatureTourScope.maybeOf(context)?.beginNavigation(
                 FeatureTourTargets.mapGoodNowCard,
               );
               setState(() {
@@ -1219,16 +1245,22 @@ class _TravelCourseSection extends StatelessWidget {
                     final course = courses[index];
                     final card = _TravelCourseCard(
                       course: course,
-                      onPressed: () {
-                        FeatureTourScope.maybeOf(context)?.completeTarget(
+                      onPressed: () async {
+                        final tour = FeatureTourScope.maybeOf(context);
+                        tour?.beginNavigation(
                           FeatureTourTargets.mapCourseCard,
                         );
-                        _showTravelCourseDetail(
+                        await _showTravelCourseDetail(
                           context,
                           course,
                           onAddCourseToRoute,
                           onSpotDetailPressed,
                         );
+                        if (context.mounted) {
+                          tour?.completeNavigation(
+                            targetKey: FeatureTourTargets.mapCourseCard,
+                          );
+                        }
                       },
                     );
                     return index == 0
@@ -1246,13 +1278,13 @@ class _TravelCourseSection extends StatelessWidget {
     );
   }
 
-  void _showTravelCourseDetail(
+  Future<void> _showTravelCourseDetail(
     BuildContext context,
     TravelCourse course,
     Future<void> Function(List<MapSpot> spots) onAddCourseToRoute,
     ValueChanged<MapSpot> onSpotDetailPressed,
-  ) {
-    Navigator.of(context).push<void>(
+  ) async {
+    await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (pageContext) {
           return _TravelCourseDetailPage(
@@ -2152,7 +2184,13 @@ class _GoodNowSpotSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final calmSpots = _spotsByCongestion('LOW');
     final hotSpots = _spotsByCongestion('HIGH');
-    final firstTargetGroup = calmSpots.isNotEmpty ? 'calm' : 'hot';
+    final otherSpots = spots
+        .where((spot) => !const ['LOW', 'HIGH'].contains(spot.congestionLevel))
+        .take(2)
+        .toList();
+    final firstTargetGroup = calmSpots.isNotEmpty
+        ? 'calm'
+        : hotSpots.isNotEmpty ? 'hot' : 'other';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2160,7 +2198,7 @@ class _GoodNowSpotSection extends StatelessWidget {
         const _DiscoverySectionHeader(title: '지금 가기 좋은 곳'),
         const SizedBox(height: 6),
         const Text(
-          '관광지 집중률 예측을 바탕으로 골라봤어요.',
+          '예상 혼잡도를 보고, 오늘 끌리는 곳을 골라보세요.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 13,
@@ -2180,6 +2218,7 @@ class _GoodNowSpotSection extends StatelessWidget {
           Column(
             children: [
               _GoodNowSpotGroup(
+                key: const ValueKey('good-now-calm'),
                 title: '내향인 전용 여유로운 장소',
                 description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
                 spots: calmSpots,
@@ -2190,14 +2229,28 @@ class _GoodNowSpotSection extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               _GoodNowSpotGroup(
+                key: const ValueKey('good-now-hot'),
                 title: '외향인 전용 사람 좋아 핫플',
-                description: '활기 있는 분위기를 즐기고 싶을 때 좋아요.',
+                description: '활기찬 분위기를 즐기고 싶을 때 좋아요.',
                 spots: hotSpots,
                 onSpotPressed: onSpotPressed,
                 targetKey: firstTargetGroup == 'hot'
                     ? FeatureTourTargets.mapGoodNowCard
                     : null,
               ),
+              if (otherSpots.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _GoodNowSpotGroup(
+                  key: const ValueKey('good-now-other'),
+                  title: '이런 곳도 있어요',
+                  description: '혼잡도가 보통이거나 아직 정보가 없는 곳이에요.',
+                  spots: otherSpots,
+                  onSpotPressed: onSpotPressed,
+                  targetKey: firstTargetGroup == 'other'
+                      ? FeatureTourTargets.mapGoodNowCard
+                      : null,
+                ),
+              ],
             ],
           ),
       ],
@@ -2205,15 +2258,9 @@ class _GoodNowSpotSection extends StatelessWidget {
   }
 
   List<MapSpot> _spotsByCongestion(String level) {
-    final fallbackLevel = level == 'HIGH' ? 'NORMAL' : 'LOW';
-    final prioritized = [
-      ...spots.where((spot) => spot.congestionLevel == level),
-      ...spots.where((spot) => spot.congestionLevel == fallbackLevel),
-      ...spots.where((spot) => spot.stampEnabled),
-      ...spots,
-    ];
     final unique = <String, MapSpot>{};
-    for (final spot in prioritized) {
+    // Filling a shortage with other levels mislabels the place's congestion.
+    for (final spot in spots.where((spot) => spot.congestionLevel == level)) {
       unique.putIfAbsent(spot.id, () => spot);
       if (unique.length >= 2) {
         break;
@@ -2225,6 +2272,7 @@ class _GoodNowSpotSection extends StatelessWidget {
 
 class _GoodNowSpotGroup extends StatelessWidget {
   const _GoodNowSpotGroup({
+    super.key,
     required this.title,
     required this.description,
     required this.spots,
@@ -2287,6 +2335,11 @@ class _GoodNowSpotGroup extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (spots.isEmpty)
+            const Text(
+              '지금은 이 조건에 맞는 장소가 없어요.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
           for (var index = 0; index < spots.length; index++) ...[
             if (index == 0 && targetKey != null)
               KeyedSubtree(

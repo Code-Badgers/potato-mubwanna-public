@@ -70,7 +70,7 @@ class AudioGuideException implements Exception {
       );
     }
     if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
-      return AudioGuideException(
+      return const AudioGuideException(
         type: AudioGuideFailureType.serviceUnavailable,
         message:
             '오디오 연결이 원활하지 않아요. 잠시 후 다시 시도해 주세요. 장소 조회와 방문 인증은 계속 이용할 수 있어요.',

@@ -22,8 +22,10 @@ class FeatureTourController extends ChangeNotifier {
   bool _isActive = false;
   bool _completionRequested = false;
   bool _hasPresentedStep = false;
+  bool _isNavigating = false;
 
   bool get isActive => _isActive;
+  bool get isNavigating => _isNavigating;
   int get stepIndex => _stepIndex;
   FeatureTourStep get currentStep => steps[_stepIndex];
 
@@ -56,6 +58,13 @@ class FeatureTourController extends ChangeNotifier {
     _advance();
   }
 
+  void continueWithoutAction() {
+    if (_isActive && currentStep.allowContinueWithoutAction) {
+      // Reading help must not consume a care action or grant a reward.
+      _advance();
+    }
+  }
+
   void completeSwipe(GlobalKey targetKey) {
     if (!_isActive || currentStep.advanceType != CoachMarkAdvanceType.swipeUp) {
       return;
@@ -67,11 +76,23 @@ class FeatureTourController extends ChangeNotifier {
     _advance();
   }
 
-  void completeNavigation() {
+  void beginNavigation(GlobalKey targetKey) {
     if (!_isActive ||
-        currentStep.advanceType != CoachMarkAdvanceType.navigationResult) {
+        currentStep.advanceType != CoachMarkAdvanceType.navigationResult ||
+        currentStep.targetKey != targetKey) {
       return;
     }
+    _isNavigating = true;
+    notifyListeners();
+  }
+
+  void completeNavigation({GlobalKey? targetKey}) {
+    if (!_isActive ||
+        currentStep.advanceType != CoachMarkAdvanceType.navigationResult ||
+        (targetKey != null && currentStep.targetKey != targetKey)) {
+      return;
+    }
+    _isNavigating = false;
     _advance();
   }
 
@@ -274,6 +295,8 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
 
   @override
   Widget build(BuildContext context) {
+    // A covered route must not scroll or time out its remaining tour steps.
+    final isCurrentRoute = ModalRoute.of(context)?.isCurrent ?? true;
     return FeatureTourScope(
       controller: _controller,
       child: AnimatedBuilder(
@@ -283,12 +306,15 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
           return Stack(
             children: [
               child!,
-              if (_controller.isActive)
+              if (_controller.isActive &&
+                  !_controller.isNavigating &&
+                  isCurrentRoute)
                 FeatureTourOverlay(
                   step: _controller.currentStep,
                   stepIndex: _controller.stepIndex,
                   totalSteps: _controller.steps.length,
                   onNext: _controller.next,
+                  onContinue: _controller.continueWithoutAction,
                   onSkip: _controller.skipTour,
                   onPresented: _handleStepPresented,
                   onTargetUnavailable: _controller.skipUnavailableStep,

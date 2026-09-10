@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -15,9 +16,133 @@ import 'package:potato_mubwanna/features/map/domain/spot_detail.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
 import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_definitions.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_host.dart';
+import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_overlay.dart';
+import 'package:potato_mubwanna/features/feature_tour/data/feature_tour_status_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:potato_mubwanna/shared/widgets/loading/potato_loading_view.dart';
 
 void main() {
+  testWidgets('location button explains denied permission without closing map',
+      (tester) async {
+    const channel = MethodChannel('flutter.baseflow.com/geolocator');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (call) async => 0,
+    );
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => _spots),
+        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: MaterialApp(home: MapScreen(
+        hasMapConfiguration: true,
+        showFullMapInitially: true,
+        mapViewBuilder: (_, __) => const SizedBox.expand(),
+      )),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('full-map-locate-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('현재 위치를 보려면 위치 권한을 허용해 주세요.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('full-map-home-button')), findsOneWidget);
+  });
+
+  testWidgets('recommendation groups never fill hot places with quiet ones',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => [_spots[0], _spots[1]]),
+        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: const MaterialApp(home: MapScreen(hasMapConfiguration: true)),
+    ));
+    await tester.pumpAndSettle();
+    final calm = find.byKey(const ValueKey('good-now-calm'));
+    final hot = find.byKey(const ValueKey('good-now-hot'));
+    final other = find.byKey(const ValueKey('good-now-other'));
+    await tester.scrollUntilVisible(calm, 300,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: calm, matching: find.text('감자 카페')), findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('감자 카페')), findsNothing);
+    expect(find.descendant(of: hot, matching: find.text('정선 5일장')), findsNothing);
+    expect(find.descendant(of: hot, matching: find.text('지금은 이 조건에 맞는 장소가 없어요.')), findsOneWidget);
+    expect(find.descendant(of: other, matching: find.text('정선 5일장')), findsOneWidget);
+  });
+
+  testWidgets('map tour resumes after course and recommended place visits',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    SharedPreferencesFeatureTourStatusStore.resetInProcessForTesting();
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => _spots),
+        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: MaterialApp(home: FeatureTourHost(
+        tourId: 'map-navigation-test',
+        steps: FeatureTourDefinitions.map,
+        child: MapScreen(
+          hasMapConfiguration: true,
+          mapViewBuilder: (spots, onSpotSelected) => Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              key: const ValueKey('test-native-marker'),
+              onPressed: () => onSpotSelected(spots.first.id),
+              child: const Text('장소 마커'),
+            ),
+          ),
+        ),
+      )),
+    ));
+    await _settleMapTour(tester);
+    await tester.tap(find.text('다음'));
+    await _settleMapTour(tester);
+    expect(find.text('2 / 7'), findsOneWidget);
+    await tester.tap(find.byKey(FeatureTourTargets.mapCourseCard));
+    await _settleMapTour(tester);
+    expect(find.byType(FeatureTourOverlay, skipOffstage: false), findsNothing);
+    await tester.pump(const Duration(seconds: 20));
+    final detailContext = tester.element(find.text('강원도 감자 먹거리 코스'));
+    Navigator.of(detailContext).pop();
+    await _settleMapTour(tester);
+    expect(find.text('3 / 7'), findsOneWidget);
+    await tester.tap(find.byKey(FeatureTourTargets.mapGoodNowCard));
+    await _settleMapTour(tester);
+    expect(find.byType(FeatureTourOverlay), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('full-map-home-button')));
+    await _settleMapTour(tester);
+    expect(find.text('4 / 7'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('open-full-map-button')));
+    await _settleMapTour(tester);
+    expect(find.text('5 / 7'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('test-native-marker')));
+    await _settleMapTour(tester);
+    expect(find.text('6 / 7'), findsOneWidget);
+    await tester.drag(find.byKey(FeatureTourTargets.spotSheetHandle), const Offset(0, -180));
+    await _settleMapTour(tester);
+    expect(find.text('7 / 7'), findsOneWidget);
+    await tester.tap(find.byKey(FeatureTourTargets.routeMode));
+    await _settleMapTour(tester);
+    expect(find.byType(FeatureTourOverlay), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('renders the discovery home before spot loading completes', (
     tester,
   ) async {
@@ -1366,6 +1491,12 @@ final _networkFailures = [
     ApiException(message: '서버 오류가 발생했습니다.', statusCode: 500),
   ),
 ];
+
+Future<void> _settleMapTour(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pumpAndSettle();
+}
 
 Future<void> _dragCourseDetailUntilVisible(
   WidgetTester tester,

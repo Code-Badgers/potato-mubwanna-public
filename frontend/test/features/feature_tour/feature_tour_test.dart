@@ -209,7 +209,7 @@ void main() {
       );
       expect(FeatureTourDefinitions.spot.first.description, contains('스탬프'));
       expect(
-        FeatureTourDefinitions.passport.single.description,
+        FeatureTourDefinitions.passport.single.title,
         contains('스탬프'),
       );
     });
@@ -316,6 +316,115 @@ void main() {
 
     setUp(() {
       store = _FakeFeatureTourStatusStore();
+    });
+
+    testWidgets('disabled care action can continue without performing it',
+        (tester) async {
+      final actionKey = GlobalKey();
+      final infoKey = GlobalKey();
+      await tester.pumpWidget(_tourApp(
+        store: store,
+        tourId: 'care-cooldown',
+        steps: [
+          FeatureTourStep(
+            targetKey: actionKey,
+            title: '감자 돌보기',
+            description: '버튼을 눌러보세요.',
+            advanceType: CoachMarkAdvanceType.targetTap,
+            allowContinueWithoutAction: true,
+          ),
+          FeatureTourStep(
+            targetKey: infoKey,
+            title: '감자 정보',
+            description: '이어서 확인해요.',
+          ),
+        ],
+        child: Column(children: [
+          ElevatedButton(
+            key: actionKey,
+            onPressed: null,
+            child: const Text('물 주기'),
+          ),
+          SizedBox(key: infoKey, height: 50, width: 100),
+        ]),
+      ));
+      await _settleTour(tester);
+      await tester.tap(find.text('다음 설명'));
+      await _settleTour(tester);
+      expect(find.text('감자 정보'), findsOneWidget);
+      expect(store.completedIds, isEmpty);
+      expect(store.stepIndices['care-cooldown'], 1);
+    });
+
+    testWidgets('does not skip steps while a detail route covers the tour',
+        (tester) async {
+      final openKey = GlobalKey();
+      final delayedKey = GlobalKey();
+      await tester.pumpWidget(_tourApp(
+        store: store,
+        tourId: 'covered-route',
+        steps: [
+          FeatureTourStep(
+            targetKey: openKey,
+            title: '상세 화면 열기',
+            description: '장소를 살펴보세요.',
+            advanceType: CoachMarkAdvanceType.targetTap,
+          ),
+          FeatureTourStep(
+            targetKey: delayedKey,
+            title: '돌아온 뒤 안내',
+            description: '다음 기능을 확인해요.',
+          ),
+        ],
+        child: Builder(builder: (context) {
+          return Center(child: ElevatedButton(
+            key: openKey,
+            onPressed: () {
+              FeatureTourScope.maybeOf(context)?.completeTarget(openKey);
+              Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('상세 내용')),
+              ));
+            },
+            child: const Text('열기'),
+          ));
+        }),
+      ));
+      await _settleTour(tester);
+      await tester.tap(find.text('열기'));
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 140; i++) {
+        await tester.pump(const Duration(milliseconds: 120));
+      }
+      expect(find.byType(FeatureTourOverlay, skipOffstage: false), findsNothing);
+      expect(store.stepIndices['covered-route'], 1);
+      expect(store.completedIds, isEmpty);
+      Navigator.of(tester.element(find.text('상세 내용'))).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(FeatureTourOverlay), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('oversized scroll target settles instead of scrolling forever',
+        (tester) async {
+      final targetKey = GlobalKey();
+      await tester.pumpWidget(_tourApp(
+        store: store,
+        tourId: 'oversized-target',
+        steps: [FeatureTourStep(
+          targetKey: targetKey,
+          title: '긴 콘텐츠 안내',
+          description: '이어서 볼 수 있어요.',
+        )],
+        child: SingleChildScrollView(child: Column(children: [
+          const SizedBox(height: 900),
+          SizedBox(key: targetKey, width: 200, height: 1400),
+        ])),
+      ));
+      await _settleTour(tester);
+      expect(find.text('긴 콘텐츠 안내'), findsOneWidget);
+      await tester.tap(find.text('확인'));
+      await _settleTour(tester);
+      expect(store.completedIds, contains('oversized-target'));
     });
 
     testWidgets('advances a target step only after the target is tapped',
