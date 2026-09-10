@@ -250,9 +250,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
+        if (focusMap) {
+          _showLocationError('현재 위치를 보려면 위치 권한을 허용해 주세요.');
+        }
         return;
       }
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 10),
+      );
       if (!mounted) {
         return;
       }
@@ -266,8 +271,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         }
       });
     } catch (_) {
-      // 현재 위치는 지도 보조 정보라 실패해도 감자 스팟 탐색 흐름은 유지한다.
+      if (focusMap) {
+        _showLocationError('현재 위치를 찾지 못했어요. 위치 설정을 확인하고 다시 눌러주세요.');
+      }
     }
+  }
+
+  void _showLocationError(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _selectSpotById(String spotId) {
@@ -314,9 +330,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _showFullMap = false;
       _isRouteMode = false;
     });
-    FeatureTourScope.maybeOf(context)?.completeNavigation(
-      targetKey: FeatureTourTargets.mapGoodNowCard,
-    );
+    final tour = FeatureTourScope.maybeOf(context);
+    if (tour != null && tour.isActive && tour.isNavigating) {
+      // Adding a course can open route mode before the course page returns.
+      // Resume its pending help when discovery is visible again.
+      final target = tour.currentStep.targetKey;
+      if (target == FeatureTourTargets.mapGoodNowCard ||
+          target == FeatureTourTargets.mapCourseCard) {
+        tour.completeNavigation(targetKey: target);
+      }
+    }
   }
 
   void _reorderRouteSpot(

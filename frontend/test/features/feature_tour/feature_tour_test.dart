@@ -318,6 +318,44 @@ void main() {
       store = _FakeFeatureTourStatusStore();
     });
 
+    testWidgets('disabled care action can continue without performing it',
+        (tester) async {
+      final actionKey = GlobalKey();
+      final infoKey = GlobalKey();
+      await tester.pumpWidget(_tourApp(
+        store: store,
+        tourId: 'care-cooldown',
+        steps: [
+          FeatureTourStep(
+            targetKey: actionKey,
+            title: '감자 돌보기',
+            description: '버튼을 눌러보세요.',
+            advanceType: CoachMarkAdvanceType.targetTap,
+            allowContinueWithoutAction: true,
+          ),
+          FeatureTourStep(
+            targetKey: infoKey,
+            title: '감자 정보',
+            description: '이어서 확인해요.',
+          ),
+        ],
+        child: Column(children: [
+          ElevatedButton(
+            key: actionKey,
+            onPressed: null,
+            child: const Text('물 주기'),
+          ),
+          SizedBox(key: infoKey, height: 50, width: 100),
+        ]),
+      ));
+      await _settleTour(tester);
+      await tester.tap(find.text('다음 설명'));
+      await _settleTour(tester);
+      expect(find.text('감자 정보'), findsOneWidget);
+      expect(store.completedIds, isEmpty);
+      expect(store.stepIndices['care-cooldown'], 1);
+    });
+
     testWidgets('does not skip steps while a detail route covers the tour',
         (tester) async {
       final openKey = GlobalKey();

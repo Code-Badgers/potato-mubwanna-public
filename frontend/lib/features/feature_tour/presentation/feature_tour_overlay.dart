@@ -29,6 +29,7 @@ class FeatureTourStep {
     this.advanceType = CoachMarkAdvanceType.nextButton,
     this.interactionHint,
     this.cardPlacement = FeatureTourCardPlacement.target,
+    this.allowContinueWithoutAction = false,
   });
 
   final GlobalKey targetKey;
@@ -40,6 +41,7 @@ class FeatureTourStep {
   final CoachMarkAdvanceType advanceType;
   final String? interactionHint;
   final FeatureTourCardPlacement cardPlacement;
+  final bool allowContinueWithoutAction;
 }
 
 class FeatureTourOverlay extends StatefulWidget {
@@ -48,6 +50,7 @@ class FeatureTourOverlay extends StatefulWidget {
     required this.stepIndex,
     required this.totalSteps,
     required this.onNext,
+    required this.onContinue,
     required this.onSkip,
     required this.onPresented,
     required this.onTargetUnavailable,
@@ -58,6 +61,7 @@ class FeatureTourOverlay extends StatefulWidget {
   final int stepIndex;
   final int totalSteps;
   final VoidCallback onNext;
+  final VoidCallback onContinue;
   final VoidCallback onSkip;
   final VoidCallback onPresented;
   final VoidCallback onTargetUnavailable;
@@ -409,6 +413,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
           totalSteps: widget.totalSteps,
           maxHeight: maxHeight,
           onNext: widget.onNext,
+          onContinue: widget.onContinue,
           onSkip: widget.onSkip,
         ),
       );
@@ -442,6 +447,7 @@ class _FeatureTourOverlayState extends State<FeatureTourOverlay> {
         totalSteps: widget.totalSteps,
         maxHeight: maxHeight,
         onNext: widget.onNext,
+        onContinue: widget.onContinue,
         onSkip: widget.onSkip,
       ),
     );
@@ -462,6 +468,7 @@ class _FeatureTourCard extends StatelessWidget {
     required this.totalSteps,
     required this.maxHeight,
     required this.onNext,
+    required this.onContinue,
     required this.onSkip,
   });
 
@@ -470,6 +477,7 @@ class _FeatureTourCard extends StatelessWidget {
   final int totalSteps;
   final double maxHeight;
   final VoidCallback onNext;
+  final VoidCallback onContinue;
   final VoidCallback onSkip;
 
   @override
@@ -517,6 +525,11 @@ class _FeatureTourCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
+                      if (step.allowContinueWithoutAction)
+                        TextButton(
+                          onPressed: onContinue,
+                          child: const Text('다음 설명'),
+                        ),
                       TextButton(
                         onPressed: onSkip,
                         style: TextButton.styleFrom(

@@ -58,6 +58,13 @@ class FeatureTourController extends ChangeNotifier {
     _advance();
   }
 
+  void continueWithoutAction() {
+    if (_isActive && currentStep.allowContinueWithoutAction) {
+      // Reading help must not consume a care action or grant a reward.
+      _advance();
+    }
+  }
+
   void completeSwipe(GlobalKey targetKey) {
     if (!_isActive || currentStep.advanceType != CoachMarkAdvanceType.swipeUp) {
       return;
@@ -307,6 +314,7 @@ class _FeatureTourHostState extends State<FeatureTourHost> {
                   stepIndex: _controller.stepIndex,
                   totalSteps: _controller.steps.length,
                   onNext: _controller.next,
+                  onContinue: _controller.continueWithoutAction,
                   onSkip: _controller.skipTour,
                   onPresented: _handleStepPresented,
                   onTargetUnavailable: _controller.skipUnavailableStep,

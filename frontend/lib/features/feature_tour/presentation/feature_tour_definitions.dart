@@ -121,6 +121,7 @@ abstract final class FeatureTourDefinitions {
       description: '쓰다듬거나 물과 영양제를 주면 감자가 자라요. 남은 횟수도 확인해보세요.',
       advanceType: CoachMarkAdvanceType.targetTap,
       interactionHint: '돌봄 버튼을 눌러보세요',
+      allowContinueWithoutAction: true,
     ),
     FeatureTourStep(
       targetKey: FeatureTourTargets.potatoInfo,

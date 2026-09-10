@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:potato_mubwanna/shared/widgets/loading/potato_loading_view.dart';
 
 void main() {
+  testWidgets('location button explains denied permission without closing map',
+      (tester) async {
+    const channel = MethodChannel('flutter.baseflow.com/geolocator');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (call) async => 0,
+    );
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => _spots),
+        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: MaterialApp(home: MapScreen(
+        hasMapConfiguration: true,
+        showFullMapInitially: true,
+        mapViewBuilder: (_, __) => const SizedBox.expand(),
+      )),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('full-map-locate-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('현재 위치를 보려면 위치 권한을 허용해 주세요.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('full-map-home-button')), findsOneWidget);
+  });
+
   testWidgets('recommendation groups never fill hot places with quiet ones',
       (tester) async {
     await tester.pumpWidget(ProviderScope(
