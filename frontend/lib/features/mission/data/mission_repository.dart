@@ -113,11 +113,13 @@ class MissionCompletionResult {
     required this.id,
     required this.rewardType,
     required this.rewardLabel,
+    this.completedAt,
   });
 
   final String id;
   final MissionRewardType rewardType;
   final String rewardLabel;
+  final DateTime? completedAt;
 
   factory MissionCompletionResult.fromJson(Object? json) {
     final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
@@ -125,6 +127,7 @@ class MissionCompletionResult {
       id: data['missionId']?.toString() ?? '',
       rewardType: missionRewardTypeFromApi(data['rewardType'] as String?),
       rewardLabel: data['rewardLabel'] as String? ?? '',
+      completedAt: DateTime.tryParse(data['completedAt']?.toString() ?? ''),
     );
   }
 }
