@@ -50,7 +50,8 @@ class SpotDetailScreen extends ConsumerWidget {
         data: (spot) => _SpotDetailBody(spot: spot),
       ),
       bottomNavigationBar: detail.maybeWhen(
-        data: (spot) => _VisitVerificationBar(spot: spot),
+        data: (spot) =>
+            spot.stampEnabled ? _VisitVerificationBar(spot: spot) : null,
         orElse: () => null,
       ),
     );
@@ -417,183 +418,185 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: _audioLine),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (result.stampIssued)
-              SizedBox(
-                key: const ValueKey('visit-stamp-impact'),
-                height: 132,
-                child: AnimatedBuilder(
-                  animation: _stampController,
-                  builder: (context, child) => Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Opacity(
-                        opacity: _impactOpacity.value,
-                        child: Transform.scale(
-                          scale: _impactScale.value,
-                          child: Container(
-                            width: 92,
-                            height: 92,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF56C787),
-                                width: 3,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (result.stampIssued)
+                SizedBox(
+                  key: const ValueKey('visit-stamp-impact'),
+                  height: 132,
+                  child: AnimatedBuilder(
+                    animation: _stampController,
+                    builder: (context, child) => Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        Opacity(
+                          opacity: _impactOpacity.value,
+                          child: Transform.scale(
+                            scale: _impactScale.value,
+                            child: Container(
+                              width: 92,
+                              height: 92,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF56C787),
+                                  width: 3,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      Opacity(
-                        key: const ValueKey('visit-stamp-imprint'),
-                        opacity: _imprintOpacity.value,
-                        child: Transform.rotate(
-                          angle: _imprintTurns.value * 6.283185307179586,
-                          child: Transform.scale(
-                            scale: _imprintScale.value,
-                            child: child,
+                        Opacity(
+                          key: const ValueKey('visit-stamp-imprint'),
+                          opacity: _imprintOpacity.value,
+                          child: Transform.rotate(
+                            angle: _imprintTurns.value * 6.283185307179586,
+                            child: Transform.scale(
+                              scale: _imprintScale.value,
+                              child: child,
+                            ),
                           ),
                         ),
-                      ),
-                      Opacity(
-                        opacity: _stampPressOpacity.value,
-                        child: Transform.translate(
-                          offset: Offset(0, _stampPressOffset.value),
-                          child: Transform.scale(
-                            scale: _stampPressScale.value,
-                            child: const _PhysicalStampPress(),
+                        Opacity(
+                          opacity: _stampPressOpacity.value,
+                          child: Transform.translate(
+                            offset: Offset(0, _stampPressOffset.value),
+                            child: Transform.scale(
+                              scale: _stampPressScale.value,
+                              child: const _PhysicalStampPress(),
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                    child: AttractionStampImage(
+                      spotName: spot.name,
+                      size: 104,
+                      fallback: const Icon(
+                        Icons.workspace_premium_rounded,
+                        color: Color(0xFF367A50),
+                        size: 72,
                       ),
-                    ],
-                  ),
-                  child: AttractionStampImage(
-                    spotName: spot.name,
-                    size: 104,
-                    fallback: const Icon(
-                      Icons.workspace_premium_rounded,
-                      color: Color(0xFF367A50),
-                      size: 72,
                     ),
                   ),
-                ),
-              )
-            else
-              const Icon(
-                Icons.celebration_rounded,
-                color: Color(0xFF56C787),
-                size: 44,
-              ),
-            const SizedBox(height: 12),
-            const Text(
-              '인증 성공',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 18),
-            _VisitResultLine(
-              icon: Icons.workspace_premium_rounded,
-              label: result.stampIssued ? '지역 스탬프 획득' : '이미 획득한 지역 스탬프',
-              color: const Color(0xFFD8A232),
-            ),
-            if (potato != null) ...[
-              const SizedBox(height: 10),
-              _PotatoAcquisitionCard(potato: potato),
-            ],
-            if (result.missionAvailable) ...[
-              const SizedBox(height: 10),
-              if (unlockedMission == null)
-                const _VisitResultLine(
-                  icon: Icons.flag_rounded,
-                  label: '점순이 미션 등장',
-                  color: Color(0xFF56C787),
                 )
               else
-                _UnlockedMissionCard(mission: unlockedMission),
-            ],
-            const SizedBox(height: 20),
-            if (result.missionAvailable) ...[
-              FilledButton.icon(
-                key: const ValueKey('visit-result-mission-entry'),
+                const Icon(
+                  Icons.celebration_rounded,
+                  color: Color(0xFF56C787),
+                  size: 44,
+                ),
+              const SizedBox(height: 12),
+              const Text(
+                '인증 성공',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _VisitResultLine(
+                icon: Icons.workspace_premium_rounded,
+                label: result.stampIssued ? '지역 스탬프 획득' : '이미 획득한 지역 스탬프',
+                color: const Color(0xFFD8A232),
+              ),
+              if (potato != null) ...[
+                const SizedBox(height: 10),
+                _PotatoAcquisitionCard(potato: potato),
+              ],
+              if (result.missionAvailable) ...[
+                const SizedBox(height: 10),
+                if (unlockedMission == null)
+                  const _VisitResultLine(
+                    icon: Icons.flag_rounded,
+                    label: '점순이 미션 등장',
+                    color: Color(0xFF56C787),
+                  )
+                else
+                  _UnlockedMissionCard(mission: unlockedMission),
+              ],
+              const SizedBox(height: 20),
+              if (result.missionAvailable) ...[
+                FilledButton.icon(
+                  key: const ValueKey('visit-result-mission-entry'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    context.push(
+                      Uri(
+                        path: '/main/missions',
+                        queryParameters: {
+                          'entry': 'visit',
+                          'spotName': spot.name,
+                          if (unlockedMission?.id.isNotEmpty == true)
+                            'missionId': unlockedMission!.id,
+                        },
+                      ).toString(),
+                    );
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF6A4A2A),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.flag_rounded),
+                  label: const Text('점순이 미션 보기'),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (potato != null) ...[
+                FilledButton.icon(
+                  key: const ValueKey('visit-result-potato-book'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    context.push('/main/potatoes');
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF56C787),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.eco_rounded),
+                  label: const Text('도감 보기'),
+                ),
+                const SizedBox(height: 8),
+              ],
+              OutlinedButton.icon(
+                key: const ValueKey('visit-result-next-route'),
                 onPressed: () {
                   Navigator.of(context).pop();
                   context.push(
                     Uri(
-                      path: '/main/missions',
-                      queryParameters: {
-                        'entry': 'visit',
-                        'spotName': spot.name,
-                        if (unlockedMission?.id.isNotEmpty == true)
-                          'missionId': unlockedMission!.id,
-                      },
+                      path: '/main/map',
+                      queryParameters: {'recommendFrom': result.spotId},
                     ).toString(),
                   );
                 },
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A4A2A),
-                  foregroundColor: Colors.white,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF367A50),
                   minimumSize: const Size.fromHeight(50),
+                  side: const BorderSide(color: Color(0xFFC9E7D4)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                icon: const Icon(Icons.flag_rounded),
-                label: const Text('점순이 미션 보기'),
+                icon: const Icon(Icons.map_rounded),
+                label: const Text('다음 장소 추천'),
               ),
-              const SizedBox(height: 8),
             ],
-            if (potato != null) ...[
-              FilledButton.icon(
-                key: const ValueKey('visit-result-potato-book'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.push('/main/potatoes');
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF56C787),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: const Icon(Icons.eco_rounded),
-                label: const Text('도감 보기'),
-              ),
-              const SizedBox(height: 8),
-            ],
-            OutlinedButton.icon(
-              key: const ValueKey('visit-result-next-route'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.push(
-                  Uri(
-                    path: '/main/map',
-                    queryParameters: {'recommendFrom': result.spotId},
-                  ).toString(),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF367A50),
-                minimumSize: const Size.fromHeight(50),
-                side: const BorderSide(color: Color(0xFFC9E7D4)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              icon: const Icon(Icons.map_rounded),
-              label: const Text('다음 장소 추천'),
-            ),
-          ],
+          ),
         ),
       ),
     );

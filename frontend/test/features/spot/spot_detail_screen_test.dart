@@ -15,12 +15,86 @@ import 'package:potato_mubwanna/features/audio/application/audio_playback_contro
 import 'package:potato_mubwanna/features/audio/data/audio_guide_repository.dart';
 import 'package:potato_mubwanna/features/audio/domain/audio_guide.dart';
 import 'package:potato_mubwanna/features/spot/application/spot_detail_controller.dart';
+import 'package:potato_mubwanna/features/potato/application/potato_collection_controller.dart';
+import 'package:potato_mubwanna/features/mypage/application/user_activity_summary_controller.dart';
 import 'package:potato_mubwanna/features/spot/data/visit_verification_repository.dart';
 import 'package:potato_mubwanna/features/spot/domain/spot_detail.dart';
 import 'package:potato_mubwanna/features/spot/domain/visit_verification.dart';
 import 'package:potato_mubwanna/features/spot/presentation/screen/spot_detail_screen.dart';
 
 void main() {
+  testWidgets('visit result actions stay reachable on a small screen',
+      (tester) async {
+    await _setMobileViewport(tester);
+    tester.view.physicalSize = const Size(320, 568);
+    await tester.pumpWidget(_app(
+      engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => _spot,
+      audioOverride: (ref) async => _guide,
+      visitRepository: _FakeVisitVerificationRepository(result: _visitResult),
+      locationService: _FakeLocationService(),
+      textScaler: const TextScaler.linear(1.3),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final next = find.byKey(const ValueKey('visit-result-next-route'));
+    await tester.ensureVisible(next);
+    await tester.pumpAndSettle();
+    expect(next.hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('non-stamp places do not promise visit verification',
+      (tester) async {
+    await _setMobileViewport(tester);
+    await tester.pumpWidget(_app(
+      engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => SpotDetail.fromJson({
+        'id': 1,
+        'name': '일반 카페',
+        'stampEnabled': false,
+      }),
+      audioOverride: (ref) async => _guide,
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('visit-verify-button')), findsNothing);
+    expect(find.text('방문 인증 준비 중'), findsNothing);
+  });
+
+  test('successful visit refreshes growth and activity summaries', () async {
+    var growthReads = 0;
+    var activityReads = 0;
+    final container = ProviderContainer(overrides: [
+      visitVerificationRepositoryProvider.overrideWithValue(
+        _FakeVisitVerificationRepository(result: _visitResult),
+      ),
+      locationServiceProvider.overrideWithValue(_FakeLocationService()),
+      potatoGrowthSummaryProvider.overrideWith((ref) async {
+        growthReads++;
+        return null;
+      }),
+      userActivitySummaryProvider.overrideWith((ref) async {
+        activityReads++;
+        return null;
+      }),
+    ]);
+    addTearDown(container.dispose);
+    container.listen(potatoGrowthSummaryProvider, (_, __) {});
+    container.listen(userActivitySummaryProvider, (_, __) {});
+    container.listen(visitVerificationControllerProvider(_spot), (_, __) {});
+    await container.read(potatoGrowthSummaryProvider.future);
+    await container.read(userActivitySummaryProvider.future);
+    await container
+        .read(visitVerificationControllerProvider(_spot).notifier)
+        .verify();
+    await container.read(potatoGrowthSummaryProvider.future);
+    await container.read(userActivitySummaryProvider.future);
+    expect(growthReads, 2);
+    expect(activityReads, 2);
+  });
+
   testWidgets('renders real spot detail and controls audio playback',
       (tester) async {
     await _setMobileViewport(tester);
