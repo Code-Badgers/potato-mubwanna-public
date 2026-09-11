@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_design_tokens.dart';
 
 class PotatoLoadingView extends StatefulWidget {
   const PotatoLoadingView({
@@ -161,24 +162,14 @@ class _PotatoLoadingViewState extends State<PotatoLoadingView> {
                 Text(
                   widget.message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                  style: AppTextStyles.stateTitle,
                 ),
                 if (widget.subtitle != null) ...[
                   const SizedBox(height: 8),
                   Text(
                     widget.subtitle!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0,
-                    ),
+                    style: AppTextStyles.body,
                   ),
                 ],
                 const SizedBox(height: 16),

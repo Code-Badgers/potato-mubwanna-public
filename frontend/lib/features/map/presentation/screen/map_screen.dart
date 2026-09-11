@@ -13,6 +13,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../../shared/widgets/app_state_message.dart';
 import '../../../../shared/widgets/place_visit_actions.dart';
 import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../../feature_tour/presentation/feature_tour_host.dart';
@@ -847,7 +848,7 @@ class _MapDiscoveryHome extends StatelessWidget {
                 ),
               ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 26, 0, 0),
+              padding: const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 0, 0),
               sliver: SliverToBoxAdapter(
                 child: _TravelCourseSection(
                   courses: courses,
@@ -857,7 +858,7 @@ class _MapDiscoveryHome extends StatelessWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 26, 20, 28),
+              padding: const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 20, 28),
               sliver: SliverToBoxAdapter(
                 child: _GoodNowSpotSection(
                   spots: spots,
@@ -1320,16 +1321,16 @@ class _TravelCourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
         child: Container(
           width: 266,
           height: 292,
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppDimens.cardRadius),
             boxShadow: AppShadows.softCard,
           ),
           child: Column(
@@ -1339,9 +1340,9 @@ class _TravelCourseCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(24)),
+                        const BorderRadius.vertical(top: Radius.circular(AppDimens.cardRadius)),
                     child: SizedBox(
-                      height: 142,
+                      height: 266 / AppDimens.landscapeImageRatio,
                       width: double.infinity,
                       child: _CourseImage(
                         imageUrl: course.heroImageUrl,
@@ -1353,7 +1354,7 @@ class _TravelCourseCard extends StatelessWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(24),
+                          top: Radius.circular(AppDimens.cardRadius),
                         ),
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
@@ -1915,9 +1916,9 @@ class _CourseStopCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final image = ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
       child: AspectRatio(
-        aspectRatio: 1.72,
+        aspectRatio: AppDimens.landscapeImageRatio,
         child: _CourseImage(
           imageUrl: stop.spot.imageUrl,
           icon: Icons.place_rounded,
@@ -2289,13 +2290,8 @@ class _GoodNowSpotGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppShadows.softCard,
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.contentSpacing),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2376,25 +2372,25 @@ class _PopularSpotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
       elevation: 0,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppDimens.cardRadius),
             boxShadow: AppShadows.softCard,
           ),
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
                 child: SizedBox(
-                  width: 72,
-                  height: 72,
+                  width: AppDimens.thumbnailSize,
+                  height: AppDimens.thumbnailSize,
                   child: _CourseImage(
                     imageUrl: spot.effectiveImageUrls.isEmpty
                         ? null
@@ -2412,12 +2408,7 @@ class _PopularSpotCard extends StatelessWidget {
                       spot.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
+                      style: AppTextStyles.cardTitle,
                     ),
                     const SizedBox(height: 5),
                     Text(
@@ -2484,12 +2475,7 @@ class _DiscoverySectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
+            style: AppTextStyles.sectionTitle,
           ),
         ),
       ],
@@ -2532,58 +2518,18 @@ class _PopularSpotMetaLine extends StatelessWidget {
 
 class _DiscoverySectionStatus extends StatelessWidget {
   const _DiscoverySectionStatus({
-    required this.icon,
-    required this.title,
-    required this.description,
+    required this.icon, required this.title, required this.description,
   });
-
   final IconData icon;
   final String title;
   final String description;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 28),
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: AppShadows.softCard,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: _mapDark, size: 34),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                height: 1.4,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(child: AppStateMessage(
+      icon: icon, title: title, description: description,
+    )),
+  );
 }
 
 class _RouteRecommendationSheet extends ConsumerWidget {
@@ -4250,13 +4196,9 @@ class _MapDataError extends StatelessWidget {
 
 class _MapStatusCard extends StatelessWidget {
   const _MapStatusCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-    this.actionLabel,
-    this.onAction,
+    required this.icon, required this.title, required this.description,
+    this.actionLabel, this.onAction,
   });
-
   final IconData icon;
   final String title;
   final String description;
@@ -4264,60 +4206,12 @@ class _MapStatusCard extends StatelessWidget {
   final VoidCallback? onAction;
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: _mapDark, size: 42),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  height: 1.45,
-                  letterSpacing: 0,
-                ),
-              ),
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: onAction,
-                  icon: const Icon(Icons.refresh_rounded, size: 19),
-                  label: Text(actionLabel!),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _mapDark,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(child: AppStateMessage(
+      icon: icon, title: title, description: description,
+      actionLabel: actionLabel, onAction: onAction,
+    )),
+  );
 }
 
 class _EmptySpotMessage extends StatelessWidget {

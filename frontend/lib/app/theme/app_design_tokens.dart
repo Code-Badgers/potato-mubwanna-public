@@ -6,12 +6,55 @@ class AppDimens {
   const AppDimens._();
 
   static const pageHorizontalPadding = 20.0;
+  static const sectionSpacing = 24.0;
+  static const contentSpacing = 12.0;
+  static const buttonHeight = 48.0;
+  static const landscapeImageRatio = 16 / 9;
+  static const thumbnailSize = 72.0;
   static const cardRadius = 22.0;
   static const compactCardRadius = 18.0;
   static const sheetRadius = 28.0;
   static const buttonRadius = 18.0;
   static const pillRadius = 999.0;
   static const bottomNavigationHeight = 78.0;
+}
+
+class AppTextStyles {
+  const AppTextStyles._();
+
+  static const sectionTitle = TextStyle(
+    color: AppColors.textPrimary,
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    height: 1.3,
+    letterSpacing: 0,
+  );
+  static const cardTitle = TextStyle(
+    color: AppColors.textPrimary,
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+    height: 1.35,
+    letterSpacing: 0,
+  );
+  static const stateTitle = TextStyle(
+    color: AppColors.textPrimary,
+    fontSize: 18,
+    fontWeight: FontWeight.w800,
+    height: 1.35,
+    letterSpacing: 0,
+  );
+  static const body = TextStyle(
+    color: AppColors.textSecondary,
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    height: 1.45,
+    letterSpacing: 0,
+  );
+  static const button = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0,
+  );
 }
 
 class AppShadows {
