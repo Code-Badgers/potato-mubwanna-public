@@ -5,6 +5,7 @@ import '../../../core/network/api_exception.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../legal/data/legal_consent_store.dart';
 import '../../mission/application/mission_controller.dart';
+import '../../mypage/application/user_activity_summary_controller.dart';
 import '../../potato/application/potato_collection_controller.dart';
 import '../../stamp/application/stamp_book_controller.dart';
 import '../data/spot_detail_repository.dart';
@@ -42,7 +43,10 @@ final visitVerificationControllerProvider = StateNotifierProvider.autoDispose
     repository: ref.watch(visitVerificationRepositoryProvider),
     locationService: ref.watch(locationServiceProvider),
     onSuccess: () {
+      // 도감과 별도로 유지되는 성장/활동 요약도 인증 결과와 함께 갱신한다.
       ref.invalidate(potatoCollectionProvider);
+      ref.invalidate(potatoGrowthSummaryProvider);
+      ref.invalidate(userActivitySummaryProvider);
       ref.invalidate(stampBookProvider);
       ref.invalidate(missionsProvider);
     },

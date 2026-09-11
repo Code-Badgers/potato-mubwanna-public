@@ -24,6 +24,41 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:potato_mubwanna/shared/widgets/loading/potato_loading_view.dart';
 
 void main() {
+  for (final stampEnabled in [true, false]) {
+    testWidgets('map visit entry respects stampEnabled=$stampEnabled', (tester) async {
+      final spot = MapSpot.fromJson({
+        'id': 1, 'name': '테스트 장소', 'stampEnabled': stampEnabled,
+        'category': 'POTATO_TOUR', 'latitude': 37.38, 'longitude': 128.66,
+      });
+      final router = GoRouter(initialLocation: '/map', routes: [
+        GoRoute(path: '/map', builder: (_, __) => const MapScreen(
+          hasMapConfiguration: true, showFullMapInitially: true,
+        )),
+        GoRoute(path: '/spots/:spotId', builder: (_, state) => Scaffold(
+          body: Text('인증 장소 ${state.pathParameters['spotId']}'),
+        )),
+      ]);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(ProviderScope(overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => [spot]),
+        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ], child: MaterialApp.router(routerConfig: router)));
+      await tester.pumpAndSettle();
+      final button = find.byKey(const ValueKey('map-visit-verify-1'));
+      if (stampEnabled) {
+        await tester.ensureVisible(button);
+        await tester.pumpAndSettle();
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(find.text('인증 장소 1'), findsOneWidget);
+      } else {
+        expect(button, findsNothing);
+      }
+    });
+  }
+
   testWidgets('location button explains denied permission without closing map',
       (tester) async {
     const channel = MethodChannel('flutter.baseflow.com/geolocator');
@@ -271,6 +306,7 @@ void main() {
         find.byKey(const ValueKey('full-map-locate-button')), findsOneWidget);
     expect(find.text('정선 5일장'), findsOneWidget);
     expect(find.text('길찾기'), findsOneWidget);
+    expect(find.byKey(const ValueKey('map-visit-verify-1')), findsOneWidget);
     expect(find.text('상세보기'), findsNothing);
     expect(find.byKey(FeatureTourTargets.mapMarker), findsOneWidget);
     final mapTourTargetSize =
