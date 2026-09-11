@@ -372,6 +372,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen>
                 child: _MissionGentleStart(
                   featuredMission: featuredMission,
                   dailyMissions: todayMissions,
+                  completedDailyMissions: selectedDailyMissions.where((mission) => mission.status == MissionStatus.completed).toList(),
                   weeklyMissions: weeklyMissions,
                   eventMissions: eventMissions,
                   completedCount: selectedDailyMissions
@@ -542,7 +543,7 @@ class _MissionLoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const PotatoLoadingView.fullScreen(
-      subtitle: '점순이가 오늘 미션을 고르고 있어요',
+      subtitle: '오늘의 미션을 불러오고 있어요',
     );
   }
 }
@@ -717,6 +718,7 @@ class _MissionGentleStart extends StatelessWidget {
   const _MissionGentleStart({
     required this.featuredMission,
     required this.dailyMissions,
+    required this.completedDailyMissions,
     required this.weeklyMissions,
     required this.eventMissions,
     required this.completedCount,
@@ -726,6 +728,7 @@ class _MissionGentleStart extends StatelessWidget {
 
   final MissionChallenge? featuredMission;
   final List<MissionChallenge> dailyMissions;
+  final List<MissionChallenge> completedDailyMissions;
   final List<MissionChallenge> weeklyMissions;
   final List<MissionChallenge> eventMissions;
   final int completedCount;
@@ -758,6 +761,23 @@ class _MissionGentleStart extends StatelessWidget {
             completedCount: completedCount,
             totalCount: totalCount,
           ),
+          if (completedDailyMissions.isNotEmpty)
+            ExpansionTile(
+              key: const ValueKey('daily-completion-history'),
+              title: const Text('오늘 완료한 미션 확인'),
+              children: [
+                for (final mission in completedDailyMissions)
+                  ListTile(
+                    title: Text(mission.title),
+                    subtitle: Text([
+                      mission.completionEvidenceLabel,
+                      mission.completionTimeLabel,
+                    ].whereType<String>().join('\n')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => onMissionTap(mission.id),
+                  ),
+              ],
+            ),
           const SizedBox(height: 12),
           if (dailyMissions.isEmpty)
             const _MissionEmptyState()
@@ -1369,6 +1389,14 @@ class _MissionDetailViewState extends State<_MissionDetailView> {
                     sliver: SliverList(
                       delegate: SliverChildListDelegate.fixed([
                         _MissionDetailIntro(mission: mission),
+                        if (mission.completionEvidenceLabel != null) ...[
+                          const SizedBox(height: 12),
+                          Text(mission.completionEvidenceLabel!),
+                          if (mission.completionTimeLabel != null)
+                            Text(mission.completionTimeLabel!),
+                          if (mission.evidencePeriodLabel != null)
+                            Text(mission.evidencePeriodLabel!),
+                        ],
                         const SizedBox(height: 14),
                         _MissionHowToCard(mission: mission),
                         const SizedBox(height: 18),
@@ -1482,6 +1510,9 @@ class _MissionDetailIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (mission.group != MissionGroup.jumsooni) {
+      return _MissionDetailSummaryCard(mission: mission);
+    }
     return SizedBox(
       height: 430,
       child: Stack(
@@ -1579,7 +1610,12 @@ class _MissionDetailSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _MissionKindBadge(label: '일일 미션'),
+          _MissionKindBadge(label: switch (mission.group) {
+            MissionGroup.jumsooni => '점순이 특별 미션',
+            MissionGroup.daily => '일일 미션',
+            MissionGroup.weekly => '주간 미션',
+            MissionGroup.event => '기간 한정 미션',
+          }),
           const SizedBox(height: 12),
           Text(
             _detailTitle(mission),
@@ -2596,10 +2632,10 @@ class _MissionRewardDialog extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              MissionJumsooniDialogue.pick(
+              mission.group == MissionGroup.jumsooni ? MissionJumsooniDialogue.pick(
                 MissionJumsooniDialogue.complete,
                 mission.id,
-              ),
+              ) : '미션을 완료했어요',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.textPrimary,

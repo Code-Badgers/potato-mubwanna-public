@@ -112,6 +112,7 @@ class MissionController
     final completedMission = mission.copyWith(
       status: MissionStatus.completed,
       progress: mission.target,
+      completedAt: result.completedAt,
     );
     // 로그아웃 후 도착한 응답은 폐기된 세션의 상태/보상 캐시를 변경하지 않는다.
     if (!mounted) return completedMission;

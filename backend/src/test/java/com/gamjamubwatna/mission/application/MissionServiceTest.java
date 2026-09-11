@@ -144,6 +144,8 @@ class MissionServiceTest {
         assertThat(result.totalCount()).isEqualTo(2);
         assertThat(result.completedCount()).isEqualTo(1);
         assertThat(result.missions().getFirst().completed()).isTrue();
+        assertThat(result.missions().getFirst().completedAt()).isEqualTo(completed.getCompletedAt());
+        assertThat(result.missions().get(1).completedAt()).isNull();
         assertThat(result.missions().getFirst().status()).isEqualTo(MissionStatus.COMPLETED);
         assertThat(result.missions().get(1).completed()).isFalse();
         assertThat(result.missions().get(1).status()).isEqualTo(MissionStatus.IN_PROGRESS);
@@ -194,6 +196,7 @@ class MissionServiceTest {
         assertThat(result.completedCount()).isZero();
         assertThat(item.completed()).isFalse();
         assertThat(item.progress()).isEqualTo(1);
+        assertThat(item.completedAt()).isNull();
         assertThat(item.periodStartsAt()).isEqualTo(Instant.parse("2026-06-30T15:00:00Z"));
         assertThat(item.periodEndsAt()).isEqualTo(Instant.parse("2026-07-01T15:00:00Z"));
     }

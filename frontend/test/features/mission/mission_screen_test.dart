@@ -27,6 +27,25 @@ import 'package:potato_mubwanna/features/potato/data/step_count_reader_stub.dart
 import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
 
 void main() {
+  testWidgets('completed daily evidence can be opened without Jumsooni intro', (tester) async {
+    await _pumpMissionScreen(tester);
+    final history = find.byKey(const ValueKey('daily-completion-history'));
+    await tester.ensureVisible(history);
+    await tester.pumpAndSettle();
+    await tester.tap(history);
+    await tester.pumpAndSettle();
+    final entry = find.text('스탬프 1개 획득하기');
+    await tester.ensureVisible(entry);
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(find.text('완료 기준: 스탬프 획득 기록'), findsOneWidget);
+    expect(find.text('일일 미션'), findsWidgets);
+    final characters = tester.widgetList<Image>(find.byType(Image)).where((image) =>
+      image.image is AssetImage && (image.image as AssetImage).assetName.contains('jumsooni'));
+    expect(characters, isEmpty);
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '완료된 미션')).onPressed, isNull);
+  });
+
   testWidgets('refresh gesture and app resume reload mission progress', (tester) async {
     final repository = _FakeMissionRepository();
     await _pumpMissionScreen(tester, repository: repository);

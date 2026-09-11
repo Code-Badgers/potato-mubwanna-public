@@ -32,6 +32,7 @@ class MissionJumsooniDialogue {
   }
 
   static String detail(MissionChallenge mission) {
+    if (mission.dialogue.trim().isNotEmpty) return mission.dialogue.trim();
     return switch (mission.type) {
       MissionType.photo || MissionType.photoOcr => '이 장면은\n사진으로 남겨도 좋겠어요',
       MissionType.quiz => '강원도 이야기를\n짧게 풀어볼까요?',

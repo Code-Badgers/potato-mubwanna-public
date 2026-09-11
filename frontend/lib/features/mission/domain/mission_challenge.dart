@@ -68,6 +68,9 @@ class MissionChallenge {
     this.isNew = false,
     this.active = true,
     this.todaySelected = false,
+    this.completedAt,
+    this.periodStartsAt,
+    this.periodEndsAt,
   });
 
   final String id;
@@ -87,12 +90,45 @@ class MissionChallenge {
   final bool isNew;
   final bool active;
   final bool todaySelected;
+  final DateTime? completedAt;
+  final DateTime? periodStartsAt;
+  final DateTime? periodEndsAt;
+
+  String? get completionEvidenceLabel {
+    if (status != MissionStatus.completed) return null;
+    final basis = switch (type) {
+      MissionType.visit => '방문 인증',
+      MissionType.visitAndStep => '걸음 수 인증',
+      MissionType.stamp => '스탬프 획득 기록',
+      MissionType.collection => '시군 방문 기록',
+      MissionType.photo => '사진 인증',
+      MissionType.photoOcr => '사진·문자 인증',
+      MissionType.qrScan => 'QR 인증',
+      MissionType.quiz => '퀴즈 정답 확인',
+    };
+    return '완료 기준: $basis';
+  }
+
+  String? get completionTimeLabel => completedAt == null || status != MissionStatus.completed
+      ? null : '완료 처리: ${_seoulTime(completedAt!)} (한국 시간)';
+
+  String? get evidencePeriodLabel {
+    if (periodStartsAt == null || periodEndsAt == null) return null;
+    return '인정 기간: ${_seoulTime(periodStartsAt!)} ~ ${_seoulTime(periodEndsAt!)} 미만';
+  }
+
+  static String _seoulTime(DateTime value) {
+    final seoul = value.toUtc().add(const Duration(hours: 9));
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${seoul.year}.${two(seoul.month)}.${two(seoul.day)} ${two(seoul.hour)}:${two(seoul.minute)}';
+  }
 
   MissionChallenge copyWith({
     MissionStatus? status,
     int? progress,
     bool? active,
     bool? isNew,
+    DateTime? completedAt,
   }) {
     return MissionChallenge(
       id: id,
@@ -112,6 +148,9 @@ class MissionChallenge {
       isNew: isNew ?? this.isNew,
       active: active ?? this.active,
       todaySelected: todaySelected,
+      completedAt: completedAt ?? this.completedAt,
+      periodStartsAt: periodStartsAt,
+      periodEndsAt: periodEndsAt,
     );
   }
 
@@ -139,6 +178,9 @@ class MissionChallenge {
       isNew: map['new'] as bool? ?? map['isNew'] as bool? ?? false,
       active: map['active'] as bool? ?? true,
       todaySelected: map['todaySelected'] as bool? ?? false,
+      completedAt: DateTime.tryParse(map['completedAt']?.toString() ?? ''),
+      periodStartsAt: DateTime.tryParse(map['periodStartsAt']?.toString() ?? ''),
+      periodEndsAt: DateTime.tryParse(map['periodEndsAt']?.toString() ?? ''),
     );
   }
 
