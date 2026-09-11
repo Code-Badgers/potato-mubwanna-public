@@ -2,6 +2,24 @@ enum PotatoRarity { common, rare, epic, legendary }
 
 enum PotatoAcquisitionType { growth, mission, visit, stamp, event }
 
+extension PotatoAcquisitionGuidance on PotatoAcquisitionType {
+  String get label => switch (this) {
+    PotatoAcquisitionType.growth => '키워서 수확',
+    PotatoAcquisitionType.mission => '미션 보상',
+    PotatoAcquisitionType.visit => '방문 인증 보상',
+    PotatoAcquisitionType.stamp => '스탬프 수집 보상',
+    PotatoAcquisitionType.event => '이벤트 보상',
+  };
+
+  String get hint => switch (this) {
+    PotatoAcquisitionType.growth => '감자를 끝까지 키운 뒤 수확하면 만날 수 있어요.',
+    PotatoAcquisitionType.mission => '연결된 미션을 완료하면 만날 수 있어요.',
+    PotatoAcquisitionType.visit => '해당 장소의 방문 인증을 완료하면 만날 수 있어요.',
+    PotatoAcquisitionType.stamp => '필요한 스탬프를 모으면 만날 수 있어요.',
+    PotatoAcquisitionType.event => '이벤트 획득 조건을 완료하면 만날 수 있어요.',
+  };
+}
+
 class PotatoCollection {
   const PotatoCollection({
     required this.totalCount,
@@ -82,6 +100,12 @@ class PotatoCollectionItem {
   final bool harvestable;
   final bool harvested;
   final PotatoCareStatus? careStatus;
+
+  String get acquisitionGuidance => [
+    acquisitionType.label,
+    if (acquisitionHint.trim().isNotEmpty) acquisitionHint.trim()
+    else acquisitionType.hint,
+  ].join('\n');
 
   int get maxGrowthLevel {
     return switch (rarity) {
