@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../shared/widgets/place_visit_actions.dart';
 import '../../../audio/application/audio_guide_controller.dart';
 import '../../../audio/application/audio_playback_controller.dart';
 import '../../../audio/data/audio_guide_repository.dart';
@@ -128,10 +129,8 @@ class _SpotDetailBody extends ConsumerWidget {
                   ],
                 ),
               ],
-              if (spot.hasPlaceInformation) ...[
-                const SizedBox(height: 30),
-                _SpotInformationSection(spot: spot),
-              ],
+              const SizedBox(height: 30),
+              _SpotInformationSection(spot: spot),
               _AudioGuideSection(
                 audioGuide: audioGuide,
                 onRetry: () => ref.invalidate(audioGuideProvider(spot.id)),
@@ -1048,7 +1047,7 @@ class _SpotInformationSection extends StatelessWidget {
       children: [
         const _SectionTitle(
           icon: Icons.info_outline_rounded,
-          title: '관광지 정보',
+          title: '이용 안내',
         ),
         if (spot.description != null) ...[
           const SizedBox(height: 12),
@@ -1062,6 +1061,17 @@ class _SpotInformationSection extends StatelessWidget {
             ),
           ),
         ],
+        if (spot.openingHours == null && spot.businessTodayText == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text('영업시간은 방문 전 확인해주세요.',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          ),
+        PlaceVisitActions(phone: spot.phone ?? spot.contactPhone, website: spot.website),
+        if (spot.openingHours != null)
+          const Text('영업정보 출처: 한국관광공사', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        if (spot.businessTodayText != null)
+          const Text('영업정보 출처: Google Places', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
         if (rows.isNotEmpty) ...[
           const SizedBox(height: 14),
           Container(

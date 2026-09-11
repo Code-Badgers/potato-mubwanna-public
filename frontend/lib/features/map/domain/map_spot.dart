@@ -23,7 +23,7 @@ class MapSpot {
     final menuItems = (json['menuItems'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(MapSpotMenuItem.fromJson)
-        .where((item) => item.name.isNotEmpty && item.hasPrice)
+        .where((item) => item.name.trim().isNotEmpty)
         .toList(growable: false);
     return MapSpot(
       id: json['id'].toString(),
@@ -240,6 +240,7 @@ class MapSpotMenuItem {
     required this.priceWon,
     required this.priceNote,
     required this.verifiedOn,
+    this.sourceUrl,
   });
 
   factory MapSpotMenuItem.fromJson(Map<String, dynamic> json) {
@@ -248,6 +249,7 @@ class MapSpotMenuItem {
       priceWon: (json['priceWon'] as num?)?.toInt(),
       priceNote: json['priceNote'] as String?,
       verifiedOn: json['verifiedOn'] as String? ?? '',
+      sourceUrl: json['sourceUrl'] as String?,
     );
   }
 
@@ -255,6 +257,7 @@ class MapSpotMenuItem {
   final int? priceWon;
   final String? priceNote;
   final String verifiedOn;
+  final String? sourceUrl;
 
   bool get hasPrice => priceWon != null || (priceNote?.isNotEmpty ?? false);
 
@@ -266,7 +269,9 @@ class MapSpotMenuItem {
           );
       return '$formatted원';
     }
-    return priceNote ?? '';
+    return (priceNote?.trim().isNotEmpty ?? false)
+        ? priceNote!.trim()
+        : '가격 확인 필요';
   }
 
   String get verifiedOnLabel => verifiedOn.replaceAll('-', '.');

@@ -31,6 +31,7 @@ void main() {
       'menuItems': [
         {
           'name': '감자빵',
+          'sourceUrl': 'https://example.com/menu',
           'priceWon': 3300,
           'priceNote': null,
           'verifiedOn': '2026-08-03',
@@ -61,10 +62,11 @@ void main() {
     expect(spot.todayOpeningText, '화요일: 오전 11:00~오후 8:00');
     expect(spot.menuItems[0].priceLabel, '3,300원');
     expect(spot.menuItems[0].verifiedOnLabel, '2026.08.03');
+    expect(spot.menuItems[0].sourceUrl, 'https://example.com/menu');
     expect(spot.menuItems[1].priceLabel, '변동가격');
   });
 
-  test('drops incomplete menu entries instead of showing invented prices', () {
+  test('keeps known menus without inventing missing prices', () {
     final spot = MapSpot.fromJson({
       'id': 1,
       'menuItems': [
@@ -77,7 +79,7 @@ void main() {
       ],
     });
 
-    expect(spot.menuItems, isEmpty);
+    expect(spot.menuItems.single.priceLabel, '가격 확인 필요');
     expect(spot.imageUrl, isNull);
   });
 }

@@ -123,7 +123,7 @@ class SpotDetail {
     return (json['menuItems'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(MapSpotMenuItem.fromJson)
-        .where((item) => item.name.isNotEmpty && item.hasPrice)
+        .where((item) => item.name.trim().isNotEmpty)
         .toList(growable: false);
   }
 }
