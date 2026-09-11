@@ -59,7 +59,7 @@ class TourApiClientTest {
             .contains("serviceKey=encoded%2Bkey")
             .contains("contentId=12345")
             .contains("imageYN=Y")
-            .contains("subImageYN=Y");
+            .doesNotContain("subImageYN", "contentTypeId");
     }
 
     @Test
@@ -137,8 +137,30 @@ class TourApiClientTest {
             .contains("https://tour.example.com/first.jpg");
         assertThat(lastQuery)
             .contains("contentId=12345")
-            .contains("firstImageYN=Y")
-            .contains("overviewYN=Y");
+            .doesNotContain("defaultYN", "firstImageYN", "addrinfoYN", "mapinfoYN", "overviewYN", "contentTypeId");
+    }
+
+    @Test
+    void mapsShoppingFieldsConfirmedByTheLiveTourApi() {
+        emptyDetailCommon();
+        server.createContext("/detailIntro2", exchange -> {
+            lastQuery = exchange.getRequestURI().getRawQuery();
+            writeJson(exchange, """
+                {"response":{"body":{"items":{"item":[{
+                  "contentid":"4093743","contenttypeid":"38",
+                  "opentime":"09:00~21:00","restdateshopping":"연중무휴",
+                  "parkingshopping":"불가능","infocentershopping":"0507-1307-3188",
+                  "saleitem":"유리 공예품 / 관광기념품","saleitemcost":""
+                }]}}}}
+                """.getBytes(StandardCharsets.UTF_8));
+        });
+        var info = client("encoded%2Bkey").findSpotTourInfo("4093743", 38).orElseThrow();
+        assertThat(info.openingHours()).isEqualTo("09:00~21:00");
+        assertThat(info.closedDays()).isEqualTo("연중무휴");
+        assertThat(info.parking()).isEqualTo("불가능");
+        assertThat(info.contactPhone()).isEqualTo("0507-1307-3188");
+        assertThat(info.admissionFee()).isNull();
+        assertThat(lastQuery).contains("contentTypeId=38");
     }
 
     @Test
