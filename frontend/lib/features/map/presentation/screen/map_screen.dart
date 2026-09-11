@@ -3216,6 +3216,18 @@ class _SelectedSpotSummary extends StatelessWidget {
             label: const Text('길찾기'),
           ),
         ),
+        if (spot.stampEnabled) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: ValueKey('map-visit-verify-${spot.id}'),
+              onPressed: () => context.push('/spots/${spot.id}'),
+              icon: const Icon(Icons.verified_outlined, size: 18),
+              label: const Text('방문 인증하기'),
+            ),
+          ),
+        ],
         _SpotTourInfoSection(
           spot: spot,
           spotDetail: spotDetail,
