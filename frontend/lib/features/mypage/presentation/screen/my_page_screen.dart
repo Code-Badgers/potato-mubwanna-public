@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/app_state_message.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -610,12 +611,7 @@ class _PotatoAlbumContentState extends State<_PotatoAlbumContent> {
                 children: [
                   Text(
                     '내 감자 도감',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                    ),
+                    style: AppTextStyles.sectionTitle,
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -860,12 +856,7 @@ class _PotatoAlbumEmpty extends StatelessWidget {
         children: [
           Text(
             '내 감자 도감',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
+            style: AppTextStyles.sectionTitle,
           ),
           SizedBox(height: 10),
           Text(
@@ -900,42 +891,14 @@ class _PotatoAlbumLoading extends StatelessWidget {
 
 class _PotatoAlbumError extends StatelessWidget {
   const _PotatoAlbumError({required this.onRetry});
-
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '내 감자 도감',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          '감자 도감을 불러오지 못했어요.',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: onRetry,
-          icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('다시 불러오기'),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => AppStateMessage(
+    icon: Icons.cloud_off_outlined, title: '내 감자 도감',
+    description: '감자 도감을 불러오지 못했어요.',
+    actionLabel: '다시 불러오기', onAction: onRetry,
+  );
 }
 
 class _QuickActionGrid extends StatelessWidget {

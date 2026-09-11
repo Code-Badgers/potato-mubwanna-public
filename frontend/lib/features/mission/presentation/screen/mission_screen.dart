@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/app_state_message.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,7 +23,6 @@ import '../../domain/mission_verification.dart';
 import '../mission_jumsooni_dialogue.dart';
 
 const _missionPrimary = Color(0xFF56C787);
-const _missionDark = Color(0xFF6A4A2A);
 const _missionGold = Color(0xFFF6C23E);
 const _missionLine = Color(0xFFE8E2D8);
 const _missionCardRadius = AppDimens.cardRadius;
@@ -691,82 +691,26 @@ class _MissionGuestPreviewTile extends StatelessWidget {
 }
 
 class _MissionErrorState extends StatelessWidget {
-  const _MissionErrorState({
-    required this.message,
-    required this.onRetry,
-  });
-
+  const _MissionErrorState({required this.message, required this.onRetry});
   final String message;
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: _missionDark,
-              size: 42,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-            ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(
-                backgroundColor: _missionPrimary,
-                foregroundColor: AppColors.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(_missionCardRadius),
-                ),
-              ),
-              child: const Text('다시 시도'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(child: AppStateMessage(
+      icon: Icons.cloud_off_outlined, title: message,
+      actionLabel: '다시 시도', onAction: onRetry,
+    )),
+  );
 }
 
 class _MissionEmptyState extends StatelessWidget {
   const _MissionEmptyState();
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(_missionCardRadius),
-        border: Border.all(color: _missionLine),
-      ),
-      child: const Text(
-        '표시할 미션이 없습니다.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const AppStateMessage(
+    icon: Icons.flag_outlined, title: '표시할 미션이 없습니다.',
+  );
 }
 
 class _MissionGentleStart extends StatelessWidget {
@@ -878,18 +822,13 @@ class _MissionGroupSection extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return Padding(
-      padding: const EdgeInsets.only(top: 22),
+      padding: const EdgeInsets.only(top: AppDimens.sectionSpacing),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
+            style: AppTextStyles.sectionTitle,
           ),
           const SizedBox(height: 4),
           Text(
@@ -1130,12 +1069,7 @@ class _MissionSectionTitle extends StatelessWidget {
               const Expanded(
                 child: Text(
                   '오늘의 일일 미션',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                  ),
+                  style: AppTextStyles.sectionTitle,
                 ),
               ),
               Container(
@@ -1229,13 +1163,10 @@ class _MissionCompactTile extends StatelessWidget {
                       mission.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: AppTextStyles.cardTitle.copyWith(
                         color: enabled
                             ? AppColors.textPrimary
                             : AppColors.textSecondary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
                       ),
                     ),
                     const SizedBox(height: 5),
@@ -1482,7 +1413,7 @@ class _MissionDetailViewState extends State<_MissionDetailView> {
                           : _submitQuiz)
                       : (canComplete ? widget.onComplete : null),
                   style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(56),
+                    minimumSize: const Size.fromHeight(AppDimens.buttonHeight),
                     backgroundColor: _missionPrimary,
                     foregroundColor: AppColors.surface,
                     disabledBackgroundColor: _missionLine,
@@ -1534,12 +1465,7 @@ class _MissionDetailTopBar extends StatelessWidget {
             child: Text(
               '미션 상세',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
+              style: AppTextStyles.sectionTitle,
             ),
           ),
           const SizedBox(width: 48),
@@ -1730,12 +1656,7 @@ class _MissionRewardSection extends StatelessWidget {
       children: [
         const Text(
           '보상',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-          ),
+          style: AppTextStyles.sectionTitle,
         ),
         const SizedBox(height: 10),
         Row(

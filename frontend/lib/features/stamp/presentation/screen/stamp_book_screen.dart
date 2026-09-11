@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/app_state_message.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -2068,14 +2069,8 @@ class _StampSpotActionCard extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 30,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        boxShadow: AppShadows.softCard,
       ),
       child: Stack(
         children: [
@@ -2638,38 +2633,16 @@ String _normalizeCityName(String value) {
 
 class _StampBookError extends StatelessWidget {
   const _StampBookError({required this.onRetry});
-
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: AppColors.textSecondary,
-              size: 36,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '스탬프 투어를 불러오지 못했습니다.',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('다시 시도')),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(child: AppStateMessage(
+      icon: Icons.cloud_off_outlined,
+      title: '스탬프 투어를 불러오지 못했습니다.',
+      actionLabel: '다시 시도', onAction: onRetry,
+    )),
+  );
 }
 
 class _SignedOutState extends StatelessWidget {
