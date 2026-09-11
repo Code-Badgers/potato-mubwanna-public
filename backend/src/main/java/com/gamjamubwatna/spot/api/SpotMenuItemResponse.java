@@ -7,7 +7,8 @@ public record SpotMenuItemResponse(
     String name,
     Integer priceWon,
     String priceNote,
-    LocalDate verifiedOn
+    LocalDate verifiedOn,
+    String sourceUrl
 ) {
 
     public static SpotMenuItemResponse from(SpotMenuItem item) {
@@ -15,7 +16,8 @@ public record SpotMenuItemResponse(
             item.getName(),
             item.getPriceWon(),
             item.getPriceNote(),
-            item.getVerifiedOn()
+            item.getVerifiedOn(),
+            item.getSourceUrl()
         );
     }
 }

@@ -64,7 +64,8 @@ class SpotControllerTest {
                     "감자옹심이",
                     10000,
                     null,
-                    LocalDate.of(2026, 8, 3)
+                    LocalDate.of(2026, 8, 3),
+                    "https://example.com/menu"
                 ))
             )));
 
