@@ -178,12 +178,13 @@ public class TourApiClient {
                 "usetime",
                 "usetimeculture",
                 "usetimeleports",
-                "usetimefestival"
+                "usetimefestival",
+                "opentime"
             ),
-            readFirstText(introItem, "restdate", "restdateculture", "restdateleports", "restdatefood"),
+            readFirstText(introItem, "restdate", "restdateculture", "restdateleports", "restdatefood", "restdateshopping"),
             readFirstText(introItem, "usefee", "usefeeleports", "expagerangeleports"),
-            readFirstText(introItem, "parking", "parkingculture", "parkingleports", "parkingfood"),
-            readFirstText(introItem, "infocenter", "infocenterculture", "infocenterleports", "infocenterfood")
+            readFirstText(introItem, "parking", "parkingculture", "parkingleports", "parkingfood", "parkingshopping"),
+            readFirstText(introItem, "infocenter", "infocenterculture", "infocenterleports", "infocenterfood", "infocentershopping")
         );
         if (isEmpty(tourInfo)) {
             return Optional.empty();
@@ -255,7 +256,6 @@ public class TourApiClient {
             "_type=json",
             "contentId=%s".formatted(encode(contentId)),
             "imageYN=Y",
-            "subImageYN=Y",
             "pageNo=1",
             "numOfRows=10"
         );
@@ -263,17 +263,13 @@ public class TourApiClient {
     }
 
     private URI detailCommonUri(String contentId) {
+        // KorService2 rejects the legacy *YN flags with resultCode=10, even with HTTP 200.
         String query = String.join("&",
             "serviceKey=%s".formatted(encodeServiceKey(serviceKey)),
             "MobileOS=%s".formatted(encode(mobileOs)),
             "MobileApp=%s".formatted(encode(mobileApp)),
             "_type=json",
-            "contentId=%s".formatted(encode(contentId)),
-            "defaultYN=Y",
-            "firstImageYN=Y",
-            "addrinfoYN=Y",
-            "mapinfoYN=Y",
-            "overviewYN=Y"
+            "contentId=%s".formatted(encode(contentId))
         );
         return URI.create("%s%s?%s".formatted(normalizedBaseUrl(), normalizedDetailCommonPath(), query));
     }
