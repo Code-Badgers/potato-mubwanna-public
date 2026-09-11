@@ -39,7 +39,7 @@ void main() {
     expect(find.text('시장·상권'), findsOneWidget);
     expect(find.text('여유'), findsOneWidget);
     expect(find.text('#감자전'), findsOneWidget);
-    expect(find.text('관광지 정보'), findsOneWidget);
+    expect(find.text('이용 안내'), findsOneWidget);
     expect(find.text('정선의 대표 전통시장입니다.'), findsOneWidget);
     expect(find.text('금요일 09:00~18:00'), findsOneWidget);
     expect(find.text('평점 4.6'), findsOneWidget);
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('정선 5일장'), findsOneWidget);
-    expect(find.text('관광지 정보'), findsOneWidget);
+    expect(find.text('이용 안내'), findsOneWidget);
     expect(find.text('관광 해설 오디오'), findsNothing);
     expect(find.byKey(const ValueKey('audio-guide-unavailable')), findsNothing);
   });

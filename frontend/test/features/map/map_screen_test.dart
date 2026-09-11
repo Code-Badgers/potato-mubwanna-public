@@ -437,6 +437,30 @@ void main() {
     expect(find.text('대표 메뉴'), findsNothing);
   });
 
+  testWidgets('shop never shows food menus even if the payload contains them', (tester) async {
+    final shop = MapSpot.fromJson({
+      'id': 97, 'name': '유리알유희', 'category': 'POTATO_SHOP',
+      'latitude': 37.7945347, 'longitude': 128.9182993,
+      'address': '강원특별자치도 강릉시 창해로 351-2', 'cityName': '강릉시',
+      'menuItems': [{'name': '잘못 연결된 음식', 'priceWon': 1000}],
+    });
+    await tester.pumpWidget(ProviderScope(overrides: [
+      spotDetailProvider.overrideWith(_failingSpotDetail),
+      mapSpotsProvider.overrideWith((ref) async => [shop]),
+      favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+      favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+    ], child: MaterialApp(home: MapScreen(
+      hasMapConfiguration: true, showFullMapInitially: true,
+      mapViewBuilder: (_, __) => const SizedBox.expand(),
+    ))));
+    await tester.pumpAndSettle();
+    expect(find.text('유리알유희'), findsOneWidget);
+    expect(find.text('대표 메뉴'), findsNothing);
+    expect(find.text('잘못 연결된 음식'), findsNothing);
+    expect(find.text('메뉴와 가격은 방문 전 확인해주세요.'), findsNothing);
+    expect(find.text('영업시간은 방문 전 확인해주세요.'), findsOneWidget);
+  });
+
   testWidgets('shows address images tour info and detail menu in spot sheet', (
     tester,
   ) async {
@@ -490,6 +514,10 @@ void main() {
     expect(find.text('대표 메뉴'), findsOneWidget);
     expect(find.text('감자라떼'), findsOneWidget);
     expect(find.text('5,500원'), findsOneWidget);
+    expect(find.text('전화 문의'), findsOneWidget);
+    expect(find.text('홈페이지'), findsOneWidget);
+    expect(find.text('영업정보 출처: 한국관광공사'), findsOneWidget);
+    expect(find.text('영업시간은 방문 전 확인해주세요.'), findsNothing);
   });
 
   testWidgets('uses spot list media and business info when detail fails', (
@@ -531,8 +559,8 @@ void main() {
 
     expect(find.text('장소 이미지를 준비 중이에요'), findsOneWidget);
     expect(find.text('이용 안내'), findsOneWidget);
-    expect(find.text('영업시간과 연락처 정보를 준비 중이에요.'), findsOneWidget);
-    expect(find.text('대표 메뉴와 가격 정보를 준비 중이에요.'), findsOneWidget);
+    expect(find.text('영업시간은 방문 전 확인해주세요.'), findsOneWidget);
+    expect(find.text('메뉴와 가격은 방문 전 확인해주세요.'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('fallback-marker-2')));
     await tester.pumpAndSettle();

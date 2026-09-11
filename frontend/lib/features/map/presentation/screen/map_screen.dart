@@ -13,6 +13,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_design_tokens.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../../shared/widgets/place_visit_actions.dart';
 import '../../../feature_tour/presentation/feature_tour_targets.dart';
 import '../../../feature_tour/presentation/feature_tour_host.dart';
 import '../../application/kakao_map_navigation.dart';
@@ -2445,7 +2446,8 @@ class _PopularSpotCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 7),
                     ],
-                    if (spot.menuItems.isNotEmpty) ...[
+                    if (_shouldShowMenuSection(spot.category) &&
+                        spot.menuItems.isNotEmpty) ...[
                       _PopularSpotMetaLine(
                         icon: Icons.restaurant_menu_rounded,
                         label:
@@ -3272,7 +3274,7 @@ class _SelectedSpotSummary extends StatelessWidget {
           spot: spot,
           spotDetail: spotDetail,
         ),
-        if (menuItems.isNotEmpty || shouldShowMenuSection) ...[
+        if (shouldShowMenuSection) ...[
           const SizedBox(height: 14),
           _SpotMenuPreview(
             key: ValueKey('spot-menu-preview-${spot.id}'),
@@ -3376,8 +3378,14 @@ class _SpotTourInfoSection extends StatelessWidget {
     final imageUrls = _imageUrls(detail, spot);
     final guideRows = _tourGuideRows(detail, spot).take(6).toList();
     final description = detail?.description;
-    final shouldShowGuidePlaceholder =
-        _shouldShowBusinessSection(spot.category) && guideRows.isEmpty;
+    final hasHours = (detail?.openingHours?.trim().isNotEmpty ?? false) ||
+        (detail?.businessOpeningHours?.todayText?.trim().isNotEmpty ?? false) ||
+        (spot.businessOpeningHours?.todayText?.trim().isNotEmpty ?? false) ||
+        (detail?.businessOpeningHours?.weekdayDescriptions.isNotEmpty ?? false) ||
+        (spot.businessOpeningHours?.weekdayDescriptions.isNotEmpty ?? false);
+    final shouldShowGuidePlaceholder = !isLoading &&
+        _shouldShowBusinessSection(spot.category) &&
+        !hasHours;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3427,17 +3435,27 @@ class _SpotTourInfoSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          if (guideRows.isEmpty)
+          if (shouldShowGuidePlaceholder)
             const _SpotInfoPlaceholder(
               icon: Icons.schedule_rounded,
-              label: '영업시간과 연락처 정보를 준비 중이에요.',
-            )
-          else
-            for (final row in guideRows) ...[
-              _TourInfoRow(icon: row.icon, label: row.label),
-              const SizedBox(height: 7),
-            ],
+              label: '영업시간은 방문 전 확인해주세요.',
+            ),
+          for (final row in guideRows) ...[
+            _TourInfoRow(icon: row.icon, label: row.label),
+            const SizedBox(height: 7),
+          ],
+          if (detail?.openingHours != null)
+            const Text('영업정보 출처: 한국관광공사',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          if ((detail?.businessOpeningHours?.hasInfo ?? false) ||
+              (spot.businessOpeningHours?.hasInfo ?? false))
+            const Text('영업정보 출처: Google Places',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
         ],
+        PlaceVisitActions(
+          phone: detail?.phone ?? spot.phone ?? detail?.contactPhone,
+          website: detail?.website ?? spot.website,
+        ),
       ],
     );
   }
@@ -3454,7 +3472,10 @@ class _SpotTourInfoSection extends StatelessWidget {
       _TourInfoItem(
         Icons.today_rounded,
         detail?.businessOpeningHours?.todayText ??
-            spot.businessOpeningHours?.todayText,
+            spot.businessOpeningHours?.todayText ??
+            ((detail?.businessOpeningHours?.weekdayDescriptions.isNotEmpty ?? false)
+                ? detail!.businessOpeningHours!.weekdayDescriptions.join('\n')
+                : spot.businessOpeningHours?.weekdayDescriptions.join('\n')),
       ),
       _TourInfoItem(
         Icons.star_rounded,
@@ -3753,15 +3774,15 @@ class _SpotMenuPreview extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.restaurant_menu_rounded,
                 size: 18,
                 color: _mapDark,
               ),
-              const SizedBox(width: 7),
-              const Expanded(
+              SizedBox(width: 7),
+              Expanded(
                 child: Text(
                   '대표 메뉴',
                   style: TextStyle(
@@ -3770,15 +3791,6 @@ class _SpotMenuPreview extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
-                ),
-              ),
-              Text(
-                '${menuItems.first.verifiedOnLabel} 확인',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
                 ),
               ),
             ],
@@ -3801,16 +3813,26 @@ class _SpotMenuPreview extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  menuItems[index].priceLabel,
-                  style: const TextStyle(
-                    color: _mapDark,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
+                Expanded(
+                  child: Text(
+                    menuItems[index].priceLabel,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                      color: _mapDark,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
                   ),
                 ),
               ],
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: PlaceSourceCaption(
+                sourceUrl: menuItems[index].sourceUrl,
+                verifiedOn: menuItems[index].verifiedOn,
+              ),
             ),
             if (index < menuItems.length - 1) const SizedBox(height: 7),
           ],
@@ -3855,7 +3877,7 @@ class _SpotEmptyMenuPreview extends StatelessWidget {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              '대표 메뉴와 가격 정보를 준비 중이에요.',
+              '메뉴와 가격은 방문 전 확인해주세요.',
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
