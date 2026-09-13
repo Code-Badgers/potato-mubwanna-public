@@ -1236,7 +1236,7 @@ class _TravelCourseSection extends StatelessWidget {
                   child: _DiscoverySectionStatus(
                     icon: Icons.route_rounded,
                     title: '추천 코스를 준비하지 못했어요',
-                    description: '장소 데이터가 모이면 코스를 보여드릴게요.',
+                    description: '같은 지역에서 함께 둘러볼 장소를 찾으면 보여드릴게요.',
                   ),
                 )
               : ListView.separated(
@@ -1666,6 +1666,11 @@ class _TravelCourseDetailPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+                const Text(
+                  '이동시간과 관람시간을 계산하지 않은 코스예요. 방문 전 각 장소의 운영시간과 길찾기를 확인해주세요.',
+                  style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+                ),
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 7,
                   runSpacing: 7,
