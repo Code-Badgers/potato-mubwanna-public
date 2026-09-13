@@ -50,11 +50,35 @@ does not replace compile-time environment constants.
 
 ### Legal notice configuration
 
-Copy `.env.example` to the ignored `frontend/.env` and fill every `LEGAL_*`
-value before a release build. The real registration number, home-office
-address, phone number, and email must not be committed. A release build must
-receive the file through `--dart-define-from-file=frontend/.env`; Gradle rejects
-the build when a required legal value is missing.
+Copy `.env.example` to the ignored `frontend/.env` for local development, or
+copy `.env.release.example` to `frontend/.env.release` for a release build.
+Fill every `LEGAL_*` value in the selected file. The real registration number,
+home-office address, phone number, and email must not be committed. Gradle
+rejects a release build when a required legal value is missing.
+
+### Android release APK
+
+The repository provides a macOS/Linux helper that builds an ARM64 release APK
+and verifies the production API URL, release signer, and Kakao release key hash.
+Create the ignored release environment file first:
+
+```bash
+cp .env.release.example .env.release
+```
+
+Fill the empty values in `.env.release`, then point
+`ANDROID_KEYSTORE_PATH` at the permanent release keystore and run:
+
+```bash
+ANDROID_KEYSTORE_PATH=/absolute/path/to/potato-mubwanna-release.jks \
+  ./tool/build_android_release.sh
+```
+
+The script prompts for the keystore password without displaying it. It uses
+the alias `potato-mubwanna-release` and the same key password by default. Set
+`ANDROID_KEY_ALIAS` or `ANDROID_KEY_PASSWORD` only when the keystore differs.
+Neither the keystore, passwords, `.env.release`, nor the generated APK should
+be committed.
 
 ### Kakao Map on a Windows Android emulator
 
