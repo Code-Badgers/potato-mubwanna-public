@@ -797,7 +797,7 @@ class _PotatoAcquisitionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  potato.alreadyOwned ? '이미 보유한 감자예요' : '감자 획득',
+                  potato.acquisitionMessage,
                   style: const TextStyle(
                     color: Color(0xFF76561A),
                     fontSize: 12,

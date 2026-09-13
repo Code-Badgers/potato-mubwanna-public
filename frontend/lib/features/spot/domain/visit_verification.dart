@@ -115,6 +115,18 @@ class VisitAcquiredPotato {
   final String acquisitionType;
   final bool alreadyOwned;
 
+  String get acquisitionMessage {
+    if (alreadyOwned) return '이미 보유한 감자예요';
+    return switch (acquisitionType.toUpperCase()) {
+      'GROWTH' => '새로운 감자를 수확했어요!',
+      'MISSION' => '미션 보상으로 감자를 받았어요!',
+      'VISIT' => '방문 보상으로 감자를 받았어요!',
+      'STAMP' => '스탬프 보상으로 감자를 받았어요!',
+      'EVENT' => '이벤트 보상으로 감자를 받았어요!',
+      _ => '새로운 감자를 받았어요!',
+    };
+  }
+
   factory VisitAcquiredPotato.fromJson(Object? json) {
     final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
     return VisitAcquiredPotato(

@@ -691,10 +691,15 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                 ),
                 const SizedBox(height: 10),
                 _PotatoProgressLine(
-                  label: '수확까지',
+                  label: '성장 진행도',
                   valueLabel: '$harvestPercent%',
                   value: harvestProgress,
                 ),
+                if (!harvested) ...[
+                  const SizedBox(height: 8),
+                  const Text('어떤 감자가 자랄까요?',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                ],
                 const SizedBox(height: 12),
                 KeyedSubtree(
                   key: FeatureTourTargets.potatoCareActions,
@@ -1036,7 +1041,7 @@ class _PotatoHarvestDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     const Text(
-                      '새로운 감자를 수확했습니다',
+                      '새로운 감자를 수확했어요!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textPrimary,
@@ -1516,7 +1521,7 @@ class _PotatoCardDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _InfoBlock(title: '감자 이야기', body: data.story),
-          _InfoBlock(title: '획득 기록', body: data.acquisitionLabel),
+          _InfoBlock(title: '획득 방법', body: data.acquisitionLabel),
           if (data.item != null) _GrowthProgress(item: data.item!),
         ],
       ),
@@ -1552,7 +1557,7 @@ class _PotatoCardSkeletonData {
   static _PotatoCardSkeletonData fromItem(PotatoCollectionItem item) {
     final locked = !item.acquired;
     final story = locked
-        ? '이 카드는 아직 뒷면만 보여요. 관련 장소를 방문하면 감자의 이야기가 열립니다.'
+        ? '아직 만나지 못한 감자예요. 획득하면 감자의 이야기가 열려요.'
         : (item.description.trim().isEmpty
             ? '${item.region} 여행길에서 열린 감자 카드예요.'
             : item.description.trim());
@@ -1565,11 +1570,7 @@ class _PotatoCardSkeletonData {
       rarity: item.rarity,
       region: item.region.trim().isEmpty ? '강원' : item.region,
       story: story,
-      acquisitionLabel: locked
-          ? (item.acquisitionHint.trim().isEmpty
-              ? '관련 감자 스팟을 방문하면 열립니다.'
-              : item.acquisitionHint.trim())
-          : '${item.region}에서 수집',
+      acquisitionLabel: item.acquisitionGuidance,
       acquiredDateLabel: acquiredDate,
       assetPath: potatoLocalAssetPath(item.code),
       locked: locked,

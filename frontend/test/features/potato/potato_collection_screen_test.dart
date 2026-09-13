@@ -25,10 +25,11 @@ void main() {
 
     expect(find.text('대표 감자'), findsNothing);
     expect(find.text('???'), findsWidgets);
+    expect(find.text('어떤 감자가 자랄까요?'), findsOneWidget);
     expect(find.text('곤드레감자'), findsNothing);
     expect(find.text('오늘 감자걸음'), findsOneWidget);
     expect(find.text('7,842 / 10,000걸음'), findsOneWidget);
-    expect(find.text('수확까지'), findsOneWidget);
+    expect(find.text('성장 진행도'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
     expect(find.text('아기'), findsNothing);
     expect(find.text('어린'), findsNothing);
@@ -74,7 +75,7 @@ void main() {
 
     expect(find.text('곤드레감자'), findsWidgets);
     expect(find.text('감자 이야기'), findsOneWidget);
-    expect(find.text('획득 기록'), findsOneWidget);
+    expect(find.text('획득 방법'), findsOneWidget);
     expect(find.text('성장 진행'), findsOneWidget);
     expect(find.text('대표 감자로 설정'), findsNothing);
   });
@@ -184,7 +185,7 @@ void main() {
 
     expect(find.text('아직 만나지 못한 감자'), findsWidgets);
     expect(find.text('감자 이야기'), findsOneWidget);
-    expect(find.text('획득 기록'), findsOneWidget);
+    expect(find.text('획득 방법'), findsOneWidget);
     expect(repository.updatedPotatoId, isNull);
   });
 
@@ -283,7 +284,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 260));
 
     expect(repository.harvestedRepresentative, isTrue);
-    expect(find.text('새로운 감자를 수확했습니다'), findsOneWidget);
+    expect(find.text('새로운 감자를 수확했어요!'), findsOneWidget);
     expect(find.text('곤드레감자 카드가 도감에 들어왔어요'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '감자 카드 보기'), findsOneWidget);
   });
