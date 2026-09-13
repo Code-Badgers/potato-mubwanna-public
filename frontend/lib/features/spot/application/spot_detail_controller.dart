@@ -35,6 +35,11 @@ final spotDetailProvider =
       ref.watch(spotDetailRepositoryProvider).fetchSpotDetail(spotId),
 );
 
+enum VisitVerificationPhase { idle, location, server }
+
+final visitVerificationPhaseProvider = StateProvider.autoDispose
+    .family<VisitVerificationPhase, SpotDetail>((ref, spot) => VisitVerificationPhase.idle);
+
 final visitVerificationControllerProvider = StateNotifierProvider.autoDispose
     .family<VisitVerificationController, AsyncValue<VisitVerificationResult?>,
         SpotDetail>(
@@ -50,6 +55,7 @@ final visitVerificationControllerProvider = StateNotifierProvider.autoDispose
       ref.invalidate(stampBookProvider);
       ref.invalidate(missionsProvider);
     },
+    onPhaseChanged: (phase) => ref.read(visitVerificationPhaseProvider(spot).notifier).state = phase,
   ),
 );
 
@@ -60,16 +66,19 @@ class VisitVerificationController
     required VisitVerificationRepository repository,
     required LocationService locationService,
     required void Function() onSuccess,
+    required void Function(VisitVerificationPhase phase) onPhaseChanged,
   })  : _spot = spot,
         _repository = repository,
         _locationService = locationService,
         _onSuccess = onSuccess,
+        _onPhaseChanged = onPhaseChanged,
         super(const AsyncValue.data(null));
 
   final SpotDetail _spot;
   final VisitVerificationRepository _repository;
   final LocationService _locationService;
   final void Function() _onSuccess;
+  final void Function(VisitVerificationPhase phase) _onPhaseChanged;
 
   Future<VisitVerificationResult?> verify() async {
     if (state.isLoading) {
@@ -78,7 +87,10 @@ class VisitVerificationController
 
     try {
       state = const AsyncValue.loading();
+      _onPhaseChanged(VisitVerificationPhase.location);
       final position = await _locationService.getCurrentPosition();
+      state = const AsyncValue.loading();
+      _onPhaseChanged(VisitVerificationPhase.server);
       final result = await _repository.verifyVisit(
         VisitVerificationRequest(
           spotId: _spot.id,
@@ -87,19 +99,23 @@ class VisitVerificationController
         ),
       );
       state = AsyncValue.data(result);
+      _onPhaseChanged(VisitVerificationPhase.idle);
       _onSuccess();
       return result;
     } on ApiException catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
+      _onPhaseChanged(VisitVerificationPhase.idle);
       return null;
     } on LocationFailure catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
+      _onPhaseChanged(VisitVerificationPhase.idle);
       return null;
     } catch (error, stackTrace) {
       state = AsyncValue.error(
         const ApiException(message: '현재 위치를 확인하지 못했습니다.'),
         stackTrace,
       );
+      _onPhaseChanged(VisitVerificationPhase.idle);
       return null;
     }
   }

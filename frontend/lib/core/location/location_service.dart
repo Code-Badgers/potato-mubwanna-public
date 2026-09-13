@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -6,6 +7,7 @@ enum LocationFailureType {
   serviceDisabled,
   permissionDenied,
   permissionDeniedForever,
+  timeout,
   unavailable,
 }
 
@@ -48,7 +50,18 @@ class LocationService {
     await _ensurePermissionGranted();
 
     try {
-      return await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
+      ).timeout(const Duration(seconds: 15));
+      if (position.accuracy.isNaN || position.accuracy > 100) {
+        throw const LocationFailure(
+          type: LocationFailureType.unavailable,
+          message: '현재 위치의 정확도가 낮습니다. 잠시 멈춘 뒤 다시 시도해주세요.',
+          actionLabel: '다시 시도',
+        );
+      }
+      return position;
     } on LocationServiceDisabledException {
       throw const LocationFailure(
         type: LocationFailureType.serviceDisabled,
@@ -63,6 +76,14 @@ class LocationService {
         settingsTarget: LocationSettingsTarget.app,
         actionLabel: '앱 설정',
       );
+    } on TimeoutException {
+      throw const LocationFailure(
+        type: LocationFailureType.timeout,
+        message: '위치 확인에 시간이 걸리고 있습니다. GPS가 잘 잡히는 곳에서 다시 시도해주세요.',
+        actionLabel: '다시 시도',
+      );
+    } on LocationFailure {
+      rethrow;
     } catch (_) {
       throw const LocationFailure(
         type: LocationFailureType.unavailable,

@@ -155,6 +155,7 @@ class _VisitVerificationBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(visitVerificationControllerProvider(spot));
+    final phase = ref.watch(visitVerificationPhaseProvider(spot));
     final canVerify = spot.stampEnabled && !state.isLoading;
 
     return SafeArea(
@@ -199,7 +200,9 @@ class _VisitVerificationBar extends ConsumerWidget {
                 : const Icon(Icons.verified_rounded),
             label: Text(
               state.isLoading
-                  ? '방문 인증 중'
+                  ? phase == VisitVerificationPhase.location
+                      ? '현재 위치 확인 중'
+                      : '서버 인증 중'
                   : spot.stampEnabled
                       ? '방문 인증하기'
                       : '방문 인증 준비 중',
