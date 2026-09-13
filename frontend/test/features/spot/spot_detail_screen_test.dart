@@ -514,6 +514,102 @@ void main() {
 
     expect(find.text('이미 방문 인증한 감자 스팟입니다.'), findsOneWidget);
     expect(find.byKey(const ValueKey('visit-result-sheet')), findsNothing);
+    expect(find.text('다시 시도'), findsNothing);
+  });
+
+  testWidgets('uses spot radius for accuracy and offers retry', (tester) async {
+    await _setMobileViewport(tester);
+    final locationService = _FakeLocationService(accuracy: 40);
+    final repository = _FakeVisitVerificationRepository(result: _visitResult);
+    final narrowSpot = SpotDetail.fromJson(const {
+      'id': 1,
+      'name': '좁은 인증 장소',
+      'stampEnabled': true,
+      'verificationRadiusMeter': 30,
+    });
+
+    await tester.pumpWidget(_app(
+      engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => narrowSpot,
+      audioOverride: (ref) async => _guide,
+      visitRepository: repository,
+      locationService: locationService,
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('정확도가 낮습니다'), findsOneWidget);
+    expect(repository.lastRequest, isNull);
+    expect(find.text('다시 시도'), findsOneWidget);
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(locationService.callCount, 2);
+  });
+
+  testWidgets('shows location and server verification phases', (tester) async {
+    await _setMobileViewport(tester);
+    final locationService = _DeferredLocationService();
+    final repository = _DeferredVisitVerificationRepository();
+    await tester.pumpWidget(_app(
+      engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => _spot,
+      audioOverride: (ref) async => _guide,
+      visitRepository: repository,
+      locationService: locationService,
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pump();
+    expect(find.text('현재 위치 확인 중'), findsOneWidget);
+
+    locationService.position.complete(_position(accuracy: 4));
+    await tester.pump();
+    expect(find.text('서버 인증 중'), findsOneWidget);
+    repository.response.complete(_visitResult);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('visit-result-sheet')), findsOneWidget);
+  });
+
+  testWidgets('ignores a late location result after leaving detail',
+      (tester) async {
+    await _setMobileViewport(tester);
+    final locationService = _DeferredLocationService();
+    await tester.pumpWidget(_app(
+      engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => _spot,
+      audioOverride: (ref) async => _guide,
+      visitRepository: _DeferredVisitVerificationRepository(),
+      locationService: locationService,
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox());
+    locationService.position.complete(_position(accuracy: 4));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('offers retry for network failures', (tester) async {
+    await _setMobileViewport(tester);
+    final repository = _FakeVisitVerificationRepository(
+      error: const ApiException(message: '네트워크 연결을 확인한 뒤 다시 시도해주세요.'),
+    );
+    await tester.pumpWidget(_app(
+      engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => _spot,
+      audioOverride: (ref) async => _guide,
+      visitRepository: repository,
+      locationService: _FakeLocationService(),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('visit-verify-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('다시 시도'), findsOneWidget);
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(repository.callCount, 2);
   });
 
   testWidgets('shows app settings action when location permission is blocked',
@@ -741,11 +837,13 @@ class _FakeVisitVerificationRepository extends VisitVerificationRepository {
   final VisitVerificationResult? result;
   final Object? error;
   VisitVerificationRequest? lastRequest;
+  int callCount = 0;
 
   @override
   Future<VisitVerificationResult> verifyVisit(
     VisitVerificationRequest request,
   ) async {
+    callCount += 1;
     lastRequest = request;
     final error = this.error;
     if (error != null) {
@@ -756,29 +854,21 @@ class _FakeVisitVerificationRepository extends VisitVerificationRepository {
 }
 
 class _FakeLocationService extends LocationService {
-  _FakeLocationService({this.error});
+  _FakeLocationService({this.error, this.accuracy = 4});
 
   final Object? error;
+  final double accuracy;
+  int callCount = 0;
   LocationSettingsTarget? openedTarget;
 
   @override
   Future<Position> getCurrentPosition() async {
+    callCount += 1;
     final error = this.error;
     if (error != null) {
       throw error;
     }
-    return Position(
-      longitude: 128.6609,
-      latitude: 37.3801,
-      timestamp: DateTime.parse('2026-07-27T00:00:00Z'),
-      accuracy: 4,
-      altitude: 0,
-      altitudeAccuracy: 0,
-      heading: 0,
-      headingAccuracy: 0,
-      speed: 0,
-      speedAccuracy: 0,
-    );
+    return _position(accuracy: accuracy);
   }
 
   @override
@@ -786,6 +876,38 @@ class _FakeLocationService extends LocationService {
     openedTarget = target;
     return true;
   }
+}
+
+class _DeferredLocationService extends LocationService {
+  final position = Completer<Position>();
+
+  @override
+  Future<Position> getCurrentPosition() => position.future;
+}
+
+class _DeferredVisitVerificationRepository extends VisitVerificationRepository {
+  _DeferredVisitVerificationRepository() : super(dio: Dio());
+  final response = Completer<VisitVerificationResult>();
+
+  @override
+  Future<VisitVerificationResult> verifyVisit(
+          VisitVerificationRequest request) =>
+      response.future;
+}
+
+Position _position({required double accuracy}) {
+  return Position(
+    longitude: 128.6609,
+    latitude: 37.3801,
+    timestamp: DateTime.parse('2026-07-27T00:00:00Z'),
+    accuracy: accuracy,
+    altitude: 0,
+    altitudeAccuracy: 0,
+    heading: 0,
+    headingAccuracy: 0,
+    speed: 0,
+    speedAccuracy: 0,
+  );
 }
 
 class _FakeAudioPlaybackEngine implements AudioPlaybackEngine {

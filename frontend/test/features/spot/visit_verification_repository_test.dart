@@ -64,6 +64,35 @@ void main() {
       ),
     );
   });
+
+  test('explains retry when verification has no server response', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
+        handler.reject(DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionTimeout,
+        ));
+      }));
+
+    await expectLater(
+      VisitVerificationRepository(dio: dio).verifyVisit(
+        const VisitVerificationRequest(
+          spotId: '1',
+          latitude: 37.3801,
+          longitude: 128.6609,
+        ),
+      ),
+      throwsA(
+        isA<ApiException>()
+            .having((error) => error.statusCode, 'statusCode', isNull)
+            .having(
+              (error) => error.message,
+              'message',
+              '네트워크 연결을 확인한 뒤 다시 시도해주세요.',
+            ),
+      ),
+    );
+  });
 }
 
 Dio _dioWithResponse({

@@ -33,10 +33,13 @@ class VisitVerificationRepository {
       return result.data!;
     } on DioException catch (error) {
       final data = error.response?.data;
+      final isNetworkFailure = error.response == null;
       throw ApiException(
-        message: data is Map<String, dynamic>
-            ? data['message'] as String? ?? '방문 인증에 실패했습니다.'
-            : '방문 인증에 실패했습니다.',
+        message: isNetworkFailure
+            ? '네트워크 연결을 확인한 뒤 다시 시도해주세요.'
+            : data is Map<String, dynamic>
+                ? data['message'] as String? ?? '방문 인증에 실패했습니다.'
+                : '방문 인증에 실패했습니다.',
         code: data is Map<String, dynamic> ? data['code'] as String? : null,
         statusCode: error.response?.statusCode,
       );

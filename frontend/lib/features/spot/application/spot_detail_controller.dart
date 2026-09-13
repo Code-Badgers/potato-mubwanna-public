@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/location/location_service.dart';
@@ -35,6 +37,12 @@ final spotDetailProvider =
       ref.watch(spotDetailRepositoryProvider).fetchSpotDetail(spotId),
 );
 
+enum VisitVerificationPhase { idle, location, server }
+
+final visitVerificationPhaseProvider = StateProvider.autoDispose
+    .family<VisitVerificationPhase, SpotDetail>(
+        (ref, spot) => VisitVerificationPhase.idle);
+
 final visitVerificationControllerProvider = StateNotifierProvider.autoDispose
     .family<VisitVerificationController, AsyncValue<VisitVerificationResult?>,
         SpotDetail>(
@@ -50,6 +58,8 @@ final visitVerificationControllerProvider = StateNotifierProvider.autoDispose
       ref.invalidate(stampBookProvider);
       ref.invalidate(missionsProvider);
     },
+    onPhaseChanged: (phase) =>
+        ref.read(visitVerificationPhaseProvider(spot).notifier).state = phase,
   ),
 );
 
@@ -60,16 +70,19 @@ class VisitVerificationController
     required VisitVerificationRepository repository,
     required LocationService locationService,
     required void Function() onSuccess,
+    required void Function(VisitVerificationPhase phase) onPhaseChanged,
   })  : _spot = spot,
         _repository = repository,
         _locationService = locationService,
         _onSuccess = onSuccess,
+        _onPhaseChanged = onPhaseChanged,
         super(const AsyncValue.data(null));
 
   final SpotDetail _spot;
   final VisitVerificationRepository _repository;
   final LocationService _locationService;
   final void Function() _onSuccess;
+  final void Function(VisitVerificationPhase phase) _onPhaseChanged;
 
   Future<VisitVerificationResult?> verify() async {
     if (state.isLoading) {
@@ -78,7 +91,25 @@ class VisitVerificationController
 
     try {
       state = const AsyncValue.loading();
+      _onPhaseChanged(VisitVerificationPhase.location);
       final position = await _locationService.getCurrentPosition();
+      if (!mounted) {
+        return null;
+      }
+      final configuredRadius = _spot.verificationRadiusMeter;
+      final accuracyLimit = math.min(
+        configuredRadius > 0 ? configuredRadius.toDouble() : 100,
+        100,
+      );
+      if (position.accuracy.isNaN || position.accuracy > accuracyLimit) {
+        throw const LocationFailure(
+          type: LocationFailureType.inaccurate,
+          message: '현재 위치의 정확도가 낮습니다. 잠시 멈춘 뒤 다시 시도해주세요.',
+          actionLabel: '다시 시도',
+        );
+      }
+      state = const AsyncValue.loading();
+      _onPhaseChanged(VisitVerificationPhase.server);
       final result = await _repository.verifyVisit(
         VisitVerificationRequest(
           spotId: _spot.id,
@@ -86,20 +117,30 @@ class VisitVerificationController
           longitude: position.longitude,
         ),
       );
+      if (!mounted) {
+        return null;
+      }
       state = AsyncValue.data(result);
+      _onPhaseChanged(VisitVerificationPhase.idle);
       _onSuccess();
       return result;
     } on ApiException catch (error, stackTrace) {
+      if (!mounted) return null;
       state = AsyncValue.error(error, stackTrace);
+      _onPhaseChanged(VisitVerificationPhase.idle);
       return null;
     } on LocationFailure catch (error, stackTrace) {
+      if (!mounted) return null;
       state = AsyncValue.error(error, stackTrace);
+      _onPhaseChanged(VisitVerificationPhase.idle);
       return null;
     } catch (error, stackTrace) {
+      if (!mounted) return null;
       state = AsyncValue.error(
         const ApiException(message: '현재 위치를 확인하지 못했습니다.'),
         stackTrace,
       );
+      _onPhaseChanged(VisitVerificationPhase.idle);
       return null;
     }
   }
