@@ -627,6 +627,41 @@ Response:
 GET /api/spots/{spotId}/recommendations
 ```
 
+### 3.11 추천 코스 차량 경로 요약
+
+추천 코스에 포함된 활성 감자 스팟을 요청 순서대로 연결한 자동차 경로의 도로 거리와 예상 이동시간을 조회한다. `spotIds`는 중복 없이 2개 이상 7개 이하로 전달한다. 첫 장소는 출발지, 마지막 장소는 목적지, 나머지는 순서가 유지되는 경유지다.
+
+```http
+POST /api/spots/route-estimate
+```
+
+Request:
+
+```json
+{
+  "spotIds": [1, 2, 3]
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "요청이 성공했습니다.",
+  "data": {
+    "distanceMeters": 18400,
+    "durationSeconds": 2760,
+    "source": "KAKAO_MOBILITY"
+  }
+}
+```
+
+- `distanceMeters`: Kakao Mobility 추천 자동차 경로의 전체 도로 거리(미터)
+- `durationSeconds`: 같은 경로의 전체 예상 이동시간(초)
+- `400 Bad Request`: ID 개수·중복·형식 오류 또는 활성 장소 누락
+- `503 Service Unavailable`: 경로 API 키 미설정, 경로 검색 결과 없음 또는 외부 API 장애
+
 ---
 
 ## 4. Stamp API

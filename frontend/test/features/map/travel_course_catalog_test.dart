@@ -22,7 +22,7 @@ void main() {
     final course = foodCourse(food);
     expect(course.spots.map((spot) => spot.id), ['1', '2', '3']);
     expect(course.heroImageUrl, 'https://example.com/food.jpg');
-    expect(course.estimatedDuration, '소요시간 미산정');
+    expect(course.estimatedDuration, '차량 이동시간 미산정');
     expect(course.description, contains('강릉'));
     expect(course.editorialIntro, '감자옹심이 → 중앙시장 → 감자빵 카페');
   });

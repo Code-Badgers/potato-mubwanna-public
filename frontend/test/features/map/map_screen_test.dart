@@ -15,6 +15,7 @@ import 'package:potato_mubwanna/features/map/domain/favorite_spot_route.dart';
 import 'package:potato_mubwanna/features/map/domain/map_spot.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_detail.dart';
 import 'package:potato_mubwanna/features/map/domain/spot_recommendation.dart';
+import 'package:potato_mubwanna/features/map/domain/travel_course_route_estimate.dart';
 import 'package:potato_mubwanna/features/map/presentation/screen/map_screen.dart';
 import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_targets.dart';
 import 'package:potato_mubwanna/features/feature_tour/presentation/feature_tour_definitions.dart';
@@ -413,6 +414,93 @@ void main() {
     expect(find.byKey(const ValueKey('favorite-route-sheet')), findsOneWidget);
     expect(find.text('내 동선 2곳'), findsOneWidget);
     expect(renderedSpots.length, 2);
+  });
+
+  testWidgets('shows road travel time on a course card and detail', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          travelCourseRouteEstimateProvider.overrideWith(
+            (ref, route) async => const TravelCourseRouteEstimate(
+              distanceMeters: 18400,
+              durationSeconds: 2760,
+              source: 'KAKAO_MOBILITY',
+            ),
+          ),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(home: MapScreen(hasMapConfiguration: true)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final courseTitle = find.text('오늘 감자로 배 채워볼까? 🥔');
+    await tester.scrollUntilVisible(
+      courseTitle,
+      360,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('map-discovery-home')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('2곳 · 차량 이동 46분'), findsWidgets);
+
+    await tester.tap(courseTitle);
+    await tester.pumpAndSettle();
+    expect(find.text('차량 이동 46분'), findsWidgets);
+    expect(find.textContaining('카카오모빌리티 추천 자동차 경로 기준'), findsOneWidget);
+  });
+
+  testWidgets('keeps an honest fallback when road travel time fails', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_testSpotDetail),
+          mapSpotsProvider.overrideWith((ref) async => _spots),
+          travelCourseRouteEstimateProvider.overrideWith(
+            (ref, route) => Future<TravelCourseRouteEstimate>.error(
+              Exception('directions unavailable'),
+            ),
+          ),
+          favoriteSpotControllerProvider.overrideWith(
+            (ref) => _favoriteController(),
+          ),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: const MaterialApp(home: MapScreen(hasMapConfiguration: true)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final courseTitle = find.text('오늘 감자로 배 채워볼까? 🥔');
+    await tester.scrollUntilVisible(
+      courseTitle,
+      360,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('map-discovery-home')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('차량 이동시간 미산정'), findsWidgets);
+
+    await tester.tap(courseTitle);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('차량 이동시간을 계산하지 못했어요'), findsOneWidget);
   });
 
   testWidgets('updates the place card when a different map marker is selected',

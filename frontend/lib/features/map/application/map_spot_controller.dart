@@ -8,6 +8,7 @@ import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
 import '../domain/spot_detail.dart';
 import '../domain/spot_recommendation.dart';
+import '../domain/travel_course_route_estimate.dart';
 
 final mapSpotRepositoryProvider = Provider<MapSpotRepository>(
   (ref) => MapSpotRepository(dio: ref.watch(dioClientProvider).dio),
@@ -26,6 +27,13 @@ final spotRecommendationsProvider =
 final spotDetailProvider =
     FutureProvider.autoDispose.family<SpotDetail, String>(
   (ref, spotId) => ref.watch(mapSpotRepositoryProvider).fetchSpotDetail(spotId),
+);
+
+final travelCourseRouteEstimateProvider = FutureProvider.autoDispose.family<
+    TravelCourseRouteEstimate, TravelCourseRouteKey>(
+  (ref, route) => ref
+      .watch(mapSpotRepositoryProvider)
+      .fetchTravelCourseRouteEstimate(route.spotIds),
 );
 
 final favoriteSpotRouteProvider = FutureProvider<FavoriteSpotRoute>(
