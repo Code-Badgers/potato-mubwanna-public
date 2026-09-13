@@ -399,19 +399,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(courseTitle);
     await tester.pumpAndSettle();
-    await _dragCourseDetailUntilVisible(tester, find.text('내 동선에 3곳 담기'));
-    await tester.tap(find.text('내 동선에 3곳 담기'));
+    await _dragCourseDetailUntilVisible(tester, find.text('내 동선에 2곳 담기'));
+    await tester.tap(find.text('내 동선에 2곳 담기'));
     await tester.pumpAndSettle();
 
-    expect(find.text('내 동선에 3곳을 담았어요'), findsOneWidget);
+    expect(find.text('내 동선에 2곳을 담았어요'), findsOneWidget);
     expect(find.text('지도에서 여행 순서를 확인해보세요.'), findsOneWidget);
 
     await tester.tap(find.text('지도에서 확인하기'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('favorite-route-sheet')), findsOneWidget);
-    expect(find.text('내 동선 3곳'), findsOneWidget);
-    expect(renderedSpots.length, 3);
+    expect(find.text('내 동선 2곳'), findsOneWidget);
+    expect(renderedSpots.length, 2);
   });
 
   testWidgets('updates the place card when a different map marker is selected',

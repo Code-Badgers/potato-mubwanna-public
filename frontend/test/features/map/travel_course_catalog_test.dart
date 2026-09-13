@@ -2,216 +2,77 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/map/data/travel_course_catalog.dart';
 import 'package:potato_mubwanna/features/map/domain/map_spot.dart';
 
+MapSpot spot(String id, String name, String category,
+    {String city = '강릉', String address = '', String? image}) => MapSpot(
+  id: id, name: name, category: category, latitude: 37.77, longitude: 128.95,
+  address: address, cityName: city, imageUrl: image,
+  congestionLevel: 'LOW', stampEnabled: true,
+);
+
 void main() {
-  test('builds six editorial travel courses from map spots', () {
-    final courses = buildTravelCourses(_spots);
+  final food = [
+    spot('1', '감자옹심이', 'POTATO_RESTAURANT', image: 'https://example.com/food.jpg'),
+    spot('2', '중앙시장', 'POTATO_MARKET'),
+    spot('3', '감자빵 카페', 'POTATO_CAFE'),
+  ];
+  TravelCourse foodCourse(List<MapSpot> spots) =>
+      buildTravelCourses(spots).firstWhere((course) => course.id == 'potato_food');
 
-    expect(courses, hasLength(6));
-    expect(
-      courses.map((course) => course.title),
-      containsAll([
-        '오늘 감자로 배 채워볼까? 🥔',
-        '사람 구경도 여행이지! 👋',
-        '강원도에서 요즘 제일 핫한 곳 🔥',
-        '사람 많은 곳은 조금 힘들어요 🌿',
-        '오늘은 바다만 보고 싶어 🌊',
-        '그냥 찍어도 분위기 좋은 곳 📷',
-      ]),
-    );
-    for (final course in courses) {
-      expect(course.categoryTitle, isNotEmpty);
-      expect(course.editorialIntro, isNotEmpty);
-      expect(course.tags.length, greaterThanOrEqualTo(3));
-      expect(course.stops, hasLength(3));
-      expect(course.spots.map((spot) => spot.id).toSet(), hasLength(3));
-    }
-    expect(courses.first.heroImageUrl, 'https://example.com/ongshimi.jpg');
+  test('matched places form a local course with honest duration and image', () {
+    final course = foodCourse(food);
+    expect(course.spots.map((spot) => spot.id), ['1', '2', '3']);
+    expect(course.heroImageUrl, 'https://example.com/food.jpg');
+    expect(course.estimatedDuration, '소요시간 미산정');
+    expect(course.description, contains('강릉'));
+    expect(course.editorialIntro, '감자옹심이 → 중앙시장 → 감자빵 카페');
   });
-
-  test('reuses resolved courses for unchanged spot data', () {
-    final first = buildTravelCourses(_spots);
-    final second = buildTravelCourses(_spots);
-
-    expect(identical(first, second), isTrue);
-  });
-
-  test('uses a matching course category image when selected stops have none',
-      () {
-    final courses = buildTravelCourses([
-      for (final spot in _spots)
-        MapSpot(
-          id: 'no-image-${spot.id}',
-          name: spot.name,
-          category: spot.category,
-          latitude: spot.latitude,
-          longitude: spot.longitude,
-          address: spot.address,
-          cityName: spot.cityName,
-          congestionLevel: spot.congestionLevel,
-          stampEnabled: spot.stampEnabled,
-        ),
-      const MapSpot(
-        id: 'food-image',
-        name: '강원 감자빵 하우스',
-        category: 'POTATO_CAFE',
-        latitude: 37.88,
-        longitude: 128.82,
-        address: '강원 강릉시',
-        cityName: '강릉',
-        imageUrl: 'https://example.com/potato-bread.jpg',
-        congestionLevel: 'LOW',
-        stampEnabled: true,
-      ),
+  test('missing stop is omitted instead of using unrelated venue and copy', () {
+    final course = foodCourse([
+      food[0], food[1], spot('wrong', '공원', 'POTATO_TOUR'),
     ]);
-
-    expect(courses.first.title, '오늘 감자로 배 채워볼까? 🥔');
-    expect(courses.first.heroImageUrl, 'https://example.com/potato-bread.jpg');
+    expect(course.spots.map((spot) => spot.id), ['1', '2']);
+    expect(course.description, contains('2곳'));
+    expect(course.editorialIntro, isNot(contains('디저트')));
+    expect(course.stops.every((stop) => stop.transitionText.isEmpty), isTrue);
   });
-
-  test('uses TourAPI or external image candidates before app fallbacks', () {
+  test('does not join different cities or expose single-stop courses', () {
     final courses = buildTravelCourses([
-      for (final spot in _spots)
-        MapSpot(
-          id: 'candidate-image-${spot.id}',
-          name: spot.name,
-          category: spot.category,
-          latitude: spot.latitude,
-          longitude: spot.longitude,
-          address: spot.address,
-          cityName: spot.cityName,
-          imageUrls: spot.id == '1'
-              ? const ['https://tour.example.com/ongshimi.jpg']
-              : const [],
-          congestionLevel: spot.congestionLevel,
-          stampEnabled: spot.stampEnabled,
-        ),
+      food[0], spot('2', '중앙시장', 'POTATO_MARKET', city: '속초'),
     ]);
-
-    expect(
-      courses.first.heroImageUrl,
-      'https://tour.example.com/ongshimi.jpg',
-    );
+    expect(courses, isEmpty);
+    expect(buildTravelCourses([]), isEmpty);
   });
-
-  test('does not use stamp tour assets as course image fallback', () {
-    final courses = buildTravelCourses([
-      for (final spot in _spots)
-        MapSpot(
-          id: 'empty-image-${spot.id}',
-          name: spot.name,
-          category: spot.category,
-          latitude: spot.latitude,
-          longitude: spot.longitude,
-          address: spot.address,
-          cityName: spot.cityName,
-          congestionLevel: spot.congestionLevel,
-          stampEnabled: spot.stampEnabled,
-        ),
+  test('chooses the city with more matching stops and normalizes city suffix', () {
+    final course = foodCourse([
+      spot('other', '감자옹심이', 'POTATO_RESTAURANT', city: '속초'),
+      food[0], food[1], spot('3', '감자빵 카페', 'POTATO_CAFE', city: '강릉시'),
     ]);
-
-    expect(courses.first.heroImageUrl, isNull);
+    expect(course.spots.map((spot) => spot.id), ['1', '2', '3']);
+  });
+  test('never borrows a hero image from a place outside the course', () {
+    final course = foodCourse([
+      food[1], food[2], spot('elsewhere', '감자옹심이', 'POTATO_RESTAURANT',
+        city: '속초', image: 'https://example.com/elsewhere.jpg'),
+    ]);
+    expect(course.heroImageUrl, isNull);
+  });
+  test('address keywords and wrong categories cannot fill a themed stop', () {
+    expect(buildTravelCourses([
+      spot('1', '식당', 'POTATO_RESTAURANT', address: '감자옹심이길'),
+      food[1], spot('3', '감자빵 박물관', 'POTATO_TOUR'),
+    ]).where((course) => course.id == 'potato_food'), isEmpty);
+  });
+  test('unknown city does not form a course', () {
+    expect(buildTravelCourses([
+      spot('1', '감자옹심이', 'POTATO_RESTAURANT', city: ''),
+      spot('2', '중앙시장', 'POTATO_MARKET', city: ''),
+    ]), isEmpty);
+  });
+  test('reuses unchanged data and recomputes when a city changes', () {
+    expect(identical(buildTravelCourses(food), buildTravelCourses(food)), isTrue);
+    final changed = foodCourse([
+      food[0], food[1], spot('3', '감자빵 카페', 'POTATO_CAFE', city: '속초'),
+    ]);
+    expect(changed.stops, hasLength(2));
   });
 }
-
-const _spots = [
-  MapSpot(
-    id: '1',
-    name: '토지옹심이 원주',
-    category: 'POTATO_RESTAURANT',
-    latitude: 37.34,
-    longitude: 127.92,
-    address: '강원 원주시',
-    cityName: '원주',
-    imageUrl: 'https://example.com/ongshimi.jpg',
-    congestionLevel: 'LOW',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '2',
-    name: '속초관광수산시장',
-    category: 'POTATO_MARKET',
-    latitude: 38.20,
-    longitude: 128.58,
-    address: '강원 속초시',
-    cityName: '속초',
-    congestionLevel: 'NORMAL',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '3',
-    name: '안목해변 카페거리',
-    category: 'POTATO_CAFE',
-    latitude: 37.77,
-    longitude: 128.95,
-    address: '강원 강릉시',
-    cityName: '강릉',
-    congestionLevel: 'LOW',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '4',
-    name: '뮤지엄 산',
-    category: 'POTATO_TOUR',
-    latitude: 37.41,
-    longitude: 127.83,
-    address: '강원 원주시',
-    cityName: '원주',
-    congestionLevel: 'LOW',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '5',
-    name: '서피비치',
-    category: 'POTATO_TOUR',
-    latitude: 38.03,
-    longitude: 128.73,
-    address: '강원 양양군',
-    cityName: '양양',
-    congestionLevel: 'NORMAL',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '6',
-    name: '원대리 자작나무숲',
-    category: 'POTATO_TOUR',
-    latitude: 37.99,
-    longitude: 128.20,
-    address: '강원 인제군',
-    cityName: '인제',
-    congestionLevel: 'LOW',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '7',
-    name: '청령포',
-    category: 'POTATO_TOUR',
-    latitude: 37.18,
-    longitude: 128.45,
-    address: '강원 영월군',
-    cityName: '영월',
-    congestionLevel: 'LOW',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '8',
-    name: '영금정',
-    category: 'POTATO_TOUR',
-    latitude: 38.21,
-    longitude: 128.60,
-    address: '강원 속초시',
-    cityName: '속초',
-    congestionLevel: 'NORMAL',
-    stampEnabled: true,
-  ),
-  MapSpot(
-    id: '9',
-    name: '낙산사',
-    category: 'POTATO_TOUR',
-    latitude: 38.12,
-    longitude: 128.63,
-    address: '강원 양양군',
-    cityName: '양양',
-    congestionLevel: 'LOW',
-    stampEnabled: true,
-  ),
-];
