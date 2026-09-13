@@ -74,6 +74,43 @@ void main() {
     expect(detail.hasTourInfo, isTrue);
     expect(detail.hasBusinessInfo, isTrue);
   });
+
+  test('requests a road route estimate in course order', () async {
+    RequestOptions? request;
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            request = options;
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: const {
+                  'success': true,
+                  'data': {
+                    'distanceMeters': 18400,
+                    'durationSeconds': 2760,
+                    'source': 'KAKAO_MOBILITY',
+                  },
+                },
+              ),
+            );
+          },
+        ),
+      );
+
+    final estimate = await MapSpotRepository(
+      dio: dio,
+    ).fetchTravelCourseRouteEstimate(['3', '1', '2']);
+
+    expect(request?.path, '/spots/route-estimate');
+    expect(request?.method, 'POST');
+    expect(request?.data, {'spotIds': [3, 1, 2]});
+    expect(estimate.distanceMeters, 18400);
+    expect(estimate.durationSeconds, 2760);
+    expect(estimate.durationLabel, '차량 이동 46분');
+  });
 }
 
 const _recommendationResponse = <String, Object?>{

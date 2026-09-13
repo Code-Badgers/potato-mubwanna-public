@@ -6,6 +6,7 @@ import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
 import '../domain/spot_detail.dart';
 import '../domain/spot_recommendation.dart';
+import '../domain/travel_course_route_estimate.dart';
 
 class MapSpotRepository {
   const MapSpotRepository({required Dio dio}) : _dio = dio;
@@ -56,6 +57,20 @@ class MapSpotRepository {
       ApiPaths.spotDetail(spotId),
     );
     return SpotDetail.fromJson(
+      response.data?['data'] as Map<String, dynamic>? ?? const {},
+    );
+  }
+
+  Future<TravelCourseRouteEstimate> fetchTravelCourseRouteEstimate(
+    List<String> spotIds,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ApiPaths.spotRouteEstimate,
+      data: {
+        'spotIds': spotIds.map(int.parse).toList(growable: false),
+      },
+    );
+    return TravelCourseRouteEstimate.fromJson(
       response.data?['data'] as Map<String, dynamic>? ?? const {},
     );
   }

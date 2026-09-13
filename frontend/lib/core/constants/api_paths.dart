@@ -11,6 +11,7 @@ class ApiPaths {
   static const myPushTokens = '/users/me/push-tokens';
   static const myLegalConsents = '/users/me/legal-consents';
   static const spots = '/spots';
+  static const spotRouteEstimate = '/spots/route-estimate';
   static String spotDetail(String spotId) => '/spots/$spotId';
   static String spotRecommendations(String spotId) =>
       '/spots/$spotId/recommendations';

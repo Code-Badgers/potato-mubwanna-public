@@ -111,7 +111,7 @@ class _TravelCourseDefinition {
       editorialIntro: stops.map((stop) => stop.spot.name).join(' → '),
       tags: [selectedCity, ...stops.map((stop) => stop.featureLabel)],
       heroImageUrl: images.isEmpty ? null : images.first,
-      estimatedDuration: '소요시간 미산정',
+      estimatedDuration: '차량 이동시간 미산정',
       focusLabel: focusLabel,
       stops: stops,
     );

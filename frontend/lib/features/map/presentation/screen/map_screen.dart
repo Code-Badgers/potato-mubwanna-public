@@ -24,6 +24,7 @@ import '../../domain/favorite_spot_route.dart';
 import '../../domain/map_spot.dart';
 import '../../domain/spot_detail.dart';
 import '../../domain/spot_recommendation.dart';
+import '../../domain/travel_course_route_estimate.dart';
 import '../widget/kakao_map_view.dart';
 import '../widget/map_spot_selection_message.dart';
 
@@ -1308,7 +1309,7 @@ class _TravelCourseSection extends StatelessWidget {
   }
 }
 
-class _TravelCourseCard extends StatelessWidget {
+class _TravelCourseCard extends ConsumerWidget {
   const _TravelCourseCard({
     required this.course,
     required this.onPressed,
@@ -1318,7 +1319,13 @@ class _TravelCourseCard extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routeEstimate = ref.watch(
+      travelCourseRouteEstimateProvider(
+        TravelCourseRouteKey(course.spots.map((spot) => spot.id)),
+      ),
+    );
+    final durationLabel = _travelCourseDurationLabel(routeEstimate);
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -1429,16 +1436,19 @@ class _TravelCourseCard extends StatelessWidget {
                             size: 16,
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            '${course.stops.length}곳 · ${course.estimatedDuration}',
-                            style: const TextStyle(
-                              color: _mapDark,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0,
+                          Expanded(
+                            child: Text(
+                              '${course.stops.length}곳 · $durationLabel',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: _mapDark,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0,
+                              ),
                             ),
                           ),
-                          const Spacer(),
                           const Icon(
                             Icons.chevron_right_rounded,
                             color: _mapDark,
@@ -1456,6 +1466,27 @@ class _TravelCourseCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _travelCourseDurationLabel(
+  AsyncValue<TravelCourseRouteEstimate> routeEstimate,
+) {
+  return routeEstimate.when(
+    data: (estimate) => estimate.durationLabel,
+    loading: () => '차량 이동시간 계산 중',
+    error: (_, __) => '차량 이동시간 미산정',
+  );
+}
+
+String _travelCourseDurationDescription(
+  AsyncValue<TravelCourseRouteEstimate> routeEstimate,
+) {
+  return routeEstimate.when(
+    data: (_) => '차량 이동시간은 카카오모빌리티 추천 자동차 경로 기준이며 관람시간은 포함하지 않아요.',
+    loading: () => '장소 순서대로 차량 이동시간을 계산하고 있어요. 관람시간은 포함하지 않아요.',
+    error: (_, __) =>
+        '차량 이동시간을 계산하지 못했어요. 방문 전 길찾기와 각 장소 운영시간을 확인해주세요.',
+  );
 }
 
 class _CourseImage extends StatelessWidget {
@@ -1558,7 +1589,7 @@ IconData _courseFallbackIcon(String courseId) {
   };
 }
 
-class _TravelCourseDetailPage extends StatelessWidget {
+class _TravelCourseDetailPage extends ConsumerWidget {
   const _TravelCourseDetailPage({
     required this.course,
     required this.onSpotDetailPressed,
@@ -1570,7 +1601,13 @@ class _TravelCourseDetailPage extends StatelessWidget {
   final Future<void> Function()? onAddPressed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routeEstimate = ref.watch(
+      travelCourseRouteEstimateProvider(
+        TravelCourseRouteKey(course.spots.map((spot) => spot.id)),
+      ),
+    );
+    final durationLabel = _travelCourseDurationLabel(routeEstimate);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -1666,16 +1703,19 @@ class _TravelCourseDetailPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '이동시간과 관람시간을 계산하지 않은 코스예요. 방문 전 각 장소의 운영시간과 길찾기를 확인해주세요.',
-                  style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+                Text(
+                  _travelCourseDurationDescription(routeEstimate),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 7,
                   runSpacing: 7,
                   children: [
-                    _CourseTag(label: course.estimatedDuration),
+                    _CourseTag(label: durationLabel),
                     _CourseTag(label: '${course.stops.length}곳'),
                     _CourseTag(label: course.focusLabel),
                     for (final tag in course.tags) _CourseTag(label: tag),
