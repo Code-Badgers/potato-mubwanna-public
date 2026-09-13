@@ -66,7 +66,9 @@ class SpotControllerTest {
                     null,
                     LocalDate.of(2026, 8, 3),
                     "https://example.com/menu"
-                ))
+                )),
+                LocalDate.of(2026, 9, 13),
+                "TOUR_API"
             )));
 
         mockMvc.perform(get("/spots")
@@ -81,6 +83,8 @@ class SpotControllerTest {
             .andExpect(jsonPath("$.data[0].cityName").value("정선군"))
             .andExpect(jsonPath("$.data[0].imageUrl").value("https://example.com/jeongseon.jpg"))
             .andExpect(jsonPath("$.data[0].imageUrls[0]").value("https://example.com/jeongseon.jpg"))
+            .andExpect(jsonPath("$.data[0].congestionPredictionDate").value("2026-09-13"))
+            .andExpect(jsonPath("$.data[0].congestionSource").value("TOUR_API"))
             .andExpect(jsonPath("$.data[0].phone").value("033-000-0000"))
             .andExpect(jsonPath("$.data[0].rating").value(4.2))
             .andExpect(jsonPath("$.data[0].businessOpeningHours.openNow").value(true))

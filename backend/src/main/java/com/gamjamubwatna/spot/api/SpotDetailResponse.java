@@ -7,6 +7,8 @@ import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.TouristSpot;
 import java.math.BigDecimal;
 import java.util.List;
+import java.time.LocalDate;
+import com.gamjamubwatna.spot.domain.SpotCongestionPrediction;
 
 public record SpotDetailResponse(
     Long id,
@@ -34,7 +36,9 @@ public record SpotDetailResponse(
     Double rating,
     PlaceOpeningHoursResponse businessOpeningHours,
     List<String> imageUrls,
-    List<SpotMenuItemResponse> menuItems
+    List<SpotMenuItemResponse> menuItems,
+    LocalDate congestionPredictionDate,
+    String congestionSource
 ) {
 
     public static SpotDetailResponse from(
@@ -43,7 +47,8 @@ public record SpotDetailResponse(
         List<String> imageUrls,
         SpotTourInfo tourInfo,
         ExternalPlaceDetails externalDetails,
-        List<SpotMenuItemResponse> menuItems
+        List<SpotMenuItemResponse> menuItems,
+        SpotCongestionPrediction prediction
     ) {
         return new SpotDetailResponse(
             spot.getId(),
@@ -56,7 +61,7 @@ public record SpotDetailResponse(
             spot.getCityName(),
             imageUrl,
             spot.getPotatoTags(),
-            spot.getCongestionLevel(),
+            prediction == null ? null : prediction.getCongestionLevel(),
             spot.getVerificationRadiusMeter(),
             spot.getStampEnabled(),
             tourInfo.description(),
@@ -71,7 +76,9 @@ public record SpotDetailResponse(
             externalDetails.rating(),
             PlaceOpeningHoursResponse.from(externalDetails.openingHours()),
             imageUrls,
-            menuItems
+            menuItems,
+            prediction == null ? null : prediction.getPredictionDate(),
+            prediction == null ? null : prediction.getSource()
         );
     }
 }

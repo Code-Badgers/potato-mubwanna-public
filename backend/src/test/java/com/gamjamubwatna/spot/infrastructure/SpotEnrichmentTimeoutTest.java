@@ -77,7 +77,7 @@ class SpotEnrichmentTimeoutTest {
         when(google.resolve(spot)).thenReturn(new ExternalPlaceDetails(null, null, null, null, null,
             List.of("https://test/2", "https://test/3")));
         SpotService service = new SpotService(spots, mock(SpotMenuItemRepository.class), images,
-            new SpotTourInfoResolver(client, new TourApiSpotReferenceResolver(client)), google);
+            new SpotTourInfoResolver(client, new TourApiSpotReferenceResolver(client)), google, mock(com.gamjamubwatna.spot.application.TodayCongestionResolver.class));
 
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             var response = service.getSpot(17L);

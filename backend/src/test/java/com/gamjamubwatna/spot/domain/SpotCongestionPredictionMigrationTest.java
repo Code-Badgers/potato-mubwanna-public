@@ -27,6 +27,29 @@ class SpotCongestionPredictionMigrationTest {
     @Autowired
     private DataSource dataSource;
 
+    @Autowired
+    private TouristSpotRepository touristSpotRepository;
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void batchQueryReturnsOnlyRequestedSpotsAndTodayInNewestSourceOrder() {
+        var spot = touristSpotRepository.findAll().getFirst();
+        var today = java.time.LocalDate.of(2026, 9, 13);
+        var instant = java.time.Instant.parse("2026-09-13T00:00:00Z");
+        for (int offset : new int[]{-1, 0, 1}) {
+            spotCongestionPredictionRepository.save(new SpotCongestionPrediction(
+                spot, today.plusDays(offset), 10, 100, CongestionLevel.LOW, "OLD_SOURCE", instant));
+        }
+        spotCongestionPredictionRepository.saveAndFlush(new SpotCongestionPrediction(
+            spot, today, 80, 100, CongestionLevel.HIGH, "NEW_SOURCE", instant.plusSeconds(60)));
+        var results = spotCongestionPredictionRepository.findTodayPredictions(java.util.List.of(spot.getId()), today);
+        assertThat(results).hasSize(2);
+        assertThat(results).extracting(SpotCongestionPrediction::getSource)
+            .containsExactly("NEW_SOURCE", "OLD_SOURCE");
+        assertThat(results).allMatch(prediction -> prediction.getPredictionDate().equals(today));
+        assertThat(spotCongestionPredictionRepository.findTodayPredictions(java.util.List.of(-1L), today)).isEmpty();
+    }
+
     @Test
     void createsSpotCongestionPredictionTableAndLookupIndexes() throws Exception {
         assertThat(spotCongestionPredictionRepository.findAll()).isEmpty();

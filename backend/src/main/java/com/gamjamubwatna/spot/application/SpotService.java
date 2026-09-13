@@ -4,6 +4,7 @@ import com.gamjamubwatna.spot.api.SpotDetailResponse;
 import com.gamjamubwatna.spot.api.SpotListResponse;
 import com.gamjamubwatna.spot.api.SpotMenuItemResponse;
 import com.gamjamubwatna.spot.domain.CongestionLevel;
+import com.gamjamubwatna.spot.domain.SpotCongestionPrediction;
 import com.gamjamubwatna.spot.domain.SpotCategory;
 import com.gamjamubwatna.spot.domain.SpotMenuItem;
 import com.gamjamubwatna.spot.domain.SpotMenuItemRepository;
@@ -25,18 +26,22 @@ public class SpotService {
     private final SpotTourInfoResolver spotTourInfoResolver;
     private final ExternalPlaceDetailsResolver externalPlaceDetailsResolver;
 
+    private final TodayCongestionResolver todayCongestionResolver;
+
     public SpotService(
         TouristSpotRepository touristSpotRepository,
         SpotMenuItemRepository spotMenuItemRepository,
         SpotImageResolver spotImageResolver,
         SpotTourInfoResolver spotTourInfoResolver,
-        ExternalPlaceDetailsResolver externalPlaceDetailsResolver
+        ExternalPlaceDetailsResolver externalPlaceDetailsResolver,
+        TodayCongestionResolver todayCongestionResolver
     ) {
         this.touristSpotRepository = touristSpotRepository;
         this.spotMenuItemRepository = spotMenuItemRepository;
         this.spotImageResolver = spotImageResolver;
         this.spotTourInfoResolver = spotTourInfoResolver;
         this.externalPlaceDetailsResolver = externalPlaceDetailsResolver;
+        this.todayCongestionResolver = todayCongestionResolver;
     }
 
     @Transactional(readOnly = true)
@@ -48,9 +53,15 @@ public class SpotService {
         List<TouristSpot> spots = touristSpotRepository.findActiveSpots(
             category,
             blankToNull(cityName),
-            congestionLevel
+            null
         );
 
+        Map<Long, SpotCongestionPrediction> predictions = todayCongestionResolver.resolve(spots);
+        // 필터도 화면에 표시하는 오늘 예측과 일치시켜 오래된 대표값으로 추천하지 않는다.
+        if (congestionLevel != null) {
+            spots = spots.stream().filter(spot -> predictions.containsKey(spot.getId())
+                && predictions.get(spot.getId()).getCongestionLevel() == congestionLevel).toList();
+        }
         Map<Long, List<SpotMenuItemResponse>> menuItemsBySpotId = menuItemsBySpotId(spots);
         Map<Long, ExternalPlaceDetails> cachedDetailsBySpotId =
             externalPlaceDetailsResolver.resolveCached(spots);
@@ -66,7 +77,8 @@ public class SpotService {
                     imageUrls.isEmpty() ? null : imageUrls.get(0),
                     imageUrls,
                     externalDetails,
-                    menuItemsBySpotId.getOrDefault(spot.getId(), List.of())
+                    menuItemsBySpotId.getOrDefault(spot.getId(), List.of()),
+                    predictions.get(spot.getId())
                 );
             })
             .toList();
@@ -98,7 +110,8 @@ public class SpotService {
             imageUrls,
             spotTourInfoResolver.resolve(spot),
             externalDetails,
-            menuItems
+            menuItems,
+            todayCongestionResolver.resolve(List.of(spot)).get(spotId)
         );
     }
 
