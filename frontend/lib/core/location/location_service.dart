@@ -8,6 +8,7 @@ enum LocationFailureType {
   permissionDenied,
   permissionDeniedForever,
   timeout,
+  inaccurate,
   unavailable,
 }
 
@@ -50,18 +51,10 @@ class LocationService {
     await _ensurePermissionGranted();
 
     try {
-      final position = await Geolocator.getCurrentPosition(
+      return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 15),
       ).timeout(const Duration(seconds: 15));
-      if (position.accuracy.isNaN || position.accuracy > 100) {
-        throw const LocationFailure(
-          type: LocationFailureType.unavailable,
-          message: '현재 위치의 정확도가 낮습니다. 잠시 멈춘 뒤 다시 시도해주세요.',
-          actionLabel: '다시 시도',
-        );
-      }
-      return position;
     } on LocationServiceDisabledException {
       throw const LocationFailure(
         type: LocationFailureType.serviceDisabled,
@@ -88,6 +81,7 @@ class LocationService {
       throw const LocationFailure(
         type: LocationFailureType.unavailable,
         message: '현재 위치를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.',
+        actionLabel: '다시 시도',
       );
     }
   }

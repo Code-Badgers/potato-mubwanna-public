@@ -238,27 +238,41 @@ class _VisitVerificationBar extends ConsumerWidget {
 
     final error = ref.read(visitVerificationControllerProvider(spot)).error;
     if (error is LocationFailure) {
-      _showLocationFailureSnackBar(context, ref, error);
+      _showLocationFailureSnackBar(context, ref, spot, error);
       return;
     }
 
     final message = error is ApiException ? error.message : '방문 인증에 실패했습니다.';
+    final canRetry = error is ApiException &&
+        (error.statusCode == null || error.statusCode! >= 500);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        action: canRetry
+            ? SnackBarAction(
+                label: '다시 시도',
+                onPressed: () => _handleVisitVerification(context, ref, spot),
+              )
+            : null,
+      ),
     );
   }
 
   void _showLocationFailureSnackBar(
     BuildContext context,
     WidgetRef ref,
+    SpotDetail spot,
     LocationFailure error,
   ) {
     final settingsTarget = error.settingsTarget;
     final needsConsent = error.type == LocationFailureType.consentRequired;
+    final canRetry = error.type == LocationFailureType.timeout ||
+        error.type == LocationFailureType.inaccurate ||
+        error.type == LocationFailureType.unavailable;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(error.message),
-        action: !needsConsent && settingsTarget == null
+        action: !needsConsent && settingsTarget == null && !canRetry
             ? null
             : SnackBarAction(
                 label: error.actionLabel ?? '설정',
@@ -267,6 +281,10 @@ class _VisitVerificationBar extends ConsumerWidget {
                     context.push(
                       '/legal/location-terms?manage=true&returnOnAccept=true',
                     );
+                    return;
+                  }
+                  if (canRetry) {
+                    _handleVisitVerification(context, ref, spot);
                     return;
                   }
                   ref.read(locationServiceProvider).openSettings(
