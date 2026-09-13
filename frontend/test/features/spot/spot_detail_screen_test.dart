@@ -286,7 +286,7 @@ void main() {
     );
     expect(find.text('인증 성공'), findsOneWidget);
     expect(find.text('지역 스탬프 획득'), findsOneWidget);
-    expect(find.text('감자 획득'), findsOneWidget);
+    expect(find.text('방문 보상으로 감자를 받았어요!'), findsOneWidget);
     expect(find.text('황금감자'), findsOneWidget);
     expect(find.text('강원특별자치도 · 희귀도 영웅'), findsOneWidget);
     expect(find.text('도감 보기'), findsOneWidget);
@@ -364,7 +364,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('이미 보유한 감자예요'), findsOneWidget);
-    expect(find.text('감자 획득'), findsNothing);
+    expect(find.text('방문 보상으로 감자를 받았어요!'), findsNothing);
     expect(find.text('황금감자'), findsOneWidget);
     expect(find.byKey(const ValueKey('visit-stamp-press')), findsNothing);
   });

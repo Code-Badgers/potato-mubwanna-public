@@ -808,6 +808,9 @@ class _MyPotatoCollectionCard extends StatelessWidget {
                     letterSpacing: 0,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text('획득 방법: ${item.acquisitionType.label}',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               ],
             ),
           ),
@@ -860,7 +863,7 @@ class _PotatoAlbumEmpty extends StatelessWidget {
           ),
           SizedBox(height: 10),
           Text(
-            '아직 수집한 감자가 없어요. 감자 스팟을 방문하면 이곳에 도감이 채워져요.',
+            '아직 수집한 감자가 없어요. 감자를 수확하거나 방문·미션 보상으로 도감을 채워보세요.',
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
