@@ -28,12 +28,14 @@ class SpotServiceTest {
     private final SpotImageResolver spotImageResolver = mock(SpotImageResolver.class);
     private final SpotTourInfoResolver spotTourInfoResolver = mock(SpotTourInfoResolver.class);
     private final ExternalPlaceDetailsResolver externalPlaceDetailsResolver = mock(ExternalPlaceDetailsResolver.class);
+    private final TodayCongestionResolver todayCongestionResolver = mock(TodayCongestionResolver.class);
     private final SpotService spotService = new SpotService(
         touristSpotRepository,
         spotMenuItemRepository,
         spotImageResolver,
         spotTourInfoResolver,
-        externalPlaceDetailsResolver
+        externalPlaceDetailsResolver,
+        todayCongestionResolver
     );
 
     @Test
@@ -184,6 +186,30 @@ class SpotServiceTest {
                 "https://google.example.com/photo.jpg",
                 "https://tour.example.com/cafe.jpg"
             );
+    }
+
+    @Test
+    void filtersByTodayPredictionAndDoesNotExposeStoredNormalWithoutPrediction() {
+        TouristSpot current = spot(1L, "오늘 예측 장소", SpotCategory.POTATO_TOUR);
+        TouristSpot missing = spot(2L, "예측 없는 장소", SpotCategory.POTATO_TOUR);
+        var prediction = new com.gamjamubwatna.spot.domain.SpotCongestionPrediction(
+            current, LocalDate.of(2026, 9, 13), 10, 100, CongestionLevel.LOW,
+            "TOURISM_CONGESTION_API", java.time.Instant.parse("2026-09-13T00:00:00Z"));
+        when(touristSpotRepository.findActiveSpots(null, null, null)).thenReturn(List.of(current, missing));
+        when(todayCongestionResolver.resolve(List.of(current, missing)))
+            .thenReturn(java.util.Map.of(1L, prediction));
+
+        var all = spotService.getSpots(null, null, null);
+        assertThat(all.get(0).congestionLevel()).isEqualTo(CongestionLevel.LOW);
+        assertThat(all.get(0).congestionPredictionDate()).isEqualTo(LocalDate.of(2026, 9, 13));
+        assertThat(all.get(0).congestionSource()).isEqualTo("TOURISM_CONGESTION_API");
+        assertThat(all.get(1).congestionLevel()).isNull();
+        assertThat(all.get(1).congestionPredictionDate()).isNull();
+        assertThat(all.get(1).congestionSource()).isNull();
+        assertThat(spotService.getSpots(null, null, CongestionLevel.LOW))
+            .extracting(SpotListResponse::id).containsExactly(1L);
+        assertThat(spotService.getSpots(null, null, CongestionLevel.NORMAL)).isEmpty();
+        verify(touristSpotRepository, never()).findActiveSpots(null, null, CongestionLevel.LOW);
     }
 
     private TouristSpot spot(Long id, String name, SpotCategory category) {

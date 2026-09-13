@@ -1,3 +1,5 @@
+import '../../../shared/models/congestion_prediction.dart' as congestion;
+
 class MapSpot {
   const MapSpot({
     required this.id,
@@ -7,7 +9,9 @@ class MapSpot {
     required this.longitude,
     required this.address,
     required this.cityName,
-    required this.congestionLevel,
+    required String congestionLevel,
+    this.congestionPredictionDate,
+    this.congestionSource,
     required this.stampEnabled,
     this.imageUrl,
     this.imageUrls = const [],
@@ -17,7 +21,7 @@ class MapSpot {
     this.businessOpeningHours,
     this.menuItems = const [],
     this.isRecommended = false,
-  });
+  }) : _congestionLevel = congestionLevel;
 
   factory MapSpot.fromJson(Map<String, dynamic> json) {
     final menuItems = (json['menuItems'] as List<dynamic>? ?? const [])
@@ -41,7 +45,9 @@ class MapSpot {
       businessOpeningHours: MapSpotBusinessOpeningHours.fromJson(
         json['businessOpeningHours'],
       ),
-      congestionLevel: json['congestionLevel'] as String? ?? 'NORMAL',
+      congestionLevel: json['congestionLevel'] as String? ?? 'UNKNOWN',
+      congestionPredictionDate: json['congestionPredictionDate'] as String?,
+      congestionSource: json['congestionSource'] as String?,
       stampEnabled: json['stampEnabled'] as bool? ?? true,
       menuItems: menuItems,
     );
@@ -60,7 +66,13 @@ class MapSpot {
   final String? website;
   final double? rating;
   final MapSpotBusinessOpeningHours? businessOpeningHours;
-  final String congestionLevel;
+  final String _congestionLevel;
+  final String? congestionPredictionDate;
+  final String? congestionSource;
+  String get congestionLevel => congestion.currentCongestionLevel(
+      _congestionLevel, congestionPredictionDate);
+  String get congestionDescription => congestion.congestionDescription(
+      congestionLevel, congestionPredictionDate, congestionSource);
   final bool stampEnabled;
   final List<MapSpotMenuItem> menuItems;
   final bool isRecommended;
@@ -80,7 +92,9 @@ class MapSpot {
       website: website,
       rating: rating,
       businessOpeningHours: businessOpeningHours,
-      congestionLevel: congestionLevel,
+      congestionLevel: _congestionLevel,
+      congestionPredictionDate: congestionPredictionDate,
+      congestionSource: congestionSource,
       stampEnabled: stampEnabled,
       menuItems: menuItems,
       isRecommended: true,
@@ -101,13 +115,7 @@ class MapSpot {
     };
   }
 
-  String get congestionLabel {
-    return switch (congestionLevel) {
-      'LOW' => '여유',
-      'HIGH' => '혼잡',
-      _ => '보통',
-    };
-  }
+  String get congestionLabel => congestion.congestionLabel(congestionLevel);
 
   String get potatoName {
     return switch (category) {

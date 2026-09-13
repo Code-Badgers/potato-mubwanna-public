@@ -2451,7 +2451,10 @@ class _PopularSpotCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 7),
                     ],
-                    _CongestionBadge(label: '혼잡도 ${spot.congestionLabel}'),
+                    _CongestionBadge(label: spot.congestionLabel),
+                  const SizedBox(height: 6),
+                  Text(spot.congestionDescription,
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
                   ],
                 ),
               ),
@@ -3183,6 +3186,9 @@ class _SelectedSpotSummary extends StatelessWidget {
                   ],
                   const SizedBox(height: 9),
                   _CongestionBadge(label: spot.congestionLabel),
+                  const SizedBox(height: 6),
+                  Text(spot.congestionDescription,
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
                 ],
               ),
             ),
@@ -4150,7 +4156,7 @@ class _CongestionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalizedLabel = label.startsWith('혼잡도') ? label : '혼잡도 $label';
+    final normalizedLabel = label == '정보 없음' ? '혼잡도 정보 없음' : '혼잡도 예측 $label';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(

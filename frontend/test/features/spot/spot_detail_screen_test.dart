@@ -1,3 +1,4 @@
+import 'package:potato_mubwanna/shared/models/congestion_prediction.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -23,6 +24,17 @@ import 'package:potato_mubwanna/features/spot/domain/visit_verification.dart';
 import 'package:potato_mubwanna/features/spot/presentation/screen/spot_detail_screen.dart';
 
 void main() {
+  testWidgets('missing prediction is clearly unavailable in detail', (tester) async {
+    await _setMobileViewport(tester);
+    await tester.pumpWidget(_app(engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => SpotDetail.fromJson({'id':1, 'name':'예측 없는 장소', 'congestionLevel':'NORMAL'}),
+      audioOverride: (ref) async => _guide));
+    await tester.pumpAndSettle();
+    expect(find.text('혼잡도 정보 없음'), findsOneWidget);
+    expect(find.text('오늘의 혼잡도 예측 정보가 없어요.'), findsOneWidget);
+    expect(find.text('보통 예측'), findsNothing);
+  });
+
   testWidgets('visit result actions stay reachable on a small screen',
       (tester) async {
     await _setMobileViewport(tester);
@@ -111,7 +123,8 @@ void main() {
 
     expect(find.text('정선 5일장'), findsOneWidget);
     expect(find.text('시장·상권'), findsOneWidget);
-    expect(find.text('여유'), findsOneWidget);
+    expect(find.text('여유 예측'), findsOneWidget);
+    expect(find.textContaining('예측 기준일 ${koreaDate()}'), findsOneWidget);
     expect(find.text('#감자전'), findsOneWidget);
     expect(find.text('이용 안내'), findsOneWidget);
     expect(find.text('정선의 대표 전통시장입니다.'), findsOneWidget);
@@ -616,7 +629,7 @@ Future<void> _setMobileViewport(WidgetTester tester) async {
   addTearDown(tester.view.resetPhysicalSize);
 }
 
-const _spot = SpotDetail(
+final _spot = SpotDetail(
   id: '1',
   contentId: '1234567',
   name: '정선 5일장',
@@ -628,6 +641,8 @@ const _spot = SpotDetail(
   imageUrl: null,
   potatoTags: ['감자', '감자전'],
   congestionLevel: 'LOW',
+  congestionPredictionDate: koreaDate(),
+  congestionSource: 'TOURISM_CONGESTION_API',
   verificationRadiusMeter: 100,
   stampEnabled: true,
   description: '정선의 대표 전통시장입니다.',
