@@ -1,3 +1,4 @@
+import 'package:potato_mubwanna/shared/models/congestion_prediction.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
@@ -82,7 +83,7 @@ Dio _dioWithResponse({
     );
 }
 
-const _spotDetailResponse = <String, Object?>{
+final _spotDetailResponse = <String, Object?>{
   'success': true,
   'message': '요청이 성공했습니다.',
   'data': {
@@ -97,6 +98,8 @@ const _spotDetailResponse = <String, Object?>{
     'imageUrl': 'https://example.com/spot.jpg',
     'potatoTags': '감자, 감자전',
     'congestionLevel': 'LOW',
+    'congestionPredictionDate': koreaDate(),
+    'congestionSource': 'TOURISM_CONGESTION_API',
     'verificationRadiusMeter': 100,
     'stampEnabled': true,
     'description': '정선의 대표 전통시장입니다.',

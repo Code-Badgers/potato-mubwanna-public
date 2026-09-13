@@ -89,12 +89,15 @@ class _SpotDetailBody extends ConsumerWidget {
                   ),
                   _SpotBadge(
                     icon: _congestionIcon(spot.congestionLevel),
-                    label: spot.congestionLabel,
+                    label: spot.congestionLevel == 'UNKNOWN' ? '혼잡도 정보 없음' : '${spot.congestionLabel} 예측',
                     background: _congestionBackground(spot.congestionLevel),
                     foreground: _congestionForeground(spot.congestionLevel),
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              Text(spot.congestionDescription,
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
               const SizedBox(height: 14),
               Text(
                 spot.name,
@@ -1580,6 +1583,7 @@ IconData _congestionIcon(String level) {
   return switch (level) {
     'LOW' => Icons.sentiment_satisfied_alt_rounded,
     'HIGH' => Icons.groups_rounded,
+    'UNKNOWN' => Icons.help_outline_rounded,
     _ => Icons.directions_walk_rounded,
   };
 }
@@ -1588,6 +1592,7 @@ Color _congestionBackground(String level) {
   return switch (level) {
     'LOW' => const Color(0xFFE7F5EB),
     'HIGH' => const Color(0xFFFFE8E3),
+    'UNKNOWN' => const Color(0xFFF0F0F0),
     _ => const Color(0xFFFFF3CD),
   };
 }
@@ -1596,6 +1601,7 @@ Color _congestionForeground(String level) {
   return switch (level) {
     'LOW' => _audioGreen,
     'HIGH' => const Color(0xFFA23E2A),
+    'UNKNOWN' => AppColors.textSecondary,
     _ => const Color(0xFF76561A),
   };
 }

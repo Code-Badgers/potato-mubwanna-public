@@ -1,3 +1,5 @@
+import '../../../shared/models/congestion_prediction.dart' as congestion;
+
 class SpotDetail {
   const SpotDetail({
     required this.id,
@@ -10,7 +12,9 @@ class SpotDetail {
     required this.cityName,
     required this.imageUrl,
     required this.potatoTags,
-    required this.congestionLevel,
+    required String congestionLevel,
+    this.congestionPredictionDate,
+    this.congestionSource,
     required this.verificationRadiusMeter,
     required this.stampEnabled,
     this.description,
@@ -24,7 +28,7 @@ class SpotDetail {
     this.rating,
     this.businessOpenNow,
     this.businessTodayText,
-  });
+  }) : _congestionLevel = congestionLevel;
 
   factory SpotDetail.fromJson(Object? json) {
     final data = json as Map<String, dynamic>? ?? const <String, dynamic>{};
@@ -47,7 +51,9 @@ class SpotDetail {
           .map((tag) => tag.trim())
           .where((tag) => tag.isNotEmpty)
           .toList(growable: false),
-      congestionLevel: data['congestionLevel'] as String? ?? 'NORMAL',
+      congestionLevel: data['congestionLevel'] as String? ?? 'UNKNOWN',
+      congestionPredictionDate: data['congestionPredictionDate'] as String?,
+      congestionSource: data['congestionSource'] as String?,
       verificationRadiusMeter: data['verificationRadiusMeter'] as int? ?? 0,
       stampEnabled: data['stampEnabled'] as bool? ?? false,
       description: _readNullableString(data['description']),
@@ -79,7 +85,13 @@ class SpotDetail {
   final String cityName;
   final String? imageUrl;
   final List<String> potatoTags;
-  final String congestionLevel;
+  final String _congestionLevel;
+  final String? congestionPredictionDate;
+  final String? congestionSource;
+  String get congestionLevel => congestion.currentCongestionLevel(
+      _congestionLevel, congestionPredictionDate);
+  String get congestionDescription => congestion.congestionDescription(
+      congestionLevel, congestionPredictionDate, congestionSource);
   final int verificationRadiusMeter;
   final bool stampEnabled;
   final String? description;
@@ -122,13 +134,7 @@ class SpotDetail {
     };
   }
 
-  String get congestionLabel {
-    return switch (congestionLevel) {
-      'LOW' => '여유',
-      'HIGH' => '혼잡',
-      _ => '보통',
-    };
-  }
+  String get congestionLabel => congestion.congestionLabel(congestionLevel);
 
   static double _readDouble(Object? value) {
     if (value is num) {

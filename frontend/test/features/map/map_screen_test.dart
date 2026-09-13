@@ -1,3 +1,4 @@
+import 'package:potato_mubwanna/shared/models/congestion_prediction.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -284,7 +285,7 @@ void main() {
 
     expect(find.text('내향인 전용 여유로운 장소'), findsOneWidget);
     expect(find.text('외향인 전용 사람 좋아 핫플'), findsOneWidget);
-    expect(find.text('혼잡도 여유'), findsAtLeastNWidgets(1));
+    expect(find.text('혼잡도 예측 여유'), findsAtLeastNWidgets(1));
     expect(find.text('방문자 많음'), findsNothing);
     expect(find.text('강원 정선군'), findsAtLeastNWidgets(1));
     expect(find.text('화요일: 오전 11:00~오후 8:00'), findsAtLeastNWidgets(1));
@@ -1775,7 +1776,7 @@ const _recommendations = [
   ),
 ];
 
-const _spots = [
+final _spots = [
   MapSpot(
     id: '1',
     name: '정선 5일장',
@@ -1784,6 +1785,8 @@ const _spots = [
     longitude: 128.66,
     address: '강원 정선군',
     cityName: '정선',
+    congestionPredictionDate: koreaDate(),
+    congestionSource: 'TOURISM_CONGESTION_API',
     congestionLevel: 'NORMAL',
     stampEnabled: true,
   ),
@@ -1795,6 +1798,8 @@ const _spots = [
     longitude: 128.67,
     address: '강원 정선군',
     cityName: '정선',
+    congestionPredictionDate: koreaDate(),
+    congestionSource: 'TOURISM_CONGESTION_API',
     congestionLevel: 'LOW',
     stampEnabled: true,
     imageUrls: [
@@ -1804,14 +1809,14 @@ const _spots = [
     phone: '033-000-0000',
     website: 'https://example.com/cafe',
     rating: 4.3,
-    businessOpeningHours: MapSpotBusinessOpeningHours(
+    businessOpeningHours: const MapSpotBusinessOpeningHours(
       openNow: true,
       todayText: '화요일: 오전 11:00~오후 8:00',
       weekdayDescriptions: [
         '화요일: 오전 11:00~오후 8:00',
       ],
     ),
-    menuItems: [
+    menuItems: const [
       MapSpotMenuItem(
         name: '감자빵',
         priceWon: 3300,
@@ -1834,6 +1839,8 @@ const _spots = [
     longitude: 128.68,
     address: '강원 정선군',
     cityName: '정선',
+    congestionPredictionDate: koreaDate(),
+    congestionSource: 'TOURISM_CONGESTION_API',
     congestionLevel: 'HIGH',
     stampEnabled: true,
   ),
@@ -1845,6 +1852,8 @@ const _spots = [
     longitude: 128.69,
     address: '강원 정선군',
     cityName: '정선',
+    congestionPredictionDate: koreaDate(),
+    congestionSource: 'TOURISM_CONGESTION_API',
     congestionLevel: 'LOW',
     stampEnabled: true,
   ),
