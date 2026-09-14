@@ -136,6 +136,14 @@ MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
 PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
 AWS_REGION='ap-northeast-2' \
 EC2_INSTANCE_ID='i-test' \
+TOUR_API_SERVICE_KEY="${service_key}" \
+bash "${deploy_dir}/sync-tour-derived-api-secrets.sh"
+
+PATH="${mock_bin}:${PATH}" \
+MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
+PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
+AWS_REGION='ap-northeast-2' \
+EC2_INSTANCE_ID='i-test' \
 GOOGLE_PLACES_API_KEY="${google_places_key}" \
 bash "${deploy_dir}/sync-google-places-secret.sh"
 
@@ -170,6 +178,10 @@ grep -q "^KAKAO_REST_API_KEY=${kakao_rest_key}$" "${production_directory}/deploy
 test "$(grep -c '^KAKAO_REST_API_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^TOUR_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^TOUR_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
+grep -q "^RELATED_TOURISM_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
+test "$(grep -c '^RELATED_TOURISM_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
+grep -q "^CONGESTION_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
+test "$(grep -c '^CONGESTION_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^GOOGLE_PLACES_API_KEY=${google_places_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^GOOGLE_PLACES_API_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^ODII_API_SERVICE_KEY=${odii_service_key}$" "${production_directory}/deploy/.env"
@@ -207,4 +219,4 @@ if grep -R -F "${firebase_service_account_base64}" "${mock_state}" > /dev/null; 
   exit 1
 fi
 
-echo 'Kakao REST, TourAPI, Google Places, ODII, Firebase secret, and Firebase config sync scenarios passed.'
+echo 'Kakao REST, TourAPI-derived services, Google Places, ODII, Firebase secret, and Firebase config sync scenarios passed.'
