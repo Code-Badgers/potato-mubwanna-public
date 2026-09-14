@@ -10,6 +10,8 @@ mock_state="${test_directory}/aws-state"
 production_directory="${test_directory}/production"
 service_key='dummy%2Fencoded%2Bkey%3D'
 google_places_key='dummy-google-places-key'
+kakao_rest_key='dummy-kakao-rest-key'
+odii_service_key='dummy-odii-service-key'
 firebase_service_account_base64='eyJ0ZXN0IjoiZmlyZWJhc2UifQ=='
 
 cleanup() {
@@ -23,6 +25,8 @@ PUBLIC_DOMAIN=example.test
 UNCHANGED_VALUE=keep-me
 TOUR_API_SERVICE_KEY=old-value
 GOOGLE_PLACES_API_KEY=old-google-value
+KAKAO_REST_API_KEY=old-kakao-value
+ODII_API_SERVICE_KEY=old-odii-value
 FIREBASE_ADMIN_ENABLED=false
 FIREBASE_PROJECT_ID=
 EOF
@@ -116,6 +120,14 @@ MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
 PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
 AWS_REGION='ap-northeast-2' \
 EC2_INSTANCE_ID='i-test' \
+KAKAO_REST_API_KEY="${kakao_rest_key}" \
+bash "${deploy_dir}/sync-kakao-rest-api-secret.sh"
+
+PATH="${mock_bin}:${PATH}" \
+MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
+PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
+AWS_REGION='ap-northeast-2' \
+EC2_INSTANCE_ID='i-test' \
 TOUR_API_SERVICE_KEY="${service_key}" \
 bash "${deploy_dir}/sync-tour-api-secret.sh"
 
@@ -126,6 +138,14 @@ AWS_REGION='ap-northeast-2' \
 EC2_INSTANCE_ID='i-test' \
 GOOGLE_PLACES_API_KEY="${google_places_key}" \
 bash "${deploy_dir}/sync-google-places-secret.sh"
+
+PATH="${mock_bin}:${PATH}" \
+MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
+PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
+AWS_REGION='ap-northeast-2' \
+EC2_INSTANCE_ID='i-test' \
+ODII_API_SERVICE_KEY="${odii_service_key}" \
+bash "${deploy_dir}/sync-odii-api-secret.sh"
 
 PATH="${mock_bin}:${PATH}" \
 MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
@@ -146,10 +166,14 @@ bash "${deploy_dir}/sync-firebase-service-account-secret.sh"
 
 grep -q '^PUBLIC_DOMAIN=example.test$' "${production_directory}/deploy/.env"
 grep -q '^UNCHANGED_VALUE=keep-me$' "${production_directory}/deploy/.env"
+grep -q "^KAKAO_REST_API_KEY=${kakao_rest_key}$" "${production_directory}/deploy/.env"
+test "$(grep -c '^KAKAO_REST_API_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^TOUR_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^TOUR_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^GOOGLE_PLACES_API_KEY=${google_places_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^GOOGLE_PLACES_API_KEY=' "${production_directory}/deploy/.env")" -eq 1
+grep -q "^ODII_API_SERVICE_KEY=${odii_service_key}$" "${production_directory}/deploy/.env"
+test "$(grep -c '^ODII_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^FIREBASE_SERVICE_ACCOUNT_BASE64=${firebase_service_account_base64}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^FIREBASE_SERVICE_ACCOUNT_BASE64=' "${production_directory}/deploy/.env")" -eq 1
 grep -q '^FIREBASE_ADMIN_ENABLED=true$' "${production_directory}/deploy/.env"
@@ -168,9 +192,19 @@ if grep -R -F "${google_places_key}" "${mock_state}" > /dev/null; then
   exit 1
 fi
 
+if grep -R -F "${kakao_rest_key}" "${mock_state}" > /dev/null; then
+  echo 'Plaintext Kakao REST API key leaked into SSM command records.' >&2
+  exit 1
+fi
+
+if grep -R -F "${odii_service_key}" "${mock_state}" > /dev/null; then
+  echo 'Plaintext ODII API key leaked into SSM command records.' >&2
+  exit 1
+fi
+
 if grep -R -F "${firebase_service_account_base64}" "${mock_state}" > /dev/null; then
   echo 'Plaintext Firebase service account leaked into SSM command records.' >&2
   exit 1
 fi
 
-echo 'TourAPI, Google Places, Firebase secret, and Firebase config sync scenarios passed.'
+echo 'Kakao REST, TourAPI, Google Places, ODII, Firebase secret, and Firebase config sync scenarios passed.'
