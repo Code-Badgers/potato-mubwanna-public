@@ -34,6 +34,8 @@ exchange_id="$(openssl rand -hex 16)"
 production_repository_directory="${PRODUCTION_REPOSITORY_DIRECTORY:-/opt/potato-mubwanna}"
 remote_private_key="/tmp/potato-production-secret-${exchange_id}.pem"
 remote_public_key="/tmp/potato-production-secret-${exchange_id}.pub"
+remote_key_envelope="/tmp/potato-production-secret-${exchange_id}.key"
+remote_key_material="/tmp/potato-production-secret-${exchange_id}.key-material"
 remote_ciphertext="/tmp/potato-production-secret-${exchange_id}.bin"
 remote_secret="/tmp/potato-production-secret-${exchange_id}.secret"
 remote_env_file="${production_repository_directory}/deploy/.env"
@@ -112,13 +114,24 @@ wait_for_command "${public_key_command_id}" "${public_key_result}"
 jq -r '.StandardOutputContent' "${public_key_result}" > "${public_key_path}"
 grep -q -- '-----BEGIN PUBLIC KEY-----' "${public_key_path}"
 
+secret_path="${runner_directory}/secret"
+key_material_path="${runner_directory}/key-material"
+key_envelope_path="${runner_directory}/key-envelope.bin"
 ciphertext_path="${runner_directory}/ciphertext.bin"
-printf '%s' "${PRODUCTION_SECRET_VALUE}" | openssl pkeyutl \
+printf '%s' "${PRODUCTION_SECRET_VALUE}" > "${secret_path}"
+openssl rand -hex 32 > "${key_material_path}"
+openssl enc -aes-256-cbc -pbkdf2 -salt \
+  -pass "file:${key_material_path}" \
+  -in "${secret_path}" \
+  -out "${ciphertext_path}"
+openssl pkeyutl \
   -encrypt \
   -pubin \
   -inkey "${public_key_path}" \
   -pkeyopt rsa_padding_mode:oaep \
-  -out "${ciphertext_path}"
+  -in "${key_material_path}" \
+  -out "${key_envelope_path}"
+key_envelope_base64="$(openssl base64 -A -in "${key_envelope_path}")"
 ciphertext_base64="$(openssl base64 -A -in "${ciphertext_path}")"
 
 secret_parameters="${runner_directory}/secret-parameters.json"
@@ -127,26 +140,34 @@ secret_result="${runner_directory}/secret-result.json"
 jq -n \
   --arg private_key "${remote_private_key}" \
   --arg public_key "${remote_public_key}" \
+  --arg key_envelope_path "${remote_key_envelope}" \
+  --arg key_material_path "${remote_key_material}" \
   --arg ciphertext_path "${remote_ciphertext}" \
   --arg secret_path "${remote_secret}" \
   --arg env_file "${remote_env_file}" \
   --arg next_env "${remote_next_env}" \
   --arg secret_name "${PRODUCTION_SECRET_NAME}" \
+  --arg key_envelope "${key_envelope_base64}" \
   --arg ciphertext "${ciphertext_base64}" \
   '{commands: [
     "set -eu",
     "umask 077",
     ("private_key=" + ($private_key | @sh)),
     ("public_key=" + ($public_key | @sh)),
+    ("key_envelope_path=" + ($key_envelope_path | @sh)),
+    ("key_material_path=" + ($key_material_path | @sh)),
     ("ciphertext_path=" + ($ciphertext_path | @sh)),
     ("secret_path=" + ($secret_path | @sh)),
     ("env_file=" + ($env_file | @sh)),
     ("next_env=" + ($next_env | @sh)),
     ("secret_name=" + ($secret_name | @sh)),
-    "cleanup() { rm -f \"${private_key}\" \"${public_key}\" \"${ciphertext_path}\" \"${secret_path}\" \"${next_env}\"; }",
+    "cleanup() { rm -f \"${private_key}\" \"${public_key}\" \"${key_envelope_path}\" \"${key_material_path}\" \"${ciphertext_path}\" \"${secret_path}\" \"${next_env}\"; }",
     "trap cleanup EXIT",
+    ("printf %s " + ($key_envelope | @sh) + " | openssl base64 -d -A -out \"${key_envelope_path}\""),
     ("printf %s " + ($ciphertext | @sh) + " | openssl base64 -d -A -out \"${ciphertext_path}\""),
-    "openssl pkeyutl -decrypt -inkey \"${private_key}\" -pkeyopt rsa_padding_mode:oaep -in \"${ciphertext_path}\" -out \"${secret_path}\"",
+    "openssl pkeyutl -decrypt -inkey \"${private_key}\" -pkeyopt rsa_padding_mode:oaep -in \"${key_envelope_path}\" -out \"${key_material_path}\"",
+    "test \"$(wc -c < \"${key_material_path}\")\" -eq 65",
+    "openssl enc -d -aes-256-cbc -pbkdf2 -pass file:\"${key_material_path}\" -in \"${ciphertext_path}\" -out \"${secret_path}\"",
     "test -s \"${secret_path}\"",
     "test -f \"${env_file}\"",
     "secret_value=\"$(cat \"${secret_path}\")\"",
