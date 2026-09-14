@@ -12,7 +12,7 @@ service_key='dummy%2Fencoded%2Bkey%3D'
 google_places_key='dummy-google-places-key'
 kakao_rest_key='dummy-kakao-rest-key'
 odii_service_key='dummy-odii-service-key'
-firebase_service_account_base64='eyJ0ZXN0IjoiZmlyZWJhc2UifQ=='
+firebase_service_account_base64="$(printf '%4096s' '' | tr ' ' A)"
 
 cleanup() {
   rm -rf "${test_directory}"
