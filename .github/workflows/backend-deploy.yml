@@ -84,11 +84,15 @@ jobs:
       - name: Sync external API production secrets
         shell: bash
         env:
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           TOUR_API_SERVICE_KEY: ${{ secrets.TOUR_API_SERVICE_KEY }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          ODII_API_SERVICE_KEY: ${{ secrets.ODII_API_SERVICE_KEY }}
         run: |
+          bash deploy/sync-kakao-rest-api-secret.sh
           bash deploy/sync-tour-api-secret.sh
           bash deploy/sync-google-places-secret.sh
+          bash deploy/sync-odii-api-secret.sh
 
       - name: Resolve local image tag
         id: image
