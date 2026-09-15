@@ -91,7 +91,7 @@ void main() {
     expect(find.byKey(const ValueKey('full-map-home-button')), findsOneWidget);
   });
 
-  testWidgets('recommendation groups never fill hot places with quiet ones',
+  testWidgets('recommendation groups use category fallback without swapping LOW',
       (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -111,9 +111,95 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.descendant(of: calm, matching: find.text('감자 카페')), findsOneWidget);
     expect(find.descendant(of: hot, matching: find.text('감자 카페')), findsNothing);
-    expect(find.descendant(of: hot, matching: find.text('정선 5일장')), findsNothing);
-    expect(find.descendant(of: hot, matching: find.text('지금은 이 조건에 맞는 장소가 없어요.')), findsOneWidget);
-    expect(find.descendant(of: other, matching: find.text('정선 5일장')), findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('정선 5일장')), findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('지금은 이 조건에 맞는 장소가 없어요.')), findsNothing);
+    expect(other, findsNothing);
+  });
+
+  testWidgets('recommendation groups fall back to Gangwon catalog without predictions',
+      (tester) async {
+    final spots = [
+      const MapSpot(
+        id: 'calm-shop',
+        name: '강원 로컬 숍',
+        category: 'POTATO_SHOP',
+        latitude: 37.8,
+        longitude: 128.2,
+        address: '강원특별자치도 강릉시 테스트로 1',
+        cityName: '강릉시',
+        congestionLevel: 'UNKNOWN',
+        stampEnabled: false,
+        imageUrl: 'https://example.com/shop.jpg',
+      ),
+      const MapSpot(
+        id: 'calm-tour',
+        name: '강원 전시관',
+        category: 'POTATO_TOUR',
+        latitude: 37.5,
+        longitude: 128.4,
+        address: '강원특별자치도 평창군 테스트로 2',
+        cityName: '평창군',
+        congestionLevel: 'UNKNOWN',
+        stampEnabled: false,
+      ),
+      const MapSpot(
+        id: 'hot-market',
+        name: '강원 전통시장',
+        category: 'POTATO_MARKET',
+        latitude: 38.2,
+        longitude: 128.5,
+        address: '강원특별자치도 속초시 테스트로 3',
+        cityName: '속초시',
+        congestionLevel: 'UNKNOWN',
+        stampEnabled: false,
+        imageUrl: 'https://example.com/market.jpg',
+      ),
+      const MapSpot(
+        id: 'hot-cafe',
+        name: '강원 감자 카페',
+        category: 'POTATO_CAFE',
+        latitude: 37.9,
+        longitude: 127.7,
+        address: '강원특별자치도 춘천시 테스트로 4',
+        cityName: '춘천시',
+        congestionLevel: 'UNKNOWN',
+        stampEnabled: false,
+      ),
+      const MapSpot(
+        id: 'outside-high',
+        name: '인근 타지역 핫플',
+        category: 'POTATO_MARKET',
+        latitude: 37.6,
+        longitude: 127.4,
+        address: '경기도 가평군 테스트로 5',
+        cityName: '가평군',
+        congestionLevel: 'HIGH',
+        stampEnabled: false,
+      ),
+    ];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => spots),
+        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: const MaterialApp(home: MapScreen(hasMapConfiguration: true)),
+    ));
+    await tester.pumpAndSettle();
+
+    final calm = find.byKey(const ValueKey('good-now-calm'));
+    final hot = find.byKey(const ValueKey('good-now-hot'));
+    await tester.scrollUntilVisible(calm, 300,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+
+    expect(find.descendant(of: calm, matching: find.text('강원 로컬 숍')), findsOneWidget);
+    expect(find.descendant(of: calm, matching: find.text('강원 전시관')), findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('강원 전통시장')), findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('강원 감자 카페')), findsOneWidget);
+    expect(find.text('인근 타지역 핫플'), findsNothing);
+    expect(find.text('지금은 이 조건에 맞는 장소가 없어요.'), findsNothing);
   });
 
   testWidgets('map tour resumes after course and recommended place visits',

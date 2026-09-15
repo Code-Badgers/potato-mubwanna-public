@@ -2229,10 +2229,41 @@ class _GoodNowSpotSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final calmSpots = _spotsByCongestion('LOW');
-    final hotSpots = _spotsByCongestion('HIGH');
-    final otherSpots = spots
-        .where((spot) => !const ['LOW', 'HIGH'].contains(spot.congestionLevel))
+    final gangwonSpots = spots.where((spot) => spot.isGangwonProvince).toList();
+    final calmSpots = _personalitySpots(
+      gangwonSpots,
+      preferredLevel: 'LOW',
+      oppositeLevel: 'HIGH',
+      fallbackCategories: const {
+        'POTATO_TOUR',
+        'POTATO_SHOP',
+        'POTATO_EXPERIENCE',
+      },
+    );
+    final calmIds = calmSpots.map((spot) => spot.id).toSet();
+    final hotSpots = _personalitySpots(
+      gangwonSpots,
+      preferredLevel: 'HIGH',
+      oppositeLevel: 'LOW',
+      fallbackCategories: const {
+        'POTATO_MARKET',
+        'POTATO_CAFE',
+        'POTATO_SNACK',
+        'POTATO_RESTAURANT',
+        'POTATO_BREWERY',
+      },
+      excludedIds: calmIds,
+    );
+    final selectedIds = {
+      ...calmIds,
+      ...hotSpots.map((spot) => spot.id),
+    };
+    final otherSpots = gangwonSpots
+        .where(
+          (spot) =>
+              !selectedIds.contains(spot.id) &&
+              !const ['LOW', 'HIGH'].contains(spot.congestionLevel),
+        )
         .take(2)
         .toList();
     final firstTargetGroup = calmSpots.isNotEmpty
@@ -2245,7 +2276,7 @@ class _GoodNowSpotSection extends StatelessWidget {
         const _DiscoverySectionHeader(title: '지금 가기 좋은 곳'),
         const SizedBox(height: 6),
         const Text(
-          '예상 혼잡도를 보고, 오늘 끌리는 곳을 골라보세요.',
+          '강원도 장소 중 오늘 끌리는 곳을 골라보세요.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 13,
@@ -2255,7 +2286,7 @@ class _GoodNowSpotSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        if (spots.isEmpty)
+        if (gangwonSpots.isEmpty)
           const _DiscoverySectionStatus(
             icon: Icons.place_outlined,
             title: '표시할 장소가 없습니다',
@@ -2267,7 +2298,7 @@ class _GoodNowSpotSection extends StatelessWidget {
               _GoodNowSpotGroup(
                 key: const ValueKey('good-now-calm'),
                 title: '내향인 전용 여유로운 장소',
-                description: '사람이 덜 몰리는 곳부터 천천히 둘러봐요.',
+                description: '전시·체험·로컬 숍처럼 천천히 즐길 강원도 장소예요.',
                 spots: calmSpots,
                 onSpotPressed: onSpotPressed,
                 targetKey: firstTargetGroup == 'calm'
@@ -2278,7 +2309,7 @@ class _GoodNowSpotSection extends StatelessWidget {
               _GoodNowSpotGroup(
                 key: const ValueKey('good-now-hot'),
                 title: '외향인 전용 사람 좋아 핫플',
-                description: '활기찬 분위기를 즐기고 싶을 때 좋아요.',
+                description: '시장·맛집·카페처럼 활기차게 즐길 강원도 장소예요.',
                 spots: hotSpots,
                 onSpotPressed: onSpotPressed,
                 targetKey: firstTargetGroup == 'hot'
@@ -2304,16 +2335,40 @@ class _GoodNowSpotSection extends StatelessWidget {
     );
   }
 
-  List<MapSpot> _spotsByCongestion(String level) {
-    final unique = <String, MapSpot>{};
-    // Filling a shortage with other levels mislabels the place's congestion.
-    for (final spot in spots.where((spot) => spot.congestionLevel == level)) {
-      unique.putIfAbsent(spot.id, () => spot);
-      if (unique.length >= 2) {
-        break;
+  List<MapSpot> _personalitySpots(
+    List<MapSpot> candidates, {
+    required String preferredLevel,
+    required String oppositeLevel,
+    required Set<String> fallbackCategories,
+    Set<String> excludedIds = const {},
+  }) {
+    final selected = <String, MapSpot>{};
+    for (final spot in candidates) {
+      if (!excludedIds.contains(spot.id) &&
+          spot.congestionLevel == preferredLevel) {
+        selected.putIfAbsent(spot.id, () => spot);
+        if (selected.length >= 2) return selected.values.toList();
       }
     }
-    return unique.values.toList();
+
+    final fallback = candidates.where(
+      (spot) =>
+          !excludedIds.contains(spot.id) &&
+          spot.congestionLevel != oppositeLevel &&
+          fallbackCategories.contains(spot.category),
+    );
+    // 예측이 없을 때도 현재 위치나 거리 대신 강원도 전체 카탈로그에서만 보완한다.
+    for (final preferImage in const [true, false]) {
+      for (final spot in fallback) {
+        if (selected.containsKey(spot.id) ||
+            spot.effectiveImageUrls.isNotEmpty != preferImage) {
+          continue;
+        }
+        selected[spot.id] = spot;
+        if (selected.length >= 2) return selected.values.toList();
+      }
+    }
+    return selected.values.toList();
   }
 }
 

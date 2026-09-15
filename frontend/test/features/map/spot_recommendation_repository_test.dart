@@ -3,6 +3,50 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
 
 void main() {
+  test('keeps only Gangwon spots in the map catalog', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.resolve(
+              Response<Map<String, Object?>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: const {
+                  'success': true,
+                  'data': [
+                    {
+                      'id': 1,
+                      'name': '강원 관광지',
+                      'category': 'POTATO_TOUR',
+                      'latitude': 37.8,
+                      'longitude': 128.2,
+                      'address': '강원특별자치도 강릉시 테스트로 1',
+                      'cityName': '강릉시',
+                    },
+                    {
+                      'id': 2,
+                      'name': '인근 타지역 관광지',
+                      'category': 'POTATO_TOUR',
+                      'latitude': 37.6,
+                      'longitude': 127.4,
+                      'address': '경기도 가평군 테스트로 2',
+                      'cityName': '가평군',
+                    },
+                  ],
+                },
+              ),
+            );
+          },
+        ),
+      );
+
+    final spots = await MapSpotRepository(dio: dio).fetchSpots();
+
+    expect(spots.map((spot) => spot.name), ['강원 관광지']);
+    expect(spots.single.isGangwonProvince, isTrue);
+  });
+
   test('fetches valid spot recommendations in external rank order', () async {
     final requestedPaths = <String>[];
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'))
@@ -117,6 +161,17 @@ const _recommendationResponse = <String, Object?>{
   'success': true,
   'message': '요청이 성공했습니다.',
   'data': [
+    {
+      'spotId': 4,
+      'name': '인근 타지역 관광지',
+      'category': 'POTATO_TOUR',
+      'latitude': 37.6,
+      'longitude': 127.4,
+      'address': '경기도 가평군',
+      'cityName': '가평군',
+      'imageUrl': 'https://example.com/outside.jpg',
+      'externalRank': 0,
+    },
     {
       'spotId': 3,
       'name': '간현관광지',
