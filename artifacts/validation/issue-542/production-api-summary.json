@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-09-15T05:25:39.0246752Z",
+  "endpoint": "https://potato-mubwanna.duckdns.org/api/spots",
+  "totalSpotCount": 97,
+  "gangwonSpotCount": 97,
+  "outsideGangwonSpotCount": 0,
+  "missingTodayCongestionCount": 97,
+  "congestionLevels": {
+    "low": 0,
+    "normal": 0,
+    "high": 0,
+    "null": 97
+  }
+}

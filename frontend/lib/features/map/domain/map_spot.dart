@@ -148,6 +148,15 @@ class MapSpot {
 
   String? get todayOpeningText => businessOpeningHours?.todayText;
 
+  bool get isGangwonProvince {
+    final normalizedAddress = address.trim();
+    if (normalizedAddress.isEmpty) {
+      return false;
+    }
+    final province = normalizedAddress.split(RegExp(r'\s+')).first;
+    return const {'강원특별자치도', '강원도', '강원'}.contains(province);
+  }
+
   bool get hasBusinessInfo {
     return (phone != null && phone!.trim().isNotEmpty) ||
         (website != null && website!.trim().isNotEmpty) ||

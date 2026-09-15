@@ -24,7 +24,12 @@ class MapSpotRepository {
     return data
         .whereType<Map<String, dynamic>>()
         .map(MapSpot.fromJson)
-        .where((spot) => spot.latitude != 0 && spot.longitude != 0)
+        .where(
+          (spot) =>
+              spot.latitude != 0 &&
+              spot.longitude != 0 &&
+              spot.isGangwonProvince,
+        )
         .toList();
   }
 
@@ -45,7 +50,8 @@ class MapSpotRepository {
         .where(
           (recommendation) =>
               recommendation.spotId.isNotEmpty &&
-              recommendation.hasValidCoordinates,
+              recommendation.hasValidCoordinates &&
+              recommendation.toMapSpot().isGangwonProvince,
         )
         .toList();
     recommendations.sort((a, b) => a.externalRank.compareTo(b.externalRank));
