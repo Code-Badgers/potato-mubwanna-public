@@ -36,6 +36,7 @@ typedef MapViewBuilder = Widget Function(
 const _mapPrimary = AppColors.primary;
 const _mapDark = AppColors.primaryDark;
 const _rareGold = AppColors.secondary;
+const _discoverySectionSpacing = 32.0;
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({
@@ -822,7 +823,7 @@ class _MapDiscoveryHome extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       slivers: [
         const SliverPadding(
-          padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 24),
           sliver: SliverToBoxAdapter(
             child: _DiscoveryHeroHeader(),
           ),
@@ -851,7 +852,7 @@ class _MapDiscoveryHome extends StatelessWidget {
           ),
         SliverPadding(
           padding:
-              const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 0, 0),
+              const EdgeInsets.fromLTRB(20, _discoverySectionSpacing, 0, 0),
           sliver: SliverToBoxAdapter(
             child: _TravelCourseSection(
               courses: courses,
@@ -862,7 +863,7 @@ class _MapDiscoveryHome extends StatelessWidget {
         ),
         SliverPadding(
           padding:
-              const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 20, 28),
+              const EdgeInsets.fromLTRB(20, _discoverySectionSpacing, 20, 40),
           sliver: SliverToBoxAdapter(
             child: _GoodNowSpotSection(
               spots: spots,
@@ -1229,7 +1230,7 @@ class _TravelCourseSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _DiscoverySectionHeader(title: '오늘 어떤 여행이 끌리나요?'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SizedBox(
           height: 304,
           child: courses.isEmpty
@@ -2254,37 +2255,11 @@ class _GoodNowSpotSection extends StatelessWidget {
       },
       excludedIds: calmIds,
     );
-    final hasFallbackRecommendations = [...calmSpots, ...hotSpots]
-        .any((spot) => spot.congestionLevel == 'UNKNOWN');
     final firstTargetGroup = calmSpots.isNotEmpty ? 'calm' : 'hot';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _DiscoverySectionHeader(title: '취향 따라 가볼 곳'),
-        const SizedBox(height: 6),
-        const Text(
-          '강원도 장소 중 오늘 끌리는 곳을 골라보세요.',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            height: 1.35,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (hasFallbackRecommendations) ...[
-          const Text(
-            '오늘 혼잡도 예측이 없는 장소는 장소 유형을 기준으로 골랐어요.',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
         if (gangwonSpots.isEmpty)
           const _DiscoverySectionStatus(
             icon: Icons.place_outlined,
@@ -2304,7 +2279,7 @@ class _GoodNowSpotSection extends StatelessWidget {
                     ? FeatureTourTargets.mapGoodNowCard
                     : null,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppDimens.sectionSpacing),
               _GoodNowSpotGroup(
                 key: const ValueKey('good-now-hot'),
                 title: '외향인 전용 사람 좋아 핫플',
@@ -2417,7 +2392,7 @@ class _GoodNowSpotGroup extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           if (spots.isEmpty)
             const Text(
               '지금은 이 조건에 맞는 장소가 없어요.',
@@ -2437,7 +2412,8 @@ class _GoodNowSpotGroup extends StatelessWidget {
                 spot: spots[index],
                 onPressed: () => onSpotPressed(spots[index]),
               ),
-            if (index < spots.length - 1) const SizedBox(height: 10),
+            if (index < spots.length - 1)
+              const SizedBox(height: AppDimens.contentSpacing),
           ],
         ],
       ),
