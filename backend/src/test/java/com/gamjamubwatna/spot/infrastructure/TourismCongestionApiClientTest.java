@@ -35,12 +35,14 @@ class TourismCongestionApiClientTest {
                   "items": {
                     "item": [
                       {
-                        "contentId": "123456",
+                        "signguCd": "51770",
+                        "tAtsNm": "정선 5일장",
                         "baseYmd": "20260727",
                         "cnctrRate": "42.7"
                       },
                       {
-                        "contentId": "123456",
+                        "signguCd": "51770",
+                        "tAtsNm": "정선 5일장",
                         "baseYmd": "20260728",
                         "cnctrRate": "121"
                       }
@@ -52,18 +54,23 @@ class TourismCongestionApiClientTest {
             """, rawQuery);
 
         var predictions = client("encoded%2Fservice%2Bkey")
-            .fetchPredictions("123456");
+            .fetchPredictions("51770", "정선 5일장");
 
         assertThat(predictions).hasSize(2);
-        assertThat(predictions.get(0).contentId()).isEqualTo("123456");
+        assertThat(predictions.get(0).touristSpotName()).isEqualTo("정선 5일장");
         assertThat(predictions.get(0).predictionDate()).isEqualTo(LocalDate.parse("2026-07-27"));
         assertThat(predictions.get(0).concentrationRate()).isEqualTo(43);
         assertThat(rawQuery.get())
             .contains("serviceKey=encoded%2Fservice%2Bkey")
             .contains("MobileOS=ETC")
             .contains("MobileApp=potato-mubwanna")
+            .contains("pageNo=1")
+            .contains("numOfRows=100")
+            .contains("areaCd=51")
+            .contains("signguCd=51770")
+            .contains("tAtsNm=%EC%A0%95%EC%84%A0%205%EC%9D%BC%EC%9E%A5")
             .contains("_type=json")
-            .contains("contentId=123456")
+            .doesNotContain("contentId=")
             .doesNotContain("%252F");
     }
 
@@ -76,8 +83,10 @@ class TourismCongestionApiClientTest {
                 "body": {
                   "items": {
                     "item": {
-                      "predictionDate": "2026-07-27",
-                      "concentrationRate": 75
+                      "signguCd": "51770",
+                      "tAtsNm": "정선5일장",
+                      "baseYmd": "2026-07-27",
+                      "cnctrRate": 75
                     }
                   }
                 }
@@ -85,13 +94,54 @@ class TourismCongestionApiClientTest {
             }
             """, new AtomicReference<>());
 
-        var predictions = client("service-key").fetchPredictions("fallback-id");
+        var predictions = client("service-key").fetchPredictions("51770", "정선 5일장");
 
         assertThat(predictions).singleElement().satisfies(prediction -> {
-            assertThat(prediction.contentId()).isEqualTo("fallback-id");
+            assertThat(prediction.touristSpotName()).isEqualTo("정선5일장");
             assertThat(prediction.predictionDate()).isEqualTo(LocalDate.parse("2026-07-27"));
             assertThat(prediction.concentrationRate()).isEqualTo(75);
         });
+    }
+
+    @Test
+    void ignoresOtherPlacesEvenWhenTheApiReturnsThemInTheSamePage() throws Exception {
+        startServer("""
+            {
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {
+                  "totalCount": 3,
+                  "items": {"item": [
+                    {"signguCd": "51770", "tAtsNm": "다른 관광지", "baseYmd": "20260727", "cnctrRate": "25"},
+                    {"signguCd": "51130", "tAtsNm": "정선 5일장", "baseYmd": "20260727", "cnctrRate": "80"},
+                    {"signguCd": "51770", "tAtsNm": "정선 5일장", "baseYmd": "20260727", "cnctrRate": "45"}
+                  ]}
+                }
+              }
+            }
+            """, new AtomicReference<>());
+
+        var predictions = client("service-key").fetchPredictions("51770", "정선 5일장");
+
+        assertThat(predictions).singleElement().satisfies(prediction ->
+            assertThat(prediction.concentrationRate()).isEqualTo(45)
+        );
+    }
+
+    @Test
+    void rejectsTruncatedPagesInsteadOfTreatingThemAsComplete() throws Exception {
+        startServer("""
+            {
+              "response": {
+                "header": {"resultCode": "0000", "resultMsg": "OK"},
+                "body": {"totalCount": 101, "items": {"item": []}}
+              }
+            }
+            """, new AtomicReference<>());
+
+        assertThatThrownBy(() -> client("service-key").fetchPredictions("51770", "정선 5일장"))
+            .isInstanceOf(TourismCongestionApiException.class)
+            .hasMessageContaining("한 페이지");
     }
 
     @Test
@@ -105,7 +155,7 @@ class TourismCongestionApiClientTest {
             }
             """, new AtomicReference<>());
 
-        assertThat(client("service-key").fetchPredictions("123456")).isEmpty();
+        assertThat(client("service-key").fetchPredictions("51770", "정선 5일장")).isEmpty();
     }
 
     @Test
@@ -120,7 +170,7 @@ class TourismCongestionApiClientTest {
             }
             """, rawQuery);
 
-        client("decoded+service/key==").fetchPredictions("123456");
+        client("decoded+service/key==").fetchPredictions("51770", "정선 5일장");
 
         assertThat(rawQuery.get())
             .contains("serviceKey=decoded%2Bservice%2Fkey%3D%3D")
@@ -138,7 +188,7 @@ class TourismCongestionApiClientTest {
             }
             """, new AtomicReference<>());
 
-        assertThatThrownBy(() -> client("service-key").fetchPredictions("123456"))
+        assertThatThrownBy(() -> client("service-key").fetchPredictions("51770", "정선 5일장"))
             .isInstanceOf(TourismCongestionApiException.class)
             .hasMessageContaining("SERVICE_KEY_IS_NOT_REGISTERED_ERROR");
     }
@@ -148,14 +198,13 @@ class TourismCongestionApiClientTest {
         TourismCongestionApiClient client = new TourismCongestionApiClient(
             RestClient.builder(),
             "https://apis.data.go.kr/B551011/TatsCnctrRateService",
-            "/tatsCnctrRateList",
+            "/tatsCnctrRatedList",
             "",
             "ETC",
-            "potato-mubwanna",
-            "contentId"
+            "potato-mubwanna"
         );
 
-        assertThatThrownBy(() -> client.fetchPredictions("123456"))
+        assertThatThrownBy(() -> client.fetchPredictions("51770", "정선 5일장"))
             .isInstanceOf(TourismCongestionApiException.class)
             .hasMessageContaining("CONGESTION_API_SERVICE_KEY");
     }
@@ -164,17 +213,16 @@ class TourismCongestionApiClientTest {
         return new TourismCongestionApiClient(
             RestClient.builder(),
             "http://localhost:%d".formatted(server.getAddress().getPort()),
-            "/tatsCnctrRateList",
+            "/tatsCnctrRatedList",
             serviceKey,
             "ETC",
-            "potato-mubwanna",
-            "contentId"
+            "potato-mubwanna"
         );
     }
 
     private void startServer(String body, AtomicReference<String> rawQuery) throws IOException {
         server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/tatsCnctrRateList", exchange -> {
+        server.createContext("/tatsCnctrRatedList", exchange -> {
             rawQuery.set(exchange.getRequestURI().getRawQuery());
             byte[] response = body.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json;charset=UTF-8");

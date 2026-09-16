@@ -15,7 +15,7 @@ class TourismCongestionSyncRunnerTest {
 
     @Test
     void skipsSyncWhenStartupFlagIsDisabled() {
-        TourismCongestionSyncRunner runner = new TourismCongestionSyncRunner(syncService, false);
+        TourismCongestionSyncRunner runner = new TourismCongestionSyncRunner(syncService, false, false);
 
         runner.run(null);
 
@@ -25,9 +25,28 @@ class TourismCongestionSyncRunnerTest {
     @Test
     void runsSyncWhenStartupFlagIsEnabled() {
         when(syncService.syncActiveSpots()).thenReturn(new TourismCongestionSyncResult(2, 1, 3, 1));
-        TourismCongestionSyncRunner runner = new TourismCongestionSyncRunner(syncService, true);
+        TourismCongestionSyncRunner runner = new TourismCongestionSyncRunner(syncService, true, false);
 
         runner.run(null);
+
+        verify(syncService).syncActiveSpots();
+    }
+
+    @Test
+    void skipsScheduledSyncWhenDailyFlagIsDisabled() {
+        TourismCongestionSyncRunner runner = new TourismCongestionSyncRunner(syncService, false, false);
+
+        runner.runScheduledSync();
+
+        verify(syncService, never()).syncActiveSpots();
+    }
+
+    @Test
+    void runsScheduledSyncWhenDailyFlagIsEnabled() {
+        when(syncService.syncActiveSpots()).thenReturn(new TourismCongestionSyncResult(2, 1, 3, 1));
+        TourismCongestionSyncRunner runner = new TourismCongestionSyncRunner(syncService, false, true);
+
+        runner.runScheduledSync();
 
         verify(syncService).syncActiveSpots();
     }

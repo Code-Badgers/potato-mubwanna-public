@@ -29,15 +29,7 @@ public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> 
         """)
     List<TouristSpot> findActiveSpotsByNames(@Param("names") Set<String> names);
 
-    @Query("""
-        SELECT spot
-        FROM TouristSpot spot
-        WHERE spot.active = true
-          AND spot.contentId IS NOT NULL
-          AND spot.contentId <> ''
-        ORDER BY spot.id ASC
-        """)
-    List<TouristSpot> findActiveSpotsWithContentId();
+    List<TouristSpot> findAllByActiveTrueOrderByIdAsc();
 
     @Query("""
         SELECT spot

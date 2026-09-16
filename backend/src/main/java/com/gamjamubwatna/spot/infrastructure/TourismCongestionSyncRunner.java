@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,13 +17,16 @@ public class TourismCongestionSyncRunner implements ApplicationRunner {
 
     private final TourismCongestionSyncService syncService;
     private final boolean syncOnStartup;
+    private final boolean syncDaily;
 
     public TourismCongestionSyncRunner(
         TourismCongestionSyncService syncService,
-        @Value("${external.congestion-api.sync-on-startup}") boolean syncOnStartup
+        @Value("${external.congestion-api.sync-on-startup}") boolean syncOnStartup,
+        @Value("${external.congestion-api.sync-daily}") boolean syncDaily
     ) {
         this.syncService = syncService;
         this.syncOnStartup = syncOnStartup;
+        this.syncDaily = syncDaily;
     }
 
     @Override
@@ -31,6 +35,19 @@ public class TourismCongestionSyncRunner implements ApplicationRunner {
             return;
         }
 
+        synchronize();
+    }
+
+    @Scheduled(
+        cron = "${external.congestion-api.sync-cron}", zone = "Asia/Seoul"
+    )
+    public void runScheduledSync() {
+        if (syncDaily) {
+            synchronize();
+        }
+    }
+
+    private void synchronize() {
         try {
             TourismCongestionSyncResult result = syncService.syncActiveSpots();
             log.info(
