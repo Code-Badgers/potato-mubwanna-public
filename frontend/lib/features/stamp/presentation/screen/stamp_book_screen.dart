@@ -1126,48 +1126,37 @@ class _StampTourHero extends StatelessWidget {
     final acquiredCount = entries.where((entry) => entry.acquired).length;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-      child: SizedBox(
-        height: 68,
-        child: Stack(
-          children: [
-            Positioned(
-              top: 2,
-              left: 0,
-              right: 0,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Expanded(
-                    child: Text(
-                      '강원도\n스탬프 투어',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 23,
-                        height: 1.08,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ),
-                  KeyedSubtree(
-                    key: FeatureTourTargets.passportButton,
-                    child: _StampTourProgressPill(
-                      acquiredCount: acquiredCount,
-                      totalCount: totalCount,
-                      onTap: () {
-                        FeatureTourScope.maybeOf(context)?.completeTarget(
-                          FeatureTourTargets.passportButton,
-                        );
-                        context.push('/main/stamps/cities');
-                      },
-                    ),
-                  ),
-                ],
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Expanded(
+            child: Text(
+              '강원도\n스탬프 투어',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 23,
+                height: 1.15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          KeyedSubtree(
+            key: FeatureTourTargets.passportButton,
+            child: _StampTourProgressPill(
+              acquiredCount: acquiredCount,
+              totalCount: totalCount,
+              onTap: () {
+                FeatureTourScope.maybeOf(context)?.completeTarget(
+                  FeatureTourTargets.passportButton,
+                );
+                context.push('/main/stamps/cities');
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1189,24 +1178,14 @@ class _StampTourProgressPill extends StatelessWidget {
     return Tooltip(
       message: '강원 여행 패스포트 보기',
       child: Material(
-        color: AppColors.surface.withValues(alpha: 0.88),
+        color: AppColors.primaryTint,
         borderRadius: BorderRadius.circular(AppDimens.pillRadius),
         elevation: 0,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppDimens.pillRadius),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppDimens.pillRadius),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.textPrimary.withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -2637,12 +2616,14 @@ class _StampBookError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(child: AppStateMessage(
-      icon: Icons.cloud_off_outlined,
-      title: '스탬프 투어를 불러오지 못했습니다.',
-      actionLabel: '다시 시도', onAction: onRetry,
-    )),
-  );
+        child: SingleChildScrollView(
+            child: AppStateMessage(
+          icon: Icons.cloud_off_outlined,
+          title: '스탬프 투어를 불러오지 못했습니다.',
+          actionLabel: '다시 시도',
+          onAction: onRetry,
+        )),
+      );
 }
 
 class _SignedOutState extends StatelessWidget {
