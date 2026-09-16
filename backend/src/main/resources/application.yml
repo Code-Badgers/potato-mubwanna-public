@@ -94,12 +94,13 @@ external:
     import-max-pages: ${TOUR_API_IMPORT_MAX_PAGES:1}
   congestion-api:
     base-url: ${CONGESTION_API_BASE_URL:https://apis.data.go.kr/B551011/TatsCnctrRateService}
-    prediction-path: ${CONGESTION_API_PREDICTION_PATH:/tatsCnctrRateList}
+    prediction-path: ${CONGESTION_API_PREDICTION_PATH:/tatsCnctrRatedList}
     service-key: ${CONGESTION_API_SERVICE_KEY:${TOUR_API_SERVICE_KEY:}}
     mobile-os: ${CONGESTION_API_MOBILE_OS:ETC}
     mobile-app: ${CONGESTION_API_MOBILE_APP:potato-mubwanna}
-    content-id-param: ${CONGESTION_API_CONTENT_ID_PARAM:contentId}
     sync-on-startup: ${CONGESTION_API_SYNC_ON_STARTUP:false}
+    sync-daily: ${CONGESTION_API_SYNC_DAILY:false}
+    sync-cron: ${CONGESTION_API_SYNC_CRON:0 15 6 * * *}
   kakao-local:
     keyword-search-url: ${KAKAO_LOCAL_KEYWORD_SEARCH_URL:https://dapi.kakao.com/v2/local/search/keyword.json}
     rest-api-key: ${KAKAO_REST_API_KEY:}
