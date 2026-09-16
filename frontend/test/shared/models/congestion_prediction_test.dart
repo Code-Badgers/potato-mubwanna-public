@@ -34,4 +34,38 @@ void main() {
     expect(MapSpot.fromJson(json).congestionLevel, 'UNKNOWN');
     expect(SpotDetail.fromJson(json).congestionLabel, '정보 없음');
   });
+
+  test('past prediction is labeled as reference, never as current congestion', () {
+    final now = DateTime.parse('2026-09-15T15:30:00Z');
+    expect(historicalCongestionDescription(
+      'LOW', '2026-09-15', 'TOURISM_CONGESTION_API', now: now,
+    ), contains('어제(9월 15일) 예측: 여유 · 참고용'));
+    expect(historicalCongestionDescription(
+      'HIGH', '2026-09-09', 'TOURISM_CONGESTION_API', now: now,
+    ), contains('지난주 같은 요일(9월 9일) 예측: 혼잡 · 참고용'));
+    expect(historicalCongestionDescription(
+      'NORMAL', '2026-09-14', 'TOURISM_CONGESTION_API', now: now,
+    ), isNull);
+    expect(historicalCongestionDescription(
+      'LOW', '2026-09-16', 'TOURISM_CONGESTION_API', now: now,
+    ), isNull);
+    expect(historicalCongestionDescription(
+      'BOGUS', '2026-09-15', 'TOURISM_CONGESTION_API', now: now,
+    ), isNull);
+
+    final yesterday = DateTime.parse('${koreaDate()}T00:00:00Z')
+        .subtract(const Duration(days: 1)).toIso8601String().substring(0, 10);
+    final json = <String, dynamic>{
+      'id': 1,
+      'congestionLevel': null,
+      'congestionReferenceLevel': 'LOW',
+      'congestionReferenceDate': yesterday,
+      'congestionReferenceSource': 'TOURISM_CONGESTION_API',
+    };
+    final map = MapSpot.fromJson(json);
+    final detail = SpotDetail.fromJson(json);
+    expect(map.congestionLevel, 'UNKNOWN');
+    expect(map.asRecommended().congestionReferenceDescription, contains('참고용'));
+    expect(detail.congestionReferenceDescription, contains('실제 혼잡도나 오늘 예측이 아니에요'));
+  });
 }

@@ -12,6 +12,9 @@ class MapSpot {
     required String congestionLevel,
     this.congestionPredictionDate,
     this.congestionSource,
+    this.congestionReferenceLevel,
+    this.congestionReferenceDate,
+    this.congestionReferenceSource,
     required this.stampEnabled,
     this.imageUrl,
     this.imageUrls = const [],
@@ -48,6 +51,9 @@ class MapSpot {
       congestionLevel: json['congestionLevel'] as String? ?? 'UNKNOWN',
       congestionPredictionDate: json['congestionPredictionDate'] as String?,
       congestionSource: json['congestionSource'] as String?,
+      congestionReferenceLevel: json['congestionReferenceLevel'] as String?,
+      congestionReferenceDate: json['congestionReferenceDate'] as String?,
+      congestionReferenceSource: json['congestionReferenceSource'] as String?,
       stampEnabled: json['stampEnabled'] as bool? ?? true,
       menuItems: menuItems,
     );
@@ -69,10 +75,18 @@ class MapSpot {
   final String _congestionLevel;
   final String? congestionPredictionDate;
   final String? congestionSource;
+  final String? congestionReferenceLevel;
+  final String? congestionReferenceDate;
+  final String? congestionReferenceSource;
   String get congestionLevel => congestion.currentCongestionLevel(
       _congestionLevel, congestionPredictionDate);
   String get congestionDescription => congestion.congestionDescription(
       congestionLevel, congestionPredictionDate, congestionSource);
+  String? get congestionReferenceDescription => congestionLevel == 'UNKNOWN'
+      ? congestion.historicalCongestionDescription(
+          congestionReferenceLevel, congestionReferenceDate,
+          congestionReferenceSource)
+      : null;
   final bool stampEnabled;
   final List<MapSpotMenuItem> menuItems;
   final bool isRecommended;
@@ -95,6 +109,9 @@ class MapSpot {
       congestionLevel: _congestionLevel,
       congestionPredictionDate: congestionPredictionDate,
       congestionSource: congestionSource,
+      congestionReferenceLevel: congestionReferenceLevel,
+      congestionReferenceDate: congestionReferenceDate,
+      congestionReferenceSource: congestionReferenceSource,
       stampEnabled: stampEnabled,
       menuItems: menuItems,
       isRecommended: true,
