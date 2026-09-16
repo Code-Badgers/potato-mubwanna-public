@@ -3,6 +3,7 @@ package com.gamjamubwatna.spot.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -19,6 +20,9 @@ import com.gamjamubwatna.spot.domain.TouristSpotRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class SpotServiceTest {
@@ -29,14 +33,22 @@ class SpotServiceTest {
     private final SpotTourInfoResolver spotTourInfoResolver = mock(SpotTourInfoResolver.class);
     private final ExternalPlaceDetailsResolver externalPlaceDetailsResolver = mock(ExternalPlaceDetailsResolver.class);
     private final TodayCongestionResolver todayCongestionResolver = mock(TodayCongestionResolver.class);
+    private final HistoricalCongestionReferenceResolver historicalCongestionReferenceResolver =
+        mock(HistoricalCongestionReferenceResolver.class);
     private final SpotService spotService = new SpotService(
         touristSpotRepository,
         spotMenuItemRepository,
         spotImageResolver,
         spotTourInfoResolver,
         externalPlaceDetailsResolver,
-        todayCongestionResolver
+        todayCongestionResolver,
+        historicalCongestionReferenceResolver
     );
+
+    @BeforeEach
+    void noHistoricalReferencesByDefault() {
+        when(historicalCongestionReferenceResolver.resolve(anyList(), anySet())).thenReturn(Map.of());
+    }
 
     @Test
     void returnsAtMostThreeMenuItemsForEachSpotAndAnEmptyListWithoutMenus() {
@@ -206,10 +218,29 @@ class SpotServiceTest {
         assertThat(all.get(1).congestionLevel()).isNull();
         assertThat(all.get(1).congestionPredictionDate()).isNull();
         assertThat(all.get(1).congestionSource()).isNull();
+        assertThat(all.get(1).congestionReferenceLevel()).isNull();
         assertThat(spotService.getSpots(null, null, CongestionLevel.LOW))
             .extracting(SpotListResponse::id).containsExactly(1L);
         assertThat(spotService.getSpots(null, null, CongestionLevel.NORMAL)).isEmpty();
         verify(touristSpotRepository, never()).findActiveSpots(null, null, CongestionLevel.LOW);
+    }
+
+    @Test
+    void exposesPastPredictionOnlyAsSeparateReferenceWithoutChangingTodayFilter() {
+        TouristSpot spot = spot(2L, "어제 예측 장소", SpotCategory.POTATO_TOUR);
+        var reference = new com.gamjamubwatna.spot.domain.SpotCongestionPrediction(
+            spot, LocalDate.of(2026, 9, 15), 20, 100, CongestionLevel.LOW,
+            "TOURISM_CONGESTION_API", java.time.Instant.parse("2026-09-15T00:00:00Z"));
+        when(touristSpotRepository.findActiveSpots(null, null, null)).thenReturn(List.of(spot));
+        when(historicalCongestionReferenceResolver.resolve(List.of(spot), Set.of()))
+            .thenReturn(Map.of(2L, reference));
+
+        SpotListResponse response = spotService.getSpots(null, null, null).get(0);
+        assertThat(response.congestionLevel()).isNull();
+        assertThat(response.congestionReferenceLevel()).isEqualTo(CongestionLevel.LOW);
+        assertThat(response.congestionReferenceDate()).isEqualTo(LocalDate.of(2026, 9, 15));
+        assertThat(response.congestionReferenceSource()).isEqualTo("TOURISM_CONGESTION_API");
+        assertThat(spotService.getSpots(null, null, CongestionLevel.LOW)).isEmpty();
     }
 
     private TouristSpot spot(Long id, String name, SpotCategory category) {
