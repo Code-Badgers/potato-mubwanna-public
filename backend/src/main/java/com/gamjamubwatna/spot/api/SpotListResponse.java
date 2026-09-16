@@ -27,7 +27,10 @@ public record SpotListResponse(
     PlaceOpeningHoursResponse businessOpeningHours,
     List<SpotMenuItemResponse> menuItems,
     LocalDate congestionPredictionDate,
-    String congestionSource
+    String congestionSource,
+    CongestionLevel congestionReferenceLevel,
+    LocalDate congestionReferenceDate,
+    String congestionReferenceSource
 ) {
 
     public static SpotListResponse from(
@@ -36,7 +39,8 @@ public record SpotListResponse(
         List<String> imageUrls,
         ExternalPlaceDetails externalDetails,
         List<SpotMenuItemResponse> menuItems,
-        SpotCongestionPrediction prediction
+        SpotCongestionPrediction prediction,
+        SpotCongestionPrediction reference
     ) {
         return new SpotListResponse(
             spot.getId(),
@@ -56,7 +60,10 @@ public record SpotListResponse(
             PlaceOpeningHoursResponse.from(externalDetails.openingHours()),
             List.copyOf(menuItems),
             prediction == null ? null : prediction.getPredictionDate(),
-            prediction == null ? null : prediction.getSource()
+            prediction == null ? null : prediction.getSource(),
+            reference == null ? null : reference.getCongestionLevel(),
+            reference == null ? null : reference.getPredictionDate(),
+            reference == null ? null : reference.getSource()
         );
     }
 }

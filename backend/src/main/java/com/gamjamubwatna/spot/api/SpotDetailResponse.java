@@ -38,7 +38,10 @@ public record SpotDetailResponse(
     List<String> imageUrls,
     List<SpotMenuItemResponse> menuItems,
     LocalDate congestionPredictionDate,
-    String congestionSource
+    String congestionSource,
+    CongestionLevel congestionReferenceLevel,
+    LocalDate congestionReferenceDate,
+    String congestionReferenceSource
 ) {
 
     public static SpotDetailResponse from(
@@ -48,7 +51,8 @@ public record SpotDetailResponse(
         SpotTourInfo tourInfo,
         ExternalPlaceDetails externalDetails,
         List<SpotMenuItemResponse> menuItems,
-        SpotCongestionPrediction prediction
+        SpotCongestionPrediction prediction,
+        SpotCongestionPrediction reference
     ) {
         return new SpotDetailResponse(
             spot.getId(),
@@ -78,7 +82,10 @@ public record SpotDetailResponse(
             imageUrls,
             menuItems,
             prediction == null ? null : prediction.getPredictionDate(),
-            prediction == null ? null : prediction.getSource()
+            prediction == null ? null : prediction.getSource(),
+            reference == null ? null : reference.getCongestionLevel(),
+            reference == null ? null : reference.getPredictionDate(),
+            reference == null ? null : reference.getSource()
         );
     }
 }

@@ -524,6 +524,45 @@ void main() {
     expect(tester.getTopLeft(homeButton).dy, lessThan(initialTop));
   });
 
+  testWidgets('full map labels yesterday prediction as reference only', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final yesterday = DateTime.parse('${koreaDate()}T00:00:00Z')
+        .subtract(const Duration(days: 1)).toIso8601String().substring(0, 10);
+    final spot = MapSpot.fromJson({
+      'id': 1,
+      'name': '어제 예측 장소',
+      'category': 'POTATO_TOUR',
+      'latitude': 37.38,
+      'longitude': 128.66,
+      'congestionReferenceLevel': 'LOW',
+      'congestionReferenceDate': yesterday,
+      'congestionReferenceSource': 'TOURISM_CONGESTION_API',
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => [spot]),
+        favoriteSpotControllerProvider.overrideWith(
+          (ref) => _favoriteController(),
+        ),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: const MaterialApp(
+        home: MapScreen(hasMapConfiguration: true, showFullMapInitially: true),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('어제('), findsOneWidget);
+    expect(find.textContaining('실제 혼잡도나 오늘 예측이 아니에요'), findsOneWidget);
+    expect(find.text('혼잡도 예측 여유'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('adds a travel course to the route and opens route mode', (
     tester,
   ) async {

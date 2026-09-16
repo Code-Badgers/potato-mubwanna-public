@@ -68,7 +68,10 @@ class SpotControllerTest {
                     "https://example.com/menu"
                 )),
                 LocalDate.of(2026, 9, 13),
-                "TOUR_API"
+                "TOUR_API",
+                null,
+                null,
+                null
             )));
 
         mockMvc.perform(get("/spots")

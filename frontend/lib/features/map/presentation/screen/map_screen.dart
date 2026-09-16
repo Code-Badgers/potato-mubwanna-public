@@ -3257,9 +3257,11 @@ class _SelectedSpotSummary extends StatelessWidget {
                   ],
                   const SizedBox(height: 9),
                   if (spot.congestionLevel == 'UNKNOWN')
-                    const Text(
-                      '오늘 혼잡도 예측은 아직 없어요.',
-                      style: TextStyle(
+                    Text(
+                      spot.congestionReferenceDescription == null
+                          ? '오늘 혼잡도 예측은 아직 없어요.'
+                          : '오늘 혼잡도 예측은 아직 없어요.\n${spot.congestionReferenceDescription}',
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
                         height: 1.4,

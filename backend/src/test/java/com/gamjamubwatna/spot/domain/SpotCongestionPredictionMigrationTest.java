@@ -51,6 +51,29 @@ class SpotCongestionPredictionMigrationTest {
     }
 
     @Test
+    @org.springframework.transaction.annotation.Transactional
+    void referenceQueryReturnsOnlyYesterdayAndSameWeekdayLastWeekInDateOrder() {
+        var spot = touristSpotRepository.findAll().getFirst();
+        var today = java.time.LocalDate.of(2026, 9, 16);
+        var instant = java.time.Instant.parse("2026-09-15T00:00:00Z");
+        for (int offset : new int[]{-8, -7, -2, -1, 0}) {
+            spotCongestionPredictionRepository.save(new SpotCongestionPrediction(
+                spot, today.plusDays(offset), 20, 100, CongestionLevel.LOW,
+                "TOURISM_CONGESTION_API", instant));
+        }
+        spotCongestionPredictionRepository.flush();
+
+        var results = spotCongestionPredictionRepository.findReferencePredictions(
+            java.util.List.of(spot.getId()), java.util.List.of(today.minusDays(1), today.minusDays(7))
+        );
+        assertThat(results).extracting(SpotCongestionPrediction::getPredictionDate)
+            .containsExactly(today.minusDays(1), today.minusDays(7));
+        assertThat(spotCongestionPredictionRepository.findReferencePredictions(
+            java.util.List.of(-1L), java.util.List.of(today.minusDays(1), today.minusDays(7))
+        )).isEmpty();
+    }
+
+    @Test
     void createsSpotCongestionPredictionTableAndLookupIndexes() throws Exception {
         assertThat(spotCongestionPredictionRepository.findAll()).isEmpty();
 

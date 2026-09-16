@@ -15,6 +15,9 @@ class SpotDetail {
     required String congestionLevel,
     this.congestionPredictionDate,
     this.congestionSource,
+    this.congestionReferenceLevel,
+    this.congestionReferenceDate,
+    this.congestionReferenceSource,
     required this.verificationRadiusMeter,
     required this.stampEnabled,
     this.description,
@@ -54,6 +57,9 @@ class SpotDetail {
       congestionLevel: data['congestionLevel'] as String? ?? 'UNKNOWN',
       congestionPredictionDate: data['congestionPredictionDate'] as String?,
       congestionSource: data['congestionSource'] as String?,
+      congestionReferenceLevel: data['congestionReferenceLevel'] as String?,
+      congestionReferenceDate: data['congestionReferenceDate'] as String?,
+      congestionReferenceSource: data['congestionReferenceSource'] as String?,
       verificationRadiusMeter: data['verificationRadiusMeter'] as int? ?? 0,
       stampEnabled: data['stampEnabled'] as bool? ?? false,
       description: _readNullableString(data['description']),
@@ -88,10 +94,18 @@ class SpotDetail {
   final String _congestionLevel;
   final String? congestionPredictionDate;
   final String? congestionSource;
+  final String? congestionReferenceLevel;
+  final String? congestionReferenceDate;
+  final String? congestionReferenceSource;
   String get congestionLevel => congestion.currentCongestionLevel(
       _congestionLevel, congestionPredictionDate);
   String get congestionDescription => congestion.congestionDescription(
       congestionLevel, congestionPredictionDate, congestionSource);
+  String? get congestionReferenceDescription => congestionLevel == 'UNKNOWN'
+      ? congestion.historicalCongestionDescription(
+          congestionReferenceLevel, congestionReferenceDate,
+          congestionReferenceSource)
+      : null;
   final int verificationRadiusMeter;
   final bool stampEnabled;
   final String? description;

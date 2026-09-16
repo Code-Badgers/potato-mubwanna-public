@@ -99,7 +99,9 @@ class _SpotDetailBody extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 spot.congestionLevel == 'UNKNOWN'
-                    ? '오늘 혼잡도 예측은 아직 없어요.'
+                    ? spot.congestionReferenceDescription == null
+                        ? '오늘 혼잡도 예측은 아직 없어요.'
+                        : '오늘 혼잡도 예측은 아직 없어요.\n${spot.congestionReferenceDescription}'
                     : spot.congestionDescription,
                 style: const TextStyle(
                   color: AppColors.textSecondary,

@@ -38,6 +38,29 @@ void main() {
     expect(find.text('보통 예측'), findsNothing);
   });
 
+  testWidgets('detail shows yesterday prediction only as a reference',
+      (tester) async {
+    await _setMobileViewport(tester);
+    final yesterday = DateTime.parse('${koreaDate()}T00:00:00Z')
+        .subtract(const Duration(days: 1)).toIso8601String().substring(0, 10);
+    await tester.pumpWidget(_app(
+      engine: _FakeAudioPlaybackEngine(),
+      spotOverride: (ref) async => SpotDetail.fromJson({
+        'id': 1,
+        'name': '어제 예측 장소',
+        'congestionReferenceLevel': 'LOW',
+        'congestionReferenceDate': yesterday,
+        'congestionReferenceSource': 'TOURISM_CONGESTION_API',
+      }),
+      audioOverride: (ref) async => _guide,
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('어제('), findsOneWidget);
+    expect(find.textContaining('오늘 예측이 아니에요'), findsOneWidget);
+    expect(find.text('여유 예측'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('visit result actions stay reachable on a small screen',
       (tester) async {
     await _setMobileViewport(tester);

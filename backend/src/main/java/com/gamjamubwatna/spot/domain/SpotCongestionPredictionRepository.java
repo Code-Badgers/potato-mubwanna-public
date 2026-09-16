@@ -21,6 +21,17 @@ public interface SpotCongestionPredictionRepository extends JpaRepository<SpotCo
         @Param("today") LocalDate today
     );
 
+    @Query("""
+        select prediction from SpotCongestionPrediction prediction
+        join fetch prediction.touristSpot spot
+        where spot.id in :spotIds and prediction.predictionDate in :dates
+        order by prediction.predictionDate desc, prediction.createdAt desc, prediction.id desc
+        """)
+    List<SpotCongestionPrediction> findReferencePredictions(
+        @Param("spotIds") Collection<Long> spotIds,
+        @Param("dates") Collection<LocalDate> dates
+    );
+
     Optional<SpotCongestionPrediction> findByTouristSpotIdAndPredictionDateAndSource(
         Long touristSpotId,
         LocalDate predictionDate,

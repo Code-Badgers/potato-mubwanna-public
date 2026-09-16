@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class SpotService {
     private final ExternalPlaceDetailsResolver externalPlaceDetailsResolver;
 
     private final TodayCongestionResolver todayCongestionResolver;
+    private final HistoricalCongestionReferenceResolver historicalCongestionReferenceResolver;
 
     public SpotService(
         TouristSpotRepository touristSpotRepository,
@@ -34,7 +36,8 @@ public class SpotService {
         SpotImageResolver spotImageResolver,
         SpotTourInfoResolver spotTourInfoResolver,
         ExternalPlaceDetailsResolver externalPlaceDetailsResolver,
-        TodayCongestionResolver todayCongestionResolver
+        TodayCongestionResolver todayCongestionResolver,
+        HistoricalCongestionReferenceResolver historicalCongestionReferenceResolver
     ) {
         this.touristSpotRepository = touristSpotRepository;
         this.spotMenuItemRepository = spotMenuItemRepository;
@@ -42,6 +45,7 @@ public class SpotService {
         this.spotTourInfoResolver = spotTourInfoResolver;
         this.externalPlaceDetailsResolver = externalPlaceDetailsResolver;
         this.todayCongestionResolver = todayCongestionResolver;
+        this.historicalCongestionReferenceResolver = historicalCongestionReferenceResolver;
     }
 
     @Transactional(readOnly = true)
@@ -62,6 +66,9 @@ public class SpotService {
             spots = spots.stream().filter(spot -> predictions.containsKey(spot.getId())
                 && predictions.get(spot.getId()).getCongestionLevel() == congestionLevel).toList();
         }
+        Map<Long, SpotCongestionPrediction> references = historicalCongestionReferenceResolver.resolve(
+            spots, predictions.keySet()
+        );
         Map<Long, List<SpotMenuItemResponse>> menuItemsBySpotId = menuItemsBySpotId(spots);
         Map<Long, ExternalPlaceDetails> cachedDetailsBySpotId =
             externalPlaceDetailsResolver.resolveCached(spots);
@@ -78,7 +85,8 @@ public class SpotService {
                     imageUrls,
                     externalDetails,
                     menuItemsBySpotId.getOrDefault(spot.getId(), List.of()),
-                    predictions.get(spot.getId())
+                    predictions.get(spot.getId()),
+                    references.get(spot.getId())
                 );
             })
             .toList();
@@ -104,6 +112,10 @@ public class SpotService {
         List<String> imageUrls = resolvedImageUrls(spot, externalDetails, 3);
         List<SpotMenuItemResponse> menuItems = menuItemsBySpotId(List.of(spot))
             .getOrDefault(spot.getId(), List.of());
+        SpotCongestionPrediction todayPrediction = todayCongestionResolver.resolve(List.of(spot)).get(spotId);
+        SpotCongestionPrediction reference = historicalCongestionReferenceResolver.resolve(
+            List.of(spot), todayPrediction == null ? Set.of() : Set.of(spotId)
+        ).get(spotId);
         return SpotDetailResponse.from(
             spot,
             imageUrls.isEmpty() ? null : imageUrls.get(0),
@@ -111,7 +123,8 @@ public class SpotService {
             spotTourInfoResolver.resolve(spot),
             externalDetails,
             menuItems,
-            todayCongestionResolver.resolve(List.of(spot)).get(spotId)
+            todayPrediction,
+            reference
         );
     }
 
