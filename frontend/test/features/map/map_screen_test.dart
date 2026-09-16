@@ -220,6 +220,9 @@ void main() {
         findsOneWidget);
     expect(find.descendant(of: calm, matching: find.text('강원 전시관')),
         findsOneWidget);
+    expect(find.descendant(of: calm, matching: find.text('테스트로 1')),
+        findsOneWidget);
+    expect(find.text('강원특별자치도 강릉시 테스트로 1'), findsNothing);
     expect(find.descendant(of: hot, matching: find.text('강원 전통시장')),
         findsOneWidget);
     expect(find.descendant(of: hot, matching: find.text('강원 감자 카페')),
@@ -366,10 +369,10 @@ void main() {
 
       final preview = find.byKey(const ValueKey('map-discovery-preview-card'));
       final heroLastLine = find.text('추천 장소를 발견하고 내 동선에 담아보세요');
-      final courseHeading = find.text('오늘 어떤 여행이 끌리나요?');
+      final courseHeading = find.text('나만 몰랐던 강원도 이색 여행');
       expect(
           tester.getTopLeft(preview).dy - tester.getBottomLeft(heroLastLine).dy,
-          greaterThanOrEqualTo(24));
+          greaterThanOrEqualTo(20));
       expect(
           tester.getTopLeft(courseHeading).dy -
               tester.getBottomLeft(preview).dy,
@@ -414,7 +417,7 @@ void main() {
     expect(find.text('내 동선 0곳'), findsNothing);
     expect(find.byKey(const ValueKey('discovery-route-button')), findsNothing);
     expect(find.byKey(const ValueKey('preview-route-button')), findsNothing);
-    expect(find.text('오늘 어떤 여행이 끌리나요?'), findsOneWidget);
+    expect(find.text('나만 몰랐던 강원도 이색 여행'), findsOneWidget);
     expect(find.text('지도 크게 보기'), findsOneWidget);
     expect(renderedSpots, isEmpty);
 

@@ -823,7 +823,7 @@ class _MapDiscoveryHome extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       slivers: [
         const SliverPadding(
-          padding: EdgeInsets.fromLTRB(20, 24, 20, 24),
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 20),
           sliver: SliverToBoxAdapter(
             child: _DiscoveryHeroHeader(),
           ),
@@ -967,30 +967,30 @@ class _DiscoveryHeroHeader extends StatelessWidget {
         Text(
           '오늘은 어디로 떠나볼까요?',
           style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20,
+            color: AppColors.primaryDark,
+            fontSize: 14,
             fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        SizedBox(height: 6),
+        Text(
+          '강원도 여행 코스 짜기',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 27,
+            fontWeight: FontWeight.w900,
+            height: 1.18,
             letterSpacing: 0,
           ),
         ),
         SizedBox(height: 8),
         Text(
-          '강원도 여행 코스 짜기',
-          style: TextStyle(
-            color: _mapPrimary,
-            fontSize: 31,
-            fontWeight: FontWeight.w900,
-            height: 1.08,
-            letterSpacing: 0,
-          ),
-        ),
-        SizedBox(height: 10),
-        Text(
           '추천 장소를 발견하고 내 동선에 담아보세요',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 14,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w500,
             letterSpacing: 0,
           ),
         ),
@@ -1012,11 +1012,11 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       key: const ValueKey('map-discovery-preview-card'),
-      height: 286,
+      height: 248,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppShadows.softCard,
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -1039,14 +1039,15 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
                 icon: const Icon(Icons.open_in_full_rounded, size: 18),
                 label: const Text('지도 크게 보기'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _mapPrimary,
+                  backgroundColor: _mapPrimary,
+                  foregroundColor: AppColors.surface,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 13,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(17),
+                    borderRadius:
+                        BorderRadius.circular(AppDimens.compactCardRadius),
                   ),
                   textStyle: const TextStyle(
                     fontSize: 14,
@@ -1229,10 +1230,10 @@ class _TravelCourseSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _DiscoverySectionHeader(title: '오늘 어떤 여행이 끌리나요?'),
+        const _DiscoverySectionHeader(title: '나만 몰랐던 강원도 이색 여행'),
         const SizedBox(height: 16),
         SizedBox(
-          height: 304,
+          height: 272,
           child: courses.isEmpty
               ? const Padding(
                   padding: EdgeInsets.only(right: 20),
@@ -1330,17 +1331,18 @@ class _TravelCourseCard extends ConsumerWidget {
     final durationLabel = _travelCourseDurationLabel(routeEstimate);
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+      borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
         child: Container(
           width: 266,
-          height: 292,
+          height: 260,
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-            boxShadow: AppShadows.softCard,
+            borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+            border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1349,9 +1351,9 @@ class _TravelCourseCard extends ConsumerWidget {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(AppDimens.cardRadius)),
+                        top: Radius.circular(AppDimens.compactCardRadius)),
                     child: SizedBox(
-                      height: 266 / AppDimens.landscapeImageRatio,
+                      height: 132,
                       width: double.infinity,
                       child: _CourseImage(
                         imageUrl: course.heroImageUrl,
@@ -1363,7 +1365,7 @@ class _TravelCourseCard extends ConsumerWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(AppDimens.cardRadius),
+                          top: Radius.circular(AppDimens.compactCardRadius),
                         ),
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
@@ -1391,8 +1393,8 @@ class _TravelCourseCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 21,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
                             height: 1.12,
                             letterSpacing: 0,
                           ),
@@ -1415,7 +1417,7 @@ class _TravelCourseCard extends ConsumerWidget {
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           height: 1.36,
                           letterSpacing: 0,
                         ),
@@ -2434,17 +2436,17 @@ class _PopularSpotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+      borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
       elevation: 0,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-            boxShadow: AppShadows.softCard,
+            borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+            border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
           ),
           child: Row(
             children: [
@@ -2469,7 +2471,7 @@ class _PopularSpotCard extends StatelessWidget {
                   children: [
                     Text(
                       spot.name,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.cardTitle,
                     ),
@@ -2478,18 +2480,13 @@ class _PopularSpotCard extends StatelessWidget {
                       '${spot.cityName} · ${spot.categoryLabel}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
+                      style: AppTextStyles.supporting,
                     ),
                     if (spot.address.trim().isNotEmpty) ...[
                       const SizedBox(height: 6),
                       _PopularSpotMetaLine(
                         icon: Icons.place_outlined,
-                        label: spot.address,
+                        label: _shortDiscoveryAddress(spot),
                       ),
                     ],
                     const SizedBox(height: 8),
@@ -2525,16 +2522,29 @@ class _PopularSpotCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
-              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary, size: 20),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+String _shortDiscoveryAddress(MapSpot spot) {
+  var address = spot.address.trim();
+  for (final prefix in const ['강원특별자치도 ', '강원도 ']) {
+    if (address.startsWith(prefix)) {
+      address = address.substring(prefix.length);
+      break;
+    }
+  }
+  final city = spot.cityName.trim();
+  if (city.isNotEmpty && address.startsWith('$city ')) {
+    address = address.substring(city.length + 1);
+  }
+  return address.isEmpty ? spot.address.trim() : address;
 }
 
 class _DiscoverySectionHeader extends StatelessWidget {

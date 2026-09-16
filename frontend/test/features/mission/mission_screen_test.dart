@@ -27,6 +27,36 @@ import 'package:potato_mubwanna/features/potato/data/step_count_reader_stub.dart
 import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
 
 void main() {
+  testWidgets('featured mission stays readable on common phone widths',
+      (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.devicePixelRatio = 1;
+    for (final width in <double>[360, 375, 390, 430]) {
+      tester.view.physicalSize = Size(width, 844);
+      await _pumpMissionScreen(tester);
+      expect(find.text('점순이의 미션'), findsOneWidget);
+      expect(find.byKey(FeatureTourTargets.missionFeatured), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'phone width $width');
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
+  testWidgets('Jumsooni detail bubble fits common phone widths',
+      (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.devicePixelRatio = 1;
+    for (final width in <double>[360, 375, 390, 430]) {
+      tester.view.physicalSize = Size(width, 844);
+      await _pumpMissionScreen(tester, visitEntryMissionId: '1004');
+      expect(find.text('미션 상세'), findsOneWidget);
+      expect(find.text('점순이 특별 미션'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'detail width $width');
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
   testWidgets('completed daily evidence can be opened without Jumsooni intro', (tester) async {
     await _pumpMissionScreen(tester);
     final history = find.byKey(const ValueKey('daily-completion-history'));

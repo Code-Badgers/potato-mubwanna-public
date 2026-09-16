@@ -689,7 +689,7 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   moisture: moisture,
                   mood: mood,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 _PotatoProgressLine(
                   label: '성장 진행도',
                   valueLabel: '$harvestPercent%',
@@ -700,7 +700,7 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                   const Text('어떤 감자가 자랄까요?',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                 ],
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 KeyedSubtree(
                   key: FeatureTourTargets.potatoCareActions,
                   child: _PotatoCareBar(
@@ -713,7 +713,7 @@ class _RepresentativePotatoCardState extends State<_RepresentativePotatoCard> {
                 ),
                 const SizedBox(height: 10),
                 const _PotatoStepGrowthPanel(),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 _PotatoHarvestAction(
                   item: potato,
                   canHarvest: canHarvest,
@@ -856,19 +856,8 @@ class _PotatoCareStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.84),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
         children: [
           Expanded(

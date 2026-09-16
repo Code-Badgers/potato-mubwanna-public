@@ -40,6 +40,39 @@ void main() {
     expect(find.text('카카오 로그인'), findsOneWidget);
   });
 
+  testWidgets('intro copy remains readable by assistive technology',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(const MaterialApp(home: OnboardingScreen()));
+
+    expect(
+      find.bySemanticsLabel(
+        '강원도 여행을 더 특별하게. 지도에서 여행지를 찾고 감자 친구와 함께 여행을 시작해보세요.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('1/4 페이지'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('intro pages fit common phone widths', (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    for (final size in <Size>[
+      const Size(360, 780),
+      const Size(375, 812),
+      const Size(390, 844),
+      const Size(430, 932),
+    ]) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(const MaterialApp(home: OnboardingScreen()));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'phone width ${size.width}');
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
   testWidgets('shows only the runtime permissions currently used',
       (tester) async {
     tester.view.physicalSize = const Size(430, 932);

@@ -23,6 +23,28 @@ import 'package:potato_mubwanna/features/spot/application/spot_detail_controller
 import 'package:potato_mubwanna/features/spot/domain/spot_detail.dart' as spot;
 
 void main() {
+  testWidgets('stamp title and passport action fit common phone widths', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.devicePixelRatio = 1;
+    await _pumpScreen(
+      tester,
+      override: stampBookProvider.overrideWith((ref) async => _stampBook()),
+    );
+    await tester.pumpAndSettle();
+
+    for (final width in <double>[360, 375, 390, 430]) {
+      tester.view.physicalSize = Size(width, 844);
+      await tester.pumpAndSettle();
+      final passport = find.byKey(FeatureTourTargets.passportButton);
+      expect(passport, findsOneWidget);
+      expect(tester.getTopRight(passport).dx, lessThanOrEqualTo(width));
+      expect(tester.takeException(), isNull, reason: 'phone width $width');
+    }
+  });
+
   testWidgets('renders a map-first stamp tour and selected city card', (
     tester,
   ) async {

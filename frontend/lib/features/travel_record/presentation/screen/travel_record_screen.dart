@@ -107,8 +107,8 @@ class _TravelRecordHeader extends StatelessWidget {
                   '여행 기록',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 0,
                   ),
                 ),
@@ -121,8 +121,8 @@ class _TravelRecordHeader extends StatelessWidget {
               '미션과 스탬프 인증을 위해 업로드한 사진은\n자동으로 이곳에 모여요.',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
                 height: 1.45,
                 letterSpacing: 0,
               ),

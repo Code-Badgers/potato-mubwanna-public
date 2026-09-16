@@ -96,19 +96,6 @@ class _SpotDetailBody extends ConsumerWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                spot.congestionLevel == 'UNKNOWN'
-                    ? spot.congestionReferenceDescription == null
-                        ? '오늘 혼잡도 예측은 아직 없어요.'
-                        : '오늘 혼잡도 예측은 아직 없어요.\n${spot.congestionReferenceDescription}'
-                    : spot.congestionDescription,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                  height: 1.4,
-                ),
-              ),
               const SizedBox(height: 14),
               Text(
                 spot.name,
@@ -134,6 +121,19 @@ class _SpotDetailBody extends ConsumerWidget {
                       : '스탬프 인증 가능',
                 ),
               ],
+              const SizedBox(height: 12),
+              Text(
+                spot.congestionLevel == 'UNKNOWN'
+                    ? spot.congestionReferenceDescription == null
+                        ? '오늘 혼잡도 예측은 아직 없어요.'
+                        : '오늘 혼잡도 예측은 아직 없어요.\n${spot.congestionReferenceDescription}'
+                    : spot.congestionDescription,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
               if (spot.potatoTags.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Wrap(
