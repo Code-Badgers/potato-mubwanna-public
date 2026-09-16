@@ -46,6 +46,7 @@ dependency_overrides:
 flutter:
   uses-material-design: true
   assets:
+    - assets/fonts/pretendard/LICENSE.txt
     - assets/onboading.png
     - assets/onboading_02.png
     - assets/onboading_03.png
@@ -60,3 +61,7 @@ flutter:
     - assets/stamps/passport/spots/
     - assets/travel_records/
     - assets/geojson/
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/pretendard/PretendardVariable.ttf
