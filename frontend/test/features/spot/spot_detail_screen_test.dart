@@ -24,14 +24,17 @@ import 'package:potato_mubwanna/features/spot/domain/visit_verification.dart';
 import 'package:potato_mubwanna/features/spot/presentation/screen/spot_detail_screen.dart';
 
 void main() {
-  testWidgets('missing prediction is clearly unavailable in detail', (tester) async {
+  testWidgets('missing prediction is clearly unavailable in detail',
+      (tester) async {
     await _setMobileViewport(tester);
-    await tester.pumpWidget(_app(engine: _FakeAudioPlaybackEngine(),
-      spotOverride: (ref) async => SpotDetail.fromJson({'id':1, 'name':'예측 없는 장소', 'congestionLevel':'NORMAL'}),
-      audioOverride: (ref) async => _guide));
+    await tester.pumpWidget(_app(
+        engine: _FakeAudioPlaybackEngine(),
+        spotOverride: (ref) async => SpotDetail.fromJson(
+            {'id': 1, 'name': '예측 없는 장소', 'congestionLevel': 'NORMAL'}),
+        audioOverride: (ref) async => _guide));
     await tester.pumpAndSettle();
-    expect(find.text('혼잡도 정보 없음'), findsOneWidget);
-    expect(find.text('오늘의 혼잡도 예측 정보가 없어요.'), findsOneWidget);
+    expect(find.text('혼잡도 정보 없음'), findsNothing);
+    expect(find.text('오늘 혼잡도 예측은 아직 없어요.'), findsOneWidget);
     expect(find.text('보통 예측'), findsNothing);
   });
 

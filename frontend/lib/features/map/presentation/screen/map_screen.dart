@@ -711,7 +711,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           onBackButtonPressed: () async {
             // 다른 탭 또는 안쪽/루트 Navigator의 팝업이 먼저 뒤로가기를 처리한다.
             if (ModalRoute.of(context)?.isCurrent != true ||
-                ModalRoute.of(Navigator.of(context).context)?.isCurrent == false) {
+                ModalRoute.of(Navigator.of(context).context)?.isCurrent ==
+                    false) {
               return false;
             }
             _returnToDiscoveryHome();
@@ -820,53 +821,55 @@ class _MapDiscoveryHome extends StatelessWidget {
       key: const ValueKey('map-discovery-home'),
       physics: const BouncingScrollPhysics(),
       slivers: [
-            const SliverPadding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
-              sliver: SliverToBoxAdapter(
-                child: _DiscoveryHeroHeader(),
+        const SliverPadding(
+          padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
+          sliver: SliverToBoxAdapter(
+            child: _DiscoveryHeroHeader(),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          sliver: SliverToBoxAdapter(
+            child: KeyedSubtree(
+              key: FeatureTourTargets.mapDiscovery,
+              child: _DiscoveryMapPreviewCard(
+                spots: previewSpots,
+                onOpenFullMap: onOpenFullMap,
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverToBoxAdapter(
-                child: KeyedSubtree(
-                  key: FeatureTourTargets.mapDiscovery,
-                  child: _DiscoveryMapPreviewCard(
-                    spots: previewSpots,
-                    onOpenFullMap: onOpenFullMap,
-                  ),
-                ),
+          ),
+        ),
+        if (isLoading || hasError)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            sliver: SliverToBoxAdapter(
+              child: _DiscoverySpotsStatus(
+                isLoading: isLoading,
+                onRetry: onRetry,
               ),
             ),
-            if (isLoading || hasError)
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                sliver: SliverToBoxAdapter(
-                  child: _DiscoverySpotsStatus(
-                    isLoading: isLoading,
-                    onRetry: onRetry,
-                  ),
-                ),
-              ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 0, 0),
-              sliver: SliverToBoxAdapter(
-                child: _TravelCourseSection(
-                  courses: courses,
-                  onAddCourseToRoute: onAddCourseToRoute,
-                  onSpotDetailPressed: onSpotDetailPressed,
-                ),
-              ),
+          ),
+        SliverPadding(
+          padding:
+              const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 0, 0),
+          sliver: SliverToBoxAdapter(
+            child: _TravelCourseSection(
+              courses: courses,
+              onAddCourseToRoute: onAddCourseToRoute,
+              onSpotDetailPressed: onSpotDetailPressed,
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 20, 28),
-              sliver: SliverToBoxAdapter(
-                child: _GoodNowSpotSection(
-                  spots: spots,
-                  onSpotPressed: onSpotPressed,
-                ),
-              ),
+          ),
+        ),
+        SliverPadding(
+          padding:
+              const EdgeInsets.fromLTRB(20, AppDimens.sectionSpacing, 20, 28),
+          sliver: SliverToBoxAdapter(
+            child: _GoodNowSpotSection(
+              spots: spots,
+              onSpotPressed: onSpotPressed,
             ),
+          ),
+        ),
       ],
     );
   }
@@ -931,9 +934,7 @@ class _DiscoverySpotsStatus extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              isLoading
-                  ? '장소 정보는 불러오는 대로 채워드릴게요'
-                  : '장소 정보를 불러오지 못했어요',
+              isLoading ? '장소 정보는 불러오는 대로 채워드릴게요' : '장소 정보를 불러오지 못했어요',
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 13,
@@ -1346,8 +1347,8 @@ class _TravelCourseCard extends ConsumerWidget {
               Stack(
                 children: [
                   ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(AppDimens.cardRadius)),
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(AppDimens.cardRadius)),
                     child: SizedBox(
                       height: 266 / AppDimens.landscapeImageRatio,
                       width: double.infinity,
@@ -1484,8 +1485,7 @@ String _travelCourseDurationDescription(
   return routeEstimate.when(
     data: (_) => '차량 이동시간은 카카오모빌리티 추천 자동차 경로 기준이며 관람시간은 포함하지 않아요.',
     loading: () => '장소 순서대로 차량 이동시간을 계산하고 있어요. 관람시간은 포함하지 않아요.',
-    error: (_, __) =>
-        '차량 이동시간을 계산하지 못했어요. 방문 전 길찾기와 각 장소 운영시간을 확인해주세요.',
+    error: (_, __) => '차량 이동시간을 계산하지 못했어요. 방문 전 길찾기와 각 장소 운영시간을 확인해주세요.',
   );
 }
 
@@ -2254,26 +2254,14 @@ class _GoodNowSpotSection extends StatelessWidget {
       },
       excludedIds: calmIds,
     );
-    final selectedIds = {
-      ...calmIds,
-      ...hotSpots.map((spot) => spot.id),
-    };
-    final otherSpots = gangwonSpots
-        .where(
-          (spot) =>
-              !selectedIds.contains(spot.id) &&
-              !const ['LOW', 'HIGH'].contains(spot.congestionLevel),
-        )
-        .take(2)
-        .toList();
-    final firstTargetGroup = calmSpots.isNotEmpty
-        ? 'calm'
-        : hotSpots.isNotEmpty ? 'hot' : 'other';
+    final hasFallbackRecommendations = [...calmSpots, ...hotSpots]
+        .any((spot) => spot.congestionLevel == 'UNKNOWN');
+    final firstTargetGroup = calmSpots.isNotEmpty ? 'calm' : 'hot';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _DiscoverySectionHeader(title: '지금 가기 좋은 곳'),
+        const _DiscoverySectionHeader(title: '취향 따라 가볼 곳'),
         const SizedBox(height: 6),
         const Text(
           '강원도 장소 중 오늘 끌리는 곳을 골라보세요.',
@@ -2286,6 +2274,17 @@ class _GoodNowSpotSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        if (hasFallbackRecommendations) ...[
+          const Text(
+            '오늘 혼잡도 예측이 없는 장소는 장소 유형을 기준으로 골랐어요.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (gangwonSpots.isEmpty)
           const _DiscoverySectionStatus(
             icon: Icons.place_outlined,
@@ -2316,19 +2315,6 @@ class _GoodNowSpotSection extends StatelessWidget {
                     ? FeatureTourTargets.mapGoodNowCard
                     : null,
               ),
-              if (otherSpots.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                _GoodNowSpotGroup(
-                  key: const ValueKey('good-now-other'),
-                  title: '이런 곳도 있어요',
-                  description: '혼잡도가 보통이거나 아직 정보가 없는 곳이에요.',
-                  spots: otherSpots,
-                  onSpotPressed: onSpotPressed,
-                  targetKey: firstTargetGroup == 'other'
-                      ? FeatureTourTargets.mapGoodNowCard
-                      : null,
-                ),
-              ],
             ],
           ),
       ],
@@ -2487,7 +2473,8 @@ class _PopularSpotCard extends StatelessWidget {
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+                borderRadius:
+                    BorderRadius.circular(AppDimens.compactCardRadius),
                 child: SizedBox(
                   width: AppDimens.thumbnailSize,
                   height: AppDimens.thumbnailSize,
@@ -2546,10 +2533,18 @@ class _PopularSpotCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 7),
                     ],
-                    _CongestionBadge(label: spot.congestionLabel),
-                  const SizedBox(height: 6),
-                  Text(spot.congestionDescription,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
+                    if (spot.congestionLevel != 'UNKNOWN') ...[
+                      _CongestionBadge(label: spot.congestionLabel),
+                      const SizedBox(height: 6),
+                      Text(
+                        spot.congestionDescription,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -2621,7 +2616,9 @@ class _PopularSpotMetaLine extends StatelessWidget {
 
 class _DiscoverySectionStatus extends StatelessWidget {
   const _DiscoverySectionStatus({
-    required this.icon, required this.title, required this.description,
+    required this.icon,
+    required this.title,
+    required this.description,
   });
   final IconData icon;
   final String title;
@@ -2629,10 +2626,13 @@ class _DiscoverySectionStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(child: AppStateMessage(
-      icon: icon, title: title, description: description,
-    )),
-  );
+        child: SingleChildScrollView(
+            child: AppStateMessage(
+          icon: icon,
+          title: title,
+          description: description,
+        )),
+      );
 }
 
 class _RouteRecommendationSheet extends ConsumerWidget {
@@ -3280,10 +3280,27 @@ class _SelectedSpotSummary extends StatelessWidget {
                     _SpotBusinessLine(label: spot.todayOpeningText!),
                   ],
                   const SizedBox(height: 9),
-                  _CongestionBadge(label: spot.congestionLabel),
-                  const SizedBox(height: 6),
-                  Text(spot.congestionDescription,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
+                  if (spot.congestionLevel == 'UNKNOWN')
+                    const Text(
+                      '오늘 혼잡도 예측은 아직 없어요.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    )
+                  else ...[
+                    _CongestionBadge(label: spot.congestionLabel),
+                    const SizedBox(height: 6),
+                    Text(
+                      spot.congestionDescription,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -3445,11 +3462,11 @@ class _SpotTourInfoSection extends StatelessWidget {
     final hasHours = (detail?.openingHours?.trim().isNotEmpty ?? false) ||
         (detail?.businessOpeningHours?.todayText?.trim().isNotEmpty ?? false) ||
         (spot.businessOpeningHours?.todayText?.trim().isNotEmpty ?? false) ||
-        (detail?.businessOpeningHours?.weekdayDescriptions.isNotEmpty ?? false) ||
+        (detail?.businessOpeningHours?.weekdayDescriptions.isNotEmpty ??
+            false) ||
         (spot.businessOpeningHours?.weekdayDescriptions.isNotEmpty ?? false);
-    final shouldShowGuidePlaceholder = !isLoading &&
-        _shouldShowBusinessSection(spot.category) &&
-        !hasHours;
+    final shouldShowGuidePlaceholder =
+        !isLoading && _shouldShowBusinessSection(spot.category) && !hasHours;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3537,7 +3554,8 @@ class _SpotTourInfoSection extends StatelessWidget {
         Icons.today_rounded,
         detail?.businessOpeningHours?.todayText ??
             spot.businessOpeningHours?.todayText ??
-            ((detail?.businessOpeningHours?.weekdayDescriptions.isNotEmpty ?? false)
+            ((detail?.businessOpeningHours?.weekdayDescriptions.isNotEmpty ??
+                    false)
                 ? detail!.businessOpeningHours!.weekdayDescriptions.join('\n')
                 : spot.businessOpeningHours?.weekdayDescriptions.join('\n')),
       ),
@@ -4314,8 +4332,11 @@ class _MapDataError extends StatelessWidget {
 
 class _MapStatusCard extends StatelessWidget {
   const _MapStatusCard({
-    required this.icon, required this.title, required this.description,
-    this.actionLabel, this.onAction,
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.actionLabel,
+    this.onAction,
   });
   final IconData icon;
   final String title;
@@ -4325,11 +4346,15 @@ class _MapStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(child: AppStateMessage(
-      icon: icon, title: title, description: description,
-      actionLabel: actionLabel, onAction: onAction,
-    )),
-  );
+        child: SingleChildScrollView(
+            child: AppStateMessage(
+          icon: icon,
+          title: title,
+          description: description,
+          actionLabel: actionLabel,
+          onAction: onAction,
+        )),
+      );
 }
 
 class _EmptySpotMessage extends StatelessWidget {
