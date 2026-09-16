@@ -27,24 +27,35 @@ import 'package:potato_mubwanna/shared/widgets/loading/potato_loading_view.dart'
 
 void main() {
   for (final stampEnabled in [true, false]) {
-    testWidgets('map visit entry respects stampEnabled=$stampEnabled', (tester) async {
+    testWidgets('map visit entry respects stampEnabled=$stampEnabled',
+        (tester) async {
       final spot = MapSpot.fromJson({
-        'id': 1, 'name': '테스트 장소', 'stampEnabled': stampEnabled,
-        'category': 'POTATO_TOUR', 'latitude': 37.38, 'longitude': 128.66,
+        'id': 1,
+        'name': '테스트 장소',
+        'stampEnabled': stampEnabled,
+        'category': 'POTATO_TOUR',
+        'latitude': 37.38,
+        'longitude': 128.66,
       });
       final router = GoRouter(initialLocation: '/map', routes: [
-        GoRoute(path: '/map', builder: (_, __) => const MapScreen(
-          hasMapConfiguration: true, showFullMapInitially: true,
-        )),
-        GoRoute(path: '/spots/:spotId', builder: (_, state) => Scaffold(
-          body: Text('인증 장소 ${state.pathParameters['spotId']}'),
-        )),
+        GoRoute(
+            path: '/map',
+            builder: (_, __) => const MapScreen(
+                  hasMapConfiguration: true,
+                  showFullMapInitially: true,
+                )),
+        GoRoute(
+            path: '/spots/:spotId',
+            builder: (_, state) => Scaffold(
+                  body: Text('인증 장소 ${state.pathParameters['spotId']}'),
+                )),
       ]);
       addTearDown(router.dispose);
       await tester.pumpWidget(ProviderScope(overrides: [
         spotDetailProvider.overrideWith(_testSpotDetail),
         mapSpotsProvider.overrideWith((ref) async => [spot]),
-        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotControllerProvider
+            .overrideWith((ref) => _favoriteController()),
         favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
       ], child: MaterialApp.router(routerConfig: router)));
       await tester.pumpAndSettle();
@@ -74,10 +85,12 @@ void main() {
       overrides: [
         spotDetailProvider.overrideWith(_testSpotDetail),
         mapSpotsProvider.overrideWith((ref) async => _spots),
-        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotControllerProvider
+            .overrideWith((ref) => _favoriteController()),
         favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
       ],
-      child: MaterialApp(home: MapScreen(
+      child: MaterialApp(
+          home: MapScreen(
         hasMapConfiguration: true,
         showFullMapInitially: true,
         mapViewBuilder: (_, __) => const SizedBox.expand(),
@@ -91,13 +104,15 @@ void main() {
     expect(find.byKey(const ValueKey('full-map-home-button')), findsOneWidget);
   });
 
-  testWidgets('recommendation groups use category fallback without swapping LOW',
+  testWidgets(
+      'recommendation groups use category fallback without swapping LOW',
       (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         spotDetailProvider.overrideWith(_testSpotDetail),
         mapSpotsProvider.overrideWith((ref) async => [_spots[0], _spots[1]]),
-        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotControllerProvider
+            .overrideWith((ref) => _favoriteController()),
         favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
       ],
       child: const MaterialApp(home: MapScreen(hasMapConfiguration: true)),
@@ -109,14 +124,20 @@ void main() {
     await tester.scrollUntilVisible(calm, 300,
         scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
-    expect(find.descendant(of: calm, matching: find.text('감자 카페')), findsOneWidget);
-    expect(find.descendant(of: hot, matching: find.text('감자 카페')), findsNothing);
-    expect(find.descendant(of: hot, matching: find.text('정선 5일장')), findsOneWidget);
-    expect(find.descendant(of: hot, matching: find.text('지금은 이 조건에 맞는 장소가 없어요.')), findsNothing);
+    expect(find.descendant(of: calm, matching: find.text('감자 카페')),
+        findsOneWidget);
+    expect(
+        find.descendant(of: hot, matching: find.text('감자 카페')), findsNothing);
+    expect(find.descendant(of: hot, matching: find.text('정선 5일장')),
+        findsOneWidget);
+    expect(
+        find.descendant(of: hot, matching: find.text('지금은 이 조건에 맞는 장소가 없어요.')),
+        findsNothing);
     expect(other, findsNothing);
   });
 
-  testWidgets('recommendation groups fall back to Gangwon catalog without predictions',
+  testWidgets(
+      'recommendation groups fall back to Gangwon catalog without predictions',
       (tester) async {
     final spots = [
       const MapSpot(
@@ -181,7 +202,8 @@ void main() {
       overrides: [
         spotDetailProvider.overrideWith(_testSpotDetail),
         mapSpotsProvider.overrideWith((ref) async => spots),
-        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotControllerProvider
+            .overrideWith((ref) => _favoriteController()),
         favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
       ],
       child: const MaterialApp(home: MapScreen(hasMapConfiguration: true)),
@@ -194,12 +216,22 @@ void main() {
         scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
 
-    expect(find.descendant(of: calm, matching: find.text('강원 로컬 숍')), findsOneWidget);
-    expect(find.descendant(of: calm, matching: find.text('강원 전시관')), findsOneWidget);
-    expect(find.descendant(of: hot, matching: find.text('강원 전통시장')), findsOneWidget);
-    expect(find.descendant(of: hot, matching: find.text('강원 감자 카페')), findsOneWidget);
+    expect(find.descendant(of: calm, matching: find.text('강원 로컬 숍')),
+        findsOneWidget);
+    expect(find.descendant(of: calm, matching: find.text('강원 전시관')),
+        findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('강원 전통시장')),
+        findsOneWidget);
+    expect(find.descendant(of: hot, matching: find.text('강원 감자 카페')),
+        findsOneWidget);
     expect(find.text('인근 타지역 핫플'), findsNothing);
     expect(find.text('지금은 이 조건에 맞는 장소가 없어요.'), findsNothing);
+    expect(find.byKey(const ValueKey('good-now-other')), findsNothing);
+    expect(find.text('오늘 혼잡도 예측이 없는 장소는 장소 유형을 기준으로 골랐어요.'), findsOneWidget);
+    expect(find.descendant(of: calm, matching: find.text('혼잡도 정보 없음')),
+        findsNothing);
+    expect(find.descendant(of: hot, matching: find.text('혼잡도 정보 없음')),
+        findsNothing);
   });
 
   testWidgets('map tour resumes after course and recommended place visits',
@@ -214,10 +246,12 @@ void main() {
       overrides: [
         spotDetailProvider.overrideWith(_testSpotDetail),
         mapSpotsProvider.overrideWith((ref) async => _spots),
-        favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
+        favoriteSpotControllerProvider
+            .overrideWith((ref) => _favoriteController()),
         favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
       ],
-      child: MaterialApp(home: FeatureTourHost(
+      child: MaterialApp(
+          home: FeatureTourHost(
         tourId: 'map-navigation-test',
         steps: FeatureTourDefinitions.map,
         child: MapScreen(
@@ -257,7 +291,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('test-native-marker')));
     await _settleMapTour(tester);
     expect(find.text('6 / 7'), findsOneWidget);
-    await tester.drag(find.byKey(FeatureTourTargets.spotSheetHandle), const Offset(0, -180));
+    await tester.drag(
+        find.byKey(FeatureTourTargets.spotSheetHandle), const Offset(0, -180));
     await _settleMapTour(tester);
     expect(find.text('7 / 7'), findsOneWidget);
     await tester.tap(find.byKey(FeatureTourTargets.routeMode));
@@ -363,7 +398,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('지금 가기 좋은 곳'), findsOneWidget);
+    expect(find.text('취향 따라 가볼 곳'), findsOneWidget);
     await tester.drag(
       find.byKey(const ValueKey('map-discovery-home')),
       const Offset(0, -420),
@@ -648,22 +683,34 @@ void main() {
     expect(find.text('대표 메뉴'), findsNothing);
   });
 
-  testWidgets('shop never shows food menus even if the payload contains them', (tester) async {
+  testWidgets('shop never shows food menus even if the payload contains them',
+      (tester) async {
     final shop = MapSpot.fromJson({
-      'id': 97, 'name': '유리알유희', 'category': 'POTATO_SHOP',
-      'latitude': 37.7945347, 'longitude': 128.9182993,
-      'address': '강원특별자치도 강릉시 창해로 351-2', 'cityName': '강릉시',
-      'menuItems': [{'name': '잘못 연결된 음식', 'priceWon': 1000}],
+      'id': 97,
+      'name': '유리알유희',
+      'category': 'POTATO_SHOP',
+      'latitude': 37.7945347,
+      'longitude': 128.9182993,
+      'address': '강원특별자치도 강릉시 창해로 351-2',
+      'cityName': '강릉시',
+      'menuItems': [
+        {'name': '잘못 연결된 음식', 'priceWon': 1000}
+      ],
     });
-    await tester.pumpWidget(ProviderScope(overrides: [
-      spotDetailProvider.overrideWith(_failingSpotDetail),
-      mapSpotsProvider.overrideWith((ref) async => [shop]),
-      favoriteSpotControllerProvider.overrideWith((ref) => _favoriteController()),
-      favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
-    ], child: MaterialApp(home: MapScreen(
-      hasMapConfiguration: true, showFullMapInitially: true,
-      mapViewBuilder: (_, __) => const SizedBox.expand(),
-    ))));
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          spotDetailProvider.overrideWith(_failingSpotDetail),
+          mapSpotsProvider.overrideWith((ref) async => [shop]),
+          favoriteSpotControllerProvider
+              .overrideWith((ref) => _favoriteController()),
+          favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+        ],
+        child: MaterialApp(
+            home: MapScreen(
+          hasMapConfiguration: true,
+          showFullMapInitially: true,
+          mapViewBuilder: (_, __) => const SizedBox.expand(),
+        ))));
     await tester.pumpAndSettle();
     expect(find.text('유리알유희'), findsOneWidget);
     expect(find.text('대표 메뉴'), findsNothing);

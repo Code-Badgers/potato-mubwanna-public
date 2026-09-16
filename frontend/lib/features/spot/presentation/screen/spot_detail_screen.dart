@@ -87,17 +87,26 @@ class _SpotDetailBody extends ConsumerWidget {
                     background: _audioMint,
                     foreground: _audioGreen,
                   ),
-                  _SpotBadge(
-                    icon: _congestionIcon(spot.congestionLevel),
-                    label: spot.congestionLevel == 'UNKNOWN' ? '혼잡도 정보 없음' : '${spot.congestionLabel} 예측',
-                    background: _congestionBackground(spot.congestionLevel),
-                    foreground: _congestionForeground(spot.congestionLevel),
-                  ),
+                  if (spot.congestionLevel != 'UNKNOWN')
+                    _SpotBadge(
+                      icon: _congestionIcon(spot.congestionLevel),
+                      label: '${spot.congestionLabel} 예측',
+                      background: _congestionBackground(spot.congestionLevel),
+                      foreground: _congestionForeground(spot.congestionLevel),
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(spot.congestionDescription,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
+              Text(
+                spot.congestionLevel == 'UNKNOWN'
+                    ? '오늘 혼잡도 예측은 아직 없어요.'
+                    : spot.congestionDescription,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
               const SizedBox(height: 14),
               Text(
                 spot.name,
@@ -1094,11 +1103,14 @@ class _SpotInformationSection extends StatelessWidget {
             child: Text('영업시간은 방문 전 확인해주세요.',
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           ),
-        PlaceVisitActions(phone: spot.phone ?? spot.contactPhone, website: spot.website),
+        PlaceVisitActions(
+            phone: spot.phone ?? spot.contactPhone, website: spot.website),
         if (spot.openingHours != null)
-          const Text('영업정보 출처: 한국관광공사', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          const Text('영업정보 출처: 한국관광공사',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
         if (spot.businessTodayText != null)
-          const Text('영업정보 출처: Google Places', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          const Text('영업정보 출처: Google Places',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
         if (rows.isNotEmpty) ...[
           const SizedBox(height: 14),
           Container(
