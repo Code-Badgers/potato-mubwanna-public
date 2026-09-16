@@ -9,6 +9,7 @@ mock_bin="${test_directory}/bin"
 mock_state="${test_directory}/aws-state"
 production_directory="${test_directory}/production"
 service_key='dummy%2Fencoded%2Bkey%3D'
+congestion_service_key='dummy-dedicated-congestion-key'
 google_places_key='dummy-google-places-key'
 kakao_rest_key='dummy-kakao-rest-key'
 odii_service_key='dummy-odii-service-key'
@@ -24,6 +25,7 @@ cat > "${production_directory}/deploy/.env" <<'EOF'
 PUBLIC_DOMAIN=example.test
 UNCHANGED_VALUE=keep-me
 TOUR_API_SERVICE_KEY=old-value
+CONGESTION_API_SERVICE_KEY=existing-congestion-key
 GOOGLE_PLACES_API_KEY=old-google-value
 KAKAO_REST_API_KEY=old-kakao-value
 ODII_API_SERVICE_KEY=old-odii-value
@@ -137,6 +139,18 @@ PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
 AWS_REGION='ap-northeast-2' \
 EC2_INSTANCE_ID='i-test' \
 TOUR_API_SERVICE_KEY="${service_key}" \
+CONGESTION_API_SERVICE_KEY='' \
+bash "${deploy_dir}/sync-tour-derived-api-secrets.sh"
+
+grep -q '^CONGESTION_API_SERVICE_KEY=existing-congestion-key$' "${production_directory}/deploy/.env"
+
+PATH="${mock_bin}:${PATH}" \
+MOCK_AWS_STATE_DIRECTORY="${mock_state}" \
+PRODUCTION_REPOSITORY_DIRECTORY="${production_directory}" \
+AWS_REGION='ap-northeast-2' \
+EC2_INSTANCE_ID='i-test' \
+TOUR_API_SERVICE_KEY="${service_key}" \
+CONGESTION_API_SERVICE_KEY="${congestion_service_key}" \
 bash "${deploy_dir}/sync-tour-derived-api-secrets.sh"
 
 PATH="${mock_bin}:${PATH}" \
@@ -180,7 +194,7 @@ grep -q "^TOUR_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/
 test "$(grep -c '^TOUR_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^RELATED_TOURISM_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^RELATED_TOURISM_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
-grep -q "^CONGESTION_API_SERVICE_KEY=${service_key}$" "${production_directory}/deploy/.env"
+grep -q "^CONGESTION_API_SERVICE_KEY=${congestion_service_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^CONGESTION_API_SERVICE_KEY=' "${production_directory}/deploy/.env")" -eq 1
 grep -q "^GOOGLE_PLACES_API_KEY=${google_places_key}$" "${production_directory}/deploy/.env"
 test "$(grep -c '^GOOGLE_PLACES_API_KEY=' "${production_directory}/deploy/.env")" -eq 1
@@ -196,6 +210,11 @@ fi
 
 if grep -R -F "${service_key}" "${mock_state}" > /dev/null; then
   echo 'Plaintext TourAPI key leaked into SSM command records.' >&2
+  exit 1
+fi
+
+if grep -R -F "${congestion_service_key}" "${mock_state}" > /dev/null; then
+  echo 'Plaintext congestion API key leaked into SSM command records.' >&2
   exit 1
 fi
 
@@ -219,4 +238,4 @@ if grep -R -F "${firebase_service_account_base64}" "${mock_state}" > /dev/null; 
   exit 1
 fi
 
-echo 'Kakao REST, TourAPI-derived services, Google Places, ODII, Firebase secret, and Firebase config sync scenarios passed.'
+echo 'Kakao REST, TourAPI-related services, dedicated congestion key, Google Places, ODII, Firebase secret, and Firebase config sync scenarios passed.'
