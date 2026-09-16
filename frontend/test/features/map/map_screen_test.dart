@@ -227,7 +227,9 @@ void main() {
     expect(find.text('인근 타지역 핫플'), findsNothing);
     expect(find.text('지금은 이 조건에 맞는 장소가 없어요.'), findsNothing);
     expect(find.byKey(const ValueKey('good-now-other')), findsNothing);
-    expect(find.text('오늘 혼잡도 예측이 없는 장소는 장소 유형을 기준으로 골랐어요.'), findsOneWidget);
+    expect(find.text('취향 따라 가볼 곳'), findsNothing);
+    expect(find.text('강원도 장소 중 오늘 끌리는 곳을 골라보세요.'), findsNothing);
+    expect(find.text('오늘 혼잡도 예측이 없는 장소는 장소 유형을 기준으로 골랐어요.'), findsNothing);
     expect(find.descendant(of: calm, matching: find.text('혼잡도 정보 없음')),
         findsNothing);
     expect(find.descendant(of: hot, matching: find.text('혼잡도 정보 없음')),
@@ -336,6 +338,46 @@ void main() {
     expect(find.text('오늘 감자로 배 채워볼까? 🥔'), findsOneWidget);
   });
 
+  for (final width in [360.0, 375.0, 390.0, 430.0]) {
+    testWidgets('discovery home keeps section spacing at ${width.toInt()}px', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            spotDetailProvider.overrideWith(_testSpotDetail),
+            mapSpotsProvider.overrideWith((ref) async => _spots),
+            favoriteSpotControllerProvider.overrideWith(
+              (ref) => _favoriteController(),
+            ),
+            favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+          ],
+          child: const MaterialApp(
+            home: MapScreen(hasMapConfiguration: true),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final preview = find.byKey(const ValueKey('map-discovery-preview-card'));
+      final heroLastLine = find.text('추천 장소를 발견하고 내 동선에 담아보세요');
+      final courseHeading = find.text('오늘 어떤 여행이 끌리나요?');
+      expect(
+          tester.getTopLeft(preview).dy - tester.getBottomLeft(heroLastLine).dy,
+          greaterThanOrEqualTo(24));
+      expect(
+          tester.getTopLeft(courseHeading).dy -
+              tester.getBottomLeft(preview).dy,
+          greaterThanOrEqualTo(32));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('renders map discovery home and opens the full Kakao map', (
     tester,
   ) async {
@@ -398,7 +440,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('취향 따라 가볼 곳'), findsOneWidget);
+    expect(find.text('취향 따라 가볼 곳'), findsNothing);
+    expect(find.text('강원도 장소 중 오늘 끌리는 곳을 골라보세요.'), findsNothing);
+    expect(find.text('오늘 혼잡도 예측이 없는 장소는 장소 유형을 기준으로 골랐어요.'), findsNothing);
     await tester.drag(
       find.byKey(const ValueKey('map-discovery-home')),
       const Offset(0, -420),
