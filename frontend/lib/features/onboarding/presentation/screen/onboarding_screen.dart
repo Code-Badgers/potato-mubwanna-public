@@ -24,18 +24,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _IntroStep(
       imageAsset: 'assets/onboarding/service_intro_01.png',
       copyAsset: 'assets/onboarding/service_intro_copy_01.png',
+      description: '강원도 여행을 더 특별하게. 지도에서 여행지를 찾고 감자 친구와 함께 여행을 시작해보세요.',
     ),
     _IntroStep(
       imageAsset: 'assets/onboarding/service_intro_02.png',
       copyAsset: 'assets/onboarding/service_intro_copy_02.png',
+      description: '방문하고 스탬프를 차곡차곡 모아요. 강원도 곳곳을 방문하고 나만의 여행 패스포트를 채워보세요.',
     ),
     _IntroStep(
       imageAsset: 'assets/onboarding/service_intro_03.png',
       copyAsset: 'assets/onboarding/service_intro_copy_03.png',
+      description: '여행할수록 감자가 쑥쑥 자라요. 함께 걷고 돌보며 새로운 감자 친구들을 만나보세요.',
     ),
     _IntroStep(
       imageAsset: 'assets/onboarding/service_intro_04.png',
       copyAsset: 'assets/onboarding/service_intro_copy_04.png',
+      description: '점순이와 미션을 하고 추억을 남겨요. 사진 인증과 여행 기록으로 오늘의 강원도 여행을 오래 기억해보세요.',
     ),
   ];
 
@@ -144,10 +148,14 @@ class _ServiceIntroPage extends StatelessWidget {
                         child: FractionallySizedBox(
                           widthFactor: 0.8,
                           heightFactor: 0.9,
-                          child: Image.asset(
-                            step.copyAsset,
-                            fit: BoxFit.contain,
-                            alignment: Alignment.center,
+                          child: Semantics(
+                            label: step.description,
+                            child: Image.asset(
+                              step.copyAsset,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.center,
+                              excludeFromSemantics: true,
+                            ),
                           ),
                         ),
                       ),
@@ -183,6 +191,7 @@ class _IntroVisual extends StatelessWidget {
         asset,
         fit: BoxFit.contain,
         alignment: Alignment.bottomCenter,
+        excludeFromSemantics: true,
       ),
     );
   }
@@ -278,23 +287,26 @@ class _PageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (index) {
-        final isActive = index == currentIndex;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: isActive ? 22 : 7,
-          height: 7,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: isActive
-                ? AppColors.primary
-                : AppColors.textSecondary.withValues(alpha: 0.22),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        );
-      }),
+    return Semantics(
+      label: '${currentIndex + 1}/$count 페이지',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(count, (index) {
+          final isActive = index == currentIndex;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: isActive ? 22 : 7,
+            height: 7,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? AppColors.primary
+                  : AppColors.textSecondary.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          );
+        }),
+      ),
     );
   }
 }
@@ -303,8 +315,10 @@ class _IntroStep {
   const _IntroStep({
     required this.imageAsset,
     required this.copyAsset,
+    required this.description,
   });
 
   final String imageAsset;
   final String copyAsset;
+  final String description;
 }
