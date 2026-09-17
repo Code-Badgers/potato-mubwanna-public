@@ -13,7 +13,6 @@ void main() {
     final refreshTokenCompleter = Completer<String?>();
     final coordinator = SessionStartupCoordinator(
       hasKakaoAuthorizationCallback: false,
-      hasCompletedOnboarding: () async => true,
       markOnboardingCompleted: () async {},
       readRefreshToken: () => refreshTokenCompleter.future,
       refreshSession: () async => false,
@@ -35,8 +34,8 @@ void main() {
           ),
         ),
         GoRoute(
-          path: '/login',
-          builder: (_, __) => const SizedBox(key: Key('login-route')),
+          path: '/onboarding',
+          builder: (_, __) => const SizedBox(key: Key('onboarding-route')),
         ),
       ],
     );
@@ -57,7 +56,7 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byKey(const Key('login-route')), findsNothing);
+    expect(find.byKey(const Key('onboarding-route')), findsNothing);
 
     await tester.tap(find.byKey(const Key('session-startup-brand-image')));
     await tester.pump();
@@ -72,6 +71,6 @@ void main() {
     refreshTokenCompleter.complete(null);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('login-route')), findsOneWidget);
+    expect(find.byKey(const Key('onboarding-route')), findsOneWidget);
   });
 }

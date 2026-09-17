@@ -19,7 +19,7 @@ class SettingsScreen extends StatefulWidget {
     this.onLogout,
     this.onWithdrawAccount,
     this.authMessage,
-    this.onOpenLogin,
+    this.onSignedOut,
     super.key,
   })  : permissionService = permissionService ?? const PermissionService(),
         stepCountReader = stepCountReader ??
@@ -35,7 +35,7 @@ class SettingsScreen extends StatefulWidget {
   final Future<void> Function()? onLogout;
   final Future<bool> Function()? onWithdrawAccount;
   final String? Function()? authMessage;
-  final VoidCallback? onOpenLogin;
+  final VoidCallback? onSignedOut;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -308,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
     await logout();
     if (mounted) {
-      widget.onOpenLogin?.call();
+      widget.onSignedOut?.call();
     }
   }
 
@@ -354,7 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       return;
     }
     if (withdrawn) {
-      widget.onOpenLogin?.call();
+      widget.onSignedOut?.call();
       return;
     }
 

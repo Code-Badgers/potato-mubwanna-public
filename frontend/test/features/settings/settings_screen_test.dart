@@ -222,7 +222,7 @@ void main() {
       notification: PermissionStatus.granted,
     );
     var logoutCalls = 0;
-    var loginCalls = 0;
+    var signedOutCalls = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -231,7 +231,7 @@ void main() {
           stepCountReader: const _FixedStepCountReader(),
           showAccountActions: true,
           onLogout: () async => logoutCalls++,
-          onOpenLogin: () => loginCalls++,
+          onSignedOut: () => signedOutCalls++,
         ),
       ),
     );
@@ -244,7 +244,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(logoutCalls, 1);
-    expect(loginCalls, 1);
+    expect(signedOutCalls, 1);
   });
 
   testWidgets('confirms account withdrawal inside settings', (tester) async {
@@ -253,7 +253,7 @@ void main() {
       notification: PermissionStatus.granted,
     );
     var withdrawalCalls = 0;
-    var loginCalls = 0;
+    var signedOutCalls = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -265,7 +265,7 @@ void main() {
             withdrawalCalls++;
             return true;
           },
-          onOpenLogin: () => loginCalls++,
+          onSignedOut: () => signedOutCalls++,
         ),
       ),
     );
@@ -281,7 +281,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(withdrawalCalls, 1);
-    expect(loginCalls, 1);
+    expect(signedOutCalls, 1);
   });
 }
 
