@@ -8,6 +8,7 @@ class AppTheme {
 
   static ThemeData get light {
     return ThemeData(
+      fontFamily: 'Pretendard',
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,

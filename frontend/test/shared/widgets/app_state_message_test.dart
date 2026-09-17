@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:potato_mubwanna/app/theme/app_colors.dart';
 import 'package:potato_mubwanna/app/theme/app_design_tokens.dart';
@@ -46,11 +47,21 @@ void main() {
   test('theme shares button sizing without changing the primary palette', () {
     final theme = AppTheme.light;
     expect(theme.colorScheme.primary, AppColors.primary);
+    expect(theme.textTheme.bodyMedium?.fontFamily, 'Pretendard');
+    expect(theme.textTheme.titleLarge?.fontFamily, 'Pretendard');
     final primary = theme.filledButtonTheme.style!;
     final secondary = theme.outlinedButtonTheme.style!;
     expect(primary.minimumSize!.resolve({})!.height, AppDimens.buttonHeight);
     expect(secondary.minimumSize!.resolve({})!.height, AppDimens.buttonHeight);
     expect(primary.textStyle!.resolve({}), AppTextStyles.button);
     expect(AppDimens.landscapeImageRatio, 16 / 9);
+  });
+
+  test('Pretendard license is included with the application assets', () async {
+    final license = await rootBundle.loadString(
+      'assets/fonts/pretendard/LICENSE.txt',
+    );
+    expect(license, contains('SIL OPEN FONT LICENSE Version 1.1'));
+    expect(license, contains('Copyright (c) 2021, Kil Hyung-jin'));
   });
 }
