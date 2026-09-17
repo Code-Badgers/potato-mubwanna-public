@@ -16,92 +16,31 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
   });
 
-  testWidgets('renders kakao login entry points', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: LoginScreen())),
-    );
+  testWidgets(
+    'login route shows the onboarding kakao action without an extra screen',
+    (tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: LoginScreen())),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.bySemanticsLabel('카카오 로그인'), findsWidgets);
-    expect(find.text('Apple 로그인 준비 중'), findsNothing);
-    expect(find.text('나중에 로그인하기'), findsOneWidget);
-  });
+      expect(find.text('카카오 로그인'), findsOneWidget);
+      expect(find.bySemanticsLabel('4/4 페이지'), findsOneWidget);
+      expect(find.text('감자 여행을 시작해볼까요?'), findsNothing);
+      expect(find.text('나중에 로그인하기'), findsNothing);
+    },
+  );
 
-  testWidgets('uses the button material for the kakao ink response', (
+  testWidgets('web authorization callback still enters permissions', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: LoginScreen())),
-    );
-
-    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-    expect(
-      button.style?.backgroundColor?.resolve(<WidgetState>{}),
-      const Color(0xFFFEE500),
-    );
-  });
-
-  for (final width in [430.0, 1200.0]) {
-    testWidgets(
-      'keeps the kakao button at its source ratio on ${width.toInt()}px',
-      (tester) async {
-        tester.view.physicalSize = Size(width, 932);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-
-        await tester.pumpWidget(
-          const ProviderScope(child: MaterialApp(home: LoginScreen())),
-        );
-
-        final buttonContent = find.byKey(
-          const Key('kakao-login-button-content'),
-        );
-        final buttonSize = tester.getSize(buttonContent);
-        expect(buttonSize.width, 300);
-        expect(buttonSize.height, 45);
-        expect(buttonSize.aspectRatio, closeTo(300 / 45, 0.01));
-        expect(find.byType(Image), findsNothing);
-      },
-    );
-  }
-
-  testWidgets('shows unsupported message when kakao login cannot start', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ProviderScope(
-          overrides: [
-            authControllerProvider.overrideWith(
-              (ref) => AuthController(
-                kakaoLoginService: _UnsupportedKakaoLoginService(),
-                authRepository: _NoopAuthRepository(),
-              ),
-            ),
-          ],
-          child: const LoginScreen(),
-        ),
-      ),
-    );
-
-    await tester.tap(find.bySemanticsLabel('카카오 로그인').first);
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.text('테스트 환경에서는 카카오 로그인을 시작할 수 없습니다.'), findsOneWidget);
-  });
-
-  testWidgets('records onboarding completion when continuing as a guest', (
-    tester,
-  ) async {
+    final kakaoService = _CallbackKakaoLoginService();
+    final authRepository = _RecordingAuthRepository();
     final statusStore = _RecordingOnboardingStatusStore();
     final router = GoRouter(
       initialLocation: '/login',
       routes: [
-        GoRoute(
-          path: '/login',
-          builder: (_, __) => const LoginScreen(),
-        ),
+        GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
         GoRoute(
           path: '/permissions',
           builder: (_, __) => const Scaffold(
@@ -115,36 +54,88 @@ void main() {
       ProviderScope(
         overrides: [
           onboardingStatusStoreProvider.overrideWithValue(statusStore),
+          authControllerProvider.overrideWith(
+            (ref) => AuthController(
+              kakaoLoginService: kakaoService,
+              authRepository: authRepository,
+            ),
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
-    await tester.tap(find.text('나중에 로그인하기'));
     await tester.pumpAndSettle();
 
+    expect(authRepository.authorizationCode, 'authorization-code');
+    expect(kakaoService.cleared, isTrue);
     expect(statusStore.markCalls, 1);
     expect(find.text('permissions destination'), findsOneWidget);
   });
+
+  testWidgets('failed web callback stays on the onboarding kakao action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            (ref) => AuthController(
+              kakaoLoginService: _RejectedCallbackKakaoLoginService(),
+              authRepository: _RecordingAuthRepository(),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: LoginScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('카카오 로그인이 취소되었습니다.'), findsOneWidget);
+    expect(find.text('카카오 로그인'), findsOneWidget);
+    expect(find.text('감자 여행을 시작해볼까요?'), findsNothing);
+  });
 }
 
-class _UnsupportedKakaoLoginService extends KakaoLoginService {
+class _CallbackKakaoLoginService extends KakaoLoginService {
+  bool cleared = false;
+
   @override
-  Future<KakaoLoginResult> login() {
-    throw const KakaoLoginUnsupportedException(
-      '테스트 환경에서는 카카오 로그인을 시작할 수 없습니다.',
+  KakaoAuthorizationCallback? readAuthorizationCallback() {
+    return const KakaoAuthorizationCallback(
+      authorizationCode: 'authorization-code',
+      redirectUri: 'http://localhost:54631/',
     );
+  }
+
+  @override
+  void clearAuthorizationCallback() {
+    cleared = true;
   }
 }
 
-class _NoopAuthRepository extends AuthRepository {
-  _NoopAuthRepository()
+class _RejectedCallbackKakaoLoginService extends KakaoLoginService {
+  @override
+  KakaoAuthorizationCallback? readAuthorizationCallback() {
+    throw const KakaoLoginUnsupportedException('카카오 로그인이 취소되었습니다.');
+  }
+}
+
+class _RecordingAuthRepository extends AuthRepository {
+  _RecordingAuthRepository()
     : super(
         dio: Dio(),
         tokenStorage: const TokenStorage(FlutterSecureStorage()),
       );
 
+  String? authorizationCode;
+
   @override
-  Future<void> loginWithKakaoToken(String kakaoAccessToken) async {}
+  Future<void> loginWithKakaoAuthorizationCode({
+    required String authorizationCode,
+    required String redirectUri,
+  }) async {
+    this.authorizationCode = authorizationCode;
+  }
 }
 
 class _RecordingOnboardingStatusStore implements OnboardingStatusStore {
