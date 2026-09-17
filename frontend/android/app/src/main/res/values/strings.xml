@@ -1,0 +1,4 @@
+<resources>
+    <string name="push_notification_channel_name">감자 소식</string>
+    <string name="push_notification_channel_description">방문, 미션, 감자 성장 소식을 알려드려요.</string>
+</resources>
