@@ -58,6 +58,13 @@ void main() {
 
     expect(find.textContaining('현재 사용자 알림'), findsOneWidget);
     expect(find.text('보기'), findsOneWidget);
+
+    authController.signOut();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.textContaining('현재 사용자 알림'), findsNothing);
+    expect(find.text('보기'), findsNothing);
   });
 }
 
@@ -83,6 +90,10 @@ class _TestAuthController extends AuthController {
 
   void authenticate() {
     state = const AuthState.authenticated();
+  }
+
+  void signOut() {
+    state = const AuthState.idle();
   }
 }
 

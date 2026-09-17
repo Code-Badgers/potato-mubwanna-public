@@ -52,6 +52,14 @@ class _PotatoMubwannaAppState extends ConsumerState<PotatoMubwannaApp>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (previous?.status == AuthStatus.authenticated &&
+          next.status != AuthStatus.authenticated) {
+        // 이전 계정의 알림이 로그아웃 뒤 온보딩 화면에 남지 않게 한다.
+        _scaffoldMessengerKey.currentState?.clearSnackBars();
+      }
+    });
+
     return MaterialApp.router(
       scaffoldMessengerKey: _scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
