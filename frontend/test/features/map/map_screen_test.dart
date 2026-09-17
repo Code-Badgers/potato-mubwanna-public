@@ -368,6 +368,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final preview = find.byKey(const ValueKey('map-discovery-preview-card'));
+      final previewDecoration =
+          tester.widget<Container>(preview).decoration! as BoxDecoration;
+      expect(previewDecoration.border, isNull);
+      expect(previewDecoration.boxShadow, isNotEmpty);
       final heroLastLine = find.text('추천 장소를 발견하고 내 동선에 담아보세요');
       final courseHeading = find.text('나만 몰랐던 강원도 이색 여행');
       expect(
@@ -535,7 +539,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final yesterday = DateTime.parse('${koreaDate()}T00:00:00Z')
-        .subtract(const Duration(days: 1)).toIso8601String().substring(0, 10);
+        .subtract(const Duration(days: 1))
+        .toIso8601String()
+        .substring(0, 10);
     final spot = MapSpot.fromJson({
       'id': 1,
       'name': '어제 예측 장소',

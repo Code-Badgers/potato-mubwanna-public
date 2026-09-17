@@ -207,6 +207,20 @@ void main() {
       expect(
         find.ancestor(
           of: find.byKey(ValueKey(key)),
+          matching: find.byWidgetPredicate((widget) {
+            if (widget is! Container || widget.decoration is! BoxDecoration) {
+              return false;
+            }
+            final decoration = widget.decoration! as BoxDecoration;
+            return decoration.border == null &&
+                (decoration.boxShadow?.isNotEmpty ?? false);
+          }),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.ancestor(
+          of: find.byKey(ValueKey(key)),
           matching: find.byWidgetPredicate(
             (widget) =>
                 widget is Material && widget.clipBehavior == Clip.antiAlias,

@@ -810,7 +810,8 @@ class _MyPotatoCollectionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text('획득 방법: ${item.acquisitionType.label}',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
               ],
             ),
           ),
@@ -898,10 +899,12 @@ class _PotatoAlbumError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppStateMessage(
-    icon: Icons.cloud_off_outlined, title: '내 감자 도감',
-    description: '감자 도감을 불러오지 못했어요.',
-    actionLabel: '다시 불러오기', onAction: onRetry,
-  );
+        icon: Icons.cloud_off_outlined,
+        title: '내 감자 도감',
+        description: '감자 도감을 불러오지 못했어요.',
+        actionLabel: '다시 불러오기',
+        onAction: onRetry,
+      );
 }
 
 class _QuickActionGrid extends StatelessWidget {
@@ -1078,32 +1081,21 @@ class _AccountMenu extends StatelessWidget {
       margin: const EdgeInsets.symmetric(
         horizontal: AppDimens.pageHorizontalPadding,
       ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-        border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            for (var index = 0; index < items.length; index++) ...[
-              _NoticeActionRow(
-                item: items[index],
-                onTap: switch (items[index].destination) {
-                  _MenuDestination.coupons => onCoupons,
-                  _MenuDestination.settings => onSettings,
-                  _MenuDestination.notices => onNotices,
-                  _MenuDestination.adminNotices => onAdminNotices,
-                },
-              ),
-              if (index < items.length - 1)
-                const Divider(height: 1, indent: 50, endIndent: 16),
-            ],
+      child: Column(
+        children: [
+          for (var index = 0; index < items.length; index++) ...[
+            _NoticeActionRow(
+              item: items[index],
+              onTap: switch (items[index].destination) {
+                _MenuDestination.coupons => onCoupons,
+                _MenuDestination.settings => onSettings,
+                _MenuDestination.notices => onNotices,
+                _MenuDestination.adminNotices => onAdminNotices,
+              },
+            ),
+            if (index < items.length - 1) const SizedBox(height: 10),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1120,13 +1112,19 @@ class _NoticeActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    return Container(
+      decoration: _myPageGlassDecoration(alpha: 0.82).copyWith(
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
           key: item.key,
           onTap: onTap,
           child: SizedBox(
-            height: 60,
+            height: 58,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -1146,7 +1144,12 @@ class _NoticeActionRow extends StatelessWidget {
                   ),
                   Text(
                     item.description,
-                    style: AppTextStyles.supporting,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   const Icon(
@@ -1159,6 +1162,7 @@ class _NoticeActionRow extends StatelessWidget {
             ),
           ),
         ),
+      ),
     );
   }
 }
@@ -1203,7 +1207,18 @@ BoxDecoration _myPageGlassDecoration({double alpha = 0.82}) {
   return BoxDecoration(
     color: AppColors.surface.withValues(alpha: alpha),
     borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-    border: Border.all(color: AppColors.line.withValues(alpha: 0.55)),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.textPrimary.withValues(alpha: 0.045),
+        blurRadius: 24,
+        offset: const Offset(0, 10),
+      ),
+      BoxShadow(
+        color: AppColors.primary.withValues(alpha: 0.035),
+        blurRadius: 34,
+        offset: const Offset(0, 16),
+      ),
+    ],
   );
 }
 
