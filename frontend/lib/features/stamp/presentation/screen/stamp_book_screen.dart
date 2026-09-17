@@ -1003,11 +1003,14 @@ class _StampBookBody extends StatelessWidget {
                   progress: progress,
                   rallybookSpots: rallybookSpots,
                   mapHeight: mapHeight,
+                  hasClaimableReward: hasClaimableReward,
                   onSpotTap: (spot) => context.push('/spots/${spot.spotId}'),
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+            SliverToBoxAdapter(
+              child: SizedBox(height: hasClaimableReward ? 58 : 10),
+            ),
           ],
         );
       },
@@ -1178,7 +1181,7 @@ class _StampTourProgressPill extends StatelessWidget {
     return Tooltip(
       message: '강원 여행 패스포트 보기',
       child: Material(
-        color: AppColors.primaryTint,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimens.pillRadius),
         elevation: 0,
         child: InkWell(
@@ -1224,12 +1227,14 @@ class _GangwonStampMap extends StatefulWidget {
     required this.progress,
     required this.rallybookSpots,
     required this.mapHeight,
+    required this.hasClaimableReward,
     required this.onSpotTap,
   });
 
   final StampProgress progress;
   final AsyncValue<List<RallybookSpot>?> rallybookSpots;
   final double mapHeight;
+  final bool hasClaimableReward;
   final ValueChanged<RallybookSpot> onSpotTap;
 
   @override
@@ -1275,6 +1280,20 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
       FeatureTourTargets.stampMarker,
     );
     _travelController.forward(from: 0);
+    if (widget.hasClaimableReward) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final visitContext = FeatureTourTargets.stampVisit.currentContext;
+        if (mounted && visitContext != null) {
+          // 보상 카드가 위를 차지해도 인증 CTA는 사용자가 직접 스크롤하지 않아도 보인다.
+          Scrollable.ensureVisible(
+            visitContext,
+            alignment: 0.85,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      });
+    }
   }
 
   void _selectCity(
@@ -1312,9 +1331,12 @@ class _GangwonStampMapState extends State<_GangwonStampMap>
 
     return Column(
       children: [
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
           margin: const EdgeInsets.fromLTRB(16, 2, 16, 10),
-          height: widget.mapHeight,
+          // 장소를 고른 뒤에는 아래 인증 카드까지 첫 화면에 보이도록 지도를 접는다.
+          height: selectedSpot == null ? widget.mapHeight : 300,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
@@ -2043,9 +2065,12 @@ class _StampSpotActionCard extends ConsumerWidget {
         : null;
 
     return Container(
+      key: hasSelection ? const ValueKey('stamp-selected-spot-card') : null,
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 196),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+      constraints: hasSelection ? null : const BoxConstraints(minHeight: 196),
+      padding: hasSelection
+          ? const EdgeInsets.fromLTRB(16, 14, 16, 14)
+          : const EdgeInsets.fromLTRB(20, 18, 20, 14),
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
@@ -2064,7 +2089,6 @@ class _StampSpotActionCard extends ConsumerWidget {
               child: hasSelection
                   ? _SelectedStampSpotContent(
                       key: ValueKey(spot!.spotId),
-                      region: region!,
                       stamp: stamp,
                       spot: spot!,
                       spotDetail: spotDetail,
@@ -2094,14 +2118,12 @@ class _StampSpotActionCard extends ConsumerWidget {
 class _SelectedStampSpotContent extends StatelessWidget {
   const _SelectedStampSpotContent({
     super.key,
-    required this.region,
     required this.stamp,
     required this.spot,
     required this.spotDetail,
     required this.onSpotTap,
   });
 
-  final GangwonMapRegion region;
   final RallybookStamp? stamp;
   final RallybookSpot spot;
   final AsyncValue<SpotDetail>? spotDetail;
@@ -2125,134 +2147,126 @@ class _SelectedStampSpotContent extends StatelessWidget {
       detail?.businessOpeningHours?.todayText,
     ]);
 
-    return SizedBox(
-      height: 244,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _StampPill(
-                label: region.city,
-                backgroundColor: AppColors.primaryTint,
-                foregroundColor: AppColors.primaryDark,
-              ),
-              const Spacer(),
-              _StampPill(
-                label: acquired ? '획득' : '미획득',
-                backgroundColor: acquired
-                    ? AppColors.primaryTint
-                    : AppColors.line.withValues(alpha: 0.32),
-                foregroundColor:
-                    acquired ? AppColors.primaryDark : AppColors.textSecondary,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            spot.spotName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 64,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _StampSpotThumbnail(
-                  key: ValueKey('stamp-spot-image-${spot.spotId}'),
-                  imageUrl: imageUrl,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${spot.cityName} · ${spot.categoryLabel}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      if (description.isNotEmpty) ...[
-                        const SizedBox(height: 5),
-                        Text(
-                          description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                            height: 1.35,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (address.isNotEmpty || openingHours != null) ...[
-            const SizedBox(height: 7),
-            if (address.isNotEmpty)
-              _StampSpotInfoLine(
-                icon: Icons.location_on_outlined,
-                label: address,
-              ),
-            if (openingHours != null)
-              _StampSpotInfoLine(
-                icon: Icons.schedule_rounded,
-                label: openingHours,
-              ),
-          ],
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 40,
-            child: FilledButton.icon(
-              onPressed: onSpotTap == null
-                  ? null
-                  : () {
-                      FeatureTourScope.maybeOf(context)?.completeTarget(
-                        FeatureTourTargets.stampVisit,
-                      );
-                      onSpotTap!();
-                    },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
-              icon: const Icon(Icons.photo_camera_rounded, size: 20),
-              label: const Text(
-                '방문 인증하기',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                spot.spotName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: 0,
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+            _StampPill(
+              label: acquired ? '획득' : '미획득',
+              backgroundColor: acquired
+                  ? AppColors.primaryTint
+                  : AppColors.line.withValues(alpha: 0.32),
+              foregroundColor:
+                  acquired ? AppColors.primaryDark : AppColors.textSecondary,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StampSpotThumbnail(
+              key: ValueKey('stamp-spot-image-${spot.spotId}'),
+              imageUrl: imageUrl,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${spot.cityName} · ${spot.categoryLabel}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  if (address.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    _StampSpotInfoLine(
+                      icon: Icons.location_on_outlined,
+                      label: address,
+                      maxLines: 2,
+                    ),
+                  ],
+                  if (openingHours != null) ...[
+                    const SizedBox(height: 4),
+                    _StampSpotInfoLine(
+                      icon: Icons.schedule_rounded,
+                      label: openingHours,
+                    ),
+                  ],
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        height: 1.3,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 40,
+          child: FilledButton.icon(
+            onPressed: onSpotTap == null
+                ? null
+                : () {
+                    FeatureTourScope.maybeOf(context)?.completeTarget(
+                      FeatureTourTargets.stampVisit,
+                    );
+                    onSpotTap!();
+                  },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            icon: const Icon(Icons.photo_camera_rounded, size: 20),
+            label: const Text(
+              '방문 인증하기',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -2289,7 +2303,7 @@ class _StampSpotThumbnail extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: SizedBox(
         width: 92,
-        height: 64,
+        height: 92,
         child: imageUrl == null
             ? const _StampSpotImagePlaceholder()
             : CachedNetworkImage(
@@ -2332,10 +2346,15 @@ class _StampSpotImagePlaceholder extends StatelessWidget {
 }
 
 class _StampSpotInfoLine extends StatelessWidget {
-  const _StampSpotInfoLine({required this.icon, required this.label});
+  const _StampSpotInfoLine({
+    required this.icon,
+    required this.label,
+    this.maxLines = 1,
+  });
 
   final IconData icon;
   final String label;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -2348,7 +2367,7 @@ class _StampSpotInfoLine extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              maxLines: 1,
+              maxLines: maxLines,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: AppColors.textSecondary,
