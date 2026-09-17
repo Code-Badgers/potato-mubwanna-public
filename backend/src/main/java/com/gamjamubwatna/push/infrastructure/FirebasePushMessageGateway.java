@@ -1,5 +1,7 @@
 package com.gamjamubwatna.push.infrastructure;
 
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -19,6 +21,9 @@ import java.util.Set;
 public class FirebasePushMessageGateway implements PushMessageGateway {
 
     private static final int MAX_BATCH_SIZE = 500;
+    private static final String ANDROID_NOTIFICATION_CHANNEL_ID = "potato_updates";
+    private static final String ANDROID_NOTIFICATION_ICON = "ic_stat_potato";
+    private static final String ANDROID_NOTIFICATION_COLOR = "#56C787";
 
     private final FirebaseMessaging firebaseMessaging;
 
@@ -62,6 +67,16 @@ public class FirebasePushMessageGateway implements PushMessageGateway {
             .setNotification(Notification.builder()
                 .setTitle(message.title())
                 .setBody(message.body())
+                .build())
+            .setAndroidConfig(AndroidConfig.builder()
+                .setPriority(AndroidConfig.Priority.HIGH)
+                .setNotification(AndroidNotification.builder()
+                    .setChannelId(ANDROID_NOTIFICATION_CHANNEL_ID)
+                    .setIcon(ANDROID_NOTIFICATION_ICON)
+                    .setColor(ANDROID_NOTIFICATION_COLOR)
+                    .setDefaultSound(true)
+                    .setDefaultVibrateTimings(true)
+                    .build())
                 .build())
             .putAllData(message.data())
             .addAllTokens(registrationTokens)
