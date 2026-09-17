@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../data/onboarding_status_store.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
     this.onboardingStatusStore = const SharedPreferencesOnboardingStatusStore(),
+    this.initialPage = 0,
     super.key,
   });
 
   final OnboardingStatusStore onboardingStatusStore;
+  final int initialPage;
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+  late final PageController _pageController;
+  late int _currentPage;
+  bool _isSubmitting = false;
 
   static const _steps = [
     _IntroStep(
@@ -46,12 +51,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool get _isLastPage => _currentPage == _steps.length - 1;
 
   @override
+  void initState() {
+    super.initState();
+    _currentPage = widget.initialPage;
+    _pageController = PageController(initialPage: widget.initialPage);
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
   Future<void> _handlePrimaryAction() async {
+    if (_isSubmitting) {
+      return;
+    }
     if (!_isLastPage) {
       await _pageController.nextPage(
         duration: const Duration(milliseconds: 280),
@@ -60,18 +75,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
 
+    setState(() => _isSubmitting = true);
     try {
       await widget.onboardingStatusStore.markOnboardingCompleted();
     } catch (_) {
       // 설정 저장 실패가 사용자의 로그인 진행을 막지 않게 한다.
     }
+    if (!mounted) {
+      return;
+    }
+    final loggedIn =
+        await ref.read(authControllerProvider.notifier).loginWithKakao();
+    if (loggedIn && mounted) {
+      context.go('/permissions');
+    }
     if (mounted) {
-      context.go('/login');
+      setState(() => _isSubmitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final isLoading = _isSubmitting || authState.status == AuthStatus.loading;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -101,7 +128,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     pageCount: _steps.length,
                     isLastPage: _isLastPage,
                     buttonLabel: _isLastPage ? '카카오 로그인' : '다음',
-                    onPressed: _handlePrimaryAction,
+                    isLoading: _isLastPage && isLoading,
+                    errorMessage:
+                        _isLastPage && authState.status == AuthStatus.failure
+                            ? authState.message
+                            : null,
+                    onPressed: isLoading ? null : _handlePrimaryAction,
                   ),
                 ),
               ],
@@ -230,6 +262,8 @@ class _OnboardingControls extends StatelessWidget {
     required this.pageCount,
     required this.isLastPage,
     required this.buttonLabel,
+    required this.isLoading,
+    required this.errorMessage,
     required this.onPressed,
   });
 
@@ -237,7 +271,9 @@ class _OnboardingControls extends StatelessWidget {
   final int pageCount;
   final bool isLastPage;
   final String buttonLabel;
-  final VoidCallback onPressed;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -248,6 +284,14 @@ class _OnboardingControls extends StatelessWidget {
           count: pageCount,
           currentIndex: currentPage,
         ),
+        if (errorMessage != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            errorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.error, fontSize: 14),
+          ),
+        ],
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
@@ -268,7 +312,12 @@ class _OnboardingControls extends StatelessWidget {
                 letterSpacing: 0,
               ),
             ),
-            child: Text(buttonLabel),
+            child: isLoading
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  )
+                : Text(buttonLabel),
           ),
         ),
       ],
