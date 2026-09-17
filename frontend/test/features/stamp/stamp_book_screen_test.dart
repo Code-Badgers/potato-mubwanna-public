@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:potato_mubwanna/app/theme/app_colors.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_guide_controller.dart';
 import 'package:potato_mubwanna/features/audio/application/audio_playback_controller.dart';
@@ -34,6 +35,12 @@ void main() {
       override: stampBookProvider.overrideWith((ref) async => _stampBook()),
     );
     await tester.pumpAndSettle();
+
+    final passportMaterial = find.descendant(
+      of: find.byKey(FeatureTourTargets.passportButton),
+      matching: find.byType(Material),
+    );
+    expect(tester.widget<Material>(passportMaterial).color, AppColors.surface);
 
     for (final width in <double>[360, 375, 390, 430]) {
       tester.view.physicalSize = Size(width, 844);
@@ -157,6 +164,113 @@ void main() {
     expect(find.text('정선의 맛과 이야기를 만나는 전통시장입니다.'), findsOneWidget);
     expect(find.text('강원특별자치도 정선군 정선길 12'), findsOneWidget);
     expect(find.text('09:00 - 18:00'), findsOneWidget);
+
+    final card = find.byKey(const ValueKey('stamp-selected-spot-card'));
+    final image = find.byKey(const ValueKey('stamp-spot-image-101'));
+    final location = find.text('강원특별자치도 정선군 정선길 12');
+    final hours = find.text('09:00 - 18:00');
+    expect(find.descendant(of: card, matching: find.text('정선')), findsNothing);
+    expect(tester.getTopLeft(location).dx,
+        greaterThan(tester.getTopRight(image).dx));
+    expect(tester.getTopLeft(hours).dx,
+        greaterThan(tester.getTopRight(image).dx));
+    expect(tester.getTopLeft(location).dy,
+        greaterThan(tester.getTopLeft(find.text('정선군 · 시장·상권')).dy));
+    expect(tester.getTopLeft(hours).dy,
+        greaterThan(tester.getTopLeft(location).dy));
+  });
+
+  testWidgets('selected visit action fits above the bottom bar on phones',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        stampBookProvider.overrideWith((ref) async => _stampBook()),
+        stampRallybookSpotsProvider.overrideWith(
+          (ref) async => _rallybookSpots,
+        ),
+        map.spotDetailProvider.overrideWith(
+          (ref, spotId) async => map.SpotDetail(
+            id: spotId,
+            name: '정선 5일장',
+            category: 'POTATO_MARKET',
+            cityName: '정선군',
+            address: '강원특별자치도 정선군 정선길 12 정선전통시장',
+            description: '정선의 맛과 이야기를 만나는 전통시장입니다.',
+            openingHours: '매일 09:00 - 18:00',
+          ),
+        ),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(
+          body: StampBookScreen(),
+          bottomNavigationBar: SizedBox(height: 78),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await _tapMapMarker(tester, 101);
+    await tester.pumpAndSettle();
+
+    for (final size in <Size>[
+      const Size(360, 780),
+      const Size(375, 812),
+      const Size(390, 844),
+      const Size(430, 932),
+    ]) {
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      final visitButton = find.ancestor(
+        of: find.text('방문 인증하기'),
+        matching: find.byType(FilledButton),
+      );
+      expect(tester.getBottomRight(visitButton).dy,
+          lessThanOrEqualTo(size.height - 78 - 48),
+          reason: 'button above bottom bar and safe area at $size');
+      expect(tester.takeException(), isNull, reason: 'phone size $size');
+    }
+  });
+
+  testWidgets('selected visit action stays visible with a claimable reward',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        stampBookProvider.overrideWith(
+          (ref) async => _stampBook(
+            acquiredCount: 6,
+            claimableTargetCount: 6,
+          ),
+        ),
+        stampRallybookSpotsProvider.overrideWith(
+          (ref) async => _rallybookSpots,
+        ),
+        map.spotDetailProvider.overrideWith(_emptySpotDetail),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(
+          body: StampBookScreen(),
+          bottomNavigationBar: SizedBox(height: 78),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await _tapMapMarker(tester, 101);
+    await tester.pumpAndSettle();
+
+    final visitButton = find.ancestor(
+      of: find.text('방문 인증하기'),
+      matching: find.byType(FilledButton),
+    );
+    expect(tester.getBottomRight(visitButton).dy,
+        lessThanOrEqualTo(780 - 78 - 48));
   });
 
   testWidgets('opens the selected stamp spot detail', (tester) async {
@@ -291,7 +405,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('가까운 장소 A'), findsWidgets);
 
-    await tester.tapAt(secondCenter);
+    // 선택 시 지도가 접히므로 다음 마커는 갱신된 위치에서 누른다.
+    await tester.tapAt(tester.getCenter(secondMarker));
     await tester.pumpAndSettle();
     expect(find.text('가까운 장소 B'), findsWidgets);
   });
