@@ -1016,7 +1016,7 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
-        border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
+        boxShadow: AppShadows.softCard,
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -1332,7 +1332,6 @@ class _TravelCourseCard extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
@@ -1342,7 +1341,7 @@ class _TravelCourseCard extends ConsumerWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-            border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
+            boxShadow: AppShadows.softCard,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2446,7 +2445,7 @@ class _PopularSpotCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-            border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
+            boxShadow: AppShadows.softCard,
           ),
           child: Row(
             children: [
