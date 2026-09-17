@@ -121,7 +121,7 @@ final appRouter = GoRouter(
             onWithdrawAccount:
                 ref.read(authControllerProvider.notifier).withdrawAccount,
             authMessage: () => ref.read(authControllerProvider).message,
-            onOpenLogin: () => context.go('/login'),
+            onSignedOut: () => context.go('/onboarding'),
           );
         },
       ),

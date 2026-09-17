@@ -10,7 +10,6 @@ void main() {
     var tokenReads = 0;
     final coordinator = _coordinator(
       hasAcceptedRequiredDocuments: false,
-      hasCompletedOnboarding: true,
       refreshToken: 'stored-refresh-token',
       onReadRefreshToken: () => tokenReads++,
     );
@@ -24,15 +23,25 @@ void main() {
     expect(tokenReads, 1);
   });
 
+  test('shows required consent before onboarding for a signed-out user',
+      () async {
+    final coordinator = _coordinator(
+      hasAcceptedRequiredDocuments: false,
+      refreshToken: null,
+    );
+
+    expect(await coordinator.resolveInitialRoute(), '/legal-consent');
+    expect(
+      await coordinator.resolveInitialRouteAfterLegalConsent(),
+      '/onboarding',
+    );
+  });
+
   test('restores a stored session before opening an initial push route',
       () async {
     final events = <String>[];
     final coordinator = SessionStartupCoordinator(
       hasKakaoAuthorizationCallback: false,
-      hasCompletedOnboarding: () async {
-        events.add('read-onboarding');
-        return true;
-      },
       markOnboardingCompleted: () async {
         events.add('mark-onboarding');
       },
@@ -64,7 +73,6 @@ void main() {
 
     expect(route, '/coupons', reason: events.toString());
     expect(events, [
-      'read-onboarding',
       'read-refresh-token',
       'mark-onboarding',
       'refresh-session',
@@ -76,7 +84,6 @@ void main() {
     var refreshCalls = 0;
     var initialPushCalls = 0;
     final coordinator = _coordinator(
-      hasCompletedOnboarding: false,
       refreshToken: null,
       onRefreshSession: () => refreshCalls++,
       onReadInitialPushMessage: () => initialPushCalls++,
@@ -89,17 +96,11 @@ void main() {
     expect(initialPushCalls, 0);
   });
 
-  test('reads onboarding state and stored token concurrently', () async {
-    final onboarding = Completer<bool>();
+  test('waits for the stored token before choosing onboarding', () async {
     final refreshToken = Completer<String?>();
-    var onboardingReads = 0;
     var refreshTokenReads = 0;
     final coordinator = SessionStartupCoordinator(
       hasKakaoAuthorizationCallback: false,
-      hasCompletedOnboarding: () {
-        onboardingReads++;
-        return onboarding.future;
-      },
       markOnboardingCompleted: () async {},
       readRefreshToken: () {
         refreshTokenReads++;
@@ -114,10 +115,8 @@ void main() {
     final route = coordinator.resolveInitialRoute();
     await Future<void>.delayed(Duration.zero);
 
-    expect(onboardingReads, 1);
     expect(refreshTokenReads, 1);
 
-    onboarding.complete(false);
     refreshToken.complete(null);
     expect(await route, '/onboarding');
   });
@@ -126,7 +125,6 @@ void main() {
     final initialMessage = Completer<PushMessage?>();
     final coordinator = SessionStartupCoordinator(
       hasKakaoAuthorizationCallback: false,
-      hasCompletedOnboarding: () async => true,
       markOnboardingCompleted: () async {},
       readRefreshToken: () async => 'stored-refresh-token',
       refreshSession: () async => true,
@@ -139,20 +137,18 @@ void main() {
     expect(await coordinator.resolveInitialRoute(), '/main/map');
   });
 
-  test('sends a returning signed-out user directly to login', () async {
+  test('sends a returning signed-out user to onboarding', () async {
     final coordinator = _coordinator(
-      hasCompletedOnboarding: true,
       refreshToken: null,
     );
 
-    expect(await coordinator.resolveInitialRoute(), '/login');
+    expect(await coordinator.resolveInitialRoute(), '/onboarding');
   });
 
-  test('clears local tokens and opens login when session refresh fails',
+  test('clears local tokens and opens onboarding when session refresh fails',
       () async {
     final events = <String>[];
     final coordinator = _coordinator(
-      hasCompletedOnboarding: false,
       refreshToken: 'expired-refresh-token',
       refreshSessionResult: false,
       onUnregisterPushToken: () => events.add('unregister-push'),
@@ -161,7 +157,7 @@ void main() {
 
     final route = await coordinator.resolveInitialRoute();
 
-    expect(route, '/login');
+    expect(route, '/onboarding');
     expect(events, ['unregister-push', 'clear-tokens']);
   });
 
@@ -169,7 +165,6 @@ void main() {
       () async {
     var clearCalls = 0;
     final coordinator = _coordinator(
-      hasCompletedOnboarding: true,
       refreshToken: 'expired-refresh-token',
       refreshSessionResult: false,
       onUnregisterPushToken: () => throw StateError('push unavailable'),
@@ -178,14 +173,13 @@ void main() {
 
     final route = await coordinator.resolveInitialRoute();
 
-    expect(route, '/login');
+    expect(route, '/onboarding');
     expect(clearCalls, 1);
   });
 
   test('coalesces concurrent startup resolution into one refresh', () async {
     var refreshCalls = 0;
     final coordinator = _coordinator(
-      hasCompletedOnboarding: true,
       refreshToken: 'stored-refresh-token',
       onRefreshSession: () => refreshCalls++,
     );
@@ -205,7 +199,6 @@ void main() {
     var refreshCalls = 0;
     final coordinator = _coordinator(
       hasKakaoAuthorizationCallback: true,
-      hasCompletedOnboarding: true,
       refreshToken: 'stored-refresh-token',
       onRefreshSession: () => refreshCalls++,
     );
@@ -218,7 +211,6 @@ void main() {
 SessionStartupCoordinator _coordinator({
   bool hasKakaoAuthorizationCallback = false,
   bool hasAcceptedRequiredDocuments = true,
-  required bool hasCompletedOnboarding,
   required String? refreshToken,
   bool refreshSessionResult = true,
   void Function()? onRefreshSession,
@@ -230,7 +222,6 @@ SessionStartupCoordinator _coordinator({
   return SessionStartupCoordinator(
     hasKakaoAuthorizationCallback: hasKakaoAuthorizationCallback,
     hasAcceptedRequiredDocuments: () async => hasAcceptedRequiredDocuments,
-    hasCompletedOnboarding: () async => hasCompletedOnboarding,
     markOnboardingCompleted: () async {},
     readRefreshToken: () async {
       onReadRefreshToken?.call();

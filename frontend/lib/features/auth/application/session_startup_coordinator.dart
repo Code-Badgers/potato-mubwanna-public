@@ -19,7 +19,6 @@ final sessionStartupCoordinatorProvider =
     hasKakaoAuthorizationCallback: AppEnvironment.hasKakaoAuthorizationCallback,
     hasAcceptedRequiredDocuments:
         legalConsentStore.hasAcceptedRequiredDocuments,
-    hasCompletedOnboarding: onboardingStatusStore.hasCompletedOnboarding,
     markOnboardingCompleted: onboardingStatusStore.markOnboardingCompleted,
     readRefreshToken: tokenStorage.readRefreshToken,
     refreshSession: ref.watch(authControllerProvider.notifier).refreshSession,
@@ -33,7 +32,6 @@ class SessionStartupCoordinator {
   SessionStartupCoordinator({
     required bool hasKakaoAuthorizationCallback,
     Future<bool> Function()? hasAcceptedRequiredDocuments,
-    required Future<bool> Function() hasCompletedOnboarding,
     required Future<void> Function() markOnboardingCompleted,
     required Future<String?> Function() readRefreshToken,
     required Future<bool> Function() refreshSession,
@@ -44,7 +42,6 @@ class SessionStartupCoordinator {
   })  : _hasKakaoAuthorizationCallback = hasKakaoAuthorizationCallback,
         _hasAcceptedRequiredDocuments =
             hasAcceptedRequiredDocuments ?? _acceptExistingTestSession,
-        _hasCompletedOnboarding = hasCompletedOnboarding,
         _markOnboardingCompleted = markOnboardingCompleted,
         _readRefreshToken = readRefreshToken,
         _refreshSession = refreshSession,
@@ -55,7 +52,6 @@ class SessionStartupCoordinator {
 
   final bool _hasKakaoAuthorizationCallback;
   final Future<bool> Function() _hasAcceptedRequiredDocuments;
-  final Future<bool> Function() _hasCompletedOnboarding;
   final Future<void> Function() _markOnboardingCompleted;
   final Future<String?> Function() _readRefreshToken;
   final Future<bool> Function() _refreshSession;
@@ -88,14 +84,10 @@ class SessionStartupCoordinator {
       return '/login';
     }
 
-    final localSession = await Future.wait<Object?>([
-      _readOnboardingStatus(),
-      _readStoredRefreshToken(),
-    ]);
-    final hasCompletedOnboarding = localSession[0] as bool;
-    final refreshToken = localSession[1] as String?;
+    final refreshToken = await _readStoredRefreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
-      return hasCompletedOnboarding ? '/login' : '/onboarding';
+      // 온보딩 완료 이력보다 현재 로그인 여부를 우선한다.
+      return '/onboarding';
     }
 
     // 기존 설치 사용자는 저장 플래그가 없더라도 유효한 세션이 있으면 재온보딩하지 않는다.
@@ -104,7 +96,7 @@ class SessionStartupCoordinator {
     if (!hasRestoredSession) {
       await _unregisterStalePushToken();
       await _clearInvalidLocalTokens();
-      return '/login';
+      return '/onboarding';
     }
 
     // 종료 상태 푸시는 인증 복구 뒤에만 소비해 보호 화면의 선행 API 호출을 막는다.
@@ -116,14 +108,6 @@ class SessionStartupCoordinator {
   Future<bool> _readRequiredDocumentConsent() async {
     try {
       return await _hasAcceptedRequiredDocuments();
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<bool> _readOnboardingStatus() async {
-    try {
-      return await _hasCompletedOnboarding();
     } catch (_) {
       return false;
     }
