@@ -51,12 +51,58 @@ find_apksigner() {
   return 1
 }
 
+validate_legal_value() {
+  local name="$1"
+  local value="$2"
+
+  if [[ -z "${value}" || "${value}" == "출시 설정 필요" || "${value}" == *$'\n'* || "${value}" == *$'\r'* ]]; then
+    return 1
+  fi
+  if [[ "${value}" == *"="* || "${value}" =~ LEGAL_[A-Z0-9_]+= ]]; then
+    return 1
+  fi
+
+  case "${name}" in
+    LEGAL_CONTACT_EMAIL)
+      [[ "${value}" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]
+      ;;
+    LEGAL_CONTACT_PHONE)
+      [[ "${value}" =~ ^[0-9+\(\)\ \-]{8,20}$ ]]
+      ;;
+    LEGAL_EFFECTIVE_DATE)
+      [[ "${value}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+}
+
 if [[ ! -f "${release_env}" ]]; then
   echo "릴리스 환경 파일을 찾지 못했습니다: ${release_env}" >&2
   echo "frontend/.env.release.example을 복사해 비밀값을 채워 주세요." >&2
   exit 1
 fi
 release_env="$(cd "$(dirname "${release_env}")" && pwd)/$(basename "${release_env}")"
+
+required_legal_values=(
+  LEGAL_BUSINESS_NAME
+  LEGAL_REPRESENTATIVE_NAME
+  LEGAL_CONTACT_EMAIL
+  LEGAL_CONTACT_PHONE
+  LEGAL_EFFECTIVE_DATE
+)
+invalid_legal_values=()
+for name in "${required_legal_values[@]}"; do
+  value="$(read_env_value "${name}")"
+  if ! validate_legal_value "${name}" "${value}"; then
+    invalid_legal_values+=("${name}")
+  fi
+done
+if (( ${#invalid_legal_values[@]} > 0 )); then
+  echo "법적 고지 릴리스 설정이 없거나 올바르지 않습니다: ${invalid_legal_values[*]}" >&2
+  exit 1
+fi
 
 if [[ -z "${ANDROID_KEYSTORE_PATH:-}" || ! -f "${ANDROID_KEYSTORE_PATH}" ]]; then
   echo "ANDROID_KEYSTORE_PATH가 실제 키스토어 파일을 가리켜야 합니다." >&2
