@@ -1586,6 +1586,13 @@ class _MissionDetailSummaryCard extends StatelessWidget {
           ),
           const _MissionMetaDivider(),
           _MissionMetaRow(icon: mission.type.icon, text: mission.type.label),
+          if (mission.type == MissionType.visitAndStep) ...[
+            const _MissionMetaDivider(),
+            _MissionMetaRow(
+              icon: Icons.flag_outlined,
+              text: _stepProgressLabel(mission),
+            ),
+          ],
           const _MissionMetaDivider(),
           const _MissionMetaRow(
               icon: Icons.schedule_rounded, text: '오늘 23:59까지'),
@@ -2036,13 +2043,28 @@ String _detailTitle(MissionChallenge mission) {
   return switch (mission.type) {
     MissionType.photo || MissionType.photoOcr => '사진으로 추억 남기기',
     MissionType.quiz => '강원도 감자 퀴즈',
-    MissionType.visitAndStep ||
-    MissionType.visit ||
-    MissionType.stamp =>
-      '${mission.spotName} 방문하기',
+    MissionType.visitAndStep => mission.title,
+    MissionType.visit || MissionType.stamp => '${mission.spotName} 방문하기',
     MissionType.qrScan => '숨은 QR 찾기',
     _ => mission.title,
   };
+}
+
+String _stepProgressLabel(MissionChallenge mission) {
+  return '현재 ${_formatCount(mission.progress)} / '
+      '목표 ${_formatCount(mission.target)}걸음';
+}
+
+String _formatCount(int value) {
+  final digits = value.abs().toString();
+  final buffer = StringBuffer();
+  for (var index = 0; index < digits.length; index++) {
+    if (index > 0 && (digits.length - index) % 3 == 0) {
+      buffer.write(',');
+    }
+    buffer.write(digits[index]);
+  }
+  return value < 0 ? '-$buffer' : buffer.toString();
 }
 
 String _spotLine(MissionChallenge mission) {

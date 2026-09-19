@@ -306,6 +306,43 @@ void main() {
     expect(repository.completeCallCount, 1);
   });
 
+  for (final stepGoal in [
+    (target: 3000, title: '강원 여행 3,000걸음 걷기', progress: '현재 31 / 목표 3,000걸음'),
+    (target: 5000, title: '강원 여행 5,000걸음 걷기', progress: '현재 31 / 목표 5,000걸음'),
+  ]) {
+    testWidgets(
+        'shows ${stepGoal.target} step mission title and goal in detail',
+        (tester) async {
+      final mission = MissionChallenge(
+        id: 'daily-steps-${stepGoal.target}',
+        group: MissionGroup.daily,
+        type: MissionType.visitAndStep,
+        status: MissionStatus.inProgress,
+        title: stepGoal.title,
+        spotName: '강원 여행길',
+        cityName: '일일 미션',
+        description: '오늘 목표 걸음 수를 채워보세요.',
+        dialogue: '천천히 걸어보자.',
+        conditionLabel: '오늘 ${stepGoal.target}걸음 달성',
+        rewardType: MissionRewardType.coin,
+        rewardLabel: '감자 코인',
+        progress: 31,
+        target: stepGoal.target,
+        todaySelected: true,
+      );
+      await _pumpMissionScreen(
+        tester,
+        repository: _FakeMissionRepository(missions: [mission]),
+      );
+
+      await _openMission(tester, stepGoal.title);
+
+      expect(find.text(stepGoal.title), findsOneWidget);
+      expect(find.text(stepGoal.progress), findsOneWidget);
+      expect(find.text('강원 여행길 방문하기'), findsNothing);
+    });
+  }
+
   testWidgets('completes photo mission after selecting upload source',
       (tester) async {
     final repository = _FakeMissionRepository();
@@ -669,10 +706,12 @@ Future<void> _tapVisibleText(WidgetTester tester, String text) async {
 
 class _FakeMissionRepository extends MissionRepository {
   _FakeMissionRepository({
+    this.missions = _missions,
     this.completeError,
     this.completeDelay = Duration.zero,
   }) : super(dio: Dio());
 
+  final List<MissionChallenge> missions;
   final Object? completeError;
   final Duration completeDelay;
   int fetchCallCount = 0;
@@ -682,7 +721,7 @@ class _FakeMissionRepository extends MissionRepository {
   @override
   Future<List<MissionChallenge>> fetchMissions() async {
     fetchCallCount += 1;
-    return _missions;
+    return missions;
   }
 
   @override
@@ -699,7 +738,7 @@ class _FakeMissionRepository extends MissionRepository {
     if (error != null) {
       throw error;
     }
-    final mission = _missions.firstWhere((mission) => mission.id == missionId);
+    final mission = missions.firstWhere((mission) => mission.id == missionId);
     if (mission.type == MissionType.quiz && payload.answer != '곤드레감자') {
       throw const ApiException(message: '정답이 틀렸습니다. 다시 풀어주세요.');
     }
