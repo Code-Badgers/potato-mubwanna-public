@@ -65,13 +65,23 @@ class SessionStartupCoordinator {
 
   Future<String> resolveInitialRoute() {
     // 여러 위젯 프레임에서 시작 처리를 요청해도 refresh token은 한 번만 회전시킨다.
-    return _initialRoute ??= _resolveInitialRoute();
+    return _initialRoute ??= _resolveInitialRouteForAttempt();
   }
 
   Future<String> resolveInitialRouteAfterLegalConsent() {
     _hasAcceptedRequiredDocumentsForSession = true;
-    _initialRoute = _resolveInitialRoute();
-    return _initialRoute!;
+    _initialRoute = null;
+    return resolveInitialRoute();
+  }
+
+  Future<String> _resolveInitialRouteForAttempt() async {
+    try {
+      return await _resolveInitialRoute();
+    } catch (_) {
+      // 실패한 Future를 캐시하면 연결이 복구되어도 재시도가 같은 오류만 돌려준다.
+      _initialRoute = null;
+      throw const SessionStartupFailure();
+    }
   }
 
   Future<String> _resolveInitialRoute() async {
@@ -114,11 +124,7 @@ class SessionStartupCoordinator {
   }
 
   Future<String?> _readStoredRefreshToken() async {
-    try {
-      return await _readRefreshToken();
-    } catch (_) {
-      return null;
-    }
+    return _readRefreshToken();
   }
 
   Future<void> _recordCompletedOnboarding() async {
@@ -130,11 +136,7 @@ class SessionStartupCoordinator {
   }
 
   Future<bool> _restoreSession() async {
-    try {
-      return await _refreshSession();
-    } catch (_) {
-      return false;
-    }
+    return _refreshSession();
   }
 
   Future<void> _unregisterStalePushToken() async {
@@ -161,6 +163,10 @@ class SessionStartupCoordinator {
       return null;
     }
   }
+}
+
+class SessionStartupFailure implements Exception {
+  const SessionStartupFailure();
 }
 
 Future<bool> _acceptExistingTestSession() async => true;
