@@ -1,7 +1,10 @@
 package com.gamjamubwatna.auth.api;
 
 import com.gamjamubwatna.auth.application.AuthService;
+import com.gamjamubwatna.auth.application.InvalidRefreshTokenException;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,10 +41,15 @@ public class AuthController {
 
     // 만료된 access token을 refresh token 회전으로 새 서비스 JWT 세션으로 교환한다.
     @PostMapping("/refresh")
-    public AuthApiResponse<AuthLoginResponse> refresh(
+    public ResponseEntity<AuthApiResponse<AuthLoginResponse>> refresh(
         @Valid @RequestBody RefreshTokenRequest request
     ) {
-        return AuthApiResponse.success(authService.refresh(request.refreshToken()));
+        try {
+            return ResponseEntity.ok(AuthApiResponse.success(authService.refresh(request.refreshToken())));
+        } catch (InvalidRefreshTokenException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AuthApiResponse.failure(exception.getMessage()));
+        }
     }
 
     // 사용자가 명시적으로 로그아웃할 때 저장된 refresh token을 폐기한다.

@@ -91,16 +91,22 @@ public class AuthService {
     @Transactional
     public AuthLoginResponse refresh(String refreshTokenValue) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
-            .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 refreshToken입니다."));
+            .orElseThrow(InvalidRefreshTokenException::new);
 
         Instant now = Instant.now(clock);
         if (!refreshToken.isUsable(now)) {
-            throw new IllegalArgumentException("사용할 수 없는 refreshToken입니다.");
+            throw new InvalidRefreshTokenException();
         }
 
-        JwtTokenProvider.JwtClaims claims = jwtTokenProvider.parse(refreshTokenValue);
+        JwtTokenProvider.JwtClaims claims;
+        try {
+            claims = jwtTokenProvider.parse(refreshTokenValue);
+        } catch (IllegalArgumentException exception) {
+            // 토큰 검증 실패만 인증 거절로 분류하고 DB/보상 처리 장애는 그대로 전파한다.
+            throw new InvalidRefreshTokenException();
+        }
         if (!"refresh".equals(claims.tokenType())) {
-            throw new IllegalArgumentException("refreshToken 형식이 아닙니다.");
+            throw new InvalidRefreshTokenException();
         }
 
         starterPotatoGrantService.grantIfNeeded(refreshToken.getUser(), now);
