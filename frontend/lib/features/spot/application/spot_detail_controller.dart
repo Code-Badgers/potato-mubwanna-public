@@ -10,7 +10,8 @@ import '../../mission/application/mission_controller.dart';
 import '../../mypage/application/user_activity_summary_controller.dart';
 import '../../potato/application/potato_collection_controller.dart';
 import '../../stamp/application/stamp_book_controller.dart';
-import '../data/spot_detail_repository.dart';
+import 'spot_detail_response_provider.dart';
+export 'spot_detail_response_provider.dart';
 import '../data/visit_verification_repository.dart';
 import '../domain/spot_detail.dart';
 import '../domain/visit_verification.dart';
@@ -22,10 +23,6 @@ final locationServiceProvider = Provider<LocationService>(
   ),
 );
 
-final spotDetailRepositoryProvider = Provider<SpotDetailRepository>(
-  (ref) => SpotDetailRepository(dio: ref.watch(dioClientProvider).dio),
-);
-
 final visitVerificationRepositoryProvider =
     Provider<VisitVerificationRepository>(
   (ref) => VisitVerificationRepository(dio: ref.watch(dioClientProvider).dio),
@@ -33,8 +30,16 @@ final visitVerificationRepositoryProvider =
 
 final spotDetailProvider =
     FutureProvider.autoDispose.family<SpotDetail, String>(
-  (ref, spotId) =>
-      ref.watch(spotDetailRepositoryProvider).fetchSpotDetail(spotId),
+  (ref, spotId) => ref
+      .watch(spotDetailResponseProvider(spotId).future)
+      .then(SpotDetail.fromJson),
+);
+
+final spotBasicDetailProvider =
+    FutureProvider.autoDispose.family<SpotDetail, String>(
+  (ref, spotId) => ref
+      .watch(spotBasicDetailResponseProvider(spotId).future)
+      .then(SpotDetail.fromJson),
 );
 
 enum VisitVerificationPhase { idle, location, server }

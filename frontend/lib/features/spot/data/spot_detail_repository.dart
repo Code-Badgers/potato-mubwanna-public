@@ -11,15 +11,24 @@ class SpotDetailRepository {
   final Dio _dio;
 
   Future<SpotDetail> fetchSpotDetail(String spotId) async {
+    return SpotDetail.fromJson(await fetchSpotDetailPayload(spotId));
+  }
+
+  Future<Map<String, dynamic>> fetchSpotDetailPayload(
+    String spotId, {
+    bool basic = false,
+  }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        ApiPaths.spotDetail(spotId),
+        basic ? ApiPaths.spotBasicDetail(spotId) : ApiPaths.spotDetail(spotId),
       );
-      final result = ApiResponse<SpotDetail>.fromJson(
+      final result = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data ?? const <String, dynamic>{},
-        SpotDetail.fromJson,
+        (value) => value is Map
+            ? Map<String, dynamic>.from(value)
+            : <String, dynamic>{},
       );
-      if (!result.success || result.data == null) {
+      if (!result.success || result.data == null || result.data!.isEmpty) {
         throw ApiException(
           message:
               result.message.isEmpty ? '관광지 정보를 불러오지 못했습니다.' : result.message,

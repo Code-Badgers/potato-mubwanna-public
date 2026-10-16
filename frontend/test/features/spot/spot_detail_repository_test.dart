@@ -36,6 +36,31 @@ void main() {
     expect(detail.businessTodayText, '금요일 09:00~18:00');
   });
 
+  test('basic details use the separate fast route', () async {
+    final paths = <String>[];
+    final dio = _dioWithResponse(
+        statusCode: 200,
+        data: const {
+          'success': true,
+          'message': 'ok',
+          'data': {'id': 7, 'name': 'saved place'}
+        },
+        requestedPaths: paths);
+    final payload = await SpotDetailRepository(dio: dio)
+        .fetchSpotDetailPayload('7', basic: true);
+    expect(payload['name'], 'saved place');
+    expect(paths, ['/spots/7/basic']);
+  });
+
+  test('rejects an empty successful payload instead of caching invalid details',
+      () async {
+    final dio = _dioWithResponse(
+        statusCode: 200, data: const {'success': true, 'data': null});
+    await expectLater(
+        SpotDetailRepository(dio: dio).fetchSpotDetailPayload('7'),
+        throwsA(isA<ApiException>()));
+  });
+
   test('throws ApiException when spot detail response fails', () async {
     final dio = _dioWithResponse(
       statusCode: 404,
