@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/session_startup_route_gate.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/loading/potato_loading_view.dart';
+import '../../../../shared/widgets/app_state_message.dart';
 import '../../application/auth_controller.dart';
 import '../../application/session_startup_coordinator.dart';
 
@@ -67,6 +68,9 @@ class SessionStartupLoadingScreen extends ConsumerStatefulWidget {
 
 class _SessionStartupLoadingScreenState
     extends ConsumerState<SessionStartupLoadingScreen> {
+  bool _isResolving = false;
+  bool _hasFailed = false;
+
   @override
   void initState() {
     super.initState();
@@ -74,33 +78,69 @@ class _SessionStartupLoadingScreenState
   }
 
   Future<void> _resolveInitialRoute() async {
-    final fallbackRoute =
-        await ref.read(sessionStartupCoordinatorProvider).resolveInitialRoute();
-    if (!mounted) {
+    if (_isResolving) {
       return;
     }
-    if (fallbackRoute == '/legal-consent') {
-      context.go(fallbackRoute);
-      return;
-    }
-    final route = sessionStartupRouteGate.completeSessionStartup(
-      fallbackRoute: fallbackRoute,
-      isAuthenticated:
-          ref.read(authControllerProvider).status == AuthStatus.authenticated,
-    );
-    if (mounted) {
+    _isResolving = true;
+    setState(() => _hasFailed = false);
+    try {
+      final fallbackRoute = await ref
+          .read(sessionStartupCoordinatorProvider)
+          .resolveInitialRoute();
+      if (!mounted) {
+        return;
+      }
+      if (fallbackRoute == '/legal-consent') {
+        context.go(fallbackRoute);
+        return;
+      }
+      final route = sessionStartupRouteGate.completeSessionStartup(
+        fallbackRoute: fallbackRoute,
+        isAuthenticated:
+            ref.read(authControllerProvider).status == AuthStatus.authenticated,
+      );
       context.go(route);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _hasFailed = true);
+      }
+    } finally {
+      _isResolving = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      key: Key('session-startup-loading'),
-      body: PotatoLoadingView.fullScreen(
-        message: '여행을 준비하고 있어요',
-        subtitle: '필요한 정보는 화면이 열린 뒤에도 이어서 불러올게요',
-      ),
+    return Scaffold(
+      key: const Key('session-startup-loading'),
+      body: _hasFailed
+          ? SafeArea(
+              child: LayoutBuilder(builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: AppStateMessage(
+                          icon: Icons.cloud_off_rounded,
+                          title: '로그인 상태를 확인하지 못했어요',
+                          description:
+                              '연결 상태를 확인한 뒤 다시 시도해주세요.\n저장된 로그인 정보는 그대로 유지돼요.',
+                          actionLabel: '다시 시도',
+                          onAction: _resolveInitialRoute,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            )
+          : const PotatoLoadingView.fullScreen(
+              message: '여행을 준비하고 있어요',
+              subtitle: '필요한 정보는 화면이 열린 뒤에도 이어서 불러올게요',
+            ),
     );
   }
 }

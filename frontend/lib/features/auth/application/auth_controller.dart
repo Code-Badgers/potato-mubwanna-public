@@ -162,9 +162,17 @@ class AuthController extends StateNotifier<AuthState> {
       await _authRepository.refreshSession();
       _completeAuthentication();
       return true;
+    } on ApiException catch (error) {
+      // 서버가 토큰을 명확히 거절한 경우에만 저장된 세션을 폐기하도록 알린다.
+      if (error.statusCode == 401) {
+        state = const AuthState.idle();
+        return false;
+      }
+      state = const AuthState.failure('로그인 상태를 확인하지 못했어요. 다시 시도해주세요.');
+      rethrow;
     } catch (_) {
-      state = const AuthState.idle();
-      return false;
+      state = const AuthState.failure('로그인 상태를 확인하지 못했어요. 다시 시도해주세요.');
+      rethrow;
     }
   }
 
