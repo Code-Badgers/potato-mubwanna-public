@@ -14,6 +14,8 @@ import '../../../audio/data/audio_guide_repository.dart';
 import '../../../audio/domain/audio_guide.dart';
 import '../../../feature_tour/presentation/feature_tour_host.dart';
 import '../../../feature_tour/presentation/feature_tour_targets.dart';
+import '../../../map/application/kakao_map_navigation.dart';
+import '../../../map/domain/map_spot.dart';
 import '../../../stamp/presentation/widget/attraction_stamp_image.dart';
 import '../../application/spot_detail_controller.dart';
 import '../../domain/spot_detail.dart';
@@ -24,13 +26,35 @@ const _audioMint = Color(0xFFE7F5EB);
 const _audioLine = Color(0xFFE4E0D8);
 
 class SpotDetailScreen extends ConsumerWidget {
-  const SpotDetailScreen({required this.spotId, super.key});
+  const SpotDetailScreen(
+      {required this.spotId,
+      this.mapUriLauncher = launchExternalMapUri,
+      super.key});
 
   final String spotId;
+  final MapUriLauncher mapUriLauncher;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(spotDetailProvider(spotId));
+    final cachedPayload = ref.exists(spotDetailResponseProvider(spotId))
+        ? ref.read(spotDetailResponseProvider(spotId)).valueOrNull
+        : null;
+    final fullSpot = detail.valueOrNull ??
+        (cachedPayload == null ? null : SpotDetail.fromJson(cachedPayload));
+    final basic = fullSpot != null
+        ? const AsyncValue<SpotDetail>.loading()
+        : ref.watch(spotBasicDetailProvider(spotId));
+    final visibleSpot = fullSpot ?? basic.valueOrNull;
+
+    void retry() {
+      ref.invalidate(spotDetailResponseProvider(spotId));
+      ref.invalidate(spotDetailProvider(spotId));
+      if (!basic.hasValue) {
+        ref.invalidate(spotBasicDetailResponseProvider(spotId));
+        ref.invalidate(spotBasicDetailProvider(spotId));
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -42,26 +66,42 @@ class SpotDetailScreen extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-      body: detail.when(
-        loading: () => const _SpotDetailLoading(),
-        error: (_, __) => _SpotDetailError(
-          onRetry: () => ref.invalidate(spotDetailProvider(spotId)),
-        ),
-        data: (spot) => _SpotDetailBody(spot: spot),
-      ),
-      bottomNavigationBar: detail.maybeWhen(
-        data: (spot) =>
-            spot.stampEnabled ? _VisitVerificationBar(spot: spot) : null,
-        orElse: () => null,
-      ),
+      body: visibleSpot != null
+          ? _SpotDetailBody(
+              spot: visibleSpot,
+              isEnriching: detail.isLoading && cachedPayload == null,
+              enrichmentFailed: detail.hasError && !detail.isLoading,
+              onRetry: retry,
+              mapUriLauncher: mapUriLauncher,
+            )
+          : detail.when(
+              loading: () => const _SpotDetailLoading(),
+              error: (_, __) => _SpotDetailError(
+                onRetry: retry,
+              ),
+              data: (spot) => _SpotDetailBody(spot: spot),
+            ),
+      // Keep verification tied to the stable full-detail model while enrichment changes.
+      bottomNavigationBar: detail.valueOrNull?.stampEnabled == true
+          ? _VisitVerificationBar(spot: detail.valueOrNull!)
+          : null,
     );
   }
 }
 
 class _SpotDetailBody extends ConsumerWidget {
-  const _SpotDetailBody({required this.spot});
+  const _SpotDetailBody(
+      {required this.spot,
+      this.isEnriching = false,
+      this.enrichmentFailed = false,
+      this.onRetry,
+      this.mapUriLauncher = launchExternalMapUri});
 
   final SpotDetail spot;
+  final bool isEnriching;
+  final bool enrichmentFailed;
+  final VoidCallback? onRetry;
+  final MapUriLauncher mapUriLauncher;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -112,6 +152,57 @@ class _SpotDetailBody extends ConsumerWidget {
                 icon: Icons.location_on_outlined,
                 text: spot.address.isEmpty ? spot.cityName : spot.address,
               ),
+              if (spot.latitude.isFinite &&
+                  spot.longitude.isFinite &&
+                  spot.latitude != 0 &&
+                  spot.longitude != 0 &&
+                  spot.latitude.abs() <= 90 &&
+                  spot.longitude.abs() <= 180) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('spot-directions-button'),
+                  icon: const Icon(Icons.directions_outlined),
+                  label: const Text('길찾기'),
+                  onPressed: () async {
+                    final destination =
+                        KakaoMapNavigation.destinationUri(MapSpot(
+                      id: spot.id,
+                      name: spot.name,
+                      category: spot.category,
+                      latitude: spot.latitude,
+                      longitude: spot.longitude,
+                      address: spot.address,
+                      cityName: spot.cityName,
+                      congestionLevel: spot.congestionLevel,
+                      stampEnabled: spot.stampEnabled,
+                    ));
+                    var opened = false;
+                    try {
+                      opened = await mapUriLauncher(destination);
+                    } catch (_) {}
+                    if (!opened && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('길찾기를 열지 못했어요. 다시 시도해주세요.')),
+                      );
+                    }
+                  },
+                ),
+              ],
+              if (isEnriching || enrichmentFailed) ...[
+                const SizedBox(height: 12),
+                Text(
+                  isEnriching
+                      ? '사진과 운영정보를 더 불러오고 있어요.'
+                      : '추가 정보를 불러오지 못했어요. 기본정보와 길찾기는 이용할 수 있어요.',
+                  key: const ValueKey('spot-enrichment-status'),
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13),
+                ),
+                if (enrichmentFailed)
+                  TextButton(
+                      onPressed: onRetry, child: const Text('추가 정보 다시 시도')),
+              ],
               if (spot.stampEnabled) ...[
                 const SizedBox(height: 8),
                 _LocationLine(

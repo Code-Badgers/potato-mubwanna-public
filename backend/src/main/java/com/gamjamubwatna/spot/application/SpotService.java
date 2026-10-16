@@ -128,6 +128,25 @@ public class SpotService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public SpotDetailResponse getBasicSpot(Long spotId) {
+        TouristSpot spot = touristSpotRepository.findByIdAndActiveTrue(spotId)
+            .orElseThrow(() -> new IllegalArgumentException("감자 스팟을 찾을 수 없습니다."));
+        // 기본 화면과 길찾기는 외부 API 지연과 무관하게 저장된 정보로 먼저 연다.
+        ExternalPlaceDetails details = externalPlaceDetailsResolver.resolveCached(List.of(spot))
+            .getOrDefault(spotId, ExternalPlaceDetails.empty());
+        List<String> images = resolvedListImageUrls(spot, details, 3);
+        SpotCongestionPrediction prediction = todayCongestionResolver.resolve(List.of(spot)).get(spotId);
+        SpotCongestionPrediction reference = historicalCongestionReferenceResolver.resolve(
+            List.of(spot), prediction == null ? Set.of() : Set.of(spotId)
+        ).get(spotId);
+        return SpotDetailResponse.from(
+            spot, images.isEmpty() ? null : images.get(0), images,
+            spotTourInfoResolver.resolveCached(spot), details,
+            menuItemsBySpotId(List.of(spot)).getOrDefault(spotId, List.of()), prediction, reference
+        );
+    }
+
     private List<String> resolvedImageUrls(
         TouristSpot spot,
         ExternalPlaceDetails externalDetails,

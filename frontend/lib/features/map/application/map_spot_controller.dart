@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../auth/application/auth_controller.dart';
+import '../../spot/application/spot_detail_response_provider.dart';
 import '../data/map_spot_repository.dart';
 import '../domain/favorite_spot_route.dart';
 import '../domain/map_spot.dart';
@@ -26,11 +27,13 @@ final spotRecommendationsProvider =
 
 final spotDetailProvider =
     FutureProvider.autoDispose.family<SpotDetail, String>(
-  (ref, spotId) => ref.watch(mapSpotRepositoryProvider).fetchSpotDetail(spotId),
+  (ref, spotId) => ref
+      .watch(spotDetailResponseProvider(spotId).future)
+      .then(SpotDetail.fromJson),
 );
 
-final travelCourseRouteEstimateProvider = FutureProvider.autoDispose.family<
-    TravelCourseRouteEstimate, TravelCourseRouteKey>(
+final travelCourseRouteEstimateProvider = FutureProvider.autoDispose
+    .family<TravelCourseRouteEstimate, TravelCourseRouteKey>(
   (ref, route) => ref
       .watch(mapSpotRepositoryProvider)
       .fetchTravelCourseRouteEstimate(route.spotIds),

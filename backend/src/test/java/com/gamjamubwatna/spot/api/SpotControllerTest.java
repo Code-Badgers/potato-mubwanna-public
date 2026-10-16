@@ -96,4 +96,24 @@ class SpotControllerTest {
             .andExpect(jsonPath("$.data[0].menuItems[0].priceNote").isEmpty())
             .andExpect(jsonPath("$.data[0].menuItems[0].verifiedOn").value("2026-08-03"));
     }
+    @Test
+    void basicDetailKeepsTheExistingResponseShape() throws Exception {
+        SpotDetailResponse response = new SpotDetailResponse(
+            7L, "12345", "saved place", SpotCategory.POTATO_TOUR,
+            new BigDecimal("37.9"), new BigDecimal("127.7"), "saved address", "city",
+            null, null, null, 100, true,
+            null, null, null, null, null, null, null, null, null, null, null,
+            List.of(), List.of(), null, null, null, null, null
+        );
+        when(spotService.getBasicSpot(7L)).thenReturn(response);
+        mockMvc.perform(get("/spots/7/basic"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.id").value(7))
+            .andExpect(jsonPath("$.data.name").value("saved place"))
+            .andExpect(jsonPath("$.data.verificationRadiusMeter").value(100))
+            .andExpect(jsonPath("$.data.imageUrls").isArray())
+            .andExpect(jsonPath("$.data.description").isEmpty());
+    }
+
 }

@@ -13,6 +13,7 @@ class ApiPaths {
   static const spots = '/spots';
   static const spotRouteEstimate = '/spots/route-estimate';
   static String spotDetail(String spotId) => '/spots/$spotId';
+  static String spotBasicDetail(String spotId) => '/spots/$spotId/basic';
   static String spotRecommendations(String spotId) =>
       '/spots/$spotId/recommendations';
   static String spotAudioGuide(String spotId) => '/audio-guides/spots/$spotId';
