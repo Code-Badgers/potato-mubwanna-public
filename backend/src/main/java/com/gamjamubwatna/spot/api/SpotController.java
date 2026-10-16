@@ -38,4 +38,10 @@ public class SpotController {
     ) {
         return AuthApiResponse.success(spotService.getSpot(spotId));
     }
+
+    // 상세 화면의 장소명·좌표·길찾기를 외부 정보보다 먼저 표시하기 위한 기본 조회다.
+    @GetMapping("/{spotId}/basic")
+    public AuthApiResponse<SpotDetailResponse> getBasicSpot(@PathVariable Long spotId) {
+        return AuthApiResponse.success(spotService.getBasicSpot(spotId));
+    }
 }

@@ -243,6 +243,61 @@ class SpotServiceTest {
         assertThat(spotService.getSpots(null, null, CongestionLevel.LOW)).isEmpty();
     }
 
+    @Test
+    void basicLookupUsesSavedFieldsAndNeverCallsExternalEnrichment() {
+        TouristSpot attraction = spot(2L, "saved place", SpotCategory.POTATO_TOUR);
+        when(attraction.getVerificationRadiusMeter()).thenReturn(100);
+        when(touristSpotRepository.findByIdAndActiveTrue(2L)).thenReturn(java.util.Optional.of(attraction));
+        when(externalPlaceDetailsResolver.resolveCached(List.of(attraction))).thenReturn(Map.of());
+        when(spotTourInfoResolver.resolveCached(attraction)).thenReturn(SpotTourInfo.empty());
+        when(spotImageResolver.resolveStoredImageUrls(attraction, 3)).thenReturn(List.of("https://example.com/saved.jpg"));
+        when(spotMenuItemRepository.findActiveByTouristSpotIds(List.of(2L)))
+            .thenReturn(List.of(menu(2L, "saved menu", 1000, 1)));
+
+        SpotDetailResponse response = spotService.getBasicSpot(2L);
+
+        assertThat(response.name()).isEqualTo("saved place");
+        assertThat(response.latitude()).isEqualByComparingTo("37.9000000");
+        assertThat(response.stampEnabled()).isTrue();
+        assertThat(response.verificationRadiusMeter()).isEqualTo(100);
+        assertThat(response.imageUrls()).containsExactly("https://example.com/saved.jpg");
+        assertThat(response.menuItems()).hasSize(1);
+        assertThat(response.description()).isNull();
+        verify(externalPlaceDetailsResolver, never()).resolve(attraction);
+        verify(spotTourInfoResolver, never()).resolve(attraction);
+        verify(spotImageResolver, never()).resolveTourApiImageUrls(attraction, 3);
+    }
+
+    @Test
+    void measuresBasicLookupSeparatelyFromSlowExternalEnrichment() throws Exception {
+        TouristSpot attraction = spot(2L, "latency probe", SpotCategory.POTATO_TOUR);
+        when(touristSpotRepository.findByIdAndActiveTrue(2L)).thenReturn(java.util.Optional.of(attraction));
+        when(externalPlaceDetailsResolver.resolveCached(List.of(attraction))).thenReturn(Map.of());
+        when(spotTourInfoResolver.resolveCached(attraction)).thenReturn(SpotTourInfo.empty());
+        when(spotImageResolver.resolveStoredImageUrls(attraction, 3)).thenReturn(List.of());
+        when(externalPlaceDetailsResolver.resolve(attraction)).thenAnswer(invocation -> {
+            Thread.sleep(75); return ExternalPlaceDetails.empty();
+        });
+        when(spotImageResolver.resolveTourApiImageUrls(attraction, 3)).thenAnswer(invocation -> {
+            Thread.sleep(75); return List.of();
+        });
+        when(spotTourInfoResolver.resolve(attraction)).thenAnswer(invocation -> {
+            Thread.sleep(75); return SpotTourInfo.empty();
+        });
+        long started = System.nanoTime();
+        spotService.getSpot(2L);
+        long fullNanos = System.nanoTime() - started;
+        started = System.nanoTime();
+        spotService.getBasicSpot(2L);
+        long basicNanos = System.nanoTime() - started;
+        System.out.printf("SPOT_LATENCY_PROBE injected_delay_ms=75 external_stages=3 full_ms=%.3f basic_ms=%.3f%n",
+            fullNanos / 1_000_000.0, basicNanos / 1_000_000.0);
+        // Timing is evidence only; invocation checks keep this regression test stable on slow CI.
+        verify(externalPlaceDetailsResolver).resolve(attraction);
+        verify(spotImageResolver).resolveTourApiImageUrls(attraction, 3);
+        verify(spotTourInfoResolver).resolve(attraction);
+    }
+
     private TouristSpot spot(Long id, String name, SpotCategory category) {
         TouristSpot spot = mock(TouristSpot.class);
         when(spot.getId()).thenReturn(id);

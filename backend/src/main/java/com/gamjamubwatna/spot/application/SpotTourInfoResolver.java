@@ -39,6 +39,12 @@ public class SpotTourInfoResolver {
         );
     }
 
+    public SpotTourInfo resolveCached(TouristSpot spot) {
+        return tourApiSpotReferenceResolver.resolveCached(spot)
+            .map(item -> tourInfoCache.getOrDefault(item.contentId(), SpotTourInfo.empty()))
+            .orElseGet(SpotTourInfo::empty);
+    }
+
     private SpotTourInfo fetchTourInfoOrEmpty(String contentId, Integer contentTypeId) {
         try {
             return tourApiClient.findSpotTourInfo(contentId, contentTypeId)

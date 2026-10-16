@@ -49,6 +49,16 @@ public class TourApiSpotReferenceResolver {
         return cache.computeIfAbsent(cacheKey, ignored -> findReference(spot));
     }
 
+    public Optional<TourApiSpotItem> resolveCached(TouristSpot spot) {
+        if (isNumericContentId(spot.getContentId())) {
+            return Optional.of(new TourApiSpotItem(
+                spot.getContentId(), spot.getContentTypeId(), spot.getName(), spot.getAddress(),
+                spot.getLatitude(), spot.getLongitude(), spot.getImageUrl()
+            ));
+        }
+        return cache.getOrDefault(cacheKey(spot), Optional.empty());
+    }
+
     private Optional<TourApiSpotItem> findReference(TouristSpot spot) {
         try {
             for (String query : searchQueries(spot)) {
