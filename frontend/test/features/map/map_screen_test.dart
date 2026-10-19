@@ -2,6 +2,7 @@ import 'package:potato_mubwanna/shared/models/congestion_prediction.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -868,6 +869,52 @@ void main() {
     expect(find.text('홈페이지'), findsOneWidget);
     expect(find.text('영업정보 출처: 한국관광공사'), findsOneWidget);
     expect(find.text('영업시간은 방문 전 확인해주세요.'), findsNothing);
+  });
+
+  testWidgets('decodes card photos at display density after marker changes',
+      (tester) async {
+    tester.view.devicePixelRatio = 3;
+    tester.view.physicalSize = const Size(1170, 2532);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_richSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => _spots),
+        favoriteSpotControllerProvider
+            .overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: MaterialApp(
+        home: MapScreen(
+          hasMapConfiguration: true,
+          showFullMapInitially: true,
+          mapViewBuilder: (spots, onSpotSelected) => Align(
+            alignment: Alignment.center,
+            child: TextButton(
+              onPressed: () => onSpotSelected('2'),
+              child: const Text('사진 장소 선택'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('사진 장소 선택'));
+    await tester.pumpAndSettle();
+    final gallery = find.byKey(const ValueKey('spot-image-gallery-2'));
+    final photos = find.descendant(
+      of: gallery,
+      matching: find.byType(CachedNetworkImage),
+    );
+    expect(photos, findsWidgets);
+    for (final element in photos.evaluate()) {
+      final photo = element.widget as CachedNetworkImage;
+      final logicalWidth = (element.renderObject as RenderBox).size.width;
+      expect(photo.memCacheWidth, (logicalWidth * 3).ceil());
+      expect(photo.memCacheHeight, isNull);
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('uses spot list media and business info when detail fails', (
