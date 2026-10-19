@@ -1504,13 +1504,25 @@ class _CourseImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveImageUrl = imageUrl?.trim();
     if (effectiveImageUrl != null && effectiveImageUrl.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: effectiveImageUrl,
-        fit: BoxFit.cover,
-        placeholder: (_, __) => _CourseImageFallback(icon: icon),
-        errorWidget: (_, error, ___) {
-          _logImageLoadFailure(effectiveImageUrl, error);
-          return _CourseImageFallback(icon: icon);
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // 카드보다 큰 원본 사진을 그대로 디코딩하면 전환 시 메모리가 급증한다.
+          // 가로만 지정해 원본 비율과 화면의 픽셀 밀도를 유지한다.
+          final cacheWidth = constraints.maxWidth.isFinite &&
+                  constraints.maxWidth > 0
+              ? (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                  .ceil()
+              : null;
+          return CachedNetworkImage(
+            imageUrl: effectiveImageUrl,
+            memCacheWidth: cacheWidth,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => _CourseImageFallback(icon: icon),
+            errorWidget: (_, error, ___) {
+              _logImageLoadFailure(effectiveImageUrl, error);
+              return _CourseImageFallback(icon: icon);
+            },
+          );
         },
       );
     }
