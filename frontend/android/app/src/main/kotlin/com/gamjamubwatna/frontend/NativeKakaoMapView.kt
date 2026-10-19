@@ -41,6 +41,7 @@ class NativeKakaoMapView(
     private val channel = MethodChannel(messenger, "potato_mubwanna/kakao_map_$viewId")
     private val spotLabels = mutableListOf<Label>()
     private val spotIdByLabelId = mutableMapOf<String, String>()
+    private var lastSpotScale: Float? = null
     private var kakaoMap: KakaoMap? = null
     private var routePolyline = pointMaps(params["routePolyline"])
     private var currentLocation = pointMap(params["currentLocation"])
@@ -177,6 +178,8 @@ class NativeKakaoMapView(
         layer.setClickable(true)
         spotLabels.clear()
         spotIdByLabelId.clear()
+        // 새 label은 기본 크기이므로 현재 줌 배율을 다시 적용한다.
+        lastSpotScale = null
         if (spots.isEmpty()) return
 
         val styleCache = mutableMapOf<String, LabelStyles>()
@@ -220,6 +223,9 @@ class NativeKakaoMapView(
             level <= 11 -> 0.66f
             else -> 0.52f
         }
+        // 카메라 이동만 끝난 경우 같은 배율의 SDK 애니메이션을 반복하지 않는다.
+        if (scale == lastSpotScale) return
+        lastSpotScale = scale
         spotLabels.forEach { label ->
             label.scaleTo(scale, scale)
         }

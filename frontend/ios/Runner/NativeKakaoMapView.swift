@@ -34,6 +34,8 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   private var currentLocation: [AnyHashable: Any]?
   private var eventHandlers: [DisposableEventHandler] = []
   private var didRegisterRouteStyle = false
+  private var registeredSpotStyleIDs = Set<String>()
+  private var lastSpotSizeKey: String?
 
   init(
     frame: CGRect,
@@ -127,6 +129,8 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
   }
 
   func addViewSucceeded(_ viewName: String, viewInfoName: String) {
+    registeredSpotStyleIDs.removeAll()
+    lastSpotSizeKey = nil
     resizeMap(to: container.bounds.size)
     let mapView = mapController?.getView("potatoMap") as? KakaoMap
     mapView?.eventDelegate = self
@@ -236,6 +240,8 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       )
     )
     layer?.clearAllItems()
+    // 새 POI는 기본 크기로 생성되므로 현재 줌 크기를 다시 적용해야 한다.
+    lastSpotSizeKey = nil
     layer?.visible = true
     layer?.setClickable(true)
     spotStyleByPoiID.removeAll()
@@ -306,9 +312,12 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
 
   private func applySpotPoiScale(for mapView: KakaoMap) {
     let sizeKey = sizeKeyForZoomLevel(mapView.zoomLevel)
+    // 이동 종료도 이 콜백을 호출한다. 크기 구간이 같으면 SDK 작업을 반복하지 않는다.
+    guard sizeKey != lastSpotSizeKey else { return }
     guard let layer = mapView.getLabelManager().getLabelLayer(layerID: spotLayerID) else {
       return
     }
+    lastSpotSizeKey = sizeKey
     spotStyleByPoiID.forEach { poiID, style in
       let styleID = styleIDFor(
         markerColor: style.markerColor,
@@ -453,14 +462,17 @@ final class NativeKakaoMapView: NSObject, FlutterPlatformView, MapControllerDele
       ("medium", CGSize(width: 57, height: 65)),
       ("large", CGSize(width: 69, height: 78)),
     ].forEach { sizeKey, size in
+      let styleID = styleIDFor(
+        markerColor: markerColor,
+        isFavorite: isFavorite,
+        routeIndex: routeIndex,
+        sizeKey: sizeKey
+      )
+      // 같은 색/즐겨찾기/순번/크기의 이미지는 지도 생명주기 동안 공유한다.
+      guard registeredSpotStyleIDs.insert(styleID).inserted else { return }
       labelManager.addPoiStyle(
         makePoiStyle(
-          styleID: styleIDFor(
-            markerColor: markerColor,
-            isFavorite: isFavorite,
-            routeIndex: routeIndex,
-            sizeKey: sizeKey
-          ),
+          styleID: styleID,
           color: color,
           isFavorite: isFavorite,
           routeIndex: routeIndex,
