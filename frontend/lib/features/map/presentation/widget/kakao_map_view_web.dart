@@ -48,6 +48,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   late final html.DivElement _messageElement;
   late final StreamSubscription<html.Event> _spotSelectedSubscription;
   int _lastInjectedFocusTick = 0;
+  bool _isMapReady = false;
 
   @override
   void initState() {
@@ -128,28 +129,35 @@ class _KakaoMapViewState extends State<KakaoMapView> {
   @override
   void didUpdateWidget(covariant KakaoMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (hasSameMapSpotRenderData(
+    if (!_isMapReady) {
+      return;
+    }
+    final updateSpots = !hasSameMapSpotRenderData(
           oldWidget.spots,
           oldWidget.favoriteSpotIds,
           widget.spots,
           widget.favoriteSpotIds,
-        ) &&
-        hasSameRoutePolyline(
-          oldWidget.routePolyline,
-          widget.routePolyline,
-        ) &&
-        hasSameRouteSpotIds(
-          oldWidget.routeSpotIds,
-          widget.routeSpotIds,
-        ) &&
-        hasSameMapPoint(
-          oldWidget.currentLocation,
-          widget.currentLocation,
-        ) &&
-        oldWidget.currentLocationFocusTick == widget.currentLocationFocusTick) {
+        ) ||
+        !hasSameRouteSpotIds(oldWidget.routeSpotIds, widget.routeSpotIds);
+    final updateRoute = !hasSameRoutePolyline(
+      oldWidget.routePolyline,
+      widget.routePolyline,
+    );
+    final updateLocation = !hasSameMapPoint(
+      oldWidget.currentLocation,
+      widget.currentLocation,
+    );
+    final focusChanged =
+        oldWidget.currentLocationFocusTick != widget.currentLocationFocusTick;
+    if (!updateSpots && !updateRoute && !updateLocation && !focusChanged) {
       return;
     }
-    _injectKakaoMapScript();
+    // 위치나 동선만 바뀌면 기존 마커 DOM을 보존해 전체 재생성을 피한다.
+    _injectKakaoMapScript(
+      updateSpots: updateSpots,
+      updateRoute: updateRoute,
+      updateLocation: updateLocation || focusChanged,
+    );
   }
 
   Future<void> _initializeMapAfterLayout() async {
@@ -183,6 +191,7 @@ class _KakaoMapViewState extends State<KakaoMapView> {
         return;
       }
 
+      _isMapReady = true;
       _injectKakaoMapScript();
       _messageElement.style.display = 'none';
     } catch (_) {
@@ -260,7 +269,11 @@ class _KakaoMapViewState extends State<KakaoMapView> {
     return maps != null;
   }
 
-  void _injectKakaoMapScript() {
+  void _injectKakaoMapScript({
+    bool updateSpots = true,
+    bool updateRoute = true,
+    bool updateLocation = true,
+  }) {
     final mapElementId = jsonEncode(_viewType);
     final routeOrder = <String, int>{
       for (var index = 0; index < widget.routeSpotIds.length; index += 1)
@@ -321,11 +334,13 @@ class _KakaoMapViewState extends State<KakaoMapView> {
       const routePolyline = $routePolyline;
       const currentLocation = $currentLocation;
       if (mapElement.__potatoRenderSpots) {
-        mapElement.__potatoRenderSpots(spots);
-        if (mapElement.__potatoRenderRoutePolyline) {
+        if (${jsonEncode(updateSpots)}) {
+          mapElement.__potatoRenderSpots(spots);
+        }
+        if (${jsonEncode(updateRoute)} && mapElement.__potatoRenderRoutePolyline) {
           mapElement.__potatoRenderRoutePolyline(routePolyline);
         }
-        if (mapElement.__potatoRenderCurrentLocation) {
+        if (${jsonEncode(updateLocation)} && mapElement.__potatoRenderCurrentLocation) {
           mapElement.__potatoRenderCurrentLocation(
             currentLocation,
             ${jsonEncode(shouldFocusCurrentLocation)}
@@ -485,8 +500,6 @@ class _KakaoMapViewState extends State<KakaoMapView> {
             }));
           }
           markerElement.addEventListener('click', selectSpot);
-          markerElement.addEventListener('pointerup', selectSpot);
-          markerElement.addEventListener('touchend', selectSpot);
           markerElements.push(markerElement);
 
           const overlay = new window.kakao.maps.CustomOverlay({
@@ -584,6 +597,8 @@ class _KakaoMapViewState extends State<KakaoMapView> {
 ''';
 
     html.document.body?.append(script);
+    // 실행된 스크립트 요소를 남기면 갱신 횟수만큼 문서와 문자열이 누적된다.
+    script.remove();
   }
 
   void _showMessage(String message) {
