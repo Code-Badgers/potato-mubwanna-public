@@ -24,7 +24,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('STAMP PAGE'), findsOneWidget);
     expect(
-        tester.widget<Text>(find.text('스탬프')).style!.color, AppColors.primary);
+        tester.widget<Text>(find.text('스탬프')).style!.color, AppColors.actionGreen);
   });
 
   testWidgets('map footer tap returns from a pushed stamp tab', (tester) async {

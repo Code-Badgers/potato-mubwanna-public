@@ -513,18 +513,19 @@ class _FeatureTourCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
                     children: [
                       Text(
                         '${stepIndex + 1} / $totalSteps',
                         style: const TextStyle(
-                          color: AppColors.primaryDark,
+                          color: AppColors.actionGreen,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0,
                         ),
                       ),
-                      const Spacer(),
                       if (step.allowContinueWithoutAction)
                         TextButton(
                           onPressed: onContinue,
@@ -534,9 +535,8 @@ class _FeatureTourCard extends StatelessWidget {
                         onPressed: onSkip,
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.textSecondary,
-                          minimumSize: const Size(0, 28),
+                          minimumSize: const Size(48, 48),
                           padding: const EdgeInsets.symmetric(horizontal: 6),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           textStyle: const TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
@@ -574,7 +574,7 @@ class _FeatureTourCard extends StatelessWidget {
                     Text(
                       step.interactionHint!,
                       style: const TextStyle(
-                        color: AppColors.primaryDark,
+                        color: AppColors.actionGreen,
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
@@ -596,8 +596,8 @@ class _FeatureTourCard extends StatelessWidget {
                         label: Text(isLastStep ? '확인' : '다음'),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 36),
+                          foregroundColor: AppColors.onPrimary,
+                          minimumSize: const Size(48, 48),
                           padding: const EdgeInsets.symmetric(horizontal: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),

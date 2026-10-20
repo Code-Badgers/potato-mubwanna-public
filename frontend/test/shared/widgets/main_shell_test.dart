@@ -1,9 +1,48 @@
+import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:potato_mubwanna/app/theme/app_theme.dart';
 import 'package:potato_mubwanna/shared/widgets/navigation/main_shell.dart';
 
 void main() {
+  testWidgets('footer stays readable and announces selection at 200% text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+    final router = _buildRouter();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(
+      theme: AppTheme.light,
+      routerConfig: router,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: const TextScaler.linear(2)),
+        child: child!,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+        tester
+            .getSemantics(find.bySemanticsLabel('지도'))
+            .flagsCollection
+            .isSelected,
+        Tristate.isTrue);
+    await tester.tap(find.text('감자밭'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+        tester
+            .getSemantics(find.bySemanticsLabel('감자밭'))
+            .flagsCollection
+            .isSelected,
+        Tristate.isTrue);
+    semantics.dispose();
+  });
   testWidgets('renders the five footer navigation labels', (tester) async {
     await _setMobileViewport(tester);
     final router = _buildRouter();

@@ -34,7 +34,7 @@ typedef MapViewBuilder = Widget Function(
 );
 
 const _mapPrimary = AppColors.primary;
-const _mapDark = AppColors.primaryDark;
+const _mapDark = AppColors.actionGreen;
 const _rareGold = AppColors.secondary;
 const _discoverySectionSpacing = 32.0;
 
@@ -967,7 +967,7 @@ class _DiscoveryHeroHeader extends StatelessWidget {
         Text(
           '오늘은 어디로 떠나볼까요?',
           style: TextStyle(
-            color: AppColors.primaryDark,
+            color: AppColors.actionGreen,
             fontSize: 14,
             fontWeight: FontWeight.w800,
             letterSpacing: 0,
@@ -1040,7 +1040,7 @@ class _DiscoveryMapPreviewCard extends StatelessWidget {
                 label: const Text('지도 크게 보기'),
                 style: FilledButton.styleFrom(
                   backgroundColor: _mapPrimary,
-                  foregroundColor: AppColors.surface,
+                  foregroundColor: AppColors.onPrimary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 13,
@@ -1176,7 +1176,8 @@ class _FullMapHomeButton extends StatelessWidget {
           dimension: 52,
           child: Icon(
             Icons.keyboard_arrow_left_rounded,
-            color: _mapDark,
+            color: AppColors.actionGreen,
+            semanticLabel: '지도 홈으로 돌아가기',
             size: 30,
           ),
         ),
@@ -1205,7 +1206,8 @@ class _FullMapLocateButton extends StatelessWidget {
           dimension: 52,
           child: Icon(
             Icons.my_location_rounded,
-            color: _mapDark,
+            color: AppColors.actionGreen,
+            semanticLabel: '현재 위치로 이동',
             size: 26,
           ),
         ),
@@ -1803,7 +1805,7 @@ class _TravelCourseDetailPage extends ConsumerWidget {
                     label: Text('내 동선에 ${course.stops.length}곳 담기'),
                     style: FilledButton.styleFrom(
                       backgroundColor: _mapPrimary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
@@ -1845,8 +1847,11 @@ class _CircularIconButton extends StatelessWidget {
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: SizedBox.square(
-          dimension: 42,
-          child: Icon(icon, color: AppColors.textPrimary, size: 23),
+          dimension: 48,
+          child: Icon(icon,
+              color: AppColors.textPrimary,
+              size: 23,
+              semanticLabel: '이전 화면으로 돌아가기'),
         ),
       ),
     );
@@ -1911,7 +1916,7 @@ class _CourseSpotRow extends StatelessWidget {
                 child: Text(
                   '$index',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.onPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),
@@ -2073,7 +2078,7 @@ class _CourseStopCard extends StatelessWidget {
               icon: const Icon(Icons.arrow_forward_rounded, size: 17),
               label: const Text('장소 자세히 보기'),
               style: TextButton.styleFrom(
-                foregroundColor: _mapDark,
+                foregroundColor: AppColors.actionGreen,
                 textStyle: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
@@ -2201,7 +2206,7 @@ class _CourseAddedRouteDialog extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(true),
                 style: FilledButton.styleFrom(
                   backgroundColor: _mapPrimary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(17),
@@ -2217,7 +2222,7 @@ class _CourseAddedRouteDialog extends StatelessWidget {
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
               style: TextButton.styleFrom(
-                foregroundColor: _mapDark,
+                foregroundColor: AppColors.actionGreen,
                 textStyle: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -2840,7 +2845,7 @@ class _FavoriteRouteEmptyState extends StatelessWidget {
             onPressed: onBrowsePressed,
             style: FilledButton.styleFrom(
               backgroundColor: _mapPrimary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.onPrimary,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -2940,7 +2945,7 @@ class _FavoriteRouteList extends StatelessWidget {
                       key: const ValueKey('route-browse-button'),
                       onPressed: onBrowsePressed,
                       style: TextButton.styleFrom(
-                        foregroundColor: _mapDark,
+                        foregroundColor: AppColors.actionGreen,
                         textStyle: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
@@ -3323,7 +3328,7 @@ class _SelectedSpotSummary extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onNavigationPressed,
             style: OutlinedButton.styleFrom(
-              foregroundColor: _mapDark,
+              foregroundColor: AppColors.actionGreen,
               side: const BorderSide(color: AppColors.line),
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
@@ -4211,39 +4216,43 @@ class _MapCategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = selected ? Colors.white : AppColors.textPrimary;
-    return Material(
-      color: selected ? _mapPrimary : Colors.white.withValues(alpha: 0.94),
-      borderRadius: BorderRadius.circular(999),
-      elevation: selected ? 4 : 1,
-      shadowColor: Colors.black.withValues(alpha: 0.14),
-      child: InkWell(
-        onTap: onTap,
+    const foregroundColor = AppColors.textPrimary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? _mapPrimary : Colors.white.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(999),
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 13),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? _mapPrimary : AppColors.line,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(category.icon, size: 17, color: foregroundColor),
-              const SizedBox(width: 6),
-              Text(
-                category.label,
-                style: TextStyle(
-                  color: foregroundColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
+        elevation: selected ? 4 : 1,
+        shadowColor: Colors.black.withValues(alpha: 0.14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected ? _mapPrimary : AppColors.line,
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(category.icon, size: 17, color: foregroundColor),
+                const SizedBox(width: 6),
+                Text(
+                  category.label,
+                  style: const TextStyle(
+                    color: foregroundColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
