@@ -142,6 +142,8 @@ class _PotatoLoadingViewState extends State<PotatoLoadingView> {
         .frameAssets[PotatoLoadingView.playbackFrameIndexes[_playbackIndex]];
     final content = Semantics(
       label: '콘텐츠를 불러오는 중',
+      value: [widget.message, if (widget.subtitle != null) widget.subtitle!]
+          .join('. '),
       container: true,
       liveRegion: true,
       child: ExcludeSemantics(
@@ -181,13 +183,21 @@ class _PotatoLoadingViewState extends State<PotatoLoadingView> {
       ),
     );
 
-    if (!widget.fullScreen) {
-      return content;
-    }
-
+    // compact는 SliverFillRemaining의 intrinsic 측정 안에서도 사용된다.
+    // 전체 화면에서만 별도 스크롤을 만들어 그 측정 경로를 보존한다.
+    if (!widget.fullScreen) return content;
+    final scrollableContent = LayoutBuilder(builder: (context, constraints) {
+      if (!constraints.hasBoundedHeight) return content;
+      return SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: content,
+        ),
+      );
+    });
     return ColoredBox(
       color: widget.backgroundColor ?? AppColors.background,
-      child: content,
+      child: scrollableContent,
     );
   }
 }
