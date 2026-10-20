@@ -282,7 +282,7 @@ class _VisitVerificationBar extends ConsumerWidget {
                 : null,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF56C787),
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.onPrimary,
               disabledBackgroundColor: const Color(0xFFD7DED6),
               disabledForegroundColor: AppColors.textSecondary,
               minimumSize: const Size.fromHeight(54),
@@ -296,7 +296,7 @@ class _VisitVerificationBar extends ConsumerWidget {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppColors.onPrimary,
                     ),
                   )
                 : const Icon(Icons.verified_rounded),
@@ -688,7 +688,7 @@ class _VisitResultSheetState extends State<_VisitResultSheet>
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF56C787),
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.onPrimary,
                     minimumSize: const Size.fromHeight(50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),

@@ -609,7 +609,7 @@ class _MissionGuestPreview extends StatelessWidget {
                     onPressed: onLogin,
                     style: FilledButton.styleFrom(
                       backgroundColor: _missionPrimary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
                       ),
@@ -941,7 +941,7 @@ class _MissionFeaturedCard extends StatelessWidget {
                           const Text(
                             '미션 살펴보기 →',
                             style: TextStyle(
-                              color: AppColors.primaryDark,
+                              color: AppColors.actionGreen,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1417,7 +1417,7 @@ class _MissionDetailViewState extends State<_MissionDetailView> {
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(AppDimens.buttonHeight),
                     backgroundColor: _missionPrimary,
-                    foregroundColor: AppColors.surface,
+                    foregroundColor: AppColors.onPrimary,
                     disabledBackgroundColor: _missionLine,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(_missionCardRadius),
@@ -1770,7 +1770,7 @@ class _MissionKindBadge extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          color: AppColors.primaryDark,
+          color: AppColors.actionGreen,
           fontSize: 12,
           fontWeight: FontWeight.w900,
           letterSpacing: 0,
@@ -1844,7 +1844,7 @@ class _MissionStepLine extends StatelessWidget {
           child: Text(
             '$index',
             style: const TextStyle(
-              color: AppColors.primaryDark,
+              color: AppColors.actionGreen,
               fontSize: 11,
               fontWeight: FontWeight.w900,
               letterSpacing: 0,
@@ -2290,7 +2290,7 @@ class _MissionPhotoSheetState extends State<_MissionPhotoSheet> {
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               backgroundColor: _missionPrimary,
-              foregroundColor: AppColors.surface,
+              foregroundColor: AppColors.onPrimary,
               disabledBackgroundColor: _missionLine,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(_missionCardRadius),
@@ -2639,7 +2639,7 @@ class _MissionRewardDialog extends StatelessWidget {
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
                 backgroundColor: _missionPrimary,
-                foregroundColor: AppColors.surface,
+                foregroundColor: AppColors.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(_missionCardRadius),
                 ),

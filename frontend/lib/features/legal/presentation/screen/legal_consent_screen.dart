@@ -219,7 +219,7 @@ class _LegalConsentScreenState extends State<LegalConsentScreen> {
                             onPressed: _canContinue ? _continue : null,
                             style: FilledButton.styleFrom(
                               backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
+                              foregroundColor: AppColors.onPrimary,
                               disabledBackgroundColor:
                                   AppColors.line.withValues(alpha: 0.78),
                               shape: RoundedRectangleBorder(

@@ -252,7 +252,7 @@ class _PassportSummaryCard extends StatelessWidget {
             child: Text(
               '$acquiredCount / $totalCount',
               style: const TextStyle(
-                color: AppColors.primaryDark,
+                color: AppColors.actionGreen,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
@@ -370,7 +370,7 @@ class _PassportSpread extends StatelessWidget {
                       child: Text(
                         'GANGWON PASSPORT',
                         style: TextStyle(
-                          color: AppColors.primaryDark,
+                          color: AppColors.actionGreen,
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.8,
@@ -529,7 +529,7 @@ class _PassportStampTile extends StatelessWidget {
                       '감자무봤나',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.primaryDark.withValues(alpha: 0.78),
+                        color: AppColors.actionGreen.withValues(alpha: 0.78),
                         fontSize: 8,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
@@ -2250,7 +2250,7 @@ class _SelectedStampSpotContent extends StatelessWidget {
                   },
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -2428,7 +2428,7 @@ class _EmptyStampSpotContent extends StatelessWidget {
                     Text(
                       '강원 여행 패스포트',
                       style: TextStyle(
-                        color: AppColors.primaryDark,
+                        color: AppColors.actionGreen,
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0,
@@ -2464,7 +2464,7 @@ class _EmptyStampSpotContent extends StatelessWidget {
             child: const Text(
               '명소를 선택하면 바로 인증할 수 있어요',
               style: TextStyle(
-                color: AppColors.primaryDark,
+                color: AppColors.actionGreen,
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
