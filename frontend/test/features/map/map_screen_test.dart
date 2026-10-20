@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:potato_mubwanna/app/theme/app_theme.dart';
 import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/map/application/map_spot_controller.dart';
 import 'package:potato_mubwanna/features/map/data/map_spot_repository.dart';
@@ -27,6 +28,48 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:potato_mubwanna/shared/widgets/loading/potato_loading_view.dart';
 
 void main() {
+  testWidgets('map controls have names and fit a narrow large-text screen',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        spotDetailProvider.overrideWith(_testSpotDetail),
+        mapSpotsProvider.overrideWith((ref) async => _spots),
+        favoriteSpotControllerProvider
+            .overrideWith((ref) => _favoriteController()),
+        favoriteSpotRouteProvider.overrideWith((ref) async => _emptyRoute),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.light,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: MapScreen(
+          hasMapConfiguration: true,
+          showFullMapInitially: true,
+          mapViewBuilder: (_, __) => const SizedBox.expand(),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.bySemanticsLabel('지도 홈으로 돌아가기'), findsOneWidget);
+    expect(find.bySemanticsLabel('현재 위치로 이동'), findsOneWidget);
+    expect(
+        tester
+            .getSize(find.byKey(const ValueKey('full-map-home-button')))
+            .height,
+        greaterThanOrEqualTo(48));
+    final category = find.bySemanticsLabel('전체');
+    expect(tester.getSize(category).height, greaterThanOrEqualTo(48));
+    semantics.dispose();
+  });
   for (final stampEnabled in [true, false]) {
     testWidgets('map visit entry respects stampEnabled=$stampEnabled',
         (tester) async {

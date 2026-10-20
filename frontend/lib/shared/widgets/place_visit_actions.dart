@@ -90,7 +90,12 @@ class PlaceSourceCaption extends StatelessWidget {
         ? text
         : InkWell(
             onTap: () => openPlaceLink(context, uri),
-            child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8), child: text));
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Align(alignment: Alignment.centerLeft, child: text),
+              ),
+            ));
   }
 }

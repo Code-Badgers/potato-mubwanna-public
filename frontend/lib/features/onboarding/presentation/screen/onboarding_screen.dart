@@ -286,23 +286,26 @@ class _OnboardingControls extends StatelessWidget {
         ),
         if (errorMessage != null) ...[
           const SizedBox(height: 12),
-          Text(
-            errorMessage!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.error, fontSize: 14),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.error, fontSize: 14),
+            ),
           ),
         ],
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 56,
+        ConstrainedBox(
+          constraints:
+              const BoxConstraints(minWidth: double.infinity, minHeight: 56),
           child: FilledButton(
             onPressed: onPressed,
             style: FilledButton.styleFrom(
               backgroundColor:
                   isLastPage ? const Color(0xFFFEE500) : AppColors.primary,
               foregroundColor:
-                  isLastPage ? const Color(0xFF191919) : AppColors.surface,
+                  isLastPage ? const Color(0xFF191919) : AppColors.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -313,10 +316,20 @@ class _OnboardingControls extends StatelessWidget {
               ),
             ),
             child: isLoading
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
-                  )
+                ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const ExcludeSemantics(
+                        child: SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2.5, color: Color(0xFF191919)),
+                    )),
+                    const SizedBox(width: 10),
+                    Flexible(
+                        child: Semantics(
+                            liveRegion: true,
+                            child: const Text('로그인 중',
+                                textAlign: TextAlign.center))),
+                  ])
                 : Text(buttonLabel),
           ),
         ),

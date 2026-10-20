@@ -29,8 +29,11 @@ class AppStateMessage extends StatelessWidget {
         children: [
           Icon(icon, color: AppColors.primaryDark, size: 36),
           const SizedBox(height: AppDimens.contentSpacing),
-          Text(title,
-              textAlign: TextAlign.center, style: AppTextStyles.stateTitle),
+          Semantics(
+            liveRegion: true,
+            child: Text(title,
+                textAlign: TextAlign.center, style: AppTextStyles.stateTitle),
+          ),
           if (description?.isNotEmpty ?? false) ...[
             const SizedBox(height: 8),
             Text(description!,

@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:potato_mubwanna/app/theme/app_theme.dart';
 import 'package:potato_mubwanna/core/storage/token_storage.dart';
 import 'package:potato_mubwanna/core/permissions/permission_service.dart';
 import 'package:potato_mubwanna/features/auth/application/auth_controller.dart';
@@ -18,6 +19,99 @@ import 'package:potato_mubwanna/features/onboarding/presentation/screen/onboardi
 import 'package:potato_mubwanna/features/onboarding/presentation/screen/permission_guide_screen.dart';
 
 void main() {
+  testWidgets('permission failure exposes a retry and recovers',
+      (tester) async {
+    final service =
+        _FakePermissionService(requestResult: PermissionStatus.denied)
+          ..failRequests = true;
+    final router = _permissionRouter(service);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+        MaterialApp.router(theme: AppTheme.light, routerConfig: router));
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    expect(find.text('위치 권한을 확인하지 못했습니다. 다시 시도해주세요.'), findsOneWidget);
+    expect(find.text('다시 시도'), findsOneWidget);
+    service.failRequests = false;
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(service.locationRequestCalls, 2);
+    expect(find.text('권한 없이 둘러보기'), findsOneWidget);
+  });
+  testWidgets('intro and login controls fit 320px at 200% text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    for (final page in [0, 3]) {
+      await tester.pumpWidget(ProviderScope(
+          child: MaterialApp(
+        theme: AppTheme.light,
+        builder: _largeText,
+        home: OnboardingScreen(initialPage: page),
+      )));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(FilledButton)).height,
+          greaterThanOrEqualTo(56));
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('permission denial actions remain reachable at 200% text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final service =
+        _FakePermissionService(requestResult: PermissionStatus.denied);
+    final router = _permissionRouter(service);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(
+      theme: AppTheme.light,
+      routerConfig: router,
+      builder: _largeText,
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(find.text('확인'), 300,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(find.text('권한 없이 둘러보기'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('권한 없이 둘러보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('map destination'), findsOneWidget);
+  });
+
+  testWidgets(
+      'permission confirmation reports waiting and prevents duplicate reads',
+      (tester) async {
+    final consent = _BlockingConsentStore();
+    final service =
+        _FakePermissionService(requestResult: PermissionStatus.denied);
+    final router = _permissionRouter(service, consentStore: consent);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+        MaterialApp.router(theme: AppTheme.light, routerConfig: router));
+    await tester.tap(find.text('확인'));
+    await tester.pump();
+    expect(find.text('권한 확인 중'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNull);
+    await tester.tap(find.text('권한 확인 중'));
+    expect(consent.reads, 1);
+    consent.result.complete(true);
+    await tester.pumpAndSettle();
+    expect(service.locationRequestCalls, 1);
+    expect(find.text('권한 없이 둘러보기'), findsOneWidget);
+  });
   testWidgets('walks through service intro onboarding pages', (tester) async {
     tester.view.physicalSize = const Size(430, 932);
     tester.view.devicePixelRatio = 1;
@@ -292,7 +386,14 @@ void main() {
   });
 }
 
-GoRouter _permissionRouter(PermissionService permissionService) {
+Widget _largeText(BuildContext context, Widget? child) => MediaQuery(
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: const TextScaler.linear(2)),
+      child: child!,
+    );
+
+GoRouter _permissionRouter(PermissionService permissionService,
+    {LegalConsentStore? consentStore}) {
   return GoRouter(
     initialLocation: '/permissions',
     routes: [
@@ -300,7 +401,7 @@ GoRouter _permissionRouter(PermissionService permissionService) {
         path: '/permissions',
         builder: (_, __) => PermissionGuideScreen(
           permissionService: permissionService,
-          legalConsentStore: _AcceptedLegalConsentStore(),
+          legalConsentStore: consentStore ?? _AcceptedLegalConsentStore(),
         ),
       ),
       GoRoute(
@@ -310,6 +411,16 @@ GoRouter _permissionRouter(PermissionService permissionService) {
       ),
     ],
   );
+}
+
+class _BlockingConsentStore extends _AcceptedLegalConsentStore {
+  final result = Completer<bool>();
+  int reads = 0;
+  @override
+  Future<bool> hasAcceptedPersonalLocation() {
+    reads++;
+    return result.future;
+  }
 }
 
 class _AcceptedLegalConsentStore implements LegalConsentStore {
@@ -343,11 +454,13 @@ class _FakePermissionService extends PermissionService {
 
   final PermissionStatus requestResult;
   int locationRequestCalls = 0;
+  bool failRequests = false;
   int notificationRequestCalls = 0;
 
   @override
   Future<PermissionStatus> requestLocation() async {
     locationRequestCalls++;
+    if (failRequests) throw StateError('test permission failure');
     return requestResult;
   }
 

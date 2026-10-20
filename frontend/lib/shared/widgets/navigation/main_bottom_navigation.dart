@@ -22,12 +22,13 @@ class MainBottomNavigation extends StatelessWidget {
   Widget _buildNavigation(BuildContext context) {
     final selectedIndex = _selectedIndex(context);
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final labelGrowth = MediaQuery.textScalerOf(context).scale(10) - 10;
 
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: SizedBox(
-          height: AppDimens.bottomNavigationHeight + bottomInset,
+          height: AppDimens.bottomNavigationHeight + bottomInset + labelGrowth,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppColors.surface.withValues(alpha: 0.88),
@@ -139,41 +140,46 @@ class _FooterItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foregroundColor =
-        isSelected ? AppColors.primary : AppColors.textSecondary;
+        isSelected ? AppColors.actionGreen : AppColors.textSecondary;
 
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: isSelected ? 42 : 36,
-              height: 30,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      child: Tooltip(
+        excludeFromSemantics: true,
+        message: label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppDimens.compactCardRadius),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: isSelected ? 42 : 36,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.18)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppDimens.pillRadius),
+                ),
+                child: Icon(icon, color: foregroundColor, size: 21),
               ),
-              child: Icon(icon, color: foregroundColor, size: 21),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: foregroundColor,
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                letterSpacing: 0,
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: foregroundColor,
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                  letterSpacing: 0,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

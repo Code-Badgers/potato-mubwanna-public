@@ -6,6 +6,9 @@ class AppColors {
   static const primary = Color(0xFF56C787);
   static const primaryDark = Color(0xFF509B64);
   static const primaryTint = Color(0xFFE5F6EA);
+  // 장식용 초록을 유지하면서 흰색/연한 표면 위 조작 글자의 대비를 확보한다.
+  static const actionGreen = Color(0xFF2D6A40);
+  static const onPrimary = textPrimary;
   static const secondary = Color(0xFFF6C23E);
   static const cream = Color(0xFFFFF8EA);
   static const line = Color(0xFFE8E2D8);

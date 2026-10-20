@@ -61,7 +61,7 @@ class _AdminNoticeScreenState extends ConsumerState<AdminNoticeScreen> {
               key: const ValueKey('admin-notice-create-button'),
               onPressed: _openEditor,
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.onPrimary,
               icon: const Icon(Icons.add_rounded),
               label: const Text(
                 '새 공지',
@@ -152,7 +152,7 @@ class _AdminBadge extends StatelessWidget {
       child: const Text(
         'ADMIN',
         style: TextStyle(
-          color: AppColors.primaryDark,
+          color: AppColors.actionGreen,
           fontSize: 10,
           fontWeight: FontWeight.w900,
           letterSpacing: 0.8,

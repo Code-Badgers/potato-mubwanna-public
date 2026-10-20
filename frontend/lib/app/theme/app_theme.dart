@@ -12,16 +12,21 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
+        onPrimary: AppColors.onPrimary,
         secondary: AppColors.secondary,
+        onSecondary: AppColors.textPrimary,
         surface: AppColors.surface,
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.background,
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(0, AppDimens.buttonHeight),
+          minimumSize:
+              const Size(AppDimens.buttonHeight, AppDimens.buttonHeight),
           backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.surface,
+          foregroundColor: AppColors.onPrimary,
+          disabledBackgroundColor: AppColors.line,
+          disabledForegroundColor: AppColors.textSecondary,
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
@@ -31,14 +36,31 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, AppDimens.buttonHeight),
-          foregroundColor: AppColors.primaryDark,
+          minimumSize:
+              const Size(AppDimens.buttonHeight, AppDimens.buttonHeight),
+          foregroundColor: AppColors.actionGreen,
           textStyle: AppTextStyles.button,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          side: const BorderSide(color: AppColors.line),
+          side: const BorderSide(color: AppColors.actionGreen),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.buttonRadius),
           ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.actionGreen,
+          minimumSize:
+              const Size(AppDimens.buttonHeight, AppDimens.buttonHeight),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          textStyle: AppTextStyles.button,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: AppColors.actionGreen,
+          minimumSize:
+              const Size(AppDimens.buttonHeight, AppDimens.buttonHeight),
         ),
       ),
       useMaterial3: true,

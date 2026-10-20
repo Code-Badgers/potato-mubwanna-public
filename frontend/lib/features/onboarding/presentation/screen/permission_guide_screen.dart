@@ -41,63 +41,53 @@ class _PermissionGuideScreenState extends State<PermissionGuideScreen> {
   bool _canContinueWithoutPermission = false;
 
   Future<void> _confirmPermissions() async {
-    final hasLocationConsent =
-        await widget.legalConsentStore.hasAcceptedPersonalLocation();
-    if (!mounted) {
-      return;
-    }
-    if (!hasLocationConsent) {
-      final accepted = await context.push<bool>(
-        '/legal/location-terms?manage=true&returnOnAccept=true',
-      );
-      if (accepted != true || !mounted) {
-        setState(() {
-          _permissionMessage = '위치정보 동의 없이 둘러볼 수 있지만 주변 탐색과 방문 인증은 제한됩니다.';
-          _canContinueWithoutPermission = true;
-        });
-        return;
-      }
-    }
-
-    if (!widget.permissionService.supportsRuntimePermissions) {
-      context.go('/main/map');
-      return;
-    }
-
+    // 동의 저장소 조회 중에도 중복 탭으로 권한 창이 여러 번 열리지 않게 한다.
+    if (_isRequesting) return;
     setState(() {
       _isRequesting = true;
       _permissionMessage = null;
       _canContinueWithoutPermission = false;
     });
-
     try {
-      final locationStatus = await widget.permissionService.requestLocation();
-      await widget.permissionService.requestNotification();
-      if (!mounted) {
+      final hasLocationConsent =
+          await widget.legalConsentStore.hasAcceptedPersonalLocation();
+      if (!mounted) return;
+      if (!hasLocationConsent) {
+        final accepted = await context.push<bool>(
+          '/legal/location-terms?manage=true&returnOnAccept=true',
+        );
+        if (!mounted) return;
+        if (accepted != true) {
+          setState(() {
+            _permissionMessage = '위치정보 동의 없이 둘러볼 수 있지만 주변 탐색과 방문 인증은 제한됩니다.';
+            _canContinueWithoutPermission = true;
+          });
+          return;
+        }
+      }
+      if (!widget.permissionService.supportsRuntimePermissions) {
+        context.go('/main/map');
         return;
       }
-
+      final locationStatus = await widget.permissionService.requestLocation();
+      await widget.permissionService.requestNotification();
+      if (!mounted) return;
       if (locationStatus.isGranted || locationStatus.isLimited) {
         context.go('/main/map');
         return;
       }
-
       setState(() {
-        _isRequesting = false;
         _permissionMessage = locationStatus.isPermanentlyDenied
             ? '위치 권한이 차단되어 있습니다. 설정의 권한 관리에서 허용해주세요.'
             : '위치 권한 없이 둘러볼 수 있지만 주변 탐색과 방문 인증은 제한됩니다.';
         _canContinueWithoutPermission = true;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() => _permissionMessage = '위치 권한을 확인하지 못했습니다. 다시 시도해주세요.');
       }
-
-      setState(() {
-        _isRequesting = false;
-        _permissionMessage = '위치 권한을 확인하지 못했습니다. 다시 시도해주세요.';
-      });
+    } finally {
+      if (mounted) setState(() => _isRequesting = false);
     }
   }
 
@@ -114,82 +104,83 @@ class _PermissionGuideScreenState extends State<PermissionGuideScreen> {
             constraints: const BoxConstraints(maxWidth: 430),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 34, 24, 22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 18),
-                  const Text(
-                    '편리한 감자여행을 위해\n접근권한을 확인해주세요',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      height: 1.26,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  Expanded(
-                    child: ListView.separated(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: _items.length + 1,
-                      separatorBuilder: (_, __) => const SizedBox(height: 22),
-                      itemBuilder: (context, index) {
-                        if (index == _items.length) {
-                          return _PermissionNotice(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 18),
+                        const Text(
+                          '편리한 감자여행을 위해\n접근권한을 확인해주세요',
+                          style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              height: 1.26),
+                        ),
+                        const SizedBox(height: 28),
+                        for (final item in _items) ...[
+                          _PermissionItemTile(item: item),
+                          const SizedBox(height: 22),
+                        ],
+                        _PermissionNotice(
                             supportsRuntimePermissions:
-                                supportsRuntimePermissions,
-                          );
-                        }
-
-                        return _PermissionItemTile(item: _items[index]);
-                      },
+                                supportsRuntimePermissions),
+                      ],
                     ),
                   ),
-                  if (_permissionMessage != null) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      _permissionMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    height: 58,
-                    child: FilledButton(
-                      onPressed: _isRequesting ? null : _confirmPermissions,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _permissionButtonColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  // 내용이 길면 하단 동작까지 함께 스크롤하고, 여유가 있으면 아래에 둔다.
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_permissionMessage != null) ...[
+                          const SizedBox(height: 14),
+                          Semantics(
+                              liveRegion: true,
+                              child: Text(_permissionMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.4))),
+                        ],
+                        const SizedBox(height: 18),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 58),
+                          child: FilledButton(
+                            onPressed:
+                                _isRequesting ? null : _confirmPermissions,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _permissionButtonColor,
+                              foregroundColor: AppColors.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              textStyle: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w800),
+                            ),
+                            child: Semantics(
+                              liveRegion: _isRequesting,
+                              child: Text(_isRequesting
+                                  ? '권한 확인 중'
+                                  : _permissionMessage != null &&
+                                          !_canContinueWithoutPermission
+                                      ? '다시 시도'
+                                      : '확인'),
+                            ),
+                          ),
                         ),
-                        textStyle: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      child: _isRequesting
-                          ? const SizedBox.square(
-                              dimension: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Text('확인'),
+                        if (_canContinueWithoutPermission)
+                          TextButton(
+                              onPressed: () => context.go('/main/map'),
+                              child: const Text('권한 없이 둘러보기')),
+                      ],
                     ),
                   ),
-                  if (_canContinueWithoutPermission)
-                    TextButton(
-                      onPressed: () => context.go('/main/map'),
-                      child: const Text('권한 없이 둘러보기'),
-                    ),
                 ],
               ),
             ),

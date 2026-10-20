@@ -16,7 +16,7 @@ import '../default_potato.dart';
 import '../potato_asset.dart';
 
 const _potatoPrimary = Color(0xFF56C787);
-const _potatoDark = Color(0xFF509B64);
+const _potatoDark = AppColors.actionGreen;
 const _potatoYellow = Color(0xFFF5D84E);
 const _potatoLine = Color(0xFFE8E2D8);
 const _potatoCardRadius = AppDimens.cardRadius;
@@ -382,7 +382,8 @@ class _PotatoGrowthDialog extends StatelessWidget {
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
                 backgroundColor: accentColor,
-                foregroundColor: AppColors.surface,
+                foregroundColor:
+                    fullyGrown ? AppColors.textPrimary : AppColors.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(_potatoCardRadius),
                 ),
@@ -962,7 +963,7 @@ class _PotatoHarvestAction extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: _potatoPrimary,
                 disabledBackgroundColor: const Color(0xFFE1DED4),
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onPrimary,
                 disabledForegroundColor: AppColors.textSecondary,
                 minimumSize: const Size(132, 42),
                 shape: RoundedRectangleBorder(
@@ -1060,7 +1061,7 @@ class _PotatoHarvestDialog extends StatelessWidget {
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(50),
                         backgroundColor: _potatoPrimary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                         ),
@@ -1114,7 +1115,7 @@ class _PotatoMainActions extends StatelessWidget {
                       FeatureTourScope.maybeOf(context)?.completeNavigation();
                     },
               style: OutlinedButton.styleFrom(
-                foregroundColor: _potatoDark,
+                foregroundColor: AppColors.actionGreen,
                 side: BorderSide(color: _potatoPrimary.withValues(alpha: 0.55)),
                 minimumSize: const Size.fromHeight(44),
                 shape: RoundedRectangleBorder(
@@ -1150,7 +1151,7 @@ class _PotatoMainActions extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: _potatoPrimary,
                 disabledBackgroundColor: const Color(0xFFBFE5CC),
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.onPrimary,
                 minimumSize: const Size.fromHeight(44),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(999),

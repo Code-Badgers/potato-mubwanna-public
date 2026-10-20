@@ -114,7 +114,7 @@ class _ProfileHeader extends StatelessWidget {
                           Text(
                             '강원도 여행자',
                             style: TextStyle(
-                              color: AppColors.primaryDark,
+                              color: AppColors.actionGreen,
                               fontSize: 21,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0,
@@ -124,7 +124,7 @@ class _ProfileHeader extends StatelessWidget {
                           Text(
                             'GANGWON TRAVELER ID',
                             style: TextStyle(
-                              color: AppColors.primaryDark,
+                              color: AppColors.actionGreen,
                               fontSize: 11,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.8,
@@ -206,7 +206,7 @@ class _TravelerIdField extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            color: AppColors.primaryDark,
+            color: AppColors.actionGreen,
             fontSize: 9,
             fontWeight: FontWeight.w900,
             letterSpacing: 0.8,
@@ -301,7 +301,7 @@ class _TravelerIdCardPainter extends CustomPainter {
       text: const TextSpan(
         text: 'GW',
         style: TextStyle(
-          color: AppColors.primaryDark,
+          color: AppColors.actionGreen,
           fontSize: 16,
           fontWeight: FontWeight.w900,
           letterSpacing: 0,
@@ -437,7 +437,7 @@ class _GuestMyPage extends StatelessWidget {
                         onPressed: onLogin,
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(17),
                           ),
@@ -635,7 +635,7 @@ class _PotatoAlbumContentState extends State<_PotatoAlbumContent> {
               child: Text(
                 '${cards.length}장',
                 style: const TextStyle(
-                  color: AppColors.primaryDark,
+                  color: AppColors.actionGreen,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,

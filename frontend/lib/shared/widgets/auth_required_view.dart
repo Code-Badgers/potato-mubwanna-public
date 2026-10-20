@@ -14,7 +14,7 @@ class AuthRequiredView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    final content = Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -55,5 +55,15 @@ class AuthRequiredView extends StatelessWidget {
         ),
       ),
     );
+    // 큰 글씨/가로 화면에서도 로그인 동작이 화면 밖으로 잘리지 않게 한다.
+    return LayoutBuilder(builder: (context, constraints) {
+      if (!constraints.hasBoundedHeight) return content;
+      return SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: content,
+        ),
+      );
+    });
   }
 }
