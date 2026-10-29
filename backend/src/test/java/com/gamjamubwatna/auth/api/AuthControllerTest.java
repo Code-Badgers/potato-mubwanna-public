@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamjamubwatna.auth.application.AuthService;
+import com.gamjamubwatna.auth.application.InvalidRefreshTokenException;
 import com.gamjamubwatna.auth.infrastructure.JwtAuthenticationFilter;
 import com.gamjamubwatna.auth.infrastructure.JwtTokenProvider;
 import com.gamjamubwatna.global.config.SecurityConfig;
@@ -162,5 +163,18 @@ class AuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
             .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
+    }
+
+    @Test
+    void refreshReturnsUnauthorizedForAnInvalidRefreshToken() throws Exception {
+        when(authService.refresh("invalid-token")).thenThrow(new InvalidRefreshTokenException());
+
+        mockMvc.perform(post("/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RefreshTokenRequest("invalid-token"))))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("로그인 세션이 만료되었습니다. 다시 로그인해주세요."))
+            .andExpect(jsonPath("$.data").doesNotExist());
     }
 }

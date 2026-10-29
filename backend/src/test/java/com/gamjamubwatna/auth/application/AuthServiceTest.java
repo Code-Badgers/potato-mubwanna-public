@@ -1,9 +1,12 @@
 package com.gamjamubwatna.auth.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +27,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class AuthServiceTest {
@@ -155,6 +160,63 @@ class AuthServiceTest {
         assertThat(response.refreshToken()).isNotBlank();
         assertThat(response.refreshToken()).isNotEqualTo(oldRefreshToken);
         verify(starterPotatoGrantService).grantIfNeeded(user, now);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"missing", "expired", "expiry-boundary", "revoked", "invalid-jwt", "wrong-type"})
+    void refreshRejectsOnlyInvalidTokens(String reason) {
+        Instant now = Instant.parse("2026-06-19T00:00:00Z");
+        RefreshTokenRepository repository = mock(RefreshTokenRepository.class);
+        StarterPotatoGrantService starterGrant = mock(StarterPotatoGrantService.class);
+        JwtTokenProvider provider = mock(JwtTokenProvider.class);
+        RefreshToken token = new RefreshToken(
+            mock(User.class), "stored-token",
+            reason.equals("expired") ? now.minusSeconds(1)
+                : reason.equals("expiry-boundary") ? now : now.plusSeconds(7200)
+        );
+        if (reason.equals("revoked")) {
+            token.revoke();
+        }
+        when(repository.findByToken("stored-token"))
+            .thenReturn(reason.equals("missing") ? Optional.empty() : Optional.of(token));
+        if (reason.equals("invalid-jwt")) {
+            when(provider.parse("stored-token")).thenThrow(new IllegalArgumentException("invalid JWT"));
+        } else if (reason.equals("wrong-type")) {
+            when(provider.parse("stored-token"))
+                .thenReturn(new JwtTokenProvider.JwtClaims("user:1", "access", now.plusSeconds(3600)));
+        }
+        AuthService service = new AuthService(
+            accessToken -> null, (code, uri) -> "unused", provider,
+            mock(UserRepository.class), repository, starterGrant, Clock.fixed(now, ZoneOffset.UTC)
+        );
+
+        assertThatThrownBy(() -> service.refresh("stored-token"))
+            .isInstanceOf(InvalidRefreshTokenException.class);
+        verifyNoInteractions(starterGrant);
+        assertThat(token.isRevoked()).isEqualTo(reason.equals("revoked"));
+    }
+
+    @Test
+    void refreshDoesNotTreatRewardFailureAsInvalidAuthentication() {
+        Instant now = Instant.parse("2026-06-19T00:00:00Z");
+        JwtTokenProvider provider = jwtTokenProvider(now);
+        User user = mock(User.class);
+        String value = provider.createRefreshToken("user:1");
+        RefreshToken token = new RefreshToken(user, value, now.plusSeconds(7200));
+        RefreshTokenRepository repository = mock(RefreshTokenRepository.class);
+        when(repository.findByToken(value)).thenReturn(Optional.of(token));
+        StarterPotatoGrantService starterGrant = mock(StarterPotatoGrantService.class);
+        doThrow(new IllegalArgumentException("reward unavailable"))
+            .when(starterGrant).grantIfNeeded(user, now);
+        AuthService service = new AuthService(
+            accessToken -> null, (code, uri) -> "unused", provider,
+            mock(UserRepository.class), repository, starterGrant, Clock.fixed(now, ZoneOffset.UTC)
+        );
+
+        assertThatThrownBy(() -> service.refresh(value))
+            .isExactlyInstanceOf(IllegalArgumentException.class)
+            .hasMessage("reward unavailable");
+        assertThat(token.isRevoked()).isFalse();
     }
 
     private JwtTokenProvider jwtTokenProvider(Instant now) {
