@@ -88,6 +88,55 @@ void main() {
     expect(controller.state.message, contains('(401)'));
   });
 
+  test('reports an invalid session only for an explicit unauthorized refresh',
+      () async {
+    final controller = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: _FailingRefreshAuthRepository(const ApiException(
+        message: '로그인 세션이 만료되었습니다.',
+        statusCode: 401,
+      )),
+    );
+    addTearDown(controller.dispose);
+
+    expect(await controller.refreshSession(), isFalse);
+    expect(controller.state.status, AuthStatus.failure);
+    expect(controller.state.message, '로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+  });
+
+  for (final status in [null, 400, 403, 408, 429, 500, 502, 503]) {
+    test('preserves the refresh failure for retry when status is $status',
+        () async {
+      final error =
+          ApiException(message: 'temporary failure', statusCode: status);
+      final pushLifecycle = _RecordingPushTokenLifecycle();
+      final controller = AuthController(
+        kakaoLoginService: const KakaoLoginService(),
+        authRepository: _FailingRefreshAuthRepository(error),
+        pushTokenLifecycle: pushLifecycle,
+      );
+      addTearDown(controller.dispose);
+
+      await expectLater(controller.refreshSession(), throwsA(same(error)));
+      expect(controller.state.status, AuthStatus.failure);
+      expect(pushLifecycle.unregisterCalls, 0);
+      expect(pushLifecycle.synchronizeCalls, 0);
+    });
+  }
+
+  test('does not classify an unexpected refresh failure as token expiry',
+      () async {
+    final error = StateError('storage unavailable');
+    final controller = AuthController(
+      kakaoLoginService: const KakaoLoginService(),
+      authRepository: _FailingRefreshAuthRepository(error),
+    );
+    addTearDown(controller.dispose);
+
+    await expectLater(controller.refreshSession(), throwsA(same(error)));
+    expect(controller.state.status, AuthStatus.failure);
+  });
+
   test('identifies an SDK failure before backend login starts', () async {
     final repository = _RecordingAuthRepository();
     final controller = AuthController(
@@ -238,6 +287,15 @@ class _RejectedLoginAuthRepository extends AuthRepository {
       statusCode: 401,
     );
   }
+}
+
+class _FailingRefreshAuthRepository extends _RecordingAuthRepository {
+  _FailingRefreshAuthRepository(this.error);
+
+  final Object error;
+
+  @override
+  Future<void> refreshSession() async => throw error;
 }
 
 class _FailingLogoutAuthRepository extends AuthRepository {

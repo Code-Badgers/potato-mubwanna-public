@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:potato_mubwanna/core/network/api_exception.dart';
 import 'package:potato_mubwanna/features/auth/application/session_startup_coordinator.dart';
 import 'package:potato_mubwanna/features/push/domain/push_message.dart';
 
@@ -145,7 +146,7 @@ void main() {
     expect(await coordinator.resolveInitialRoute(), '/onboarding');
   });
 
-  test('clears local tokens and opens onboarding when session refresh fails',
+  test('clears local tokens and opens login when session refresh is rejected',
       () async {
     final events = <String>[];
     final coordinator = _coordinator(
@@ -157,7 +158,7 @@ void main() {
 
     final route = await coordinator.resolveInitialRoute();
 
-    expect(route, '/onboarding');
+    expect(route, '/login');
     expect(events, ['unregister-push', 'clear-tokens']);
   });
 
@@ -173,7 +174,7 @@ void main() {
 
     final route = await coordinator.resolveInitialRoute();
 
-    expect(route, '/onboarding');
+    expect(route, '/login');
     expect(clearCalls, 1);
   });
 
@@ -192,6 +193,132 @@ void main() {
 
     expect(routes, everyElement('/main/map'));
     expect(refreshCalls, 1);
+  });
+
+  test('keeps tokens and the initial push untouched until a retry succeeds',
+      () async {
+    var refreshCalls = 0;
+    var clearCalls = 0;
+    var unregisterCalls = 0;
+    var pushReads = 0;
+    final coordinator = SessionStartupCoordinator(
+      hasKakaoAuthorizationCallback: false,
+      markOnboardingCompleted: () async {},
+      readRefreshToken: () async => 'stored-refresh-token',
+      refreshSession: () async {
+        if (++refreshCalls == 1) throw TimeoutException('connection lost');
+        return true;
+      },
+      unregisterPushToken: () async => unregisterCalls++,
+      clearLocalTokens: () async => clearCalls++,
+      readInitialPushMessage: () async {
+        pushReads++;
+        return const PushMessage(
+            title: null,
+            body: null,
+            data: {'destination': 'SPOT', 'destinationId': '7'});
+      },
+    );
+
+    await expectLater(coordinator.resolveInitialRoute(),
+        throwsA(isA<SessionStartupFailure>()));
+    expect(clearCalls, 0);
+    expect(unregisterCalls, 0);
+    expect(pushReads, 0);
+    expect(await coordinator.resolveInitialRoute(), '/spots/7');
+    expect(await coordinator.resolveInitialRoute(), '/spots/7');
+    expect(refreshCalls, 2);
+    expect(pushReads, 1);
+  });
+
+  test('coalesces retry requests after a failed attempt', () async {
+    final retry = Completer<bool>();
+    var refreshCalls = 0;
+    final coordinator = _coordinator(
+      refreshToken: 'stored-refresh-token',
+      refreshSession: () {
+        if (++refreshCalls == 1) throw const ApiException(message: 'offline');
+        return retry.future;
+      },
+    );
+    await expectLater(coordinator.resolveInitialRoute(),
+        throwsA(isA<SessionStartupFailure>()));
+    final first = coordinator.resolveInitialRoute();
+    final second = coordinator.resolveInitialRoute();
+    expect(identical(first, second), isTrue);
+    await Future<void>.delayed(Duration.zero);
+    expect(refreshCalls, 2);
+    retry.complete(true);
+    expect(await first, '/main/map');
+    expect(await second, '/main/map');
+  });
+
+  test('repeated transient failures never clear tokens or unregister push',
+      () async {
+    var clearCalls = 0;
+    var unregisterCalls = 0;
+    final coordinator = _coordinator(
+      refreshToken: 'stored-refresh-token',
+      refreshSession: () async =>
+          throw const ApiException(message: 'unavailable', statusCode: 503),
+      onClearLocalTokens: () => clearCalls++,
+      onUnregisterPushToken: () => unregisterCalls++,
+    );
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await expectLater(coordinator.resolveInitialRoute(),
+          throwsA(isA<SessionStartupFailure>()));
+    }
+    expect(clearCalls, 0);
+    expect(unregisterCalls, 0);
+  });
+
+  test('does not mistake a token storage failure for a signed-out user',
+      () async {
+    var tokenReads = 0;
+    var clearCalls = 0;
+    final coordinator = SessionStartupCoordinator(
+      hasKakaoAuthorizationCallback: false,
+      markOnboardingCompleted: () async {},
+      readRefreshToken: () async {
+        if (++tokenReads == 1) throw StateError('storage unavailable');
+        return 'stored-refresh-token';
+      },
+      refreshSession: () async => true,
+      unregisterPushToken: () async {},
+      clearLocalTokens: () async => clearCalls++,
+      readInitialPushMessage: () async => null,
+    );
+    await expectLater(coordinator.resolveInitialRoute(),
+        throwsA(isA<SessionStartupFailure>()));
+    expect(await coordinator.resolveInitialRoute(), '/main/map');
+    expect(clearCalls, 0);
+  });
+
+  test('preserves accepted consent when session recovery needs a retry',
+      () async {
+    var consentReads = 0;
+    var refreshCalls = 0;
+    final coordinator = SessionStartupCoordinator(
+      hasKakaoAuthorizationCallback: false,
+      hasAcceptedRequiredDocuments: () async {
+        consentReads++;
+        return false;
+      },
+      markOnboardingCompleted: () async {},
+      readRefreshToken: () async => 'stored-refresh-token',
+      refreshSession: () async {
+        if (++refreshCalls == 1) throw TimeoutException('offline');
+        return true;
+      },
+      unregisterPushToken: () async {},
+      clearLocalTokens: () async {},
+      readInitialPushMessage: () async => null,
+    );
+    expect(await coordinator.resolveInitialRoute(), '/legal-consent');
+    await expectLater(coordinator.resolveInitialRouteAfterLegalConsent(),
+        throwsA(isA<SessionStartupFailure>()));
+    expect(await coordinator.resolveInitialRoute(), '/main/map');
+    expect(consentReads, 1);
   });
 
   test('prioritizes a pending Kakao callback over stored session recovery',
@@ -213,6 +340,7 @@ SessionStartupCoordinator _coordinator({
   bool hasAcceptedRequiredDocuments = true,
   required String? refreshToken,
   bool refreshSessionResult = true,
+  Future<bool> Function()? refreshSession,
   void Function()? onRefreshSession,
   void Function()? onUnregisterPushToken,
   void Function()? onClearLocalTokens,
@@ -229,7 +357,9 @@ SessionStartupCoordinator _coordinator({
     },
     refreshSession: () async {
       onRefreshSession?.call();
-      return refreshSessionResult;
+      return refreshSession == null
+          ? refreshSessionResult
+          : await refreshSession();
     },
     unregisterPushToken: () async {
       onUnregisterPushToken?.call();

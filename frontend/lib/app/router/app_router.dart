@@ -55,9 +55,18 @@ final appRouter = GoRouter(
             await ref.read(stepCountReaderProvider).readTodaySteps();
           },
           onAccepted: () async {
-            final fallbackRoute = await ref
-                .read(sessionStartupCoordinatorProvider)
-                .resolveInitialRouteAfterLegalConsent();
+            String fallbackRoute;
+            try {
+              fallbackRoute = await ref
+                  .read(sessionStartupCoordinatorProvider)
+                  .resolveInitialRouteAfterLegalConsent();
+            } on SessionStartupFailure {
+              // 동의는 저장됐으므로 세션 장애를 동의 저장 오류로 표시하지 않는다.
+              if (context.mounted) {
+                context.go('/startup/loading');
+              }
+              return;
+            }
             final route = sessionStartupRouteGate.completeSessionStartup(
               fallbackRoute: fallbackRoute,
               isAuthenticated: ref.read(authControllerProvider).status ==
