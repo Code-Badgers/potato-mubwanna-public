@@ -163,7 +163,7 @@ class AuthServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"missing", "expired", "revoked", "invalid-jwt", "wrong-type"})
+    @ValueSource(strings = {"missing", "expired", "expiry-boundary", "revoked", "invalid-jwt", "wrong-type"})
     void refreshRejectsOnlyInvalidTokens(String reason) {
         Instant now = Instant.parse("2026-06-19T00:00:00Z");
         RefreshTokenRepository repository = mock(RefreshTokenRepository.class);
@@ -171,7 +171,8 @@ class AuthServiceTest {
         JwtTokenProvider provider = mock(JwtTokenProvider.class);
         RefreshToken token = new RefreshToken(
             mock(User.class), "stored-token",
-            reason.equals("expired") ? now.minusSeconds(1) : now.plusSeconds(7200)
+            reason.equals("expired") ? now.minusSeconds(1)
+                : reason.equals("expiry-boundary") ? now : now.plusSeconds(7200)
         );
         if (reason.equals("revoked")) {
             token.revoke();
