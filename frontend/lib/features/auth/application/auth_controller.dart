@@ -165,7 +165,9 @@ class AuthController extends StateNotifier<AuthState> {
     } on ApiException catch (error) {
       // 서버가 토큰을 명확히 거절한 경우에만 저장된 세션을 폐기하도록 알린다.
       if (error.statusCode == 401) {
-        state = const AuthState.idle();
+        state = const AuthState.failure(
+          '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+        );
         return false;
       }
       state = const AuthState.failure('로그인 상태를 확인하지 못했어요. 다시 시도해주세요.');

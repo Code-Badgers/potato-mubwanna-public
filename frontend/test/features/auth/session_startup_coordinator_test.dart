@@ -146,7 +146,7 @@ void main() {
     expect(await coordinator.resolveInitialRoute(), '/onboarding');
   });
 
-  test('clears local tokens and opens onboarding when session refresh fails',
+  test('clears local tokens and opens login when session refresh is rejected',
       () async {
     final events = <String>[];
     final coordinator = _coordinator(
@@ -158,7 +158,7 @@ void main() {
 
     final route = await coordinator.resolveInitialRoute();
 
-    expect(route, '/onboarding');
+    expect(route, '/login');
     expect(events, ['unregister-push', 'clear-tokens']);
   });
 
@@ -174,7 +174,7 @@ void main() {
 
     final route = await coordinator.resolveInitialRoute();
 
-    expect(route, '/onboarding');
+    expect(route, '/login');
     expect(clearCalls, 1);
   });
 
