@@ -106,7 +106,8 @@ class SessionStartupCoordinator {
     if (!hasRestoredSession) {
       await _unregisterStalePushToken();
       await _clearInvalidLocalTokens();
-      return '/onboarding';
+      // 세션이 만료된 기존 사용자는 소개를 반복하지 않고 로그인 버튼으로 안내한다.
+      return '/login';
     }
 
     // 종료 상태 푸시는 인증 복구 뒤에만 소비해 보호 화면의 선행 API 호출을 막는다.

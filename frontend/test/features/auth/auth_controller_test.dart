@@ -100,7 +100,8 @@ void main() {
     addTearDown(controller.dispose);
 
     expect(await controller.refreshSession(), isFalse);
-    expect(controller.state.status, AuthStatus.idle);
+    expect(controller.state.status, AuthStatus.failure);
+    expect(controller.state.message, '로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
   });
 
   for (final status in [null, 400, 403, 408, 429, 500, 502, 503]) {
