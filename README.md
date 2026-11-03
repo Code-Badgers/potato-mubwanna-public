@@ -1,3 +1,7 @@
+> 이 저장소는 감자무봤나의 개발 이력을 보존한 공개용 소스입니다. 과거 커밋에 포함된 개인 연락처를 예시 값으로 바꾸고 작성자 이메일을 GitHub noreply 주소로 정리했습니다. 기존 커밋의 작성 날짜와 변경 순서는 보존했으며, 이력 정리로 커밋 식별값은 변경됐습니다.
+> 운영 서비스는 종료됐습니다. 실제 API 키와 운영 백업은 포함하지 않으며, API 키와 운영자 정보는 예시 설정을 참고해 별도로 준비해야 합니다.
+> 자동 운영 배포 설정은 `.github/workflows/backend-deploy.yml.example`로 보관합니다.
+
 <div align="center">
 
 # 🥔 감자무봤나
@@ -19,7 +23,7 @@
   <img
     width="920"
     alt="감자무봤나 서비스 소개 및 원스토어 바로가기"
-    src="https://github.com/user-attachments/assets/637f6975-20e0-45e3-9ad3-a234139bf1d7"
+    src="docs/images/readme/01.png"
   />
 </a>
 
@@ -89,7 +93,7 @@
   <tr>
     <td align="center" width="33%">
       <img
-        src="https://github.com/user-attachments/assets/6b46c897-5b4f-45e5-9e1f-7b5468e69007"
+        src="docs/images/readme/02.png"
         width="260"
         alt="강원도 여행 코스 탐색 화면"
       /><br />
@@ -98,7 +102,7 @@
     </td>
     <td align="center" width="33%">
       <img
-        src="https://github.com/user-attachments/assets/2b4be4d0-aca5-4d96-be05-2f31e6a5001d"
+        src="docs/images/readme/03.png"
         width="260"
         alt="강원 관광지 지도 화면"
       /><br />
@@ -107,7 +111,7 @@
     </td>
     <td align="center" width="33%">
       <img
-        src="https://github.com/user-attachments/assets/67587540-e112-4723-bcf2-9e2e76c53d16"
+        src="docs/images/readme/04.png"
         width="260"
         alt="강원도 추천 여행 코스 상세 화면"
       /><br />
@@ -129,7 +133,7 @@
   <tr>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/6302189d-ead9-4770-b28f-d3725d90b758"
+        src="docs/images/readme/05.png"
         width="320"
         alt="관광지 혼잡도와 상세 정보 화면"
       /><br />
@@ -138,7 +142,7 @@
     </td>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/aa2a3c12-e926-4272-ba9c-4fa1feddc01a"
+        src="docs/images/readme/06.png"
         width="320"
         alt="관광지 추천 코스와 내 동선 화면"
       /><br />
@@ -169,7 +173,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/821a966d-d65f-4363-92b5-33b1a87b1c17"
+        src="docs/images/readme/07.png"
         width="320"
         alt="강원도 스탬프 투어 관광지 선택 화면"
       /><br />
@@ -178,7 +182,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
     </td>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/cb6f2640-cd8a-4f0e-bb4a-352e7e4a6d47"
+        src="docs/images/readme/08.png"
         width="320"
         alt="강원 여행 관광 패스포트 화면"
       /><br />
@@ -189,7 +193,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/f698f132-2385-4bed-9ba7-2c4478f09560"
+        src="docs/images/readme/09.png"
         width="320"
         alt="관광지 상세와 방문 인증 화면"
       /><br />
@@ -198,7 +202,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
     </td>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/3fe87a83-fc36-46fa-958d-e30646315ae1"
+        src="docs/images/readme/10.png"
         width="320"
         alt="한국관광공사 Odii 관광 해설 오디오 화면"
       /><br />
@@ -231,7 +235,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/60f12b72-5b08-429a-a6de-658231691b59"
+        src="docs/images/readme/11.png"
         width="320"
         alt="감자 캐릭터 수집 화면"
       /><br />
@@ -240,7 +244,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
     </td>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/965a680e-8d63-4d5c-9d50-524db5064ae3"
+        src="docs/images/readme/12.png"
         width="320"
         alt="감자 캐릭터 성장 화면"
       /><br />
@@ -264,7 +268,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/e6534fad-e0b5-4817-8fcf-056dd65c40ca"
+        src="docs/images/readme/13.png"
         width="320"
         alt="미션 메인 화면"
       /><br />
@@ -273,7 +277,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
     </td>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/767b1e73-ecd1-4ba8-87e2-14b1d5c10213"
+        src="docs/images/readme/14.png"
         width="320"
         alt="미션 상세 화면"
       /><br />
@@ -301,7 +305,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/defe08fb-22a0-435f-8ffa-e6614ac77220"
+        src="docs/images/readme/15.jpg"
         width="320"
         alt="강원 여행 기록 화면"
       /><br />
@@ -310,7 +314,7 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
     </td>
     <td align="center" width="50%">
       <img
-        src="https://github.com/user-attachments/assets/9e41ddce-2a58-4bf5-ab6f-54ae0b0613bd"
+        src="docs/images/readme/16.jpg"
         width="320"
         alt="강원 여행 사진 기록 화면"
       /><br />
@@ -332,28 +336,28 @@ GPS 방문 인증을 완료하면 해당 장소의 전용 스탬프를 획득합
   <tr>
     <td align="center" width="25%">
       <img
-        src="https://github.com/user-attachments/assets/39dee8a1-10b1-4e6e-ba5c-3e9d5b9714ae"
+        src="docs/images/readme/17.png"
         width="320"
         alt="감자무봤나 관광데이터 활용 화면 1"
       />
     </td>
     <td align="center" width="25%">
       <img
-        src="https://github.com/user-attachments/assets/d7f12193-93e5-4353-b83f-9d2919414160"
+        src="docs/images/readme/18.png"
         width="320"
         alt="감자무봤나 관광데이터 활용 화면 2"
       />
     </td>
     <td align="center" width="25%">
       <img
-        src="https://github.com/user-attachments/assets/59cb905d-562e-4e3b-a18a-a761019e3fa0"
+        src="docs/images/readme/19.png"
         width="320"
         alt="감자무봤나 관광데이터 활용 화면 3"
       />
     </td>
     <td align="center" width="25%">
       <img
-        src="https://github.com/user-attachments/assets/ff4b5ab9-fc38-46b5-8fb9-827936a551b7"
+        src="docs/images/readme/20.png"
         width="320"
         alt="감자무봤나 관광데이터 활용 화면 4"
       />
@@ -406,7 +410,7 @@ Odii → 현장 경험 강화
 <img
   width="920"
   alt="감자무봤나 기술 스택"
-  src="https://github.com/user-attachments/assets/5868d421-9fb9-4ce2-9c73-4aeb837195e6"
+  src="docs/images/readme/21.png"
 />
 
 </div>
